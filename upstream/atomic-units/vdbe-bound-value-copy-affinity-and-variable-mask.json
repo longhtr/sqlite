@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-bound-value-copy-affinity-and-variable-mask",
+  "title": "VDBE bound-value copy, affinity, and reoptimization variable mask",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3VdbeGetBoundValue and sqlite3VdbeSetVarmask are the planner/reprepare boundary for bound parameters: one returns a caller-owned affinity-applied copy while preserving the binding, and the other records parameters whose rebinding may change a query plan.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeGetBoundValue::line-5366",
+      "src/vdbeaux.c::function::sqlite3VdbeSetVarmask::line-5389"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeGetBoundValue::behavior::assert::line-5367-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeGetBoundValue::behavior::if::line-5368-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeGetBoundValue::behavior::assert::line-5370-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeGetBoundValue::behavior::if::line-5372-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeGetBoundValue::behavior::if::line-5374-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeGetBoundValue::behavior::return::line-5378-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeGetBoundValue::behavior::return::line-5381-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetVarmask::behavior::assert::line-5390-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetVarmask::behavior::assert::line-5391-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetVarmask::behavior::if::line-5393-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Public bind APIs and binding mutation",
+      "Planner reoptimization decision",
+      "General Mem affinity/copy/value allocation implementation",
+      "QPSG/InternalFunc flag configuration"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-make-ready-bulk-allocation-and-rewind",
+      "vdbe-saved-sql-and-reprepare-bytecode-swap",
+      "connection-allocation-for-vdbe-growth"
+    ],
+    "external_source_responsibilities": [
+      "Source-equivalent Mem copy, affinity and sqlite3ValueFree lifecycle"
+    ],
+    "caller_closure": "Both active bound-value/reoptimization functions are assigned. Exact aVar/nVar/expmask owners and Mem allocator behavior are dependency-covered; public binding/planner callers remain open."
+  },
+  "contracts": {
+    "inputs": [
+      "nullable Vdbe, positive one-based variable index, affinity; or positive variable index for mask"
+    ],
+    "outputs": [
+      "null for null Vdbe/SQL NULL/OOM, otherwise new caller-owned Mem copy with affinity; updated expmask"
+    ],
+    "ownership": "Original aVar remains Vdbe-owned and unchanged. Successful GetBoundValue creates one connection-owned sqlite3_value for caller release.",
+    "state_and_results": "Mask sets bit iVar-1 for indices 1..31 and saturates all indices >=32 into bit 31. Existing bits remain set.",
+    "locks_callbacks_io": "Caller holds connection mutex. No callback or I/O.",
+    "failure_and_continuation": "Value allocation OOM returns null with sticky connection OOM and leaves binding unchanged. SQL NULL returns null without allocation."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeGetBoundValue::line-5366",
+      "relation": "source-bound-value-or-reoptimization-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::getBoundValue"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeSetVarmask::line-5389",
+      "relation": "source-bound-value-or-reoptimization-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::setVariableMask"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "sqlite3_value is the exact Mem representation in both C and Zig.",
+    "Affinity is passed as the canonical byte value and applied by the existing source-shaped Mem helper."
+  ],
+  "oracle": {
+    "protocol": "The shared worker packages two variables, binds integer and NULL values, retrieves affinity-applied copies, sets mask indices 1/31/32, disables lookaside, and forces value-copy allocation OOM. C and Zig compare 363 observations.",
+    "internal_observations": [
+      "binding Mem flags/value",
+      "nonnull copied flags/value",
+      "NULL no-allocation result",
+      "cumulative expmask boundaries",
+      "OOM null result and sticky flag",
+      "source binding remains available for OOM attempt"
+    ],
+    "normalization": "Returned pointers normalize to null/non-null; flags, integer values, masks and OOM state are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Deterministic value-allocation OOM is reached with lookaside disabled; return is null and sticky state matches.",
+    "io_crash_concurrency": "No I/O/callback; caller mutex remains integration obligation.",
+    "malformed_input": "Source asserts positive indices and QPSG/InternalFunc compatibility; worker uses valid indexes with QPSG disabled.",
+    "continuation": "Successful copies are freed immediately; source bindings survive copies, NULL checks, mask updates, and failed copy.",
+    "performance": "Direct one-based array access, one conditional copy, and constant-time bit updates.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build vdbe-mem-differential",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig and source-corresponding vdbe_mem owners",
+    "native_call_path": "Symbolic worker reaches exact packaged aVar and connection allocator. Public bind/reoptimize callers remain partially handwritten.",
+    "bounded_owner_retired": "No. Integrate public bind and planner reoptimization paths."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires bind/planner integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Integrate public bindings and planner reoptimization with source Vdbe aVar/expmask.",
+    "Complete Vdbe reset/final destruction of bound values.",
+    "Independent fidelity review remains open."
+  ]
+}

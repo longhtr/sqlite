@@ -1,0 +1,10 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version":1,"phase":"phase-13-scoped-advanced-slice","profile":"sqlite-3.53.4-upsert-window-pragma-vacuum-v1","baseline_checkin":"bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc","status":"bounded-regression-evidence","mapped_entity_count":12,"public_symbol_count_added":0,"total_exported_sqlite_symbol_count":44,
+  "corpus":{"manifest":"tests/fixtures/sql-advanced/manifest.json","cases":4,"differential_observations":4},
+  "supported":["single-row ON CONFLICT DO NOTHING","single implicit-row row_number() OVER ()","PRAGMA user_version read","VACUUM on already compact database"],
+  "deferred_to_phase17":["persistent views and triggers","ATTACH/DETACH connection topology","general windows and aggregates","writable pragmas","general VACUUM"],
+  "evidence":{"sql_api_oracle_differential":"pass-4-scoped-family-observations","upsert_durability":"retained-insert-rollback-wal-fault-oom","read_oom_io":"retained-expression-and-storage-partitions"},
+  "slice_exit_gates":{"native_tokenizer_to_vdbe_path":"pass","sql_api_oracle_differential":"pass","generated_program_diagnostics":"pass","oom_and_io":"pass","write_durability":"pass"}
+}

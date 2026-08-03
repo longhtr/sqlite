@@ -1,0 +1,44 @@
+{
+  "schema_version": 3,
+  "policy": "Production engine artifacts contain only Zig objects. C is allowed only in oracle, diagnostic, fixture-generation, or test-harness artifacts and must never provide native engine behavior.",
+  "status": "production-zero-c-verified",
+  "completion_claim": false,
+  "native_c_sources": [],
+  "expected_native_archive_members": [
+    "libsqlite_zig_zcu.o"
+  ],
+  "c_global_symbols": {},
+  "test_only_c_sources": [
+    {
+      "path": "tests/legacy_c_abi/variadic_shims.c",
+      "sha256": "48855958574d9d8a102a67024f47025437ab1ea0dfbf80bcd1f2e0354aff7a7e",
+      "lines": 211,
+      "purpose": "Historical canonical-C-client regression only; not linked into production artifacts"
+    }
+  ],
+  "test_only_c_entrypoints": [
+    "sqlite3_config",
+    "sqlite3_db_config",
+    "sqlite3_log",
+    "sqlite3_mprintf",
+    "sqlite3_snprintf",
+    "sqlite3_str_appendf",
+    "sqlite3_str_vappendf",
+    "sqlite3_test_control",
+    "sqlite3_vmprintf",
+    "sqlite3_vsnprintf",
+    "sqlite3_vtab_config"
+  ],
+  "test_only_legacy_mechanics": [
+    "manual partial sqlite3_api_routines table",
+    "constructor-based extension table installation"
+  ],
+  "required_end_state": {
+    "production_c_sources": 0,
+    "production_c_objects": 0,
+    "production_c_global_symbols": 0,
+    "manual_extension_api_table": false,
+    "upstream_sqlite_implementation_objects": 0
+  },
+  "note": "The C shim is retained only inside a historical test executable. It is absent from the installed static/shared Zig libraries."
+}

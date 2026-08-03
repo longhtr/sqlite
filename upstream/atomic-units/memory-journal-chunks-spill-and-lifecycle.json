@@ -1,0 +1,429 @@
+{
+  "schema_version": 1,
+  "id": "memory-journal-chunks-spill-and-lifecycle",
+  "title": "In-memory rollback-journal chunks, spill, and lifecycle",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "This unit owns the complete active memjournal.c chunk representation, sequential/header writes, cached reads, truncation, cleanup, optional atomic spill to the underlying VFS, open mode selection, identity, and size calculation. The native Journal is a direct source-shaped translation and its chunk/cursor/truncate/spill trace matches the pinned C implementation; production Pager ABI routing and complete failure assurance remain open.",
+    "source_files": [
+      {
+        "path": "src/memjournal.c",
+        "sha256": "abb378b0fde5ac60076dfb42b36d5951003475b89fcb5da7dd122df5a6aa8264"
+      }
+    ],
+    "source_entity_ids": [
+      "src/memjournal.c::struct::FileChunk::line-39",
+      "src/memjournal.c::typedef::FileChunk::line-31",
+      "src/memjournal.c::struct::FilePoint::line-59",
+      "src/memjournal.c::typedef::FilePoint::line-30",
+      "src/memjournal.c::macro::MEMJOURNAL_DFLT_FILECHUNKSIZE::line-47",
+      "src/memjournal.c::struct::MemJournal::line-68",
+      "src/memjournal.c::typedef::MemJournal::line-29",
+      "src/memjournal.c::variable::MemJournalMethods::line-319",
+      "src/memjournal.c::member::endpoint::line-74",
+      "src/memjournal.c::macro::fileChunkSize::line-53",
+      "src/memjournal.c::member::flags::line-77",
+      "src/memjournal.c::member::iOffset::line-60",
+      "src/memjournal.c::function::memjrnlClose::line-290",
+      "src/memjournal.c::function::memjrnlCreateFile::line-145",
+      "src/memjournal.c::function::memjrnlFileSize::line-310",
+      "src/memjournal.c::function::memjrnlFreeChunks::line-133",
+      "src/memjournal.c::function::memjrnlRead::line-86",
+      "src/memjournal.c::function::memjrnlSync::line-302",
+      "src/memjournal.c::function::memjrnlTruncate::line-260",
+      "src/memjournal.c::function::memjrnlWrite::line-187",
+      "src/memjournal.c::member::nChunkSize::line-70",
+      "src/memjournal.c::member::nSpill::line-72",
+      "src/memjournal.c::member::pChunk::line-61",
+      "src/memjournal.c::member::pFirst::line-73",
+      "src/memjournal.c::member::pMethod::line-69",
+      "src/memjournal.c::member::pNext::line-40",
+      "src/memjournal.c::member::pVfs::line-78",
+      "src/memjournal.c::member::readpoint::line-75",
+      "src/memjournal.c::function::sqlite3JournalIsInMemory::line-430",
+      "src/memjournal.c::function::sqlite3JournalOpen::line-353",
+      "src/memjournal.c::function::sqlite3JournalSize::line-438",
+      "src/memjournal.c::function::sqlite3MemJournalOpen::line-391",
+      "src/memjournal.c::member::zChunk::line-41",
+      "src/memjournal.c::member::zJournal::line-79"
+    ],
+    "behavioral_block_ids": [
+      "src/memjournal.c::function::memjrnlRead::behavior::if::line-98-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlRead::behavior::return::line-99-column-5::ordinal-0",
+      "src/memjournal.c::function::memjrnlRead::behavior::assert::line-101-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlRead::behavior::if::line-102-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlRead::behavior::for::line-104-column-5::ordinal-0",
+      "src/memjournal.c::function::memjrnlRead::behavior::assert::line-112-column-5::ordinal-0",
+      "src/memjournal.c::function::memjrnlRead::behavior::do::line-116-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlRead::behavior::conditional::line-118-column-17::ordinal-0",
+      "src/memjournal.c::function::memjrnlRead::behavior::conditional::line-124-column-26::ordinal-0",
+      "src/memjournal.c::function::memjrnlRead::behavior::return::line-127-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlFreeChunks::behavior::for::line-136-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlCreateFile::behavior::if::line-152-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlCreateFile::behavior::for::line-156-column-5::ordinal-0",
+      "src/memjournal.c::function::memjrnlCreateFile::behavior::if::line-157-column-7::ordinal-0",
+      "src/memjournal.c::function::memjrnlCreateFile::behavior::if::line-161-column-7::ordinal-0",
+      "src/memjournal.c::function::memjrnlCreateFile::behavior::break::line-161-column-16::ordinal-0",
+      "src/memjournal.c::function::memjrnlCreateFile::behavior::if::line-164-column-5::ordinal-0",
+      "src/memjournal.c::function::memjrnlCreateFile::behavior::if::line-169-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlCreateFile::behavior::return::line-177-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::if::line-199-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::if::line-201-column-5::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::return::line-204-column-5::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::assert::line-214-column-5::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::if::line-215-column-5::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::if::line-218-column-5::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::assert::line-219-column-7::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::while::line-222-column-7::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::conditional::line-225-column-22::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::assert::line-227-column-9::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::if::line-228-column-9::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::if::line-231-column-11::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::return::line-232-column-13::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::if::line-235-column-11::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::assert::line-236-column-13::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::assert::line-239-column-13::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::assert::line-245-column-9::ordinal-0",
+      "src/memjournal.c::function::memjrnlWrite::behavior::return::line-254-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlTruncate::behavior::assert::line-262-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlTruncate::behavior::if::line-263-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlTruncate::behavior::if::line-265-column-5::ordinal-0",
+      "src/memjournal.c::function::memjrnlTruncate::behavior::for::line-270-column-7::ordinal-0",
+      "src/memjournal.c::function::memjrnlTruncate::behavior::if::line-273-column-7::ordinal-0",
+      "src/memjournal.c::function::memjrnlTruncate::behavior::return::line-284-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlClose::behavior::return::line-293-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlSync::behavior::return::line-304-column-3::ordinal-0",
+      "src/memjournal.c::function::memjrnlFileSize::behavior::return::line-313-column-3::ordinal-0",
+      "src/memjournal.c::function::sqlite3JournalOpen::behavior::assert::line-362-column-3::ordinal-0",
+      "src/memjournal.c::function::sqlite3JournalOpen::behavior::if::line-369-column-3::ordinal-0",
+      "src/memjournal.c::function::sqlite3JournalOpen::behavior::return::line-370-column-5::ordinal-0",
+      "src/memjournal.c::function::sqlite3JournalOpen::behavior::if::line-373-column-3::ordinal-0",
+      "src/memjournal.c::function::sqlite3JournalOpen::behavior::assert::line-377-column-5::ordinal-0",
+      "src/memjournal.c::function::sqlite3JournalOpen::behavior::return::line-385-column-3::ordinal-0",
+      "src/memjournal.c::function::sqlite3JournalIsInMemory::behavior::return::line-431-column-3::ordinal-0",
+      "src/memjournal.c::function::sqlite3JournalSize::behavior::return::line-439-column-3::ordinal-0",
+      "src/memjournal.c::function::sqlite3JournalSize::behavior::conditional::line-439-column-10::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Pager policy selecting statement or rollback memory journals",
+      "Underlying VFS file method behavior after successful spill",
+      "Inactive sqlite3JournalCreate compile-profile branch and other inactive branches not present in the behavioral inventory"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "os-unix-process-lifecycle-and-default-vfs",
+      "global-allocator-core-for-connection-growth"
+    ],
+    "external_source_responsibilities": [
+      "Pager journal-open policy and atomic-write call sites",
+      "sqlite3_file preallocated-storage ABI owner and exact sqlite3Os wrappers"
+    ],
+    "caller_closure": "Native unit tests call all memory operations and spill through the production MemoryVfs ABI. Pager currently opens journals directly through its configured VFS rather than Journal, so production caller closure is not yet complete."
+  },
+  "contracts": {
+    "inputs": [
+      "Allocator, optional underlying sqlite3_vfs/name, open flags, spill threshold, offsets, byte spans, truncate sizes and sync flags"
+    ],
+    "outputs": [
+      "Exact SQLite result code, read bytes, file size, memory/spilled identity"
+    ],
+    "ownership": "Each in-memory chunk is one allocation containing link plus payload. Journal owns and frees chunks. Successful spill transfers behavior to an owned underlying sqlite3_file allocation; failed spill closes the provisional file and retains every chunk.",
+    "state_and_results": "Endpoint and readpoint preserve source cursor semantics. Writes append except the bounded header rewrite and truncate-before-rewrite path. Threshold zero opens the real file immediately, negative remains memory-only, and positive spills when exceeded.",
+    "locks_callbacks_io": "Memjournal has no mutex. In-memory methods perform no I/O. Spill invokes underlying xOpen/xWrite and later routes read/write/truncate/sync/size/close through its method table.",
+    "failure_and_continuation": "Short reads do not mutate cursors, chunk OOM returns IOERR_NOMEM with a closable prefix, and failed spill preserves in-memory rollback content for continuation."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/memjournal.c::struct::FileChunk::line-39",
+      "relation": "source-memory-journal-struct-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::constant::Chunk"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::typedef::FileChunk::line-31",
+      "relation": "source-memory-journal-typedef-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::constant::Chunk"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::struct::FilePoint::line-59",
+      "relation": "source-memory-journal-struct-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::constant::Point"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::typedef::FilePoint::line-30",
+      "relation": "source-memory-journal-typedef-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::constant::Point"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::macro::MEMJOURNAL_DFLT_FILECHUNKSIZE::line-47",
+      "relation": "source-memory-journal-macro-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::constant::default_allocation_size"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::struct::MemJournal::line-68",
+      "relation": "source-memory-journal-struct-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::constant::Journal"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::typedef::MemJournal::line-29",
+      "relation": "source-memory-journal-typedef-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::constant::Journal"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::variable::MemJournalMethods::line-319",
+      "relation": "source-memory-journal-variable-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::constant::Journal",
+        "src/core/memory_journal.zig::function::Journal.realMethods"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::endpoint::line-74",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::field::Journal.endpoint"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::macro::fileChunkSize::line-53",
+      "relation": "source-memory-journal-macro-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.chunkAllocationSize"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::flags::line-77",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::field::Journal.flags"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::iOffset::line-60",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::field::Point.offset"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::function::memjrnlClose::line-290",
+      "relation": "source-memory-journal-function-to-native-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.close"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::function::memjrnlCreateFile::line-145",
+      "relation": "source-memory-journal-function-to-native-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.createFile"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::function::memjrnlFileSize::line-310",
+      "relation": "source-memory-journal-function-to-native-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.fileSize"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::function::memjrnlFreeChunks::line-133",
+      "relation": "source-memory-journal-function-to-native-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.freeChunks"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::function::memjrnlRead::line-86",
+      "relation": "source-memory-journal-function-to-native-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.read"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::function::memjrnlSync::line-302",
+      "relation": "source-memory-journal-function-to-native-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.sync"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::function::memjrnlTruncate::line-260",
+      "relation": "source-memory-journal-function-to-native-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.truncate"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::function::memjrnlWrite::line-187",
+      "relation": "source-memory-journal-function-to-native-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.write"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::nChunkSize::line-70",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::field::Journal.chunk_size"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::nSpill::line-72",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::field::Journal.spill_threshold"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::pChunk::line-61",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::field::Point.chunk"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::pFirst::line-73",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::field::Journal.first"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::pMethod::line-69",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::constant::Journal",
+        "src/core/memory_journal.zig::function::Journal.realMethods"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::pNext::line-40",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::field::Chunk.next"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::pVfs::line-78",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::field::Journal.underlying_vfs"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::readpoint::line-75",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::field::Journal.readpoint"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::function::sqlite3JournalIsInMemory::line-430",
+      "relation": "source-memory-journal-function-to-native-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.isInMemory"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::function::sqlite3JournalOpen::line-353",
+      "relation": "source-memory-journal-function-to-native-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.open"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::function::sqlite3JournalSize::line-438",
+      "relation": "source-memory-journal-function-to-native-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::journalSize"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::function::sqlite3MemJournalOpen::line-391",
+      "relation": "source-memory-journal-function-to-native-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.open"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::zChunk::line-41",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::function::Journal.chunkBytes"
+      ]
+    },
+    {
+      "source_entity_id": "src/memjournal.c::member::zJournal::line-79",
+      "relation": "source-memory-journal-member-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory_journal.zig::field::Journal.journal_name"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Flexible C FileChunk payload is represented by one aligned Zig allocation containing a Chunk header followed by chunk_size bytes.",
+    "C morphs the caller-preallocated MemJournal bytes into the real sqlite3_file on spill; Zig owns a separate aligned real-file storage slice because the translated Journal is a typed native owner.",
+    "The C MemJournalMethods ABI table is represented by typed Journal methods until pager sqlite3_file routing is integrated."
+  ],
+  "oracle": {
+    "protocol": "Native tests cross chunk boundaries, repeated/cached reads, short reads, header overwrite, partial and zero truncation, append after truncation, threshold spill through a real VFS method table, size, close, and one-shot chunk OOM. The pinned C/Zig workers emit and compare 14 exact state and byte observations.",
+    "internal_observations": [
+      "result code",
+      "memory/spilled identity",
+      "endpoint size",
+      "read bytes",
+      "VFS open/write/close events",
+      "post-failure closability"
+    ],
+    "normalization": "Bytes, sizes, result codes and ordered method events are exact; allocation addresses are ignored."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "First chunk OOM and cleanup are covered; every chunk boundary and spill-storage/open/write OOM/fault site remains open.",
+    "io_crash_concurrency": "Successful real-VFS spill and readback pass. Failed-open/write restoration and crash boundaries need exact differential coverage; source unit is single-threaded.",
+    "malformed_input": "Short read and forward-gap write are guarded; source relies on internal assertions for several invalid write shapes.",
+    "continuation": "Truncate/reappend, close after OOM, and successful spill continuation pass; failed spill retry matrix remains open.",
+    "performance": "Chunk traversal and allocation shape follow source. Readpoint caching is retained; benchmark and production pager selection remain open.",
+    "commands": [
+      "zig test src/core/memory_journal.zig -lc",
+      "zig build memory-journal-differential",
+      "zig build test -j2"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/memory_journal.zig Journal; Pager integration pending",
+    "native_call_path": "Focused native caller -> Journal -> chunk owner or underlying sqlite3_vfs method table",
+    "bounded_owner_retired": "No prior source-shaped memory-journal owner existed; Pager direct-VFS journal storage remains until integration."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires pinned C differential, complete failure matrix, Pager ABI integration, and independent review."
+  },
+  "known_blockers": [
+    "Integrate Journal behind Pager journal-open policy and sqlite3_file ABI storage.",
+    "Extend the pinned C/Zig differential with all chunk-boundary and spill failure/OOM continuation cases.",
+    "Complete all chunk-boundary and spill OOM/VFS fault continuation cases.",
+    "Independent fidelity review remains open."
+  ]
+}

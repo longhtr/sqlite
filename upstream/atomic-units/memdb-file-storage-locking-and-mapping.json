@@ -1,0 +1,630 @@
+{
+  "schema_version": 1,
+  "id": "memdb-file-storage-locking-and-mapping",
+  "title": "Memdb shared/private storage, file methods, locking, and mapping",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These active memdb.c methods own shared-versus-private store creation and last-close destruction, contiguous doubled-capacity byte I/O, rollback-only truncation/sync, reader/writer locks, fetch behavior, file controls, ABI method tails, access, and pathname handling. The dedicated native memdb owner now follows these target-profile traces. The source MemStore/MemFile/MemFS representations, method tables, selected mutex helpers, delegated VFS services, and memdb identity predicate are also assigned here.",
+    "source_files": [
+      {
+        "path": "src/memdb.c",
+        "sha256": "dc655196df8c8b495f09d9061dd521930c03bdef50a69f28d4ca76dc8ce462b0"
+      }
+    ],
+    "source_entity_ids": [
+      "src/memdb.c::function::memdbClose::line-210",
+      "src/memdb.c::function::memdbRead::line-252",
+      "src/memdb.c::function::memdbEnlarge::line-274",
+      "src/memdb.c::function::memdbWrite::line-294",
+      "src/memdb.c::function::memdbTruncate::line-331",
+      "src/memdb.c::function::memdbSync::line-348",
+      "src/memdb.c::function::memdbFileSize::line-357",
+      "src/memdb.c::function::memdbLock::line-368",
+      "src/memdb.c::function::memdbUnlock::line-426",
+      "src/memdb.c::function::memdbFileControl::line-464",
+      "src/memdb.c::function::memdbDeviceCharacteristics::line-501",
+      "src/memdb.c::function::memdbFetch::line-510",
+      "src/memdb.c::function::memdbUnfetch::line-529",
+      "src/memdb.c::function::memdbOpen::line-542",
+      "src/memdb.c::function::memdbAccess::line-639",
+      "src/memdb.c::function::memdbFullPathname::line-657",
+      "src/memdb.c::struct::MemFS::line-97",
+      "src/memdb.c::struct::MemFile::line-85",
+      "src/memdb.c::typedef::MemFile::line-26",
+      "src/memdb.c::struct::MemStore::line-70",
+      "src/memdb.c::typedef::MemStore::line-27",
+      "src/memdb.c::typedef::MemVfs::line-25",
+      "src/memdb.c::macro::ORIGVFS::line-32",
+      "src/memdb.c::member::aData::line-74",
+      "src/memdb.c::member::apMemStore::line-99",
+      "src/memdb.c::member::base::line-86",
+      "src/memdb.c::member::eLock::line-88",
+      "src/memdb.c::member::mFlags::line-77",
+      "src/memdb.c::function::memdbCurrentTimeInt64::line-726",
+      "src/memdb.c::function::memdbDlClose::line-694",
+      "src/memdb.c::function::memdbDlError::line-680",
+      "src/memdb.c::function::memdbDlOpen::line-671",
+      "src/memdb.c::function::memdbDlSym::line-687",
+      "src/memdb.c::function::memdbEnter::line-195",
+      "src/memdb.c::function::memdbGetLastError::line-723",
+      "src/memdb.c::function::memdbLeave::line-198",
+      "src/memdb.c::function::memdbRandomness::line-702",
+      "src/memdb.c::function::memdbSleep::line-710",
+      "src/memdb.c::variable::memdb_g::line-100",
+      "src/memdb.c::variable::memdb_io_methods::line-162",
+      "src/memdb.c::variable::memdb_vfs::line-137",
+      "src/memdb.c::member::nMemStore::line-98",
+      "src/memdb.c::member::nMmap::line-76",
+      "src/memdb.c::member::nRdLock::line-78",
+      "src/memdb.c::member::nRef::line-80",
+      "src/memdb.c::member::nWrLock::line-79",
+      "src/memdb.c::member::pMutex::line-75",
+      "src/memdb.c::member::pStore::line-87",
+      "src/memdb.c::function::sqlite3IsMemdb::line-915",
+      "src/memdb.c::member::sz::line-71",
+      "src/memdb.c::member::szAlloc::line-72",
+      "src/memdb.c::member::szMax::line-73",
+      "src/memdb.c::member::zFName::line-81"
+    ],
+    "behavioral_block_ids": [
+      "src/memdb.c::function::memdbClose::behavior::if::line-212-column-3::ordinal-0",
+      "src/memdb.c::function::memdbClose::behavior::for::line-218-column-5::ordinal-0",
+      "src/memdb.c::function::memdbClose::behavior::if::line-219-column-7::ordinal-0",
+      "src/memdb.c::function::memdbClose::behavior::if::line-221-column-9::ordinal-0",
+      "src/memdb.c::function::memdbClose::behavior::if::line-223-column-11::ordinal-0",
+      "src/memdb.c::function::memdbClose::behavior::break::line-228-column-9::ordinal-0",
+      "src/memdb.c::function::memdbClose::behavior::if::line-236-column-3::ordinal-0",
+      "src/memdb.c::function::memdbClose::behavior::if::line-237-column-5::ordinal-0",
+      "src/memdb.c::function::memdbClose::behavior::return::line-246-column-3::ordinal-0",
+      "src/memdb.c::function::memdbRead::behavior::if::line-260-column-3::ordinal-0",
+      "src/memdb.c::function::memdbRead::behavior::if::line-262-column-5::ordinal-0",
+      "src/memdb.c::function::memdbRead::behavior::return::line-264-column-5::ordinal-0",
+      "src/memdb.c::function::memdbRead::behavior::return::line-268-column-3::ordinal-0",
+      "src/memdb.c::function::memdbEnlarge::behavior::if::line-276-column-3::ordinal-0",
+      "src/memdb.c::function::memdbEnlarge::behavior::return::line-277-column-5::ordinal-0",
+      "src/memdb.c::function::memdbEnlarge::behavior::if::line-279-column-3::ordinal-0",
+      "src/memdb.c::function::memdbEnlarge::behavior::return::line-280-column-5::ordinal-0",
+      "src/memdb.c::function::memdbEnlarge::behavior::if::line-283-column-3::ordinal-0",
+      "src/memdb.c::function::memdbEnlarge::behavior::if::line-285-column-3::ordinal-0",
+      "src/memdb.c::function::memdbEnlarge::behavior::return::line-285-column-17::ordinal-0",
+      "src/memdb.c::function::memdbEnlarge::behavior::return::line-288-column-3::ordinal-0",
+      "src/memdb.c::function::memdbWrite::behavior::if::line-302-column-3::ordinal-0",
+      "src/memdb.c::function::memdbWrite::behavior::return::line-306-column-5::ordinal-0",
+      "src/memdb.c::function::memdbWrite::behavior::if::line-308-column-3::ordinal-0",
+      "src/memdb.c::function::memdbWrite::behavior::if::line-310-column-5::ordinal-0",
+      "src/memdb.c::function::memdbWrite::behavior::return::line-314-column-7::ordinal-0",
+      "src/memdb.c::function::memdbWrite::behavior::if::line-316-column-5::ordinal-0",
+      "src/memdb.c::function::memdbWrite::behavior::return::line-321-column-3::ordinal-0",
+      "src/memdb.c::function::memdbTruncate::behavior::if::line-335-column-3::ordinal-0",
+      "src/memdb.c::function::memdbTruncate::behavior::return::line-342-column-3::ordinal-0",
+      "src/memdb.c::function::memdbSync::behavior::return::line-351-column-3::ordinal-0",
+      "src/memdb.c::function::memdbFileSize::behavior::return::line-362-column-3::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::if::line-372-column-3::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::return::line-372-column-29::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::assert::line-375-column-3::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::assert::line-376-column-3::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::assert::line-377-column-3::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::if::line-379-column-3::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::switch::line-382-column-5::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::case::line-383-column-7::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::assert::line-384-column-9::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::if::line-385-column-9::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::break::line-390-column-9::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::case::line-393-column-7::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::case::line-394-column-7::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::assert::line-395-column-9::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::if::line-396-column-9::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::if::line-397-column-11::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::break::line-403-column-9::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::default::line-406-column-7::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::assert::line-407-column-9::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::assert::line-408-column-9::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::if::line-409-column-9::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::if::line-411-column-15::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::break::line-414-column-9::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::if::line-418-column-3::ordinal-0",
+      "src/memdb.c::function::memdbLock::behavior::return::line-420-column-3::ordinal-0",
+      "src/memdb.c::function::memdbUnlock::behavior::if::line-429-column-3::ordinal-0",
+      "src/memdb.c::function::memdbUnlock::behavior::return::line-429-column-29::ordinal-0",
+      "src/memdb.c::function::memdbUnlock::behavior::assert::line-432-column-3::ordinal-0",
+      "src/memdb.c::function::memdbUnlock::behavior::if::line-433-column-3::ordinal-0",
+      "src/memdb.c::function::memdbUnlock::behavior::if::line-434-column-5::ordinal-0",
+      "src/memdb.c::function::memdbUnlock::behavior::if::line-438-column-5::ordinal-0",
+      "src/memdb.c::function::memdbUnlock::behavior::return::line-446-column-3::ordinal-0",
+      "src/memdb.c::function::memdbFileControl::behavior::if::line-468-column-3::ordinal-0",
+      "src/memdb.c::function::memdbFileControl::behavior::if::line-472-column-3::ordinal-0",
+      "src/memdb.c::function::memdbFileControl::behavior::if::line-474-column-5::ordinal-0",
+      "src/memdb.c::function::memdbFileControl::behavior::if::line-475-column-7::ordinal-0",
+      "src/memdb.c::function::memdbFileControl::behavior::return::line-486-column-3::ordinal-0",
+      "src/memdb.c::function::memdbDeviceCharacteristics::behavior::return::line-503-column-3::ordinal-0",
+      "src/memdb.c::function::memdbFetch::behavior::if::line-518-column-3::ordinal-0",
+      "src/memdb.c::function::memdbFetch::behavior::return::line-525-column-3::ordinal-0",
+      "src/memdb.c::function::memdbUnfetch::behavior::return::line-536-column-3::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::if::line-556-column-3::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::for::line-562-column-5::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::if::line-563-column-7::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::break::line-565-column-9::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::if::line-568-column-5::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::if::line-571-column-7::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::return::line-573-column-9::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::if::line-577-column-7::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::return::line-580-column-9::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::if::line-590-column-7::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::return::line-594-column-9::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::if::line-605-column-5::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::return::line-606-column-7::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::if::line-613-column-3::ordinal-0",
+      "src/memdb.c::function::memdbOpen::behavior::return::line-618-column-3::ordinal-0",
+      "src/memdb.c::function::memdbAccess::behavior::return::line-649-column-3::ordinal-0",
+      "src/memdb.c::function::memdbFullPathname::behavior::return::line-665-column-3::ordinal-0",
+      "src/memdb.c::function::memdbCurrentTimeInt64::behavior::return::line-727-column-3::ordinal-0",
+      "src/memdb.c::function::memdbDlOpen::behavior::return::line-672-column-3::ordinal-0",
+      "src/memdb.c::function::memdbDlSym::behavior::return::line-688-column-3::ordinal-0",
+      "src/memdb.c::function::memdbGetLastError::behavior::return::line-724-column-3::ordinal-0",
+      "src/memdb.c::function::memdbRandomness::behavior::return::line-703-column-3::ordinal-0",
+      "src/memdb.c::function::memdbSleep::behavior::return::line-711-column-3::ordinal-0",
+      "src/memdb.c::function::sqlite3IsMemdb::behavior::return::line-916-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "sqlite3_serialize/sqlite3_deserialize and memdbFromDbSchema schema lookup",
+      "Global maximum configuration API outside memdb.c",
+      "Inactive-profile omitted methods"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "os-unix-process-lifecycle-and-default-vfs",
+      "global-allocator-core-for-connection-growth",
+      "mutex-static-and-dynamic-allocation"
+    ],
+    "external_source_responsibilities": [
+      "sqlite3_serialize/sqlite3_deserialize store replacement and ownership flags remain separate units",
+      "Dynamic configured-mutex allocation identity and its allocation-site OOM matrix remain assurance work"
+    ],
+    "caller_closure": "Production memdb registration routes opens into MemoryVfs.initMemdb and source-shaped ABI tails. Shared/private lifetime, doubled growth and limits, file controls, byte I/O, reader/writer locking, rollback-only behavior, and process allocator ownership are integrated."
+  },
+  "contracts": {
+    "inputs": [
+      "Memdb VFS filename, open flags, file operation parameters, lock level, and byte ranges"
+    ],
+    "outputs": [
+      "Source-family result code, shared/private handle, copied bytes, size, lock transition, or nullable mapped pointer"
+    ],
+    "ownership": "Absolute names longer than one byte share a store until last close. Other names own a private store per handle. Handles borrow stores; last close destroys bytes/name/store.",
+    "state_and_results": "Shared opens reuse content; private opens do not. Reads zero-fill short tails. Writes grow contiguous bytes. Sync is a no-op. Truncate cannot grow. Ordinary resizable memdb fetch returns null. Lock upgrades preserve one writer and reader exclusion.",
+    "locks_callbacks_io": "No external I/O. Shared-name lookup/last-close publication and every MemStore operation are serialized with registry and per-store mutexes in source lock order; private stores use the same safe owner without registry publication.",
+    "failure_and_continuation": "Open allocation failure publishes no handle/store. Growth beyond szMax or while non-resizable/mapped returns FULL; allocation failure returns IOERR_NOMEM without size/content mutation. Busy lock attempts preserve prior levels; last-close cleanup permits fresh reopening."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/memdb.c::function::memdbClose::line-210",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::MemoryVfs.closeAndDestroy"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbRead::line-252",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::MemoryFile.read"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbEnlarge::line-274",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::MemoryFile.write"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbWrite::line-294",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::MemoryFile.write"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbTruncate::line-331",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::MemoryFile.truncate"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbSync::line-348",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::MemoryFile.sync"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbFileSize::line-357",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::MemoryFile.fileSize"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbLock::line-368",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::MemoryFile.lock"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbUnlock::line-426",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::MemoryFile.unlock"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbFileControl::line-464",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::axControl"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbDeviceCharacteristics::line-501",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::memdbDevice"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbFetch::line-510",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::MemoryFile.fetch",
+        "src/core/vfs.zig::function::memdbFetch"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbUnfetch::line-529",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::MemoryFile.unfetch",
+        "src/core/vfs.zig::function::memdbUnfetch"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbOpen::line-542",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::MemoryVfs.open",
+        "src/core/vfs.zig::function::memdbOpen"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbAccess::line-639",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::memdbAccess"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbFullPathname::line-657",
+      "relation": "source-memdb-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::memdbFull"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::struct::MemFS::line-97",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::constant::MemoryVfs"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::struct::MemFile::line-85",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::constant::MemoryFile"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::typedef::MemFile::line-26",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::constant::MemoryFile"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::struct::MemStore::line-70",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::constant::FileState"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::typedef::MemStore::line-27",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::constant::FileState"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::typedef::MemVfs::line-25",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::constant::sqlite3_vfs"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::macro::ORIGVFS::line-32",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::MemdbContext.original"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::aData::line-74",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.volatile_data"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::apMemStore::line-99",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::MemoryVfs.files"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::base::line-86",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::AbiFile.base"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::eLock::line-88",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::MemoryFile.lock_level"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::mFlags::line-77",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.memdb_resizable",
+        "src/core/vfs.zig::field::FileState.memdb_readonly"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbCurrentTimeInt64::line-726",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::memdbTime64"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbDlClose::line-694",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::memdbDlClose"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbDlError::line-680",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::memdbDlError"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbDlOpen::line-671",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::memdbDlOpen"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbDlSym::line-687",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::memdbDlSym"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbEnter::line-195",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.mutex"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbGetLastError::line-723",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::memdbLast"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbLeave::line-198",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.mutex"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbRandomness::line-702",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::memdbRandom"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::memdbSleep::line-710",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::memdbSleep"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::variable::memdb_g::line-100",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::MemoryVfs.files",
+        "src/core/vfs.zig::field::MemoryVfs.registry_mutex"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::variable::memdb_io_methods::line-162",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::constant::memdb_io_methods"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::variable::memdb_vfs::line-137",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::constant::MemdbAdapter"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::nMemStore::line-98",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::MemoryVfs.files"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::nMmap::line-76",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.memdb_mmap_count"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::nRdLock::line-78",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.memdb_read_locks"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::nRef::line-80",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.open_count"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::nWrLock::line-79",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.memdb_write_lock"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::pMutex::line-75",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.mutex"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::pStore::line-87",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::MemoryFile.state"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::sqlite3IsMemdb::line-915",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::function::isMemdbVfs"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::sz::line-71",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.volatile_data"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::szAlloc::line-72",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.volatile_data"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::szMax::line-73",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.size_max"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::member::zFName::line-81",
+      "relation": "source-memdb-state-or-delegated-method-to-native-memdb",
+      "zig_declaration_ids": [
+        "src/core/vfs.zig::field::FileState.name"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "MemStore fields are represented by FileState with an exact logical size, precise doubled allocation capacity, szMax, flags, mmap count, reader/writer counts, open count, and per-store mutex.",
+    "Source global shared-store array is represented by a mutex-protected string hash map; names, shared/private selection, references, lock order, publication and last-close outcomes are preserved.",
+    "Source configured dynamic mutex pointer is represented by an embedded native mutex; functional contention is exact but configured-mutex allocation identity/OOM remains assurance work.",
+    "FCNTL_VFSNAME uses the process memory Manager in production so sqlite3_free ownership is preserved; pointer spelling is normalized in the differential."
+  ],
+  "oracle": {
+    "protocol": "Compiled C and Zig workers compare a 38-field exact memdb trace across 24 isolated operation orderings: VFS/I/O versions and tails, OPEN_MEMORY, device flags, shared bytes, reader/writer upgrades and BUSY continuation, fetch, truncate/sync, doubled growth through size limits, FULL continuation, VFSNAME/access controls, private isolation, surviving references, and last-close fresh reopen. Native tests add exact capacity, allocator OOM, process-manager VFSNAME ownership, and eight-thread open/growth/close coverage.",
+    "internal_observations": [
+      "VFS v2/I/O v3 method tails and OPEN_MEMORY",
+      "shared/private store identity and last-close fresh reopen",
+      "read/write bytes, exact doubled capacity and short-read zeroing",
+      "reader/writer lock outcomes and prior-state continuation",
+      "rollback-only sync/truncate",
+      "szMax query/set, FULL and IOERR_NOMEM continuation",
+      "VFSNAME process allocation and access false",
+      "fetch null for ordinary resizable stores",
+      "eight-thread registry/store serialization"
+    ],
+    "normalization": "C and Zig store/pointer addresses are allocation identities. VFSNAME pointer spelling is normalized to its memdb prefix and size suffix; all names, bytes, capacities, limits, result codes, lock states, ABI tails, close continuation and allocator ownership are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": true,
+    "oom": "Exact growth allocation failure returns IOERR_NOMEM without mutation; open/store/handle rollback coverage passes. Configured dynamic-mutex allocation-site identity remains open.",
+    "io_crash_concurrency": "No disk/crash semantics. Registry plus per-store serialization passes eight-thread shared open, concurrent precise growth, byte integrity, lock, close and last-reference coverage.",
+    "malformed_input": "Negative fetch ranges, growth overflow, unknown/null controls, pathname categories, and size-limit boundaries are handled; deserialize-only flag combinations remain separate.",
+    "continuation": "Busy lock, short read, close/reopen, shared last-close and private isolation pass.",
+    "performance": "Hash lookup replaces source linear shared-store search. Contiguous bytes preserve exact doubled growth capped by szMax; locking remains constant per operation.",
+    "commands": [
+      "zig test src/core/vfs.zig -lc",
+      "zig test src/core/global.zig -lc",
+      "zig build test -j2"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/vfs.zig MemoryVfs memdb mode, MemdbContext, and MemdbAdapter",
+    "native_call_path": "global.initializeProcessOs registers process_mem_adapter; ABI xOpen routes to MemoryVfs.open with memdb_mode and publishes memdb_io_methods.",
+    "bounded_owner_retired": "The process memdb name no longer points at generic durable/crash/WAL MemoryVfs ABI semantics."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Internal trace equivalence is established for scoped file methods. Requires configured-mutex allocation-site review, deserialize boundary completion, assurance expansion, and independent review."
+  },
+  "known_blockers": [
+    "Configured dynamic-mutex allocation identity and exact mutex-allocation OOM site remain open.",
+    "Mapped-store creation is tracked by the scaffolded serialize/deserialize unit, which now adopts main-schema external buffers; attached schemas and complete differential assurance remain open there.",
+    "Independent review remains open."
+  ]
+}

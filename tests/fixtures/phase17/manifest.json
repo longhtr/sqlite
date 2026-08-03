@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "name": "phase17-bounded-api-regression",
+  "status": "bounded-regression-evidence",
+  "completion_claim": false,
+  "profile": "linux-core-public-api-v10",
+  "canonical_header_assertions": 166,
+  "exported_sqlite_symbols": 286,
+  "provisional_symbols_exercised": 281,
+  "scope": [
+    "selected connection, statement, value, blob, utility, callback, extension, virtual-table, backup, and WAL API examples"
+  ],
+  "warning": "Passing this corpus does not establish complete SQLite API semantics or complete Phase 17.",
+  "clients": [
+    "tests/api/phase17_connection_client.c"
+  ]
+}

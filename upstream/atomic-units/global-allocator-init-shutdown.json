@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "id": "global-allocator-init-shutdown",
+  "title": "Global allocator default-method selection, initialization, and shutdown",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These three functions select the pinned default mem1 backend, initialize allocator mutex/backend/page-cache configuration, clear mem0 on failure, and shut down/reset allocator state. They are the immediate lifecycle closure required before the global allocation core.",
+    "source_files": [
+      {
+        "path": "src/malloc.c",
+        "sha256": "19f728f9a323aec82906a3e1c5f0e656a308a6892136e58c5cfd0c6c3832c961"
+      },
+      {
+        "path": "src/mem1.c",
+        "sha256": "62e0fc49a1bf8b6e291952995a946065732ab014b6dba3d04b8fd904d824bdb7"
+      }
+    ],
+    "source_entity_ids": [
+      "src/malloc.c::function::sqlite3MallocInit::line-159",
+      "src/malloc.c::function::sqlite3MallocEnd::line-187",
+      "src/mem1.c::function::sqlite3MemSetDefault::line-277"
+    ],
+    "behavioral_block_ids": [
+      "src/malloc.c::function::sqlite3MallocInit::behavior::if::line-161-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3MallocInit::behavior::if::line-165-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3MallocInit::behavior::if::line-171-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3MallocInit::behavior::return::line-172-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3MallocEnd::behavior::if::line-188-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Top-level sqlite3_initialize/sqlite3_shutdown reference counting and recursion",
+      "sqlite3_config dispatch and configuration validation",
+      "Page-cache subsystem initialization beyond allocator-time pPage validation",
+      "Non-mem1 allocator backends from other build profiles"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "global-allocator-state-representations",
+      "global-status-primitives",
+      "pthread-mutex-enter-leave-core",
+      "mutex-static-and-dynamic-allocation",
+      "mutex-method-selection-and-lifecycle"
+    ],
+    "external_source_responsibilities": [
+      "Exact public sqlite3_mem_methods ABI-to-Backend configuration transport"
+    ],
+    "caller_closure": "Default backend selection and direct allocator init/end are assigned. Top-level lifecycle is assigned but scaffolded; static page-cache consumer and final memory-method configuration integration remain blocking."
+  },
+  "contracts": {
+    "inputs": [
+      "Pre-initialization configured allocator methods and static page-cache settings"
+    ],
+    "outputs": [
+      "Initialized allocator backend and mutex, or exact initialization result with mem0 cleared"
+    ],
+    "ownership": "Configured method context remains caller-owned. Allocator owns its mutex/state lifecycle and invokes xShutdown only after successful startup.",
+    "state_and_results": "Missing xMalloc selects mem1 defaults. Invalid static page-cache settings are zeroed. xInit result is returned; failure zeroes mem0. End invokes xShutdown if present then clears mem0.",
+    "locks_callbacks_io": "Allocates STATIC_MEM mutex and invokes configured xInit/xShutdown callbacks. No I/O.",
+    "failure_and_continuation": "Failed xInit leaves allocator-local limits/nearly-full/start state cleared and permits later reconfiguration/retry."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3MallocInit::line-159",
+      "relation": "one-to-one-lifecycle-or-default-backend-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::Manager.start"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3MallocEnd::line-187",
+      "relation": "one-to-one-lifecycle-or-default-backend-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::Manager.stop"
+      ]
+    },
+    {
+      "source_entity_id": "src/mem1.c::function::sqlite3MemSetDefault::line-277",
+      "relation": "one-to-one-lifecycle-or-default-backend-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::systemBackend"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Manager is constructed with systemBackend, so C nullable xMalloc/default-method selection is represented by a non-null default backend value.",
+    "Manager receives the shared process STATIC_MEM identity at start and clears its nullable mem0 mutex reference on initialization failure and shutdown.",
+    "Manager resets allocator-local limits/nearly-full state on init failure and shutdown and now preserves source static page-cache validation before xInit."
+  ],
+  "oracle": {
+    "protocol": "Infrastructure C/Zig differential compares default/configured backend initialization and shutdown counts, method-table copy behavior, repeated/shuffled lifecycle, allocation after init, and shutdown idempotence. Native tests inject backend init failure and verify allocator-local state clearing.",
+    "internal_observations": [
+      "default backend selection",
+      "xInit/xShutdown callback counts and order",
+      "startup result and started state",
+      "failure-state clearing",
+      "repeated stop/restart"
+    ],
+    "normalization": "Embedded versus allocated STATIC_MEM mutex address is ignored; callback sequence, results, and allocator state are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Injected initialization failure clears allocator-local state; mutex-allocation OOM integration remains open.",
+    "io_crash_concurrency": "No I/O. Top-level concurrent initialization and mutex lifecycle remain blocking.",
+    "malformed_input": "Null storage, sub-512 page size, and nonpositive page count clear pPage/szPage exactly; broader backend configuration validation remains open.",
+    "continuation": "Failure retry and repeated stop are tested natively; full sqlite3_initialize continuation is external.",
+    "performance": "Direct backend callbacks; final mutex allocation topology remains open.",
+    "commands": [
+      "zig test src/core/memory.zig -lc",
+      "zig build infrastructure-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/memory.zig Manager.start/stop and systemBackend",
+    "native_call_path": "global.process_coordinator exclusively starts/stops memory.process_manager; public APIs initialize through that coordinator and internal allocation paths use memory.processManager only after startup.",
+    "bounded_owner_retired": "Yes for production allocator lifecycle: the memory-only lazy-start and direct shutdown helpers were removed, and verify-config rejects their return. Final typed configuration and top-level lifecycle trace promotion remain separate dependencies."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Internal lifecycle traces pass; integration with final typed configuration/top-level lifecycle, assurance, and independent review remain."
+  },
+  "known_blockers": [
+    "Top-level sqlite3_initialize/shutdown now has exclusive production ownership, but its source-equivalent refcount/condition event trace and final typed memory-configuration API remain integration work.",
+    "Static page-cache configuration validation is trace-equivalent here, but the page-cache subsystem must consume the same configured owner before integration.",
+    "Independent fidelity review remains open."
+  ]
+}

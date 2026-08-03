@@ -1,0 +1,36 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-10-wal",
+  "profile": "sqlite-3.53.4-wal-full-4096-native-index-hybrid-unix-bridge",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 35,
+  "corpus": {"manifest": "tests/fixtures/wal/manifest.json", "fixture_count": 1, "page_size": 4096, "cross_process_vfs": "upstream-unix-vfs-public-abi-hybrid-bridge"},
+  "slices": {
+    "wal_read_and_recovery": {"status": "pass", "scope": ["header", "salts", "rolling checksums", "commit marks", "trailing-frame rejection", "latest-frame snapshot", "database-size snapshot"]},
+    "wal_write": {"status": "pass", "scope": ["header creation and sync", "frame append", "commit frame", "FULL sync", "change counter", "oracle-readable output"]},
+    "shared_memory_index": {"status": "pass", "scope": ["public xShmMap/xShmLock/xShmBarrier/xShmUnmap", "single writer", "shared readers", "exclusive checkpoint reset", "index publication", "delete and stale rebuild"]},
+    "checkpoint": {"status": "pass", "scope": ["latest committed frames", "database sync", "reader-safe conservative reset", "WAL truncate and sync", "continued reads and writes"]},
+    "crash_matrix": {"status": "pass", "events": 9, "scope": ["header write/sync", "frame header/page", "WAL sync commit point", "index publication", "checkpoint database write/sync", "WAL reset"]},
+    "oracle_interoperability": {"status": "pass", "command": "wal-differential + wal-unix-hybrid", "observations": 13, "scope": ["oracle WAL to Zig continuation", "Zig WAL to oracle read", "native crash recovery", "checkpoint", "shm deletion/rebuild", "stale index recovery"]},
+    "target_native_stress": {"status": "pass-local", "target": "aarch64-linux-gnu", "scope": ["16 sequential commits", "stable old reader", "new reader visibility", "writer exclusion", "checkpoint exclusion", "seq-cst barrier publication"]},
+    "fault_and_allocation": {"status": "pass", "scope": ["open", "read", "write", "truncate", "sync", "shm map", "shm lock", "rollback and retry"], "oom": "pass-bounded-one-shot"}
+  },
+  "phase_owned_deferrals": [
+    {"item": "complete native Unix cross-process VFS rerun", "owning_phase": "phase-15"},
+    {"item": "native Windows shared-memory/locking rerun", "owning_phase": "phase-16"},
+    {"item": "NORMAL/OFF synchronous modes, read-only WAL without shm, and advanced checkpoint modes", "owning_phase": "later-feature-expansion"},
+    {"item": "SQLite private wal-index binary layout interoperability (native index is rebuilt from WAL)", "owning_phase": "phase-15-cross-process-optimization"}
+  ],
+  "exit_gates": {
+    "approved_hybrid_cross_process_vfs": "pass",
+    "wal_crash_matrix": "pass",
+    "oracle_interoperability": "pass",
+    "memory_ordering_review_and_stress": "pass",
+    "index_delete_rebuild_stale_recovery": "pass",
+    "fault_and_allocation_ownership": "pass",
+    "source_mapping": "pass"
+  }
+}

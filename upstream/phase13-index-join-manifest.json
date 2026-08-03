@@ -1,0 +1,10 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version":1,"phase":"phase-13-index-join-slice","profile":"sqlite-3.53.4-covering-index-self-pk-join-v1","baseline_checkin":"bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc","status":"bounded-regression-evidence","mapped_entity_count":19,"public_symbol_count_added":0,"total_exported_sqlite_symbol_count":44,
+  "corpus":{"manifest":"tests/fixtures/sql-index-join/manifest.json","queries":2,"differential_observations":604},
+  "supported":["explicit INDEXED BY covering-index scan","index-record projection and order","same-table INTEGER PRIMARY KEY inner join using USING"],
+  "evidence":{"sql_api_oracle_differential":"pass-604-index-join-observations","oom_io":"retained-table-scan-and-index-btree-partitions","exports":"pass-exact-44-symbol-partition"},
+  "not_yet_complete":["cost-based index selection","general join graphs","outer joins","indexed generated DML","index DDL"],
+  "slice_exit_gates":{"native_tokenizer_to_vdbe_path":"pass","sql_api_oracle_differential":"pass","generated_program_diagnostics":"pass","oom_and_io":"pass"}
+}

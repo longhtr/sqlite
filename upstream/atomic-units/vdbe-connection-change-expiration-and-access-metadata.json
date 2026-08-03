@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-connection-change-expiration-and-access-metadata",
+  "title": "VDBE connection changes, statement expiration, and metadata access",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These source helpers are the small connection/statement metadata boundary: publish connection changes, opt a statement into change counting, expire all linked statements with immediate/advisory strength, expose db/preparation flags, and reset the step result. They operate on the same exact linked Vdbe state.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeSetChanges::line-5305",
+      "src/vdbeaux.c::function::sqlite3VdbeCountChanges::line-5315",
+      "src/vdbeaux.c::function::sqlite3ExpirePreparedStatements::line-5337",
+      "src/vdbeaux.c::function::sqlite3VdbeDb::line-5347",
+      "src/vdbeaux.c::function::sqlite3VdbePrepareFlags::line-5354",
+      "src/vdbeaux.c::function::sqlite3VdbeResetStepResult::line-3524"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeSetChanges::behavior::assert::line-5306-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3ExpirePreparedStatements::behavior::for::line-5339-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeDb::behavior::return::line-5348-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbePrepareFlags::behavior::return::line-5355-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Application-facing sqlite3_changes APIs",
+      "Schema-reprepare execution",
+      "VDBE reset/finalize lifecycle beyond rc reset",
+      "Connection mutex implementation"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-creation-connection-linkage-and-parse-ownership",
+      "vdbe-builder-state-representations",
+      "vdbe-saved-sql-and-reprepare-bytecode-swap"
+    ],
+    "external_source_responsibilities": [
+      "Caller holds connection mutex for change publication/expiration"
+    ],
+    "caller_closure": "All six active metadata functions are assigned; their exact fields and linked-list owners are covered by dependencies. Public APIs and reset/reprepare orchestration remain follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "connection/change delta, Vdbe, expiration code, or metadata accessor target"
+    ],
+    "outputs": [
+      "nChange assignment and nTotalChange accumulation; changeCntOn; every linked expired=code+1; db/prepFlags; rc=OK"
+    ],
+    "ownership": "No allocations or owner transitions. Expiration traverses but does not relink the connection Vdbe list.",
+    "state_and_results": "SetChanges replaces current nChange while adding to total. CountChanges is sticky true. Expiration code 0 maps to immediate 1 and code 1 to advisory 2.",
+    "locks_callbacks_io": "Caller holds connection mutex. No callback or I/O.",
+    "failure_and_continuation": "No failure/OOM path. ResetStepResult permits subsequent step/reset logic to observe OK."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeSetChanges::line-5305",
+      "relation": "source-connection-statement-metadata-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::setChanges"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeCountChanges::line-5315",
+      "relation": "source-connection-statement-metadata-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::countChanges"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3ExpirePreparedStatements::line-5337",
+      "relation": "source-connection-statement-metadata-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::expirePreparedStatements"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeDb::line-5347",
+      "relation": "source-connection-statement-metadata-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::database"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbePrepareFlags::line-5354",
+      "relation": "source-connection-statement-metadata-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::prepareFlags"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeResetStepResult::line-3524",
+      "relation": "source-connection-statement-metadata-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::resetStepResult"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Vdbe bitfields are exact packed Zig fields; all counters/results retain C integer widths."
+  ],
+  "oracle": {
+    "protocol": "The shared worker creates two linked VDBEs, publishes seven changes, enables change counting, applies immediate then advisory expiration to both nodes, checks database/preparation accessors, and resets SQLITE_INTERRUPT to OK in a 363-observation trace.",
+    "internal_observations": [
+      "current and total-change delta",
+      "changeCntOn bit",
+      "both linked expiration strengths",
+      "database pointer identity",
+      "prepare flag value",
+      "reset rc result"
+    ],
+    "normalization": "All counters, flags and results are exact; database pointer normalizes only to owner identity."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "No allocation or OOM behavior.",
+    "io_crash_concurrency": "No I/O/callback; mutex remains caller obligation.",
+    "malformed_input": "Source expects valid connection/list and expiration code convention; worker uses exact owners and both documented codes.",
+    "continuation": "Metadata remains valid through later swap/delete cleanup; expiration does not mutate links.",
+    "performance": "Constant-time accessors/updates and one linear statement-list traversal.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding metadata helpers",
+    "native_call_path": "Symbolic worker uses exact two-node connection list. Public change/reprepare/reset callers remain partially handwritten.",
+    "bounded_owner_retired": "No. Integrate public/reset/reprepare callers."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires production caller integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Integrate public changes, reset, and expiration callers.",
+    "Complete P4-aware reset/destruction lifecycle.",
+    "Independent fidelity review remains open."
+  ]
+}

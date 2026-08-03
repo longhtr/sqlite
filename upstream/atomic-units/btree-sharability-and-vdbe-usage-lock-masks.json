@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "id": "btree-sharability-and-vdbe-usage-lock-masks",
+  "title": "Btree sharability and VDBE database-usage/shared-cache lock masks",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeSharable and sqlite3VdbeUsesBtree establish the prepared-statement database-use mask and the shared-cache lock subset. Exact Btree/BtLock layout is required because sharability is a source field rather than a delegated API property.",
+    "source_files": [
+      {
+        "path": "src/btree.c",
+        "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"
+      },
+      {
+        "path": "src/btreeInt.h",
+        "sha256": "ff5fe8e9b8ff6a209ec93b2448d70de11ad1514b1dfe5c74741169f17b09e527"
+      },
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/btree.c::function::sqlite3BtreeSharable::line-11576",
+      "src/vdbeaux.c::function::sqlite3VdbeUsesBtree::line-2035",
+      "src/btreeInt.h::member::db::line-346",
+      "src/btreeInt.h::member::eLock::line-316",
+      "src/btreeInt.h::member::hasIncrblobCur::line-351",
+      "src/btreeInt.h::member::iBDataVersion::line-354",
+      "src/btreeInt.h::member::iTable::line-315",
+      "src/btreeInt.h::member::inTrans::line-348",
+      "src/btreeInt.h::member::lock::line-361",
+      "src/btreeInt.h::member::locked::line-350",
+      "src/btreeInt.h::member::nBackup::line-353",
+      "src/btreeInt.h::member::pBt::line-347",
+      "src/btreeInt.h::member::pBtree::line-314",
+      "src/btreeInt.h::member::pNext::line-317",
+      "src/btreeInt.h::member::pNext::line-355",
+      "src/btreeInt.h::member::pPrev::line-356",
+      "src/btreeInt.h::member::sharable::line-349",
+      "src/btreeInt.h::member::wantToLock::line-352"
+    ],
+    "behavioral_block_ids": [
+      "src/btree.c::function::sqlite3BtreeSharable::behavior::return::line-11577-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeUsesBtree::behavior::assert::line-2036-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeUsesBtree::behavior::assert::line-2037-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeUsesBtree::behavior::if::line-2039-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Btree enter/leave and shared-cache lock acquisition",
+      "BtShared lifecycle and transaction state",
+      "ParseSchema operation generation",
+      "Statement lock release"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-builder-state-representations",
+      "vdbe-final-label-fixup-and-program-flags"
+    ],
+    "external_source_responsibilities": [
+      "Exact sqlite3.aDb/nDb and Db.pBt owners already represented"
+    ],
+    "caller_closure": "Both active functions and every active-profile field of Btree/BtLock are assigned. Shared-cache mutex/lock execution and code-generator callers remain separate."
+  },
+  "contracts": {
+    "inputs": [
+      "live Btree for direct sharability read; Vdbe with valid database index and live Db.pBt"
+    ],
+    "outputs": [
+      "0/nonzero sharable result; cumulative btreeMask and lockMask"
+    ],
+    "ownership": "No allocation or ownership transfer. Btree, Db array, and Vdbe remain caller/connection-owned.",
+    "state_and_results": "Every valid index sets btreeMask. lockMask is set only for non-TEMP indexes whose Btree.sharable is nonzero. Existing mask bits remain set.",
+    "locks_callbacks_io": "No callback or I/O. This records future lock requirements; it does not acquire locks. Caller connection mutex remains an integration obligation.",
+    "failure_and_continuation": "No failure result or allocation. Inputs are source-asserted to fit DbMask and connection nDb."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeSharable::line-11576",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_aux.zig::function::sharable"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeUsesBtree::line-2035",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::usesBtree"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::db::line-346",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Btree.db"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::eLock::line-316",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::BtLock.eLock"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::hasIncrblobCur::line-351",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Btree.hasIncrblobCur"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::iBDataVersion::line-354",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Btree.iBDataVersion"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::iTable::line-315",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::BtLock.iTable"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::inTrans::line-348",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Btree.inTrans"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::lock::line-361",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Btree.lock"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::locked::line-350",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Btree.locked"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::nBackup::line-353",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Btree.nBackup"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::pBt::line-347",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Btree.pBt"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::pBtree::line-314",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::BtLock.pBtree"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::pNext::line-317",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::BtLock.pNext"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::pNext::line-355",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Btree.pNext"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::pPrev::line-356",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Btree.pPrev"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::sharable::line-349",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Btree.sharable"
+      ]
+    },
+    {
+      "source_entity_id": "src/btreeInt.h::member::wantToLock::line-352",
+      "relation": "source-btree-sharability-or-usage-mask-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Btree.wantToLock"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "BtShared remains opaque because these functions do not dereference it; Btree and embedded BtLock preserve exact active-profile size, alignment, field order, and offsets.",
+    "C DbMaskSet expands to the equivalent typed u32 shift/or in Zig."
+  ],
+  "oracle": {
+    "protocol": "The shared worker packages three Db/Btree slots, marks main and TEMP sharable and a third database private, then calls the direct accessor and cumulative Vdbe usage function. Exact layouts are independently probed and C/Zig compare 363 observations.",
+    "internal_observations": [
+      "direct sharable byte result",
+      "cumulative btreeMask",
+      "TEMP exclusion from lockMask",
+      "shared main inclusion",
+      "private database exclusion"
+    ],
+    "normalization": "All index, sharable, and mask values are exact; pointers are not compared."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "No allocation and no OOM branch.",
+    "io_crash_concurrency": "No I/O/callback; lock acquisition and mutex behavior remain integration work.",
+    "malformed_input": "Source assertions require 0<=i<nDb and mask-width fit; worker exercises valid main/TEMP/attached indices.",
+    "continuation": "Repeated calls preserve prior bits and correctly accumulate later database usage.",
+    "performance": "One field read and constant-time mask updates preserve source shape.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test",
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/btree_aux.zig and src/core/internal/vdbe_aux.zig",
+    "native_call_path": "Symbolic worker reaches exact Btree/BtLock/Db/Vdbe owners. Parser and runtime shared-cache lock callers remain handwritten.",
+    "bounded_owner_retired": "No. Integrate ParseSchema and VDBE enter/leave lock paths."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires shared-cache call-path integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Connect source compiler database-use call sites.",
+    "Integrate shared-cache lock acquisition/release.",
+    "Independent fidelity review remains open."
+  ]
+}

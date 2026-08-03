@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-immediate-and-deferred-foreign-key-commit-guards",
+  "title": "VDBE immediate and deferred foreign-key commit guards",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These guards convert outstanding immediate or connection-deferred foreign-key counts into the exact VDBE constraint state, abort policy, fixed error message, and prepare-mode-dependent return code used by halt/commit.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::vdbeFkError::line-3284",
+      "src/vdbeaux.c::function::sqlite3VdbeCheckFkImmediate::line-3291",
+      "src/vdbeaux.c::function::sqlite3VdbeCheckFkDeferred::line-3295"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::vdbeFkError::behavior::if::line-3288-column-3::ordinal-0",
+      "src/vdbeaux.c::function::vdbeFkError::behavior::return::line-3288-column-52::ordinal-0",
+      "src/vdbeaux.c::function::vdbeFkError::behavior::return::line-3289-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCheckFkImmediate::behavior::if::line-3292-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCheckFkImmediate::behavior::return::line-3292-column-29::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCheckFkImmediate::behavior::return::line-3293-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCheckFkDeferred::behavior::if::line-3297-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCheckFkDeferred::behavior::return::line-3297-column-53::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCheckFkDeferred::behavior::return::line-3298-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Foreign-key constraint counting and mutation",
+      "VDBE halt/transaction commit",
+      "General variadic sqlite3VdbeError formatting",
+      "Public extended-result-code policy"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "connection-allocation-for-vdbe-growth",
+      "vdbe-saved-sql-and-reprepare-bytecode-swap"
+    ],
+    "external_source_responsibilities": [
+      "Connection-owned fixed-message duplication is the no-format-specifier specialization of sqlite3VdbeError"
+    ],
+    "caller_closure": "The private error transition and both active immediate/deferred guards are assigned. Constraint producers and halt callers remain integration work."
+  },
+  "contracts": {
+    "inputs": [
+      "Vdbe nFkConstraint, connection nDeferredCons/nDeferredImmCons, and prepare flags"
+    ],
+    "outputs": [
+      "SQLITE_OK with no mutation when selected counts are zero; otherwise error/extended constraint return and Vdbe error state"
+    ],
+    "ownership": "On violation, any prior Vdbe.zErrMsg is consumed and replaced by a connection-owned fixed message, or null on OOM.",
+    "state_and_results": "Violation always sets rc=SQLITE_CONSTRAINT_FOREIGNKEY and errorAction=OE_Abort. Return is SQLITE_ERROR unless SQLITE_PREPARE_SAVESQL is set, then the extended constraint code.",
+    "locks_callbacks_io": "No callback or I/O; caller holds connection mutex.",
+    "failure_and_continuation": "Message allocation OOM sets sticky connection OOM but preserves the source rc/action and prepare-dependent return. Zero-count guards preserve all prior Vdbe error state."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::vdbeFkError::line-3284",
+      "relation": "source-foreign-key-commit-guard-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::foreignKeyError"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeCheckFkImmediate::line-3291",
+      "relation": "source-foreign-key-commit-guard-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::checkForeignKeyImmediate"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeCheckFkDeferred::line-3295",
+      "relation": "source-foreign-key-commit-guard-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::checkForeignKeyDeferred"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The fixed no-format-argument sqlite3VdbeError call is specialized to exact connection string duplication; resulting bytes, ownership, replacement, and OOM behavior are unchanged."
+  ],
+  "oracle": {
+    "protocol": "The shared worker seeds prior rc/action/message state, exercises zero/nonzero immediate and deferred counts with and without SQLITE_PREPARE_SAVESQL, then disables lookaside and forces fixed-message allocation OOM. C and Zig compare 363 observations.",
+    "internal_observations": [
+      "zero-count no-mutation",
+      "immediate count selection",
+      "sum of deferred and deferred-immediate counts",
+      "constraint rc and abort action",
+      "generic versus extended return",
+      "fixed message bytes",
+      "prior-message replacement",
+      "sticky OOM with null message"
+    ],
+    "normalization": "Return codes, rc, action, prepare flags, message bytes/nullness, and OOM state are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Deterministic no-lookaside message-allocation failure preserves rc/action/return while publishing null and sticky OOM.",
+    "io_crash_concurrency": "No I/O/callback; caller mutex remains integration obligation.",
+    "malformed_input": "Counters are source i64 values; zero and positive representative states are covered. Negative counters are forbidden by their external owners.",
+    "continuation": "No-violation paths preserve seeded state; all violation paths remain safe for subsequent halt/error transfer.",
+    "performance": "Constant-time count checks and one allocation only on violation preserve source shape.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig halt/constraint helpers",
+    "native_call_path": "Symbolic worker reaches exact Vdbe/Sqlite3 counters and connection allocator. VDBE halt and FK producer call paths remain handwritten.",
+    "bounded_owner_retired": "No. Integrate constraint producers and sqlite3VdbeHalt."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires halt-path integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Integrate source FK counter producers.",
+    "Connect sqlite3VdbeHalt transaction path.",
+    "Independent fidelity review remains open."
+  ]
+}

@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "id": "pcache-static-slot-allocation-and-free",
+  "title": "PCache bulk/static/heap page allocation, free, and status accounting",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These functions initialize per-cache bulk pages, allocate page objects from bulk-local storage or configured process slots before one contiguous Manager fallback, classify static versus heap pressure, update source status slots, and return or release each storage class in source order.",
+    "source_files": [
+      {
+        "path": "src/pcache1.c",
+        "sha256": "b5bfbbac157325f96f0023c0856533cd6ce94180bcbbd1d4069e5a60a242de3d"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pcache1.c::function::pcache1Alloc::line-343",
+      "src/pcache1.c::function::pcache1Free::line-381",
+      "src/pcache1.c::function::sqlite3PageMalloc::line-491",
+      "src/pcache1.c::function::sqlite3PageFree::line-499",
+      "src/pcache1.c::function::pcache1InitBulk::line-297",
+      "src/pcache1.c::function::pcache1AllocPage::line-431",
+      "src/pcache1.c::function::pcache1FreePage::line-472",
+      "src/pcache1.c::function::pcache1UnderMemoryPressure::line-520",
+      "src/pcache1.c::typedef::PgFreeslot::line-88",
+      "src/pcache1.c::member::isBulkLocal::line-120",
+      "src/pcache1.c::member::pBulk::line-202",
+      "src/pcache1.c::member::pFree::line-201"
+    ],
+    "behavioral_block_ids": [
+      "src/pcache1.c::function::pcache1Alloc::behavior::assert::line-345-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Alloc::behavior::if::line-346-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Alloc::behavior::if::line-349-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1Alloc::behavior::assert::line-353-column-7::ordinal-0",
+      "src/pcache1.c::function::pcache1Alloc::behavior::if::line-359-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Alloc::behavior::if::line-365-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1Alloc::behavior::return::line-375-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Free::behavior::if::line-382-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Free::behavior::return::line-382-column-14::ordinal-0",
+      "src/pcache1.c::function::pcache1Free::behavior::if::line-383-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Free::behavior::assert::line-392-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1Free::behavior::assert::line-395-column-5::ordinal-0",
+      "src/pcache1.c::function::sqlite3PageMalloc::behavior::assert::line-492-column-3::ordinal-0",
+      "src/pcache1.c::function::sqlite3PageMalloc::behavior::return::line-493-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1InitBulk::behavior::if::line-300-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1InitBulk::behavior::return::line-300-column-30::ordinal-0",
+      "src/pcache1.c::function::pcache1InitBulk::behavior::if::line-302-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1InitBulk::behavior::return::line-302-column-24::ordinal-0",
+      "src/pcache1.c::function::pcache1InitBulk::behavior::if::line-304-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1InitBulk::behavior::if::line-309-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1InitBulk::behavior::if::line-312-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1InitBulk::behavior::if::line-315-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1InitBulk::behavior::do::line-317-column-7::ordinal-0",
+      "src/pcache1.c::function::pcache1InitBulk::behavior::assert::line-321-column-9::ordinal-0",
+      "src/pcache1.c::function::pcache1InitBulk::behavior::return::line-331-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1AllocPage::behavior::assert::line-435-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1AllocPage::behavior::if::line-436-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1AllocPage::behavior::assert::line-437-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1AllocPage::behavior::if::line-450-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1AllocPage::behavior::if::line-452-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1AllocPage::behavior::if::line-456-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1AllocPage::behavior::return::line-456-column-18::ordinal-0",
+      "src/pcache1.c::function::pcache1AllocPage::behavior::assert::line-460-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1AllocPage::behavior::return::line-466-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FreePage::behavior::assert::line-474-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FreePage::behavior::assert::line-476-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FreePage::behavior::if::line-477-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1UnderMemoryPressure::behavior::if::line-521-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1UnderMemoryPressure::behavior::return::line-522-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1UnderMemoryPressure::behavior::return::line-524-column-5::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "PGroup-wide LRU and purgeable-page accounting",
+      "Memory-debug type tagging"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "pcache-process-lifecycle-and-static-buffer",
+      "global-status-primitives",
+      "global-allocator-core-for-connection-growth",
+      "pthread-mutex-enter-leave-core"
+    ],
+    "external_source_responsibilities": [],
+    "caller_closure": "Production Cache creation and destruction route through bulk-local, static-slot, and process-Manager heap branches. Direct Lifecycle.pageMalloc/pageFree use the same static and Manager primitives."
+  },
+  "contracts": {
+    "inputs": [
+      "Requested contiguous page/header/extra size, per-cache maximum, signed nInitPage configuration, and initialized process PCache lifecycle"
+    ],
+    "outputs": [
+      "Eight-byte-aligned static slot when eligible/available, otherwise one rounded contiguous heap allocation, or null/OOM"
+    ],
+    "ownership": "Bulk storage is one Manager allocation owned by Cache and split into cache-local pages returned to its free list; static slots are borrowed from Lifecycle; ordinary heap ownership transfers to Cache. Every class is returned or freed exactly once.",
+    "state_and_results": "On an empty cache with nMax>=3, positive nInitPage selects a page count and negative nInitPage selects KiB, capped by nMax. Bulk-local pages precede process slots. Static pop/push updates free count/pressure/PAGECACHE_USED; ordinary fallback updates PAGECACHE_OVERFLOW; successful process allocations update MEMORY_USED. Pressure selects the static-pool flag only when configured slots can fit page-plus-extra; otherwise it selects Manager heap-nearly-full state.",
+    "locks_callbacks_io": "STATIC_PMEM serializes global free slots, static pressure, and PCache status. STATIC_MEM serializes Manager allocation and heap-nearly-full state. No I/O; benign bulk allocation has no externally visible callback.",
+    "failure_and_continuation": "Bulk allocation is benign: OOM continues into ordinary page allocation. Static exhaustion falls back to Manager heap. Heap/hash OOM restores popped or allocated ownership and later fetch continues."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Alloc::line-343",
+      "relation": "source-allocation-to-lifecycle-and-cache-transport",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Lifecycle.allocateSlot",
+        "src/core/page_cache.zig::function::Lifecycle.allocateOverflow",
+        "src/core/page_cache.zig::function::Cache.createPage"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Free::line-381",
+      "relation": "source-allocation-to-lifecycle-and-cache-transport",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Lifecycle.freeSlot",
+        "src/core/page_cache.zig::function::Lifecycle.freeOverflow",
+        "src/core/page_cache.zig::function::Cache.destroyPage"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::sqlite3PageMalloc::line-491",
+      "relation": "source-allocation-to-lifecycle-and-cache-transport",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Lifecycle.pageMalloc"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::sqlite3PageFree::line-499",
+      "relation": "source-allocation-to-lifecycle-and-cache-transport",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Lifecycle.pageFree"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1InitBulk::line-297",
+      "relation": "source-bulk-initialization-to-cache-local-pool",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.initializeBulk",
+        "src/core/page_cache.zig::function::Cache.releaseBulk"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1AllocPage::line-431",
+      "relation": "source-page-allocation-to-cache-storage-selection",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.initializeBulk",
+        "src/core/page_cache.zig::function::Cache.createPage"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1FreePage::line-472",
+      "relation": "source-page-free-to-cache-storage-return",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.destroyPage",
+        "src/core/page_cache.zig::function::Cache.releaseBulk"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1UnderMemoryPressure::line-520",
+      "relation": "source-pressure-selector-to-static-or-heap-owner",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Lifecycle.underMemoryPressure",
+        "src/core/memory.zig::function::Manager.heapNearlyFull",
+        "src/core/page_cache.zig::function::Cache.underMemoryPressure"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::typedef::PgFreeslot::line-88",
+      "relation": "source-page-allocation-state-to-native-owner",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::FreeSlot"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::isBulkLocal::line-120",
+      "relation": "source-page-allocation-state-to-native-owner",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Page.bulk_local"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::pBulk::line-202",
+      "relation": "source-page-allocation-state-to-native-owner",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Cache.bulk_pointer"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::pFree::line-201",
+      "relation": "source-page-allocation-state-to-native-owner",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Cache.bulk_free"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Source PgHdr1 and higher PgHdr layers are adjacent C records; Zig Page is placed at an aligned offset in the same bulk/static/heap chunk and records its storage class explicitly.",
+    "Cache-local free pages use Page.bulk_next instead of PgHdr1.pNext; the single bulk allocation and chunk arithmetic, precedence, cap, and release behavior are preserved.",
+    "Lifecycle.pageMalloc/pageFree provide direct utility transport; production Cache uses the same static and Manager-backed primitives.",
+    "MEMTYPE_PCACHE debug tags are represented by explicit bulk_local/static_slot/process_heap ownership fields.",
+    "Source compares szPage+szExtra before selecting static pressure; Cache passes native page_size+extra_size while its Zig Page metadata remains outside that comparison."
+  ],
+  "oracle": {
+    "protocol": "The C/Zig PCache differential's first 782 scope observations include two-slot static exhaustion/restoration and static-versus-heap pressure selection, three-page bulk precedence, ordinary overflow, and shrink release. Native tests cover positive page-count mode, negative KiB mode, nMax cap, benign bulk OOM fallback, sticky ordinary OOM, status restoration, and sixteen concurrent direct allocations.",
+    "internal_observations": [
+      "static eligibility and pop order",
+      "slot exhaustion and pressure",
+      "one contiguous heap fallback",
+      "rounded overflow bytes",
+      "PAGECACHE_USED/OVERFLOW/SIZE",
+      "hash insertion OOM rollback",
+      "free range classification and restoration",
+      "positive and negative nInitPage arithmetic",
+      "nMax bulk cap",
+      "bulk-local page precedence and reuse",
+      "benign bulk OOM then ordinary fallback",
+      "single-allocation bulk release",
+      "static-capacity versus heap pressure selection",
+      "soft-create pressure rejection and clean-page recycling"
+    ],
+    "normalization": "Heap/static addresses are allocation identities; counts, ranges, rounded sizes, status values, ownership, results, and event order are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": true,
+    "oom": "One-shot bulk OOM is benign and falls through to ordinary Manager allocation; sticky process OOM leaves Memory/PCache status and Cache ownership unchanged; hash rollback is leak-free.",
+    "io_crash_concurrency": "No I/O. STATIC_PMEM protects slot pressure and STATIC_MEM protects heap pressure; sixteen-thread allocation restoration passes and exact C/Zig pressure selection is differential-tested.",
+    "malformed_input": "Oversized requests bypass static slots; lifecycle manager validates static configuration.",
+    "continuation": "Bulk OOM fallback, static return, ordinary OOM, clear/reuse, shrink release, and subsequent fetch are tested.",
+    "performance": "Bulk initialization is one allocation plus one linear chunk-link pass; bulk/static pop and push are constant-time; ordinary fallback is one Manager allocation.",
+    "commands": [
+      "zig test src/core/page_cache.zig -lc",
+      "zig build pcache-differential",
+      "zig build test -j2"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/page_cache.zig Lifecycle plus Cache contiguous page storage",
+    "native_call_path": "Pager.open uses Cache.initWithLifecycle(activeProcessLifecycle); first fetch applies signed initial_pages bulk policy before static-slot and ordinary Manager allocation.",
+    "bounded_owner_retired": "Cache no longer ignores nInitPage, configured slots, process Manager, or source storage precedence, and no longer performs three heap allocations per ordinary page."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires independent review of chunk layout representation, the explicit PGroup dependency boundary, exact status/ownership traces, and concurrent behavior."
+  },
+  "known_blockers": [
+    "PGroup-wide cross-cache LRU, purgeable counters, and source-shaped hash buckets are integrated in a separate scaffolded unit pending exact object-allocation and upper-cache coupling.",
+    "Independent fidelity review remains open."
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "id": "mutex-method-selection-and-lifecycle",
+  "title": "Configured/default/no-op mutex method selection and lifecycle",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These functions select configured, pthread, or no-op mutex methods, publish allocation last across a memory barrier, invoke xMutexInit/xMutexEnd, and expose the profile concrete method tables.",
+    "source_files": [
+      {
+        "path": "src/mutex.c",
+        "sha256": "34f26fdcd49753d421b56c5cecff8bcca94f375f7b179b854f11d3b5654bff6b"
+      },
+      {
+        "path": "src/mutex_unix.c",
+        "sha256": "f9a625d7e71f9d64c772409df2c2f437a40960ad43c8bc8c429fd786b8918415"
+      },
+      {
+        "path": "src/mutex_noop.c",
+        "sha256": "9810c814f82605fa1b5ca805fdb661bc54d13ec0264fce4eab9262740abf5bd1"
+      }
+    ],
+    "source_entity_ids": [
+      "src/mutex.c::function::sqlite3MutexInit::line-228",
+      "src/mutex.c::function::sqlite3MutexEnd::line-274",
+      "src/mutex_unix.c::function::sqlite3MemoryBarrier::line-91",
+      "src/mutex_unix.c::function::pthreadMutexInit::line-102",
+      "src/mutex_unix.c::function::pthreadMutexEnd::line-103",
+      "src/mutex_unix.c::function::sqlite3DefaultMutex::line-373",
+      "src/mutex_noop.c::function::noopMutexInit::line-38",
+      "src/mutex_noop.c::function::noopMutexEnd::line-39",
+      "src/mutex_noop.c::function::sqlite3NoopMutex::line-52"
+    ],
+    "behavioral_block_ids": [
+      "src/mutex.c::function::sqlite3MutexInit::behavior::if::line-230-column-3::ordinal-0",
+      "src/mutex.c::function::sqlite3MutexInit::behavior::if::line-239-column-5::ordinal-0",
+      "src/mutex.c::function::sqlite3MutexInit::behavior::assert::line-259-column-3::ordinal-0",
+      "src/mutex.c::function::sqlite3MutexInit::behavior::return::line-267-column-3::ordinal-0",
+      "src/mutex.c::function::sqlite3MutexEnd::behavior::if::line-276-column-3::ordinal-0",
+      "src/mutex.c::function::sqlite3MutexEnd::behavior::return::line-284-column-3::ordinal-0",
+      "src/mutex_noop.c::function::noopMutexInit::behavior::return::line-38-column-33::ordinal-0",
+      "src/mutex_noop.c::function::noopMutexEnd::behavior::return::line-39-column-32::ordinal-0",
+      "src/mutex_noop.c::function::sqlite3NoopMutex::behavior::return::line-66-column-3::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexInit::behavior::return::line-102-column-36::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexEnd::behavior::return::line-103-column-35::ordinal-0",
+      "src/mutex_unix.c::function::sqlite3DefaultMutex::behavior::return::line-391-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "sqlite3_initialize top-level orchestration",
+      "Individual mutex allocation/free/enter/try/leave operations",
+      "Debug THREAD_MISUSE_WARNINGS wrapper methods",
+      "Windows mutex implementation"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "pthread-mutex-enter-leave-core"
+    ],
+    "external_source_responsibilities": [],
+    "caller_closure": "Default pthread, single-thread no-op, and configured method lifecycle paths are assigned through process/local Subsystem owners."
+  },
+  "contracts": {
+    "inputs": [
+      "Core-mutex mode and optional copied sqlite3_mutex_methods before initialization"
+    ],
+    "outputs": [
+      "Initialized selected method owner or exact xMutexInit failure; matching xMutexEnd result at shutdown"
+    ],
+    "ownership": "Subsystem owns a copied method table; configured callback context/pointers remain configurator-owned. Process static native mutexes remain process-owned.",
+    "state_and_results": "Configured methods take precedence. Otherwise core mode selects pthread and single-thread selects no-op. Allocation publication follows a full memory barrier. Failed xMutexInit leaves subsystem uninitialized.",
+    "locks_callbacks_io": "Invokes xMutexInit/xMutexEnd without holding a returned SQLite mutex. Sequentially consistent publication barriers protect method visibility. No I/O.",
+    "failure_and_continuation": "Initialization callback failure propagates unchanged and permits reconfiguration/retry; end result propagates after state is cleared."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/mutex.c::function::sqlite3MutexInit::line-228",
+      "relation": "one-to-one-lifecycle-or-method-selection",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::Subsystem.startLifecycle"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex.c::function::sqlite3MutexEnd::line-274",
+      "relation": "one-to-one-lifecycle-or-method-selection",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::Subsystem.stopLifecycle"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_unix.c::function::sqlite3MemoryBarrier::line-91",
+      "relation": "one-to-one-lifecycle-or-method-selection",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::memoryBarrier"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_unix.c::function::pthreadMutexInit::line-102",
+      "relation": "one-to-one-lifecycle-or-method-selection",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::pthreadInit"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_unix.c::function::pthreadMutexEnd::line-103",
+      "relation": "one-to-one-lifecycle-or-method-selection",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::pthreadEnd"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_unix.c::function::sqlite3DefaultMutex::line-373",
+      "relation": "one-to-one-lifecycle-or-method-selection",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::Subsystem.startLifecycle"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_noop.c::function::noopMutexInit::line-38",
+      "relation": "one-to-one-lifecycle-or-method-selection",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::noopInit"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_noop.c::function::noopMutexEnd::line-39",
+      "relation": "one-to-one-lifecycle-or-method-selection",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::noopEnd"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_noop.c::function::sqlite3NoopMutex::line-52",
+      "relation": "one-to-one-lifecycle-or-method-selection",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::noopMethods"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C copies nine callback fields into sqlite3GlobalConfig and publishes xMutexAlloc last; Zig copies the complete MutexMethods value into MethodsAdapter before sequentially consistent publication.",
+    "The GCC __sync_synchronize barrier is represented by a seq_cst atomic RMW barrier token.",
+    "Default concrete methods are direct native Subsystem operations instead of an ABI method-table roundtrip; configured methods retain callback transport exactly."
+  ],
+  "oracle": {
+    "protocol": "Infrastructure C/Zig differential compares copied configured method callbacks, init/end counts, allocation and enter/try/leave routing, single/multi/serialized mode transitions, 100 lifecycle cycles, and an eight-thread init race. Native Coordinator test proves configured methods provide allocator STATIC_MEM and public dynamic transport.",
+    "internal_observations": [
+      "configured method copy survives caller mutation",
+      "xMutexInit/xMutexEnd count and result",
+      "default pthread versus no-op selection",
+      "allocation publication before use",
+      "configured STATIC_MEM used by memory Manager",
+      "failure leaves lifecycle retryable"
+    ],
+    "normalization": "Method-table/global addresses and barrier implementation bytes are ignored; callbacks, results, publication order, and lifecycle state are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "No allocation by lifecycle itself; configured callback failure and dynamic mutex OOM are covered in dependencies.",
+    "io_crash_concurrency": "No I/O. Publication uses seq_cst ordering and concurrent initialization is tested; formal weak-memory review remains open.",
+    "malformed_input": "Missing configured callbacks remain a configuration precondition; default tables are complete.",
+    "continuation": "Init failure/retry, repeated init, and idempotent shutdown are tested.",
+    "performance": "Default path avoids callback indirection after selection; barrier count follows source publication boundaries.",
+    "commands": [
+      "zig test src/core/global.zig -lc",
+      "zig test src/core/mutex.zig -lc",
+      "zig build infrastructure-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/mutex.zig Subsystem configured_methods and lifecycle methods",
+    "native_call_path": "global.process_coordinator starts selected mutex methods before memory and uses configured STATIC_MEM for Manager.lock; public mutex operations dispatch through the same process subsystem.",
+    "bounded_owner_retired": "Separate MethodsAdapter-only evidence is now integrated into Subsystem and production Coordinator lifecycle."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Must verify callback completeness/preconditions, publication ordering, failure retry, modes, and weak-memory semantics."
+  },
+  "known_blockers": [
+    "A typed process configuration function is exposed; consolidation into the final coherent configuration API domain remains open.",
+    "Independent weak-memory/concurrency review is pending."
+  ]
+}

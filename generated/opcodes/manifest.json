@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "sqlite_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "input": "reference/c_oracle/sqlite3.c opcodes.h section",
+  "input_sha256": "b1dd5d74ec7f29055a6684fa06fb3c2f6821c87dd38f9a458dfd2e8a1db28189",
+  "vdbe_source_sha256": "d92cb9c4edabd099a5e6e9aa796f4e524bcd00ff9d90e51468ac96d4c6d6ca1d",
+  "output": "src/core/generated/opcodes.zig",
+  "output_sha256": "fa93f372e73bca1ca0919c8ba9046a98246dc6b27032b6b351951104f66ab37d",
+  "opcode_count": 192,
+  "execution_case_count": 190,
+  "property_count": 192,
+  "max_jump_opcode": 66,
+  "non_execution_opcodes": [
+    "Explain",
+    "Noop"
+  ]
+}

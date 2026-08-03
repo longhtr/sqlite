@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "id": "mutex-static-and-dynamic-allocation",
+  "title": "Core-mutex gating and pthread static/dynamic mutex allocation",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These configuration fields and two complete allocation functions form the internal sqlite3MutexAlloc closure used to acquire STATIC_MEM and also preserve dynamic fast/recursive allocation and OOM semantics.",
+    "source_files": [
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      },
+      {
+        "path": "src/mutex_unix.c",
+        "sha256": "f9a625d7e71f9d64c772409df2c2f437a40960ad43c8bc8c429fd786b8918415"
+      },
+      {
+        "path": "src/mutex.c",
+        "sha256": "34f26fdcd49753d421b56c5cecff8bcca94f375f7b179b854f11d3b5654bff6b"
+      }
+    ],
+    "source_entity_ids": [
+      "src/sqliteInt.h::member::bCoreMutex::line-4287",
+      "src/sqliteInt.h::member::mutex::line-4302",
+      "src/mutex_unix.c::function::pthreadMutexAlloc::line-153",
+      "src/mutex.c::function::sqlite3MutexAlloc::line-299"
+    ],
+    "behavioral_block_ids": [
+      "src/mutex.c::function::sqlite3MutexAlloc::behavior::if::line-300-column-3::ordinal-0",
+      "src/mutex.c::function::sqlite3MutexAlloc::behavior::return::line-301-column-5::ordinal-0",
+      "src/mutex.c::function::sqlite3MutexAlloc::behavior::assert::line-303-column-3::ordinal-0",
+      "src/mutex.c::function::sqlite3MutexAlloc::behavior::assert::line-304-column-3::ordinal-0",
+      "src/mutex.c::function::sqlite3MutexAlloc::behavior::return::line-305-column-3::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexAlloc::behavior::switch::line-169-column-3::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexAlloc::behavior::case::line-170-column-5::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexAlloc::behavior::if::line-172-column-7::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexAlloc::behavior::break::line-189-column-7::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexAlloc::behavior::case::line-191-column-5::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexAlloc::behavior::if::line-193-column-7::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexAlloc::behavior::break::line-199-column-7::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexAlloc::behavior::default::line-201-column-5::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexAlloc::behavior::break::line-209-column-7::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexAlloc::behavior::return::line-215-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Public sqlite3_mutex_alloc auto-initialization wrapper",
+      "Mutex free/destruction",
+      "Mutex subsystem default-method selection and initialization",
+      "API-armor invalid mutex kind behavior"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "pthread-mutex-enter-leave-core",
+      "mutex-method-selection-and-lifecycle"
+    ],
+    "external_source_responsibilities": [
+      "SQLite allocator integration for dynamic mutex storage"
+    ],
+    "caller_closure": "Core gating, configured xMutexAlloc dispatch, pthread dynamic allocation, and all twelve stable static identities are assigned. Public auto-init and destruction remain separate."
+  },
+  "contracts": {
+    "inputs": [
+      "Mutex kind 0 through 13 and configured core-mutex mode/method table"
+    ],
+    "outputs": [
+      "Null when core mutexing is disabled or dynamic allocation fails; fresh dynamic mutex for kinds 0/1; stable process mutex identity for kinds 2 through 13"
+    ],
+    "ownership": "Dynamic mutex ownership transfers to caller until mutex free. Static mutexes are process-lifetime borrowed identities.",
+    "state_and_results": "Recursive kind supports recursive entry; fast/static kinds are non-recursive. Repeated static requests return the same address, including allocator STATIC_MEM.",
+    "locks_callbacks_io": "Allocation does not enter the returned mutex. Configured xMutexAlloc may allocate. No I/O.",
+    "failure_and_continuation": "Dynamic OOM returns null without leaked storage; later allocations continue. Static allocation cannot fail while core mutexing is enabled."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/sqliteInt.h::member::bCoreMutex::line-4287",
+      "relation": "configuration-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::field::Subsystem.mode"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::mutex::line-4302",
+      "relation": "configuration-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::constant::MethodsAdapter"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_unix.c::function::pthreadMutexAlloc::line-153",
+      "relation": "source-allocation-to-native-and-configured-transports",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::Subsystem.alloc",
+        "src/core/mutex.zig::function::processStatic"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex.c::function::sqlite3MutexAlloc::line-299",
+      "relation": "source-allocation-to-native-and-configured-transports",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::Subsystem.alloc",
+        "src/core/mutex.zig::function::MethodsAdapter.alloc"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C pthreadMutexAlloc owns a function-local static array; Zig owns one process_static_mutexes array shared by public mutex transport and memory.Manager.",
+    "C dynamic mutex storage is zero-allocated through sqlite3MallocZero; Subsystem uses its injected allocator and initializes every field explicitly.",
+    "C recursive mutex uses pthread recursive attributes; Zig uses owner/depth tracking over a native mutex with equivalent visible entry/leave semantics."
+  ],
+  "oracle": {
+    "protocol": "Infrastructure differential compares all runtime modes, repeated STATIC_MEM identity, recursive dynamic behavior, contention, configured xMutexAlloc dispatch, and initialization ordering. Native tests exhaust dynamic allocation failures and prove process STATIC_MEM is shared with memory.Manager.",
+    "internal_observations": [
+      "core-mutex disabled null",
+      "stable and distinct static identities",
+      "fresh dynamic identity and kind",
+      "recursive entry",
+      "configured callback dispatch",
+      "bounded OOM without leaks",
+      "allocator STATIC_MEM shared identity"
+    ],
+    "normalization": "Dynamic addresses and implementation-specific recursive mutex bytes are normalized to identities; nullability, static equality, kind, callbacks, and lock behavior are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "All deterministic dynamic allocation failure positions are tested sticky and one-shot. Static identities allocate no heap.",
+    "io_crash_concurrency": "No I/O. Static identity and contended recursive operation are tested; process-wide initialization races remain open.",
+    "malformed_input": "Kinds 0 through 13 are in scope; API armor is disabled in the profile.",
+    "continuation": "Allocation after induced OOM and repeated static lookup continue correctly.",
+    "performance": "Static lookup is indexed constant time; recursive manual tracking overhead needs review.",
+    "commands": [
+      "zig test src/core/mutex.zig -lc",
+      "zig test src/core/memory.zig -lc",
+      "zig build infrastructure-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/mutex.zig process_static_mutexes, processStatic, and Subsystem.alloc",
+    "native_call_path": "memory.Manager.lock points at processStatic(.static_mem); public static mutex allocation routes to the same process array.",
+    "bounded_owner_retired": "The duplicate public_api.zig static mutex array was removed."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Must verify static identity integration, configured transport, recursive implementation difference, OOM, and concurrency."
+  },
+  "known_blockers": [
+    "Configured lifecycle is integrated; public auto-initialization event equivalence and final typed configuration remain open.",
+    "Dynamic mutex free/destruction is separate.",
+    "Independent review is pending."
+  ]
+}

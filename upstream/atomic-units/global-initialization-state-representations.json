@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "id": "global-initialization-state-representations",
+  "title": "Global initialization layer flags, progress owner, and waiter synchronization state",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These seven Sqlite3Config fields are the complete initialization-progress and per-layer state read or written by sqlite3_initialize/shutdown. Coordinator and subsystem owners now preserve partial-success state across late failures.",
+    "source_files": [
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      }
+    ],
+    "source_entity_ids": [
+      "src/sqliteInt.h::member::isInit::line-4317",
+      "src/sqliteInt.h::member::inProgress::line-4318",
+      "src/sqliteInt.h::member::isMutexInit::line-4319",
+      "src/sqliteInt.h::member::isMallocInit::line-4320",
+      "src/sqliteInt.h::member::isPCacheInit::line-4321",
+      "src/sqliteInt.h::member::nRefInitMutex::line-4322",
+      "src/sqliteInt.h::member::pInitMutex::line-4323"
+    ],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": [
+      "Other Sqlite3Config configuration fields",
+      "Concrete PCache/OS resources represented by the flags",
+      "SQL connection initialization state"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "global-allocator-state-representations",
+      "mutex-method-selection-and-lifecycle"
+    ],
+    "external_source_responsibilities": [
+      "Independent event review of scoped OS/VFS state publication"
+    ],
+    "caller_closure": "Every source layer flag and init progress/waiter identity has a production representation consumed by global-library-initialize-shutdown."
+  },
+  "contracts": {
+    "inputs": [
+      "Concurrent, recursive, successful, partially failed, retried, and shutdown lifecycle events"
+    ],
+    "outputs": [
+      "Exact initialized/progress and per-layer ownership state needed to skip completed work and clean partial initialization"
+    ],
+    "ownership": "Coordinator owns process init progress/waiters; mutex Subsystem, memory Manager, and page_cache.Lifecycle own their layer flags/resources.",
+    "state_and_results": "isInit is set only after all layers succeed. Late failure preserves completed mutex/malloc/pcache layers. Recursive owner returns immediately; other callers wait. Shutdown clears each initialized layer in source order.",
+    "locks_callbacks_io": "state_lock/state_changed/owner replace pInitMutex+nRefInitMutex for serialization; configured STATIC_MAIN and recursive init handles remain allocated so source callback and OOM behavior is retained. No I/O at representation level.",
+    "failure_and_continuation": "Partial layer state survives failure so retry skips completed layers; shutdown cleans partial state even when isInit is false."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/sqliteInt.h::member::isInit::line-4317",
+      "relation": "source-init-flags-to-explicit-state-and-layer-owners",
+      "zig_declaration_ids": [
+        "src/core/global.zig::field::Coordinator.state"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::inProgress::line-4318",
+      "relation": "source-init-flags-to-explicit-state-and-layer-owners",
+      "zig_declaration_ids": [
+        "src/core/global.zig::field::Coordinator.state",
+        "src/core/global.zig::field::Coordinator.owner"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::isMutexInit::line-4319",
+      "relation": "source-init-flags-to-explicit-state-and-layer-owners",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::field::Subsystem.initialized"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::isMallocInit::line-4320",
+      "relation": "source-init-flags-to-explicit-state-and-layer-owners",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.started"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::isPCacheInit::line-4321",
+      "relation": "source-init-flags-to-explicit-state-and-layer-owners",
+      "zig_declaration_ids": [
+        "src/core/global.zig::field::Coordinator.pcache_initialized"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::nRefInitMutex::line-4322",
+      "relation": "source-init-flags-to-explicit-state-and-layer-owners",
+      "zig_declaration_ids": [
+        "src/core/global.zig::field::Coordinator.state_changed"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pInitMutex::line-4323",
+      "relation": "source-init-flags-to-explicit-state-and-layer-owners",
+      "zig_declaration_ids": [
+        "src/core/global.zig::field::Coordinator.state_lock"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C uses seven scalar/pointer fields plus recursive pInitMutex reference counting; Zig uses an explicit State enum, owner id, condition variable, and subsystem-owned initialized booleans.",
+    "nRefInitMutex waiter lifetime is represented by condition-variable waiters rather than an exposed counter.",
+    "isMallocInit and isMutexInit are the authoritative Manager.started and Subsystem.initialized values, avoiding duplicate flags."
+  ],
+  "oracle": {
+    "protocol": "Infrastructure differential compares 100 lifecycle cycles, an eight-thread race, and configured mutex/PCache failure-retry state. Native tests cover same-thread recursion with repeated xMutexInit, recursive init-handle OOM, configured mutex layers, late failure preserving mutex/malloc/pcache state, retry, partial shutdown, and production owner state.",
+    "internal_observations": [
+      "isInit/state final transition",
+      "inProgress and recursive owner",
+      "mutex/malloc/pcache partial flags",
+      "waiter wakeup",
+      "late-failure preservation and retry",
+      "partial and complete shutdown clearing"
+    ],
+    "normalization": "Explicit enum/condition representation replaces pointer/refcount addresses; layer booleans, callback events, results, and ordering are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Allocator/mutex failure state is represented; per-cache allocation OOM remains outside this representation unit.",
+    "io_crash_concurrency": "No I/O at representation level. Eight-thread and recursive races pass; formal event proof remains pending.",
+    "malformed_input": "Not input-driven.",
+    "continuation": "Late failure retry and partial shutdown continuation are tested.",
+    "performance": "Condition variable replaces source refcounted recursive mutex; contention benchmark/review remains open.",
+    "commands": [
+      "zig test src/core/global.zig -lc",
+      "zig build infrastructure-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/global.zig process_coordinator plus process mutex/memory owners",
+    "native_call_path": "public sqlite3_initialize/shutdown and auto-init paths share these production fields.",
+    "bounded_owner_retired": "Direct memory-only public lifecycle and duplicate production init flags are retired."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Must verify partial failures, waiter/refcount equivalence, shutdown races/preconditions, and layer integration."
+  },
+  "known_blockers": [
+    "PCache and scoped OS/VFS process state owners are trace-equivalent; independent publication review remains open.",
+    "Condition-variable versus nRefInitMutex event/performance equivalence needs independent review."
+  ]
+}

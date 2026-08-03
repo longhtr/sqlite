@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "id": "os-unix-process-lifecycle-and-default-vfs",
+  "title": "Unix OS lifecycle, default Unix VFS, and memdb VFS registration",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These functions are the active OS layer called by sqlite3_initialize: wrapper dispatch, the four-variant Linux Unix VFS table, shutdown, and memdb registration. Production owns concrete Unix locking-mode and memory adapters in one shared ABI registry.",
+    "source_files": [
+      {
+        "path": "src/os.c",
+        "sha256": "27ca8107a34b56ecba3be400af68842ce3e82b12b134c833785c0f04c2267722"
+      },
+      {
+        "path": "src/os_unix.c",
+        "sha256": "bad02ce9e25e3842c116a9f9bb13128b74f965692c5987202103423c86f62475"
+      },
+      {
+        "path": "src/memdb.c",
+        "sha256": "dc655196df8c8b495f09d9061dd521930c03bdef50a69f28d4ca76dc8ce462b0"
+      }
+    ],
+    "source_entity_ids": [
+      "src/os.c::function::sqlite3OsInit::line-345",
+      "src/os_unix.c::function::sqlite3_os_init::line-8448",
+      "src/os_unix.c::function::sqlite3_os_end::line-8581",
+      "src/memdb.c::function::sqlite3MemdbInit::line-923"
+    ],
+    "behavioral_block_ids": [
+      "src/memdb.c::function::sqlite3MemdbInit::behavior::if::line-926-column-3::ordinal-0",
+      "src/memdb.c::function::sqlite3MemdbInit::behavior::return::line-926-column-26::ordinal-0",
+      "src/memdb.c::function::sqlite3MemdbInit::behavior::if::line-933-column-3::ordinal-0",
+      "src/memdb.c::function::sqlite3MemdbInit::behavior::return::line-935-column-3::ordinal-0",
+      "src/os.c::function::sqlite3OsInit::behavior::if::line-347-column-3::ordinal-0",
+      "src/os.c::function::sqlite3OsInit::behavior::return::line-347-column-14::ordinal-0",
+      "src/os.c::function::sqlite3OsInit::behavior::return::line-349-column-3::ordinal-0",
+      "src/os_unix.c::function::sqlite3_os_init::behavior::assert::line-8531-column-3::ordinal-0",
+      "src/os_unix.c::function::sqlite3_os_init::behavior::for::line-8534-column-3::ordinal-0",
+      "src/os_unix.c::function::sqlite3_os_init::behavior::assert::line-8552-column-3::ordinal-0",
+      "src/os_unix.c::function::sqlite3_os_init::behavior::assert::line-8553-column-3::ordinal-0",
+      "src/os_unix.c::function::sqlite3_os_init::behavior::assert::line-8565-column-3::ordinal-0",
+      "src/os_unix.c::function::sqlite3_os_init::behavior::return::line-8571-column-3::ordinal-0",
+      "src/os_unix.c::function::sqlite3_os_end::behavior::return::line-8586-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Unix method bodies outside variant selection; posix/no-lock/dotfile/exclusive locking and method-tail selection have native evidence",
+      "VFS registry public find/register/unregister source entities",
+      "Windows and non-Unix VFS profiles",
+      "Memdb file implementation details beyond process VFS registration"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "global-initialization-state-representations",
+      "pthread-mutex-enter-leave-core"
+    ],
+    "external_source_responsibilities": [
+      "Memdb file methods plus serialize/deserialize semantics are separate source units"
+    ],
+    "caller_closure": "Top-level OS, the active Linux unix/unix-none/unix-dotfile/unix-excl table, memdb registration, and shutdown calls are assigned. Process-static owners preserve source names, order, default selection, and locking-method tails."
+  },
+  "contracts": {
+    "inputs": [
+      "Initialized mutex/memory/PCache layers and process VFS registry"
+    ],
+    "outputs": [
+      "SQLITE_OK with unix default, unix-none, unix-dotfile, unix-excl, and named memdb VFS adapters registered"
+    ],
+    "ownership": "Four UnixVfs locking-mode owners, one MemoryVfs owner, and ABI adapters have process lifetime. Registry borrows adapter pointers and preserves them across shutdown/reinitialize.",
+    "state_and_results": "OS initialization is idempotent under global serialization. unix is default; unix-none, unix-dotfile, unix-excl, and memdb are named non-default adapters. Shutdown clears OS initialized state but static VFS identities remain registered.",
+    "locks_callbacks_io": "Registration mutates process registry during serialized initialization. No file I/O occurs during lifecycle itself.",
+    "failure_and_continuation": "The target-profile static adapters and registry operations are infallible after earlier layer initialization. Shutdown/reinitialize preserves exact identities, table order, and default selection."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/os.c::function::sqlite3OsInit::line-345",
+      "relation": "source-os-lifecycle-to-process-vfs-owner",
+      "zig_declaration_ids": [
+        "src/core/global.zig::function::initializeProcessOs"
+      ]
+    },
+    {
+      "source_entity_id": "src/os_unix.c::function::sqlite3_os_init::line-8448",
+      "relation": "source-os-lifecycle-to-process-vfs-owner",
+      "zig_declaration_ids": [
+        "src/core/global.zig::function::initializeProcessOs",
+        "src/core/global.zig::variable::process_unix_adapter",
+        "src/core/global.zig::variable::process_unix_none_adapter",
+        "src/core/global.zig::variable::process_unix_dotfile_adapter",
+        "src/core/global.zig::variable::process_unix_excl_adapter"
+      ]
+    },
+    {
+      "source_entity_id": "src/os_unix.c::function::sqlite3_os_end::line-8581",
+      "relation": "source-os-lifecycle-to-process-vfs-owner",
+      "zig_declaration_ids": [
+        "src/core/global.zig::function::shutdownProcessOs"
+      ]
+    },
+    {
+      "source_entity_id": "src/memdb.c::function::sqlite3MemdbInit::line-923",
+      "relation": "source-os-lifecycle-to-process-vfs-owner",
+      "zig_declaration_ids": [
+        "src/core/global.zig::function::initializeProcessOs",
+        "src/core/global.zig::variable::process_mem_adapter"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The active Linux source table and Zig both register unix, unix-none, unix-dotfile, and unix-excl in order with unix default; typed LockingMode replaces C finder pointers.",
+    "MemdbAdapter is VFS version 2, borrows the default Unix adapter for delegated services, selects max file size, and registers non-default. Memdb file/serialize semantics are separate units.",
+    "Source sqlite3_os_end validates profile globals; Zig clears lifecycle state while retaining process-static registry identities."
+  ],
+  "oracle": {
+    "protocol": "Process Coordinator tests verify exact Linux variant names, default, memdb lookup, and stable registration across shutdown. Unix tests verify posix v3, no-lock v3 without xShmMap, dotfile v1 directory contention, exclusive process-lifetime locking, URI/mmap/syscall overrides, OFD cross-process contention, process-death unlock, and rollback/WAL durability.",
+    "internal_observations": [
+      "OS initialized flag",
+      "four-entry active Unix variant table and order",
+      "unix default selection",
+      "no-lock method tail and non-contention",
+      "dotfile directory contention and v1 method tail",
+      "exclusive lock persistence until close",
+      "memdb named registration",
+      "stable adapter identities",
+      "shutdown/reinitialize registry continuation",
+      "real Unix VFS behavior suites"
+    ],
+    "normalization": "Static C/Zig adapter addresses are allocation identities; Linux variant cardinality, names, order, default, method versions/tails, lock outcomes, results, and lifecycle are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": true,
+    "oom": "Lifecycle registration uses process-static owners and is allocation-free. Per-open Unix/memdb ownership failures have native cleanup coverage.",
+    "io_crash_concurrency": "Lifecycle performs no I/O. Posix has OFD cross-process and process-death evidence; no-lock, dotfile, and exclusive modes have method-tail and contention tests. Memdb source concurrency remains open.",
+    "malformed_input": "Not input-driven at lifecycle level.",
+    "continuation": "Repeated shutdown/reinitialize preserves the four Unix and memdb identities, order, and default.",
+    "performance": "Four static adapters match the active Linux table. No-lock bypasses kernel locks, dotfile uses one lock directory, and exclusive retains one whole-file OFD lock until close.",
+    "commands": [
+      "zig test src/core/global.zig -lc",
+      "zig test src/core/unix_vfs.zig -lc",
+      "zig build infrastructure-differential",
+      "zig build test -j2"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/global.zig process Unix/mem VFS owners and src/core/vfs.zig process registry",
+    "native_call_path": "process_coordinator invokes initializeProcessOs after PCache and shutdownProcessOs before PCache shutdown; public VFS APIs share vfs.process_vfs_head.",
+    "bounded_owner_retired": "The duplicate private public_api VFS head was removed; lifecycle and public registration now share one process registry."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Scoped OS/registration behavior is integrated; requires registry event differential and independent review. Memdb file and serialize/deserialize methods are separate units."
+  },
+  "known_blockers": [
+    "Exact C/Zig registry event differential and independent review remain open.",
+    "Memdb file methods are trace-equivalent and serialize/deserialize have a separate scaffolded atomic unit; their remaining blockers are tracked there."
+  ]
+}

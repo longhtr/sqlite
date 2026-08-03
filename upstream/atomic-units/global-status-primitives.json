@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "id": "global-status-primitives",
+  "title": "Global status value, increment, decrement, and highwater primitives",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These are the complete status.c state identities and four lock-assuming primitives used directly by the global allocation core. Manager now uses the source ten-slot current/highwater model rather than allocator-specific counters.",
+    "source_files": [
+      {
+        "path": "src/status.c",
+        "sha256": "e0a82481e7b51a5e069b664d1cb7c24e8ac29b7994fd314ae3da2839fe4b2da7"
+      }
+    ],
+    "source_entity_ids": [
+      "src/status.c::typedef::sqlite3StatValueType::line-23",
+      "src/status.c::typedef::sqlite3StatType::line-27",
+      "src/status.c::struct::sqlite3StatType::line-28",
+      "src/status.c::member::nowValue::line-29",
+      "src/status.c::member::mxValue::line-30",
+      "src/status.c::variable::sqlite3Stat::line-31",
+      "src/status.c::variable::statMutex::line-37",
+      "src/status.c::macro::wsdStatInit::line-61",
+      "src/status.c::macro::wsdStat::line-62",
+      "src/status.c::function::sqlite3StatusValue::line-69",
+      "src/status.c::function::sqlite3StatusUp::line-89",
+      "src/status.c::function::sqlite3StatusDown::line-100",
+      "src/status.c::function::sqlite3StatusHighwater::line-114"
+    ],
+    "behavioral_block_ids": [
+      "src/status.c::function::sqlite3StatusValue::behavior::assert::line-71-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusValue::behavior::assert::line-72-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusValue::behavior::assert::line-73-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusValue::behavior::return::line-75-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusUp::behavior::assert::line-91-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusUp::behavior::assert::line-92-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusUp::behavior::assert::line-93-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusUp::behavior::if::line-96-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusDown::behavior::assert::line-102-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusDown::behavior::assert::line-103-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusDown::behavior::assert::line-104-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusDown::behavior::assert::line-106-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusHighwater::behavior::assert::line-117-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusHighwater::behavior::assert::line-119-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusHighwater::behavior::assert::line-120-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusHighwater::behavior::assert::line-121-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusHighwater::behavior::assert::line-123-column-3::ordinal-0",
+      "src/status.c::function::sqlite3StatusHighwater::behavior::if::line-126-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "sqlite3_status/sqlite3_status64 public locking and reset APIs",
+      "Database-connection status and lookaside status"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Caller ownership of the allocator or pcache status mutex selected by statMutex",
+      "Pinned 64-bit target selection of sqlite3StatValueType"
+    ],
+    "caller_closure": "The four internal primitives and their complete ten-slot state are assigned. Public query locking and non-allocator producer integration remain separate units."
+  },
+  "contracts": {
+    "inputs": [
+      "Status operation 0 through 9 and signed update/highwater amount under the source preconditions"
+    ],
+    "outputs": [
+      "Current value or updated current/highwater slot"
+    ],
+    "ownership": "Process-lifetime status slots own no allocations.",
+    "state_and_results": "Up accepts signed deltas and raises highwater only when current exceeds it; Down requires nonnegative N and leaves highwater unchanged; Highwater accepts only size/parser operations and never changes current.",
+    "locks_callbacks_io": "Caller holds the mutex selected by the source statMutex table. No callbacks or I/O.",
+    "failure_and_continuation": "No result-code failure path; invalid operations violate source assertions/preconditions."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/status.c::typedef::sqlite3StatValueType::line-23",
+      "relation": "status-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.now_value"
+      ]
+    },
+    {
+      "source_entity_id": "src/status.c::typedef::sqlite3StatType::line-27",
+      "relation": "status-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::constant::Manager"
+      ]
+    },
+    {
+      "source_entity_id": "src/status.c::struct::sqlite3StatType::line-28",
+      "relation": "status-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::constant::Manager"
+      ]
+    },
+    {
+      "source_entity_id": "src/status.c::member::nowValue::line-29",
+      "relation": "one-to-one-status-state-or-primitive",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.now_value"
+      ]
+    },
+    {
+      "source_entity_id": "src/status.c::member::mxValue::line-30",
+      "relation": "one-to-one-status-state-or-primitive",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.max_value"
+      ]
+    },
+    {
+      "source_entity_id": "src/status.c::variable::sqlite3Stat::line-31",
+      "relation": "one-to-one-status-state-or-primitive",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::constant::Manager"
+      ]
+    },
+    {
+      "source_entity_id": "src/status.c::variable::statMutex::line-37",
+      "relation": "one-to-one-status-state-or-primitive",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.lock"
+      ]
+    },
+    {
+      "source_entity_id": "src/status.c::macro::wsdStatInit::line-61",
+      "relation": "status-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::constant::Manager"
+      ]
+    },
+    {
+      "source_entity_id": "src/status.c::macro::wsdStat::line-62",
+      "relation": "status-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::constant::Manager"
+      ]
+    },
+    {
+      "source_entity_id": "src/status.c::function::sqlite3StatusValue::line-69",
+      "relation": "one-to-one-status-state-or-primitive",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::Manager.statusValue"
+      ]
+    },
+    {
+      "source_entity_id": "src/status.c::function::sqlite3StatusUp::line-89",
+      "relation": "one-to-one-status-state-or-primitive",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::Manager.statusUp"
+      ]
+    },
+    {
+      "source_entity_id": "src/status.c::function::sqlite3StatusDown::line-100",
+      "relation": "one-to-one-status-state-or-primitive",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::Manager.statusDown"
+      ]
+    },
+    {
+      "source_entity_id": "src/status.c::function::sqlite3StatusHighwater::line-114",
+      "relation": "one-to-one-status-state-or-primitive",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::Manager.statusHighwater"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The private C sqlite3Stat object is embedded in memory.Manager as two exact ten-element i64 arrays.",
+    "The active 64-bit profile makes sqlite3StatValueType i64.",
+    "Manager selects its allocator STATIC_MEM handle for allocator slots and the Lifecycle-provided STATIC_PMEM/PCACHE1 handle for page-cache slots, matching statMutex topology.",
+    "C writable-static-data macros collapse to direct Manager field access because SQLITE_OMIT_WSD is absent."
+  ],
+  "oracle": {
+    "protocol": "Native primitive tests exercise increment, decrement, independent slots, highwater-only updates, and reset queries. The infrastructure C/Zig differential compares allocator status current/highwater/count/size observations and shuffled process lifecycle cases.",
+    "internal_observations": [
+      "ten-slot current and highwater state",
+      "signed increment and conditional maximum",
+      "decrement without maximum mutation",
+      "size-only highwater update",
+      "allocator status differential output"
+    ],
+    "normalization": "Private global/Manager addresses and mutex identity are ignored; operation indices and all numeric state transitions are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": true,
+    "oom": "No allocation and no OOM path.",
+    "io_crash_concurrency": "No I/O. Allocator and page-cache slots use distinct source-corresponding mutex identities; concurrent status differential remains open.",
+    "malformed_input": "Invalid operations are source-precondition violations; all ten valid slots are representable.",
+    "continuation": "Updates are deterministic and subsequent reads continue from exact state.",
+    "performance": "Constant-time indexed updates; Manager embedding adds no allocation.",
+    "commands": [
+      "zig test src/core/memory.zig -lc",
+      "zig build infrastructure-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/memory.zig Manager status arrays and primitives",
+    "native_call_path": "Manager allocator paths use statusValue/Up/Down/Highwater directly; public status queries use Manager.status.",
+    "bounded_owner_retired": "The prior separate allocator-specific current/highwater fields were removed."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Must independently verify all source assertions, ten-slot transitions, target-width choice, cross-subsystem lock topology, and concurrency."
+  },
+  "known_blockers": [
+    "Allocator and page-cache producers share the status owner with source-corresponding lock selection; exact concurrent event evidence remains pending.",
+    "Independent fidelity review is pending."
+  ]
+}

@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-operation-append-core",
+  "title": "VDBE operation-array growth and fixed-operand append core",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These eight mutually coupled vdbeaux.c routines implement the smallest operation-array append state machine: geometric growth, allocator-reported capacity, fixed P1/P2/P3 initialization, and P4_INT32 insertion.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::growOpArray::line-164",
+      "src/vdbeaux.c::function::growOp3::line-227",
+      "src/vdbeaux.c::function::addOp4IntSlow::line-233",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp0::line-263",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp1::line-266",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp2::line-269",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp3::line-272",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp4Int::line-317"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::growOpArray::behavior::conditional::line-179-column-25::ordinal-0",
+      "src/vdbeaux.c::function::growOpArray::behavior::if::line-185-column-3::ordinal-0",
+      "src/vdbeaux.c::function::growOpArray::behavior::return::line-187-column-5::ordinal-0",
+      "src/vdbeaux.c::function::growOpArray::behavior::assert::line-190-column-3::ordinal-0",
+      "src/vdbeaux.c::function::growOpArray::behavior::assert::line-191-column-3::ordinal-0",
+      "src/vdbeaux.c::function::growOpArray::behavior::if::line-193-column-3::ordinal-0",
+      "src/vdbeaux.c::function::growOpArray::behavior::return::line-198-column-3::ordinal-0",
+      "src/vdbeaux.c::function::growOpArray::behavior::conditional::line-198-column-11::ordinal-0",
+      "src/vdbeaux.c::function::growOp3::behavior::assert::line-228-column-3::ordinal-0",
+      "src/vdbeaux.c::function::growOp3::behavior::if::line-229-column-3::ordinal-0",
+      "src/vdbeaux.c::function::growOp3::behavior::return::line-229-column-27::ordinal-0",
+      "src/vdbeaux.c::function::growOp3::behavior::assert::line-230-column-3::ordinal-0",
+      "src/vdbeaux.c::function::growOp3::behavior::return::line-231-column-3::ordinal-0",
+      "src/vdbeaux.c::function::addOp4IntSlow::behavior::if::line-242-column-3::ordinal-0",
+      "src/vdbeaux.c::function::addOp4IntSlow::behavior::return::line-247-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp0::behavior::return::line-264-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp1::behavior::return::line-267-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp2::behavior::return::line-270-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp3::behavior::assert::line-277-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp3::behavior::assert::line-278-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp3::behavior::if::line-279-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp3::behavior::return::line-280-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp3::behavior::assert::line-282-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp3::behavior::assert::line-285-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp3::behavior::return::line-315-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp4Int::behavior::if::line-329-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp4Int::behavior::return::line-330-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp4Int::behavior::assert::line-334-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOp4Int::behavior::return::line-364-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "VDBE object creation and linked-list ownership",
+      "pointer/string/function P4 ownership and destruction",
+      "labels and final fixup resolution",
+      "operation-list transfer, readiness, execution, reset, and deletion"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "active-profile-limit-constants",
+      "vdbe-builder-state-representations",
+      "connection-allocation-for-vdbe-growth"
+    ],
+    "external_source_responsibilities": [
+      "SQLITE_LIMIT_VDBE_OP initialization and runtime mutation"
+    ],
+    "caller_closure": "Compiler callers remain inventoried separately. This unit cannot pass admission until its exact representation and connection-allocation dependencies have atomic dossiers at source-translated or later."
+  },
+  "contracts": {
+    "inputs": [
+      "An INIT-state Vdbe with its owning Parse and sqlite3 connection",
+      "A canonical u8 opcode and fixed integer operands",
+      "The connection SQLITE_LIMIT_VDBE_OP value"
+    ],
+    "outputs": [
+      "The inserted operation address",
+      "An allocator-sized Vdbe.aOp array with initialized opcode, P1-P5, and P4 type/value"
+    ],
+    "ownership": "The connection allocator owns aOp. Reallocation preserves the old pointer and capacity on failure; successful growth updates Parse.szOpAlloc from allocator usable size.",
+    "state_and_results": "nOp advances only after capacity exists. Growth limit or allocation failure sets connection OOM state and the slow append returns SQLite's historical sentinel address 1.",
+    "locks_callbacks_io": "Caller holds the connection mutex. No callbacks or I/O occur.",
+    "failure_and_continuation": "On OOM, existing operations remain owned and destructible; callers observe sticky sqlite3.mallocFailed and stop meaningful code generation."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::growOpArray::line-164",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::growOperationArray"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::growOp3::line-227",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::growOperation3"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::addOp4IntSlow::line-233",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::addOperation4IntSlow"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeAddOp0::line-263",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::addOperation0"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeAddOp1::line-266",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::addOperation1"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeAddOp2::line-269",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::addOperation2"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeAddOp3::line-272",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::addOperation3"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeAddOp4Int::line-317",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::addOperation4Int"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The C integer opcode parameter is a generated Zig enum(u8), making the source range assertion structural.",
+    "The Parse.db pointer is opaque in the cycle-breaking Parse layout module and is converted back to the exact sqlite3 type at the vdbeaux boundary.",
+    "The active profile omits test realloc stress, explain comments, statement scan status, VDBE profiling, debug add-op tracing, and VDBE coverage fields; only selected branches are translated."
+  ],
+  "oracle": {
+    "protocol": "One neutral symbolic sequence names AddOp0/AddOp1/AddOp2/AddOp3/AddOp4Int operations, successful geometric growth, limit OOM, reached one-shot and sticky allocation failures, sticky persistence, and post-clear continuation; C and Zig adapters emit addresses, capacities, operands, P4 types, mallocFailed, and ownership state. The comparator also mutates an emitted capacity and proves the divergence is rejected.",
+    "internal_observations": [
+      "append address and nOp before/after each operation",
+      "requested and allocator-reported capacity",
+      "opcode and P1-P5/P4 initialization",
+      "growth-limit and reached one-shot realloc failure",
+      "old-array identity and contents after failure"
+    ],
+    "normalization": "Pointer addresses are replaced only by stable allocation identities; capacities, operation bytes, results, and event order are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Native and differential traces cover initial growth-limit OOM, reached one-shot and sticky growth allocation failures, sticky persistence across machine reset, preservation of the existing operation array, and continuation after explicit fault/OOM clear.",
+    "io_crash_concurrency": "No I/O; connection mutex is a caller obligation.",
+    "malformed_input": "Internal trusted API with source assertions; invalid opcodes are unrepresentable in Zig.",
+    "continuation": "Oracle traces prove the old array and operation count remain intact after growth failure and appends resume after OOM clear.",
+    "performance": "Geometric growth and allocator-sized capacity are preserved; no benchmark credit yet.",
+    "commands": [
+      "zig test src/core/internal_vdbe_mem_test.zig -lc",
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test",
+      "zig build opcodes-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "Planned source-corresponding VDBE builder under src/core/internal/vdbe_aux.zig",
+    "native_call_path": "Not integrated; the handwritten src/core/vdbe.zig Program remains the bounded production scaffold.",
+    "bounded_owner_retired": "No. Program construction in src/core/vdbe.zig and sql_frontend.zig remains frozen pending the complete builder/compiler ownership switch."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "The combined 363-observation builder trace preserves the append/growth/OOM observations; broader builder closure, production ownership, assurance, and independent review remain."
+  },
+  "known_blockers": [
+    "P4 pointer ownership, labels/fixups, VDBE creation, operation-list transfer, readiness, and deletion remain separate prerequisite/follow-on units.",
+    "The source-corresponding builder is not yet the production compiler owner; handwritten Program construction must be retired before integration.",
+    "Independent fidelity review remains open."
+  ]
+}

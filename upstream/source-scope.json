@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "match_policy": "most-specific-rule-wins",
+  "rules": [
+    { "glob": "src/**", "classification": "core-implementation-or-input", "scope": "core" },
+    { "glob": "src/test*.c", "classification": "oracle-test", "scope": "test" },
+    { "glob": "src/tcl*.c", "classification": "oracle-test-adapter", "scope": "test" },
+    { "glob": "src/parse.y", "classification": "generated-input", "scope": "core" },
+    { "glob": "tool/lemon.c", "classification": "host-build-tool", "scope": "core" },
+    { "glob": "tool/lempar.c", "classification": "generated-input", "scope": "core" },
+    { "glob": "tool/*.tcl", "classification": "host-build-tool", "scope": "core" },
+    { "glob": "ext/fts5/**", "classification": "optional-extension", "scope": "fts5-profile" },
+    { "glob": "ext/rtree/**", "classification": "optional-extension", "scope": "rtree-profile" },
+    { "glob": "ext/session/**", "classification": "optional-extension", "scope": "session-profile" },
+    { "glob": "ext/**", "classification": "excluded-pending-classification", "scope": "none" },
+    { "glob": "test/**", "classification": "oracle-test", "scope": "test" },
+    { "glob": "mptest/**", "classification": "oracle-test", "scope": "test" },
+    { "glob": "tool/**", "classification": "oracle-or-host-tool", "scope": "tool" },
+    { "glob": "src/shell.c.in", "classification": "shell", "scope": "shell-profile" }
+  ],
+  "generated_outputs": [
+    "reference/c_oracle/sqlite3.c",
+    "reference/c_oracle/sqlite3-lines.c",
+    "include/sqlite3.h",
+    "include/sqlite3ext.h",
+    "generated/parser/sqlite_parse.c",
+    "generated/parser/sqlite_parse.h",
+    "generated/parser/sqlite_parse.sql",
+    "generated/parser/sqlite-parser-manifest.json"
+  ]
+}

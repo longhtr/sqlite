@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-record-serial-type-length-and-value-decode",
+  "title": "VDBE record serial-type lengths and scalar value decode",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These helpers are the source record-format boundary that maps serial types to payload lengths and decodes NULL, signed integers, IEEE-754 values, zero/one constants, and ephemeral text/blob views into exact Mem state.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::serialGet::line-4071",
+      "src/vdbeaux.c::function::serialGet7::line-4106",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::line-4123",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialTypeLen::line-3988",
+      "src/vdbeaux.c::function::sqlite3VdbeOneByteSerialTypeLen::line-3997",
+      "src/vdbeaux.c::variable::sqlite3SmallTypeSizes::line-3968",
+      "src/vdbeaux.c::macro::ONE_BYTE_INT::line-4056",
+      "src/vdbeaux.c::macro::TWO_BYTE_INT::line-4057",
+      "src/vdbeaux.c::macro::THREE_BYTE_INT::line-4058",
+      "src/vdbeaux.c::macro::FOUR_BYTE_UINT::line-4059",
+      "src/vdbeaux.c::macro::FOUR_BYTE_INT::line-4060"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeSerialTypeLen::behavior::if::line-3989-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialTypeLen::behavior::return::line-3990-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialTypeLen::behavior::assert::line-3992-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialTypeLen::behavior::return::line-3994-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeOneByteSerialTypeLen::behavior::assert::line-3998-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeOneByteSerialTypeLen::behavior::return::line-3999-column-3::ordinal-0",
+      "src/vdbeaux.c::function::serialGet::behavior::if::line-4079-column-3::ordinal-0",
+      "src/vdbeaux.c::function::serialGet::behavior::assert::line-4100-column-5::ordinal-0",
+      "src/vdbeaux.c::function::serialGet::behavior::conditional::line-4103-column-19::ordinal-0",
+      "src/vdbeaux.c::function::serialGet7::behavior::assert::line-4113-column-3::ordinal-0",
+      "src/vdbeaux.c::function::serialGet7::behavior::if::line-4116-column-3::ordinal-0",
+      "src/vdbeaux.c::function::serialGet7::behavior::return::line-4118-column-5::ordinal-0",
+      "src/vdbeaux.c::function::serialGet7::behavior::return::line-4121-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::switch::line-4128-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::case::line-4129-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::return::line-4134-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::case::line-4136-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::case::line-4137-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::return::line-4140-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::case::line-4142-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::return::line-4148-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::case::line-4150-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::return::line-4156-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::case::line-4158-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::return::line-4164-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::case::line-4166-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::return::line-4176-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::case::line-4178-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::return::line-4184-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::case::line-4186-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::case::line-4187-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::return::line-4191-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::case::line-4193-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::case::line-4194-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::return::line-4199-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::default::line-4201-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::return::line-4210-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSerialGet::behavior::return::line-4213-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Serial-type selection during record creation",
+      "Record-header varint parsing",
+      "UnpackedRecord allocation/lifecycle",
+      "Record comparison and collations"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-builder-state-representations"
+    ],
+    "external_source_responsibilities": [
+      "Exact Mem/MemValue flags and scalar union layout"
+    ],
+    "caller_closure": "The active size table, integer extraction macros, both local 8-byte decoders, public serial decoder, and both length APIs are assigned. Record unpack/compare callers remain follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "serial type and at least its encoded payload bytes; destination Mem"
+    ],
+    "outputs": [
+      "payload length and source-shaped Mem flags/scalar/view fields"
+    ],
+    "ownership": "Scalar/NULL values own no payload. Text/blob outputs are MEM_Ephem views into caller-owned input bytes. No prior Mem owner is released because source requires fresh destination state.",
+    "state_and_results": "Types 0/11 are NULL; 10 is NULL|Zero no-change; 1..6 are signed big-endian integers; 7 is big-endian f64 with NaN mapped to NULL; 8/9 are integer 0/1; >=12 alternates blob/text and length floor((N-12)/2).",
+    "locks_callbacks_io": "No connection, lock, callback, allocation, or I/O.",
+    "failure_and_continuation": "No failure path. serialGet7 returns one for NaN and zero for real while the public decoder communicates through Mem flags."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::serialGet::line-4071",
+      "relation": "source-record-serial-decode-or-length-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::function::serialGet"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::serialGet7::line-4106",
+      "relation": "source-record-serial-decode-or-length-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::function::serialGet7"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeSerialGet::line-4123",
+      "relation": "source-record-serial-decode-or-length-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::function::serialGetValue"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeSerialTypeLen::line-3988",
+      "relation": "source-record-serial-decode-or-length-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::function::serialTypeLength"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeOneByteSerialTypeLen::line-3997",
+      "relation": "source-record-serial-decode-or-length-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::function::oneByteSerialTypeLength"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::variable::sqlite3SmallTypeSizes::line-3968",
+      "relation": "source-record-serial-decode-or-length-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::constant::small_type_sizes"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::macro::ONE_BYTE_INT::line-4056",
+      "relation": "source-record-serial-decode-or-length-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::function::oneByteInteger"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::macro::TWO_BYTE_INT::line-4057",
+      "relation": "source-record-serial-decode-or-length-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::function::twoByteInteger"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::macro::THREE_BYTE_INT::line-4058",
+      "relation": "source-record-serial-decode-or-length-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::function::threeByteInteger"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::macro::FOUR_BYTE_UINT::line-4059",
+      "relation": "source-record-serial-decode-or-length-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::function::fourByteUnsigned"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::macro::FOUR_BYTE_INT::line-4060",
+      "relation": "source-record-serial-decode-or-length-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::function::fourByteInteger"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C sign-extension arithmetic is expressed with fixed-width bitcasts/subtraction in Zig; every resulting i64 bit pattern is identical.",
+    "Mixed-endian float support is absent from the pinned ABI/profile; big-endian record bits are bitcast to the host IEEE-754 f64 exactly as the active C branch.",
+    "The constant 128-byte size table is compile-time generated from the same fixed exceptional entries and alternating payload formula."
+  ],
+  "oracle": {
+    "protocol": "The shared worker decodes serial types 0 through 15 plus 127, 128, 129, 255, and 256 from sign-sensitive bytes, compares both length APIs, flags, n, union bits, and ephemeral pointer identity, then directly exercises serialGet7 with finite 1.0 and a NaN payload. C and Zig compare 363 observations.",
+    "internal_observations": [
+      "small and large serial lengths",
+      "signed 8/16/24/32/48/64-bit decode",
+      "IEEE finite bits and NaN-to-NULL",
+      "NULL no-change fields",
+      "integer constants",
+      "blob/text ephemeral flags, lengths, and pointer identity",
+      "serialGet7 return convention"
+    ],
+    "normalization": "All flags, lengths, integer/floating union bits, and return values are exact; ephemeral addresses normalize to input-pointer identity."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "No allocation or OOM branch.",
+    "io_crash_concurrency": "Pure byte decoding; no I/O, callback, or shared state.",
+    "malformed_input": "Source requires sufficient payload bytes; worker provides eight bytes and representative zero/positive payload lengths.",
+    "continuation": "Decoded ephemeral values remain valid while fixture bytes live; scalar values are immediately reusable by record consumers.",
+    "performance": "Constant-time table lookup/bit assembly and direct switch preserve source hot-path shape without allocation.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test",
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_record.zig",
+    "native_call_path": "Symbolic worker reaches exact Mem and record bytes. Record unpack/comparison/opcode call paths remain partially handwritten.",
+    "bounded_owner_retired": "No. Port record unpack, comparison, and MakeRecord callers."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires record subsystem integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Integrate sqlite3VdbeRecordUnpack and comparison families.",
+    "Connect record opcodes to exact helpers.",
+    "Independent fidelity review remains open."
+  ]
+}

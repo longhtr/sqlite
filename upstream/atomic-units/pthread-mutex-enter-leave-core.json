@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "id": "pthread-mutex-enter-leave-core",
+  "title": "Pinned pthread mutex representation and nullable enter/leave dispatch",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These are the active pthread mutex storage/initializer identities and complete concrete plus public-wrapper enter/leave functions used by STATIC_MEM allocator locking.",
+    "source_files": [
+      {
+        "path": "src/mutex.c",
+        "sha256": "34f26fdcd49753d421b56c5cecff8bcca94f375f7b179b854f11d3b5654bff6b"
+      },
+      {
+        "path": "src/mutex_unix.c",
+        "sha256": "f9a625d7e71f9d64c772409df2c2f437a40960ad43c8bc8c429fd786b8918415"
+      }
+    ],
+    "source_entity_ids": [
+      "src/mutex_unix.c::macro::SQLITE_MUTEX_NREF::line-35",
+      "src/mutex_unix.c::struct::sqlite3_mutex::line-41",
+      "src/mutex_unix.c::member::mutex::line-42",
+      "src/mutex_unix.c::macro::SQLITE3_MUTEX_INITIALIZER::line-58",
+      "src/mutex_unix.c::function::pthreadMutexEnter::line-251",
+      "src/mutex_unix.c::function::pthreadMutexLeave::line-350",
+      "src/mutex.c::function::sqlite3_mutex_enter::line-322",
+      "src/mutex.c::function::sqlite3_mutex_leave::line-348"
+    ],
+    "behavioral_block_ids": [
+      "src/mutex.c::function::sqlite3_mutex_enter::behavior::if::line-323-column-3::ordinal-0",
+      "src/mutex.c::function::sqlite3_mutex_enter::behavior::assert::line-324-column-5::ordinal-0",
+      "src/mutex.c::function::sqlite3_mutex_leave::behavior::if::line-349-column-3::ordinal-0",
+      "src/mutex.c::function::sqlite3_mutex_leave::behavior::assert::line-350-column-5::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexEnter::behavior::assert::line-252-column-3::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexLeave::behavior::assert::line-351-column-3::ordinal-0",
+      "src/mutex_unix.c::function::pthreadMutexLeave::behavior::assert::line-356-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Mutex subsystem default-method selection and initialization",
+      "Dynamic and static mutex allocation/free",
+      "Try-lock and debug held/notheld behavior",
+      "No-op mutex implementation and public auto-initialization"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Configured sqlite3_mutex_methods callback validity",
+      "Caller discipline forbidding recursive entry of non-recursive mutexes"
+    ],
+    "caller_closure": "Concrete pthread enter/leave and nullable configured-method wrappers are assigned. Allocation, initialization, try, and no-op modes remain separate."
+  },
+  "contracts": {
+    "inputs": [
+      "Nullable wrapper mutex or non-null initialized pthread mutex"
+    ],
+    "outputs": [
+      "Mutex acquired exactly once or released exactly once; null wrapper input is a no-op"
+    ],
+    "ownership": "No allocation or ownership transfer. Mutex storage outlives entry.",
+    "state_and_results": "Pinned NREF=0 C storage uses only pthread_mutex_t. Non-recursive reentry is a precondition violation.",
+    "locks_callbacks_io": "Concrete operations call pthread lock/unlock. Wrapper operations dispatch configured callbacks only for non-null input. No I/O.",
+    "failure_and_continuation": "Enter blocks until success; leave has undefined behavior on invalid ownership, matching source preconditions."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/mutex_unix.c::macro::SQLITE_MUTEX_NREF::line-35",
+      "relation": "one-to-one-pthread-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::constant::Mutex"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_unix.c::struct::sqlite3_mutex::line-41",
+      "relation": "one-to-one-pthread-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::constant::Mutex"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_unix.c::member::mutex::line-42",
+      "relation": "one-to-one-pthread-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::field::Mutex.native"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_unix.c::macro::SQLITE3_MUTEX_INITIALIZER::line-58",
+      "relation": "one-to-one-pthread-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::field::Mutex.native"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_unix.c::function::pthreadMutexEnter::line-251",
+      "relation": "one-to-one-pthread-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::Mutex.enter"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex_unix.c::function::pthreadMutexLeave::line-350",
+      "relation": "one-to-one-pthread-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::Mutex.leave"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex.c::function::sqlite3_mutex_enter::line-322",
+      "relation": "wrapper-to-native-and-configured-transports",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::enter",
+        "src/core/mutex.zig::function::MethodsAdapter.enter"
+      ]
+    },
+    {
+      "source_entity_id": "src/mutex.c::function::sqlite3_mutex_leave::line-348",
+      "relation": "wrapper-to-native-and-configured-transports",
+      "zig_declaration_ids": [
+        "src/core/mutex.zig::function::leave",
+        "src/core/mutex.zig::function::MethodsAdapter.leave"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Pinned C sqlite3_mutex stores only pthread_mutex_t because SQLITE_MUTEX_NREF=0; Zig Mutex additionally tracks owner/depth for native assertions and manual recursive behavior.",
+    "The additional Zig tracking does not alter pthread acquisition ordering for STATIC_MEM and other non-recursive mutexes.",
+    "C callback wrappers and direct pthread methods remain separate functions; Zig models them with MethodsAdapter and nullable native helpers."
+  ],
+  "oracle": {
+    "protocol": "Infrastructure C/Zig differential compares recursive/static identities, same-thread and contended entry, null/no-op mode, configured callback dispatch, and mode transitions. Native tests run 40,000 contended recursive updates and allocator alarm unlocked-hook checks.",
+    "internal_observations": [
+      "null wrapper no-op",
+      "configured callback dispatch",
+      "blocking acquisition and release",
+      "stable protected counter",
+      "STATIC_MEM alarm release/reacquire"
+    ],
+    "normalization": "Mutex addresses, pthread object bytes, and Zig-only owner/depth fields are ignored; callback events and synchronization results are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "No allocation in this unit.",
+    "io_crash_concurrency": "No I/O. Contention and alarm release/reacquire are tested; exhaustive scheduler/interleaving evidence remains open.",
+    "malformed_input": "Null wrappers are tested. Invalid ownership/reentry are source-precondition violations.",
+    "continuation": "Repeated enter/leave and post-contention continuation are tested.",
+    "performance": "One pthread operation per non-recursive enter/leave plus Zig assertion tracking; overhead review remains open.",
+    "commands": [
+      "zig test src/core/mutex.zig -lc",
+      "zig test src/core/memory.zig -lc",
+      "zig build infrastructure-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/mutex.zig Mutex and MethodsAdapter; memory.Manager embeds Mutex kind static_mem",
+    "native_call_path": "Global allocator status/heap paths call Manager.enter/leave through the shared process STATIC_MEM pointer and Mutex.enter/leave.",
+    "bounded_owner_retired": "memory.Manager no longer owns an independent raw pthread lock implementation."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Must verify NREF profile choice, callback/null paths, pthread ordering, extra tracking overhead, and integration."
+  },
+  "known_blockers": [
+    "Allocation/default-method/no-op lifecycle remains separate.",
+    "Independent concurrency/performance review is pending."
+  ]
+}

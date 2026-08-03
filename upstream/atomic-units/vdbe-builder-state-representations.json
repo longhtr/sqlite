@@ -1,0 +1,352 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-builder-state-representations",
+  "title": "VDBE builder operation and owner-state representations",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The append builder requires these exact active-profile operation, P4, Vdbe, Parse, and connection state identities as one representation boundary. Only fields read or written by the fixed-operand append core are assigned.",
+    "source_files": [
+      {
+        "path": "src/vdbe.h",
+        "sha256": "c2f07fd77827a922a77d8bde1c873536056e7269898d4bd2b4088f8222cd6259"
+      },
+      {
+        "path": "src/vdbeInt.h",
+        "sha256": "60f87bb47cae281d4a9d3aecbdecd39a77fe91f7c5266d5e9985cf8b75ea44b5"
+      },
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeInt.h::typedef::Op::line-46",
+      "src/vdbeInt.h::struct::Vdbe::line-458",
+      "src/vdbeInt.h::member::db::line-459",
+      "src/vdbeInt.h::member::pParse::line-461",
+      "src/vdbeInt.h::member::aOp::line-482",
+      "src/vdbeInt.h::member::nOp::line-483",
+      "src/vdbeInt.h::member::nOpAlloc::line-484",
+      "src/vdbeInt.h::member::eVdbeState::line-502",
+      "src/vdbeInt.h::macro::VDBE_INIT_STATE::line-534",
+      "src/vdbe.h::typedef::Vdbe::line-27",
+      "src/vdbe.h::struct::VdbeOp::line-55",
+      "src/vdbe.h::member::opcode::line-56",
+      "src/vdbe.h::member::p4type::line-57",
+      "src/vdbe.h::member::p5::line-58",
+      "src/vdbe.h::member::p1::line-59",
+      "src/vdbe.h::member::p2::line-60",
+      "src/vdbe.h::member::p3::line-61",
+      "src/vdbe.h::union::p4union::line-62",
+      "src/vdbe.h::member::i::line-63",
+      "src/vdbe.h::member::p::line-64",
+      "src/vdbe.h::member::p4::line-82",
+      "src/vdbe.h::typedef::VdbeOp::line-95",
+      "src/vdbe.h::macro::P4_NOTUSED::line-126",
+      "src/vdbe.h::macro::P4_INT32::line-130",
+      "src/sqliteInt.h::struct::sqlite3::line-1669",
+      "src/sqliteInt.h::member::mallocFailed::line-1690",
+      "src/sqliteInt.h::member::aLimit::line-1705",
+      "src/sqliteInt.h::typedef::Parse::line-1362",
+      "src/sqliteInt.h::struct::Parse::line-3882",
+      "src/sqliteInt.h::member::db::line-3883",
+      "src/sqliteInt.h::member::szOpAlloc::line-3919"
+    ],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": [
+      "VDBE fields not accessed by operation append",
+      "Parse and sqlite3 fields owned by compiler, execution, mutex, or allocator units",
+      "P4 ownership classes other than NOTUSED and INT32",
+      "Opcode semantic execution"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Pinned ABI target and generated active-profile C layout probes",
+      "Public SQLITE_LIMIT_VDBE_OP category index; its runtime value and mutation belong to connection-limit behavior"
+    ],
+    "caller_closure": "All direct storage identities used by vdbe-operation-append-core are included; allocator-internal sqlite3/Lookaside state belongs to the connection-allocation unit."
+  },
+  "contracts": {
+    "inputs": [
+      "Pinned active profile and aarch64-linux-gnu layout probe",
+      "Canonical generated opcode enum with u8 storage"
+    ],
+    "outputs": [
+      "ABI-exact Zig VdbeOp/P4Union/Vdbe/Parse/Sqlite3 storage for append state",
+      "Exact P4_NOTUSED, P4_INT32, and VDBE_INIT_STATE values"
+    ],
+    "ownership": "Representation-only unit; it introduces no allocations or destruction. Pointer optionality models C nullability without changing layout.",
+    "state_and_results": "Field signedness, widths, offsets, union overlay, and constants match the active C preprocessor and layout oracle exactly.",
+    "locks_callbacks_io": "None.",
+    "failure_and_continuation": "Compile-time layout mismatch is a build failure; there is no runtime partial state."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeInt.h::typedef::Op::line-46",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::Op"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::struct::Vdbe::line-458",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::Vdbe"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::db::line-459",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.db"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::pParse::line-461",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.pParse"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::aOp::line-482",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.aOp"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::nOp::line-483",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.nOp"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::nOpAlloc::line-484",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.nOpAlloc"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::eVdbeState::line-502",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.eVdbeState"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::macro::VDBE_INIT_STATE::line-534",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::vdbe_state.init"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::typedef::Vdbe::line-27",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::Vdbe"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::struct::VdbeOp::line-55",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::VdbeOp"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::opcode::line-56",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeOp.opcode"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::p4type::line-57",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeOp.p4type"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::p5::line-58",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeOp.p5"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::p1::line-59",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeOp.p1"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::p2::line-60",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeOp.p2"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::p3::line-61",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeOp.p3"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::union::p4union::line-62",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::P4Union"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::i::line-63",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::P4Union.i"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::p::line-64",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::P4Union.p"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::p4::line-82",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeOp.p4"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::typedef::VdbeOp::line-95",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::VdbeOp"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::macro::P4_NOTUSED::line-126",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::p4.not_used"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::macro::P4_INT32::line-130",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::p4.int32"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::struct::sqlite3::line-1669",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::Sqlite3"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::mallocFailed::line-1690",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.mallocFailed"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::aLimit::line-1705",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.aLimit"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::typedef::Parse::line-1362",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::constant::Parse"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::struct::Parse::line-3882",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::constant::Parse"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::db::line-3883",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.db"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::szOpAlloc::line-3919",
+      "relation": "one-to-one-layout-or-constant",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.szOpAlloc"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C typedef and tagged-struct identities may converge on one Zig extern struct declaration.",
+    "The cycle-breaking Parse module uses opaque sqlite3/Vdbe pointers while retaining exact pointer layout; vdbeaux converts them only at the typed boundary.",
+    "C opcode integer storage is represented by enum(u8), preserving byte layout while making invalid values structurally unavailable to builder callers."
+  ],
+  "oracle": {
+    "protocol": "Generated C probes emit sizes, alignments, every relevant field offset/size, union member offsets, bit masks, and active constants; Zig compile-time checks and the VDBE builder differential consume those facts.",
+    "internal_observations": [
+      "type size and alignment",
+      "field offset and width",
+      "P4 union overlay",
+      "P4 and VDBE state constants",
+      "operation bytes emitted by the append builder"
+    ],
+    "normalization": "No layout normalization. Names are mapped explicitly; all numeric layout and constant observations are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Not applicable to representation-only unit.",
+    "io_crash_concurrency": "Not applicable.",
+    "malformed_input": "Generated enum prevents invalid builder opcode input; raw execution validation is a separate unit.",
+    "continuation": "Not applicable.",
+    "performance": "Extern structs and enum(u8) add no translation or allocation layer.",
+    "commands": [
+      "zig build internal-vdbe-layout-test",
+      "zig build internal-parse-layout-test",
+      "zig build vdbe-builder-differential",
+      "zig build opcodes-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_types.zig and src/core/internal/parse_types.zig",
+    "native_call_path": "The source-corresponding vdbe_aux builder candidate uses these representations directly; the bounded handwritten production compiler is not yet migrated.",
+    "bounded_owner_retired": "Duplicate handwritten Program/Instruction representations remain frozen and are outside this representation unit."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Independent review must verify scope closure, generated C facts, target ABI, and absence of semantic credit for unused fields."
+  },
+  "known_blockers": [
+    "Subsystem integration waits for the source builder/compiler path to replace handwritten Program construction."
+  ]
+}

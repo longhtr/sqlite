@@ -1,0 +1,653 @@
+{
+  "schema_version": 1,
+  "id": "pcache-pgroup-cross-cache-lru-and-limits",
+  "title": "PCache PGroup cross-cache LRU, limits, and recycling",
+  "status": "scaffolded",
+  "admission_ready": false,
+  "scope": {
+    "rationale": "These source responsibilities jointly own PGroup-wide maximum/minimum/pinned/purgeable accounting, cache registration, recyclable-page LRU membership, cross-cache buffer recycling, soft-create admission, limit enforcement, shrink, and page counts. Native unified mode now shares one intrusive LRU and exact page buffer across caches. The dossier also owns the PCache1/PgHdr1/PGroup fields that directly carry these semantics; static/bulk allocation-only fields remain with their allocation unit.",
+    "source_files": [
+      {
+        "path": "src/pcache1.c",
+        "sha256": "b5bfbbac157325f96f0023c0856533cd6ce94180bcbbd1d4069e5a60a242de3d"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pcache1.c::typedef::PGroup::line-89",
+      "src/pcache1.c::struct::PGroup::line-158",
+      "src/pcache1.c::function::pcache1Create::line-764",
+      "src/pcache1.c::function::pcache1Destroy::line-1171",
+      "src/pcache1.c::function::pcache1Cachesize::line-814",
+      "src/pcache1.c::function::pcache1EnforceMaxPage::line-621",
+      "src/pcache1.c::function::pcache1PinPage::line-578",
+      "src/pcache1.c::function::pcache1RemoveFromHash::line-603",
+      "src/pcache1.c::function::pcache1FetchStage2::line-874",
+      "src/pcache1.c::function::pcache1FetchNoMutex::line-1002",
+      "src/pcache1.c::function::pcache1Fetch::line-1047",
+      "src/pcache1.c::function::pcache1Unpin::line-1078",
+      "src/pcache1.c::function::pcache1Shrink::line-839",
+      "src/pcache1.c::function::pcache1Pagecount::line-856",
+      "src/pcache1.c::function::pcache1ResizeHash::line-537",
+      "src/pcache1.c::member::mutex::line-159",
+      "src/pcache1.c::member::lru::line-164",
+      "src/pcache1.c::member::mxPinned::line-162",
+      "src/pcache1.c::member::nMaxPage::line-160",
+      "src/pcache1.c::member::nMinPage::line-161",
+      "src/pcache1.c::member::nPurgeable::line-163",
+      "src/pcache1.c::typedef::PCache1::line-86",
+      "src/pcache1.c::struct::PCache1::line-175",
+      "src/pcache1.c::typedef::PgHdr1::line-87",
+      "src/pcache1.c::struct::PgHdr1::line-117",
+      "src/pcache1.c::member::apHash::line-200",
+      "src/pcache1.c::member::bPurgeable::line-187",
+      "src/pcache1.c::member::iKey::line-119",
+      "src/pcache1.c::member::iMaxKey::line-191",
+      "src/pcache1.c::member::isAnchor::line-121",
+      "src/pcache1.c::member::n90pct::line-190",
+      "src/pcache1.c::member::nHash::line-199",
+      "src/pcache1.c::member::nMax::line-189",
+      "src/pcache1.c::member::nMin::line-188",
+      "src/pcache1.c::member::nPage::line-198",
+      "src/pcache1.c::member::nPurgeableDummy::line-192",
+      "src/pcache1.c::member::nRecyclable::line-197",
+      "src/pcache1.c::member::pCache::line-123",
+      "src/pcache1.c::member::pGroup::line-182",
+      "src/pcache1.c::member::pLruNext::line-124",
+      "src/pcache1.c::member::pLruPrev::line-125",
+      "src/pcache1.c::member::pNext::line-122",
+      "src/pcache1.c::member::page::line-118",
+      "src/pcache1.c::member::pnPurgeable::line-183",
+      "src/pcache1.c::member::szAlloc::line-186",
+      "src/pcache1.c::member::szExtra::line-185",
+      "src/pcache1.c::member::szPage::line-184",
+      "src/pcache1.c::function::pcache1Rekey::line-1113",
+      "src/pcache1.c::function::pcache1Truncate::line-1156",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::line-646",
+      "src/pcache1.c::macro::PAGE_IS_PINNED::line-133",
+      "src/pcache1.c::macro::PAGE_IS_UNPINNED::line-134",
+      "src/pcache1.c::macro::PCACHE1_MIGHT_USE_GROUP_MUTEX::line-251",
+      "src/pcache1.c::macro::pcache1EnterMutex::line-249",
+      "src/pcache1.c::macro::pcache1LeaveMutex::line-250"
+    ],
+    "behavioral_block_ids": [
+      "src/pcache1.c::function::pcache1PinPage::behavior::assert::line-579-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1PinPage::behavior::assert::line-580-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1PinPage::behavior::assert::line-581-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1PinPage::behavior::assert::line-582-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1PinPage::behavior::assert::line-583-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1PinPage::behavior::assert::line-589-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1PinPage::behavior::assert::line-590-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1PinPage::behavior::return::line-592-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1RemoveFromHash::behavior::assert::line-608-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1RemoveFromHash::behavior::for::line-610-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1RemoveFromHash::behavior::if::line-614-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1EnforceMaxPage::behavior::assert::line-624-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1EnforceMaxPage::behavior::while::line-625-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1EnforceMaxPage::behavior::assert::line-628-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1EnforceMaxPage::behavior::assert::line-629-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1EnforceMaxPage::behavior::if::line-633-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Create::behavior::assert::line-769-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Create::behavior::assert::line-770-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Create::behavior::if::line-774-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Create::behavior::if::line-775-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1Create::behavior::if::line-782-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1Create::behavior::conditional::line-790-column-27::ordinal-0",
+      "src/pcache1.c::function::pcache1Create::behavior::if::line-792-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1Create::behavior::if::line-801-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1Create::behavior::return::line-806-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Cachesize::behavior::assert::line-817-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Cachesize::behavior::if::line-818-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Cachesize::behavior::if::line-822-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1Shrink::behavior::if::line-841-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Pagecount::behavior::return::line-862-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::assert::line-884-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::assert::line-886-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::assert::line-887-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::if::line-888-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::return::line-893-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::if::line-896-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::assert::line-897-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::if::line-900-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::assert::line-906-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::if::line-910-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::if::line-921-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::if::line-925-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::if::line-936-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchStage2::behavior::return::line-940-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchNoMutex::behavior::while::line-1012-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchNoMutex::behavior::if::line-1018-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchNoMutex::behavior::if::line-1019-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchNoMutex::behavior::return::line-1020-column-7::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchNoMutex::behavior::return::line-1022-column-7::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchNoMutex::behavior::if::line-1024-column-9::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchNoMutex::behavior::return::line-1026-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1FetchNoMutex::behavior::return::line-1028-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1Fetch::behavior::assert::line-1056-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Fetch::behavior::assert::line-1057-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Fetch::behavior::assert::line-1058-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Fetch::behavior::assert::line-1059-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Fetch::behavior::assert::line-1060-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Fetch::behavior::assert::line-1061-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Fetch::behavior::return::line-1068-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1Unpin::behavior::assert::line-1087-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Unpin::behavior::assert::line-1093-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Unpin::behavior::assert::line-1094-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Unpin::behavior::if::line-1096-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Destroy::behavior::assert::line-1174-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Destroy::behavior::if::line-1176-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Destroy::behavior::assert::line-1177-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Destroy::behavior::assert::line-1179-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1ResizeHash::behavior::assert::line-542-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1ResizeHash::behavior::if::line-545-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1ResizeHash::behavior::if::line-550-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1ResizeHash::behavior::if::line-552-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1ResizeHash::behavior::if::line-554-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1ResizeHash::behavior::for::line-555-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1ResizeHash::behavior::while::line-558-column-7::ordinal-0",
+      "src/pcache1.c::function::pcache1Rekey::behavior::assert::line-1123-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Rekey::behavior::assert::line-1124-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Rekey::behavior::assert::line-1125-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Rekey::behavior::assert::line-1129-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Rekey::behavior::while::line-1132-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Rekey::behavior::assert::line-1137-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Rekey::behavior::if::line-1142-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Truncate::behavior::if::line-1159-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::behavior::assert::line-652-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::behavior::assert::line-653-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::behavior::assert::line-654-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::behavior::if::line-655-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::behavior::for::line-669-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::behavior::assert::line-672-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::behavior::while::line-674-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::behavior::if::line-675-column-7::ordinal-0",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::behavior::if::line-678-column-9::ordinal-0",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::behavior::if::line-685-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::behavior::break::line-685-column-20::ordinal-0",
+      "src/pcache1.c::function::pcache1TruncateUnsafe::behavior::assert::line-688-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "PCache static-slot and overflow allocation bodies assigned to pcache-static-slot-allocation-and-free",
+      "Bulk allocation assigned to the static-slot allocation unit and inactive in unified mode",
+      "Truncate/rekey and hash-resize details require later cache-table units",
+      "ENABLE_MEMORY_MANAGEMENT and non-selected threading profiles"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "pcache-process-lifecycle-and-static-buffer",
+      "pcache-static-slot-allocation-and-free",
+      "pthread-mutex-enter-leave-core"
+    ],
+    "external_source_responsibilities": [
+      "Exact PCache1/PGroup object allocation topology and create-failure publication",
+      "Exact upper pcache.c dirty/stress/reference coupling"
+    ],
+    "caller_closure": "Production Pager caches use Cache. Unified target mode is selected only for a startup static page buffer with core mutexes disabled, matching the active profile. Separate caches retain private groups."
+  },
+  "contracts": {
+    "inputs": [
+      "Cache page/extra size, purgeability and maximum; key and create mode; pin/unpin/reuse decision; memory pressure"
+    ],
+    "outputs": [
+      "Hit/miss/create result, pinned page, exact cross-cache recycled buffer, page count, or rejected soft create"
+    ],
+    "ownership": "Each allocated page belongs to one Cache hash at a time and one PGroup purgeable count. An unpinned clean page belongs to exactly one intrusive group LRU. Cross-cache recycling transfers cache/hash ownership without freeing the underlying slot.",
+    "state_and_results": "Create/destroy and cache-size changes update nMax/nMin/mxPinned. Allocation/free update nPurgeable. Unpin inserts at LRU head; pin removes. Recycle and enforcement take the LRU tail across all group members. Shrink temporarily enforces group maximum zero.",
+    "locks_callbacks_io": "The active unified mode has core mutexes disabled, so source PGroup mutex is null. Separate mode uses private groups. No I/O occurs; dirty stress remains an upper-cache callback.",
+    "failure_and_continuation": "Hash/event capacity OOM before transfer leaves victim and both caches unchanged. Wrong-sized victims are freed before ordinary allocation. Limit enforcement stops when no clean unpinned victim exists; pinned/dirty pages remain usable."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pcache1.c::typedef::PGroup::line-89",
+      "relation": "source-pgroup-type-to-native-group-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::Group"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::struct::PGroup::line-158",
+      "relation": "source-pgroup-type-to-native-group-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::Group"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Create::line-764",
+      "relation": "source-pgroup-operation-to-native-cache-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.initWithLifecycle"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Destroy::line-1171",
+      "relation": "source-pgroup-operation-to-native-cache-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.deinit"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Cachesize::line-814",
+      "relation": "source-pgroup-operation-to-native-cache-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.setCacheSize"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1EnforceMaxPage::line-621",
+      "relation": "source-pgroup-operation-to-native-cache-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.enforceGroupMax"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1PinPage::line-578",
+      "relation": "source-pgroup-operation-to-native-cache-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.removeFromGroupLru",
+        "src/core/page_cache.zig::function::Cache.pin"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1RemoveFromHash::line-603",
+      "relation": "source-pgroup-operation-to-native-cache-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.discard"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1FetchStage2::line-874",
+      "relation": "source-pgroup-operation-to-native-cache-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.makeRoom",
+        "src/core/page_cache.zig::function::Cache.recyclePage",
+        "src/core/page_cache.zig::function::Cache.fetch"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1FetchNoMutex::line-1002",
+      "relation": "source-pgroup-operation-to-native-cache-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.fetch"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Fetch::line-1047",
+      "relation": "source-pgroup-operation-to-native-cache-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.fetch"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Unpin::line-1078",
+      "relation": "source-pgroup-operation-to-native-cache-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.release",
+        "src/core/page_cache.zig::function::Cache.unpin",
+        "src/core/page_cache.zig::function::Cache.addToGroupLru"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Shrink::line-839",
+      "relation": "source-pgroup-operation-to-native-cache-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.shrink"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Pagecount::line-856",
+      "relation": "source-pgroup-operation-to-native-cache-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.pageCount"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1ResizeHash::line-537",
+      "relation": "source-pcache-hash-resize-to-native-page-table-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::PageTable.resize"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::mutex::line-159",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.group_mutex"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::lru::line-164",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Group.lru_head",
+        "src/core/page_cache.zig::field::Group.lru_tail"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::mxPinned::line-162",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Group.max_pinned"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nMaxPage::line-160",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Group.max_pages"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nMinPage::line-161",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Group.min_pages"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nPurgeable::line-163",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Group.purgeable_pages"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::typedef::PCache1::line-86",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::Cache"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::struct::PCache1::line-175",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::Cache"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::typedef::PgHdr1::line-87",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::Page"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::struct::PgHdr1::line-117",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::Page"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::apHash::line-200",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::PageTable.buckets"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::bPurgeable::line-187",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Cache.purgeable"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::iKey::line-119",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Page.key"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::iMaxKey::line-191",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Cache.pages"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::isAnchor::line-121",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Page.on_group_lru"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::n90pct::line-190",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Cache.max_pages"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nHash::line-199",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::PageTable.buckets"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nMax::line-189",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Cache.max_pages"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nMin::line-188",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Group.min_pages"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nPage::line-198",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::PageTable.page_count"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nPurgeableDummy::line-192",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Cache.purgeable"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nRecyclable::line-197",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Cache.recyclable_pages"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::pCache::line-123",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Page.owner"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::pGroup::line-182",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Cache.private_group",
+        "src/core/page_cache.zig::field::Cache.lifecycle"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::pLruNext::line-124",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Page.lru_next"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::pLruPrev::line-125",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Page.lru_prev"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::pNext::line-122",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Page.hash_next"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::page::line-118",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Page.data",
+        "src/core/page_cache.zig::field::Page.extra"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::pnPurgeable::line-183",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.pageGroup"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::szAlloc::line-186",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.pageLayout"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::szExtra::line-185",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Cache.extra_size"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::szPage::line-184",
+      "relation": "source-pcache-pgroup-page-state-to-native-representation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Cache.page_size"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Rekey::line-1113",
+      "relation": "source-pcache-rekey-truncate-to-native-cache-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.move",
+        "src/core/page_cache.zig::function::PageTable.rekey"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Truncate::line-1156",
+      "relation": "source-pcache-rekey-truncate-to-native-cache-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.truncate"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1TruncateUnsafe::line-646",
+      "relation": "source-pcache-rekey-truncate-to-native-cache-operation-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.truncate",
+        "src/core/page_cache.zig::function::Cache.discard"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::macro::PAGE_IS_PINNED::line-133",
+      "relation": "source-pcache-pin-or-selected-mutex-macro-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Page.isPinned"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::macro::PAGE_IS_UNPINNED::line-134",
+      "relation": "source-pcache-pin-or-selected-mutex-macro-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Page.isPinned"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::macro::PCACHE1_MIGHT_USE_GROUP_MUTEX::line-251",
+      "relation": "source-pcache-pin-or-selected-mutex-macro-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.usesSharedGroup"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::macro::pcache1EnterMutex::line-249",
+      "relation": "source-pcache-pin-or-selected-mutex-macro-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.group_mutex"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::macro::pcache1LeaveMutex::line-250",
+      "relation": "source-pcache-pin-or-selected-mutex-macro-candidate",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.group_mutex"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Source anchor PgHdr1 is represented by nullable Group head/tail pointers with Page prev/next/on-LRU fields.",
+    "PCache1 apHash/nHash/nPage is represented by PageTable with nullable bucket heads, intrusive hash_next links, modulo lookup, 256-slot initial allocation, doubling, and benign later resize OOM.",
+    "Source PCache1 and private PGroup share one zeroed allocation; native Cache is embedded in Pager and allocates its initial PageTable separately, so create-allocation timing remains a promotion blocker.",
+    "Source nMin is 10 per purgeable cache and unsigned mxPinned arithmetic is preserved with wrapping arithmetic.",
+    "Source unified mode has no bulk-local pages; native cross-cache transfer therefore retains static/overflow allocation ownership safely."
+  ],
+  "oracle": {
+    "protocol": "The compiled pcache1/pcache C worker and native worker compare 787 exact lines. Five focused additions cover aggregate purgeable/max/min/free-slot state, cross-cache pointer-identity recycle and page counts, two-cache limit enforcement, group-wide shrink, and 256-to-512 intrusive hash growth/collision order. Native tests additionally check initial hash OOM, benign later resize OOM, intrusive ownership/invariants, and unchanged static-slot status.",
+    "internal_observations": [
+      "group nPurgeable/nMaxPage/nMinPage",
+      "LRU oldest/newest ownership",
+      "exact recycled page pointer and static slot",
+      "per-cache page/recyclable counts",
+      "free static slot count",
+      "cross-cache limit victims",
+      "group-wide shrink continuation",
+      "initial/doubled hash bucket count",
+      "collision-chain head/next key",
+      "initial versus benign resize OOM"
+    ],
+    "normalization": "C/Zig page addresses differ, but within-worker pointer identity is exact. Keys, counts, limits, LRU victim order, slot ownership, results, and continuation are not normalized."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": true,
+    "oom": "Initial 256-bucket failure leaves Cache unavailable and Pager returns NOMEM; later doubling failure is benign and preserves old buckets. Full PCache1/PGroup object allocation-sequence equivalence remains open.",
+    "io_crash_concurrency": "No I/O. Unified mode is selected only when core mutexes are disabled; broader configured/memory-management mutex profiles are out of selected scope.",
+    "malformed_input": "Key zero, conflicting keys and invalid ownership have native guards; exact source assertions remain to be closed with the hash unit.",
+    "continuation": "Cross-cache recycle, limit, shrink, pinned/dirty retention and deinit counter continuation pass.",
+    "performance": "Intrusive PGroup LRU and PageTable hash-chain operations are constant time on average. Hash growth doubles from 256 exactly as source; pathological collision performance remains source-shaped.",
+    "commands": [
+      "zig test src/core/page_cache.zig -lc",
+      "zig test src/core/pager.zig -lc",
+      "zig build pcache-differential",
+      "zig build test -j2"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/page_cache.zig Cache and Lifecycle.shared_group",
+    "native_call_path": "Pager.open constructs production caches against activeProcessLifecycle; unified mode caches resolve Lifecycle.shared_group on fetch/release/limit/shrink.",
+    "bounded_owner_retired": "Per-cache lru_stamp scans no longer own fetch-time eviction in unified or private groups; local scan remains only for explicitly local purge."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "PGroup/LRU and source-shaped hash behavior are integrated. Requires exact PCache1/PGroup object allocation publication, complete upper-cache coupling traces, assurance, and independent review."
+  },
+  "known_blockers": [
+    "PCache1/private-PGroup one-allocation create/failure topology differs from embedded Cache plus PageTable allocation.",
+    "Complete upper pcache.c dirty/stress/reference coupling traces remain open.",
+    "Independent fidelity review remains open."
+  ],
+  "caller_closure": "Production Pager caches use Cache. Unified target mode is selected only for a startup static page buffer with core mutexes disabled, matching the active profile. Separate caches retain private groups. PageTable now preserves source bucket/chaining/resize behavior."
+}

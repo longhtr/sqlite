@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "phase": "phase-7-read-only-btree-records",
+  "profile": "sqlite-3.53.4-core-default-threadsafe1-rollback-readonly-binary-collation",
+  "generator": "tools/generate_btree_fixtures.py",
+  "fixtures": [
+    {
+      "name": "core-512.db",
+      "sha256": "05e760290d9b32db47f9277330c7aa84e47a5eeb3f4378c9125ee5de63a6c72f",
+      "size": 235520,
+      "page_size": 512,
+      "encoding": "utf-8",
+      "auto_vacuum": "none",
+      "freelist_pages": 240,
+      "integrity_check": "ok",
+      "rows": 701,
+      "roots": {
+        "items": 2,
+        "items_t_i": 3,
+        "wr": 4
+      },
+      "seek_rowids": [
+        1,
+        350,
+        700,
+        1099511627776
+      ],
+      "overflow_rowid": 1099511627776
+    },
+    {
+      "name": "utf16le-1024.db",
+      "sha256": "f38799e91eec4d496b69635fa434e57a3ff123e950cfcaafbfe18e11208ede65",
+      "size": 253952,
+      "page_size": 1024,
+      "encoding": "utf-16le",
+      "auto_vacuum": "none",
+      "freelist_pages": 120,
+      "integrity_check": "ok",
+      "rows": 501,
+      "roots": {
+        "items": 2,
+        "items_t_i": 3,
+        "wr": 4
+      },
+      "seek_rowids": [
+        1,
+        250,
+        500,
+        1099511627776
+      ],
+      "overflow_rowid": 1099511627776
+    },
+    {
+      "name": "utf16be-2048.db",
+      "sha256": "3483d06717431a6aec43c7dbc3d638b8a1b8f7c9bf932f03b9c4e34214e79956",
+      "size": 284672,
+      "page_size": 2048,
+      "encoding": "utf-16be",
+      "auto_vacuum": "none",
+      "freelist_pages": 60,
+      "integrity_check": "ok",
+      "rows": 701,
+      "roots": {
+        "items": 2,
+        "items_t_i": 3,
+        "wr": 4
+      },
+      "seek_rowids": [
+        1,
+        350,
+        700,
+        1099511627776
+      ],
+      "overflow_rowid": 1099511627776
+    },
+    {
+      "name": "autovacuum-4096.db",
+      "sha256": "a2d644894fd2d6837848f7b4cceaeeef7cd451dab006b639a51d82d37c57ee37",
+      "size": 311296,
+      "page_size": 4096,
+      "encoding": "utf-8",
+      "auto_vacuum": "incremental",
+      "freelist_pages": 39,
+      "integrity_check": "ok",
+      "rows": 901,
+      "roots": {
+        "items": 3,
+        "items_t_i": 4,
+        "wr": 5
+      },
+      "seek_rowids": [
+        1,
+        450,
+        900,
+        1099511627776
+      ],
+      "overflow_rowid": 1099511627776
+    },
+    {
+      "name": "autovacuum-full-8192.db",
+      "sha256": "1ee038ecdd2922b022be214835aaa6710138db4993ac031d8a8a63bb3a50db48",
+      "size": 188416,
+      "page_size": 8192,
+      "encoding": "utf-8",
+      "auto_vacuum": "full",
+      "freelist_pages": 0,
+      "integrity_check": "ok",
+      "rows": 1001,
+      "roots": {
+        "items": 3,
+        "items_t_i": 4,
+        "wr": 5
+      },
+      "seek_rowids": [
+        1,
+        500,
+        1000,
+        1099511627776
+      ],
+      "overflow_rowid": 1099511627776
+    },
+    {
+      "name": "core-16384.db",
+      "sha256": "5c0414855b2f12068ade94d7271382b54034d0488f36200819ab08a459663c66",
+      "size": 409600,
+      "page_size": 16384,
+      "encoding": "utf-8",
+      "auto_vacuum": "none",
+      "freelist_pages": 8,
+      "integrity_check": "ok",
+      "rows": 1401,
+      "roots": {
+        "items": 2,
+        "items_t_i": 3,
+        "wr": 4
+      },
+      "seek_rowids": [
+        1,
+        700,
+        1400,
+        1099511627776
+      ],
+      "overflow_rowid": 1099511627776
+    },
+    {
+      "name": "core-32768.db",
+      "sha256": "00c00be7feccfcac5adef85be95de5cd9b1c3b5ba0e1c070c4cf18c2b4033c08",
+      "size": 524288,
+      "page_size": 32768,
+      "encoding": "utf-8",
+      "auto_vacuum": "none",
+      "freelist_pages": 4,
+      "integrity_check": "ok",
+      "rows": 1801,
+      "roots": {
+        "items": 2,
+        "items_t_i": 3,
+        "wr": 4
+      },
+      "seek_rowids": [
+        1,
+        900,
+        1800,
+        1099511627776
+      ],
+      "overflow_rowid": 1099511627776
+    },
+    {
+      "name": "wide-65536.db",
+      "sha256": "7e3df1c673b50c780706d06be1ec8360837e30720172d4783b508f45d43000a5",
+      "size": 786432,
+      "page_size": 65536,
+      "encoding": "utf-8",
+      "auto_vacuum": "none",
+      "freelist_pages": 2,
+      "integrity_check": "ok",
+      "rows": 2601,
+      "roots": {
+        "items": 2,
+        "items_t_i": 3,
+        "wr": 4
+      },
+      "seek_rowids": [
+        1,
+        1300,
+        2600,
+        1099511627776
+      ],
+      "overflow_rowid": 1099511627776
+    }
+  ]
+}

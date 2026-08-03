@@ -1,0 +1,348 @@
+{
+  "schema_version": 1,
+  "id": "connection-allocation-state-representations",
+  "title": "Connection allocation, lookaside, interrupt, and Parse state representations",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These are the additional exact sqlite3, Lookaside, LookasideSlot, interrupt-union, and Parse identities read or written by the connection-aware allocation/OOM closure.",
+    "source_files": [
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      }
+    ],
+    "source_entity_ids": [
+      "src/sqliteInt.h::typedef::Lookaside::line-1357",
+      "src/sqliteInt.h::typedef::LookasideSlot::line-1358",
+      "src/sqliteInt.h::struct::Lookaside::line-1594",
+      "src/sqliteInt.h::member::bDisable::line-1595",
+      "src/sqliteInt.h::member::sz::line-1596",
+      "src/sqliteInt.h::member::szTrue::line-1597",
+      "src/sqliteInt.h::member::anStat::line-1600",
+      "src/sqliteInt.h::member::pInit::line-1601",
+      "src/sqliteInt.h::member::pFree::line-1602",
+      "src/sqliteInt.h::member::pSmallInit::line-1604",
+      "src/sqliteInt.h::member::pSmallFree::line-1605",
+      "src/sqliteInt.h::member::pMiddle::line-1606",
+      "src/sqliteInt.h::member::pStart::line-1609",
+      "src/sqliteInt.h::member::pEnd::line-1610",
+      "src/sqliteInt.h::member::pTrueEnd::line-1611",
+      "src/sqliteInt.h::struct::LookasideSlot::line-1613",
+      "src/sqliteInt.h::member::pNext::line-1614",
+      "src/sqliteInt.h::member::mutex::line-1673",
+      "src/sqliteInt.h::member::errByteOffset::line-1683",
+      "src/sqliteInt.h::member::bBenignMalloc::line-1691",
+      "src/sqliteInt.h::member::suppressErr::line-1694",
+      "src/sqliteInt.h::member::nVdbeExec::line-1719",
+      "src/sqliteInt.h::member::pParse::line-1741",
+      "src/sqliteInt.h::member::isInterrupted::line-1758",
+      "src/sqliteInt.h::member::u1::line-1760",
+      "src/sqliteInt.h::member::lookaside::line-1761",
+      "src/sqliteInt.h::member::pnBytesFreed::line-1793",
+      "src/sqliteInt.h::member::zErrMsg::line-3884",
+      "src/sqliteInt.h::member::rc::line-3886",
+      "src/sqliteInt.h::member::nErr::line-3916",
+      "src/sqliteInt.h::member::pOuterParse::line-3954",
+      "src/sqliteInt.h::member::pWith::line-4000"
+    ],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": [
+      "sqlite3/Parse fields not touched by connection allocation or OOM propagation",
+      "Lookaside configuration ownership and bMalloced lifetime",
+      "Execution semantics of connection mutexes and interrupts"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-builder-state-representations"
+    ],
+    "external_source_responsibilities": [
+      "Pinned ABI target and generated active-profile C layout probes"
+    ],
+    "caller_closure": "Together with vdbe-builder-state-representations, this unit covers every owner-state field accessed by connection-allocation-for-vdbe-growth; mutex and atomic operation behavior remain separate behavioral dependencies."
+  },
+  "contracts": {
+    "inputs": [
+      "Pinned active profile and target ABI layout facts"
+    ],
+    "outputs": [
+      "Exact two-size lookaside lists/counters and sqlite3/Parse OOM state storage"
+    ],
+    "ownership": "Representation only. Optional pointers retain C nullability and exact widths/offsets.",
+    "state_and_results": "All accessed fields, union overlays, and list links match the C layout oracle exactly.",
+    "locks_callbacks_io": "None at representation level.",
+    "failure_and_continuation": "Any layout mismatch is a compile-time failure."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/sqliteInt.h::typedef::Lookaside::line-1357",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::Lookaside"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::typedef::LookasideSlot::line-1358",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::LookasideSlot"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::struct::Lookaside::line-1594",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::Lookaside"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::bDisable::line-1595",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Lookaside.bDisable"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::sz::line-1596",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Lookaside.sz"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::szTrue::line-1597",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Lookaside.szTrue"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::anStat::line-1600",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Lookaside.anStat"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pInit::line-1601",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Lookaside.pInit"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pFree::line-1602",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Lookaside.pFree"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pSmallInit::line-1604",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Lookaside.pSmallInit"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pSmallFree::line-1605",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Lookaside.pSmallFree"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pMiddle::line-1606",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Lookaside.pMiddle"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pStart::line-1609",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Lookaside.pStart"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pEnd::line-1610",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Lookaside.pEnd"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pTrueEnd::line-1611",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Lookaside.pTrueEnd"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::struct::LookasideSlot::line-1613",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::LookasideSlot"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pNext::line-1614",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::LookasideSlot.pNext"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::mutex::line-1673",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.mutex"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::errByteOffset::line-1683",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.errByteOffset"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::bBenignMalloc::line-1691",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.bBenignMalloc"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::suppressErr::line-1694",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.suppressErr"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::nVdbeExec::line-1719",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.nVdbeExec"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pParse::line-1741",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.pParse"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::isInterrupted::line-1758",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3Interrupt.isInterrupted"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::u1::line-1760",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.u1"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::lookaside::line-1761",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.lookaside"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pnBytesFreed::line-1793",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.pnBytesFreed"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::zErrMsg::line-3884",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.zErrMsg"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::rc::line-3886",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.rc"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::nErr::line-3916",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.nErr"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pOuterParse::line-3954",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.pOuterParse"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pWith::line-4000",
+      "relation": "one-to-one-layout",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.pWith"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The anonymous C interrupt union has the stable Zig name Sqlite3Interrupt.",
+    "Parse uses opaque cycle-breaking pointers without changing pointer representation.",
+    "C volatile affects access operations rather than storage layout; relaxed atomic-store behavior belongs to the allocator unit."
+  ],
+  "oracle": {
+    "protocol": "Generated internal C probes and Zig compile-time checks compare exact sizes, alignments, field offsets/widths, union overlays, and packed masks; allocator traces exercise list and OOM fields.",
+    "internal_observations": [
+      "Lookaside and slot layout",
+      "sqlite3 allocation/OOM fields",
+      "interrupt union overlay",
+      "Parse error-owner fields"
+    ],
+    "normalization": "Anonymous C union naming only; all numeric layout observations are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Representation-only; allocator fault traces consume these fields.",
+    "io_crash_concurrency": "Storage is exact; mutex/atomic behavior is separately admitted.",
+    "malformed_input": "Not applicable.",
+    "continuation": "Not applicable.",
+    "performance": "No wrapper allocation or indirection.",
+    "commands": [
+      "zig build internal-vdbe-layout-test",
+      "zig build internal-parse-layout-test",
+      "zig build vdbe-builder-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_types.zig and src/core/internal/parse_types.zig",
+    "native_call_path": "db_allocator.zig and vdbe_aux.zig candidates consume the exact fields directly.",
+    "bounded_owner_retired": "No duplicate exact internal layout owner is used by the source-corresponding candidates."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Must independently verify selected field closure, anonymous union mapping, and generated target facts."
+  },
+  "known_blockers": [
+    "Final subsystem integration follows allocator and source-builder integration."
+  ]
+}

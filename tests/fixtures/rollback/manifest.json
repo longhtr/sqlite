@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "phase": "phase-8-rollback-journal-writes",
+  "profile": "sqlite-3.53.4-delete-full-4096-sector4096",
+  "generator": "tools/generate_rollback_fixtures.py",
+  "fixtures": [
+    {
+      "name": "core-4096.db",
+      "sha256": "344d810db01b9d7d3957000977fd2a911da027b658ca46e7ae8c68e895a7331a",
+      "size": 4096,
+      "page_size": 4096,
+      "initial_user_version": 0,
+      "integrity_check": "ok"
+    }
+  ],
+  "mutation": "fixed-size page-1 user_version and change-counter update",
+  "commit_events": [
+    "journal_write",
+    "journal_initial_sync",
+    "journal_header_write",
+    "journal_final_sync",
+    "database_write",
+    "database_sync",
+    "journal_delete"
+  ],
+  "fault_targets": {
+    "write_calls": 6,
+    "sync_calls": 3,
+    "truncate_calls": 2,
+    "delete_calls": 1,
+    "open_calls": 1,
+    "lock_calls": 1,
+    "short_write_calls": 1,
+    "sticky_targets": [
+      "write",
+      "sync",
+      "delete"
+    ]
+  },
+  "immediate_crash_fault_boundaries": 12,
+  "interoperability": [
+    "oracle_commit_native_continue_oracle_read",
+    "oracle_hot_native_recover_continue",
+    "native_hot_oracle_recover_continue"
+  ]
+}

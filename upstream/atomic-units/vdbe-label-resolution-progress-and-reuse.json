@@ -1,0 +1,250 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-label-resolution-progress-and-reuse",
+  "title": "VDBE label resolution, progress checks, and reusable-program marker",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These active source functions and state fields form the dependency-closed label state machine used by the VDBE builder: negative label issuance, geometric label-array growth, resolve-to-next-op, hundred-label progress checks, interrupt/callback propagation, and Expire/Noop reusable marking. They extend the admitted fixed-operand append core and share its connection allocation/OOM closure.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      },
+      {
+        "path": "src/util.c",
+        "sha256": "f3ad5a891625459352c1b57c053d3b89dcc973206644126a857c0ff82b7ce37f"
+      },
+      {
+        "path": "src/vdbe.h",
+        "sha256": "c2f07fd77827a922a77d8bde1c873536056e7269898d4bd2b4088f8222cd6259"
+      },
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeMakeLabel::line-610",
+      "src/vdbeaux.c::function::resizeResolveLabel::line-619",
+      "src/vdbeaux.c::function::sqlite3VdbeResolveLabel::line-637",
+      "src/vdbeaux.c::function::sqlite3VdbeRunOnlyOnce::line-659",
+      "src/vdbeaux.c::function::sqlite3VdbeReusable::line-666",
+      "src/util.c::function::sqlite3ProgressCheck::line-211",
+      "src/vdbe.h::macro::ADDR::line-179",
+      "src/sqliteInt.h::macro::AtomicLoad::line-238",
+      "src/sqliteInt.h::member::nLabel::line-3923",
+      "src/sqliteInt.h::member::nLabelAlloc::line-3924",
+      "src/sqliteInt.h::member::aLabel::line-3925",
+      "src/sqliteInt.h::member::nProgressSteps::line-3934",
+      "src/sqliteInt.h::member::xProgress::line-1767",
+      "src/sqliteInt.h::member::pProgressArg::line-1768",
+      "src/sqliteInt.h::member::nProgressOps::line-1769"
+    ],
+    "behavioral_block_ids": [
+      "src/util.c::function::sqlite3ProgressCheck::behavior::if::line-213-column-3::ordinal-0",
+      "src/util.c::function::sqlite3ProgressCheck::behavior::if::line-218-column-3::ordinal-0",
+      "src/util.c::function::sqlite3ProgressCheck::behavior::if::line-219-column-5::ordinal-0",
+      "src/util.c::function::sqlite3ProgressCheck::behavior::if::line-221-column-11::ordinal-0",
+      "src/util.c::function::sqlite3ProgressCheck::behavior::if::line-222-column-7::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeLabel::behavior::return::line-611-column-3::ordinal-0",
+      "src/vdbeaux.c::function::resizeResolveLabel::behavior::if::line-623-column-3::ordinal-0",
+      "src/vdbeaux.c::function::resizeResolveLabel::behavior::if::line-630-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeResolveLabel::behavior::assert::line-640-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeResolveLabel::behavior::assert::line-641-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeResolveLabel::behavior::assert::line-642-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeResolveLabel::behavior::if::line-648-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeResolveLabel::behavior::assert::line-651-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeReusable::behavior::for::line-668-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeReusable::behavior::if::line-669-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeReusable::behavior::break::line-671-column-7::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Final resolveP2Values label fixup over completed operation arrays",
+      "General progress checks outside label growth",
+      "VDBE creation/readiness/deletion and P4 ownership",
+      "Debug-only add-op tracing and inactive progress-callback omission profile"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-operation-append-core",
+      "vdbe-builder-state-representations",
+      "connection-allocation-for-vdbe-growth"
+    ],
+    "external_source_responsibilities": [
+      "Connection progress-handler configuration and caller-held mutex",
+      "Final operation-array P2 fixup during readiness"
+    ],
+    "caller_closure": "All direct state and helpers used by label issuance/resolution, hundred-boundary progress checks, and reusable marking are assigned. Compiler callers and final fixup/readiness remain follow-on atomic units."
+  },
+  "contracts": {
+    "inputs": [
+      "INIT-state Vdbe/Parse/connection, issued negative label, current operation count, progress callback configuration, interrupt flag"
+    ],
+    "outputs": [
+      "Negative label ID, resolved operation address in Parse.aLabel, sticky OOM/interrupt Parse state, and Expire-to-Noop reusable marker"
+    ],
+    "ownership": "Parse owns the connection-allocated aLabel array. ReallocOrFree destroys the prior array on growth failure exactly as source; successful growth updates allocation slots and target.",
+    "state_and_results": "nLabel is the negative issued count. nLabelAlloc grows to 10-nLabel. Resolution binds once to Vdbe.nOp. Every crossed hundred invokes progress checking after allocation and before publication. Interrupt and callback results update nErr/rc/nProgressSteps in source order.",
+    "locks_callbacks_io": "Caller holds the connection mutex. Progress callback may run at hundred-label boundaries and is invoked after checking the atomic interrupt. No I/O.",
+    "failure_and_continuation": "Label growth OOM clears aLabel/nLabelAlloc, preserves sticky connection/Parse OOM, and permits reallocation after explicit OOM/fault clear. Interrupt does not prevent publishing the resolved target."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeMakeLabel::line-610",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::makeLabel"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::resizeResolveLabel::line-619",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::resizeResolveLabel"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeResolveLabel::line-637",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::resolveLabel"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeRunOnlyOnce::line-659",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::runOnlyOnce"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeReusable::line-666",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::reusable"
+      ]
+    },
+    {
+      "source_entity_id": "src/util.c::function::sqlite3ProgressCheck::line-211",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::progressCheck"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::macro::ADDR::line-179",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::function::labelAddress"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::macro::AtomicLoad::line-238",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::progressCheck"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::nLabel::line-3923",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.nLabel"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::nLabelAlloc::line-3924",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.nLabelAlloc"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::aLabel::line-3925",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.aLabel"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::nProgressSteps::line-3934",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.nProgressSteps"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::xProgress::line-1767",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.xProgress"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pProgressArg::line-1768",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.pProgressArg"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::nProgressOps::line-1769",
+      "relation": "source-label-progress-or-reuse-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.nProgressOps"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C ADDR macro is the typed labelAddress complement helper.",
+    "C relaxed AtomicLoad is Zig monotonic @atomicLoad.",
+    "The active non-debug profile does not initialize unused label slots to -1; native likewise publishes only the resolved slot.",
+    "Canonical opcode enum values represent OP_Expire and OP_Noop without changing u8 storage."
+  ],
+  "oracle": {
+    "protocol": "The shared symbolic VDBE-builder program now drives label issuance, initial and hundred-boundary growth, resolution targets, progress callback configuration, atomic interrupt propagation, reusable marking, reached realloc OOM, realloc-or-free ownership loss, explicit clear, and continuation through pinned C and Zig workers.",
+    "internal_observations": [
+      "issued label and negative nLabel",
+      "nLabelAlloc and aLabel presence",
+      "resolved target and current nOp",
+      "mallocFailed, Parse nErr/rc/nProgressSteps",
+      "Expire/Noop opcode mutation",
+      "one-shot OOM and post-clear continuation"
+    ],
+    "normalization": "Label values, capacities, targets, result states and opcodes are exact. Pointer values are reduced only to null/non-null ownership."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "The 363-observation builder trace reaches label realloc failure, verifies realloc-or-free ownership loss and sticky OOM, then resumes after clear.",
+    "io_crash_concurrency": "No I/O. Atomic interrupt ordering and callback invocation are traced; caller mutex ownership remains an integration obligation.",
+    "malformed_input": "Internal labels are generated by makeLabel; source assertions constrain range and one-time resolution.",
+    "continuation": "Post-OOM label reallocation and post-interrupt target publication match source.",
+    "performance": "Negative counts, 10-slot slack growth, hundred-boundary progress checks, and read/write order follow source.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig test src/core/internal_vdbe_mem_test.zig -lc",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding builder",
+    "native_call_path": "Symbolic native builder worker reaches exact Vdbe/Parse/Sqlite3 owners; production SQL still uses handwritten Program construction.",
+    "bounded_owner_retired": "No. Compiler ownership switch waits for complete builder labels/fixups/P4/lifecycle closure."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires final fixup/compiler integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Final P2 fixup is now trace-equivalent; integrate it through MakeReady and the production compiler owner.",
+    "Integrate source builder into compiler ownership and retire handwritten Program construction.",
+    "Complete callback reentrancy/concurrency assurance and independent fidelity review."
+  ]
+}

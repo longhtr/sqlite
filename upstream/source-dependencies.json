@@ -1,0 +1,6000 @@
+{
+  "schema_version": 1,
+  "sqlite_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "profile": "sqlite-3.53.4-core-default-threadsafe1",
+  "method": "libclang active AST call/global/type references aggregated by source file",
+  "generator_sha256": "8f810215e976c9560b04f68ab6be92130be42cf7ebd8b309a4d7774c653c3639",
+  "counts": {
+    "active_files": 85,
+    "source_file_units": 85,
+    "cross_file_edges": 654,
+    "unique_active_references": 14923,
+    "files_by_track": {
+      "stage1-internal-model-generated": 17,
+      "stage2-foundational-services": 28,
+      "stage3-storage-transactions": 5,
+      "stage4-vdbe-runtime": 8,
+      "stage5-compiler-planner": 23,
+      "stage6-public-api-extensions": 4
+    }
+  },
+  "nodes": [
+    {
+      "file": "src/alter.c",
+      "source_file_unit": "alter.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 70,
+      "outgoing_file_dependencies": 15,
+      "incoming_file_dependencies": 5
+    },
+    {
+      "file": "src/analyze.c",
+      "source_file_unit": "analyze.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 43,
+      "outgoing_file_dependencies": 9,
+      "incoming_file_dependencies": 2
+    },
+    {
+      "file": "src/attach.c",
+      "source_file_unit": "attach.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 15,
+      "outgoing_file_dependencies": 17,
+      "incoming_file_dependencies": 2
+    },
+    {
+      "file": "src/auth.c",
+      "source_file_unit": "auth.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 7,
+      "outgoing_file_dependencies": 5,
+      "incoming_file_dependencies": 9
+    },
+    {
+      "file": "src/backup.c",
+      "source_file_unit": "backup.c",
+      "track": "stage3-storage-transactions",
+      "active_entity_count": 30,
+      "outgoing_file_dependencies": 12,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/bitvec.c",
+      "source_file_unit": "bitvec.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 29,
+      "outgoing_file_dependencies": 3,
+      "incoming_file_dependencies": 3
+    },
+    {
+      "file": "src/btmutex.c",
+      "source_file_unit": "btmutex.c",
+      "track": "stage3-storage-transactions",
+      "active_entity_count": 11,
+      "outgoing_file_dependencies": 3,
+      "incoming_file_dependencies": 11
+    },
+    {
+      "file": "src/btree.c",
+      "source_file_unit": "btree.c",
+      "track": "stage3-storage-transactions",
+      "active_entity_count": 232,
+      "outgoing_file_dependencies": 16,
+      "incoming_file_dependencies": 14
+    },
+    {
+      "file": "src/btree.h",
+      "source_file_unit": "btree.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 44,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 18
+    },
+    {
+      "file": "src/btreeInt.h",
+      "source_file_unit": "btreeInt.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 175,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/build.c",
+      "source_file_unit": "build.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 130,
+      "outgoing_file_dependencies": 20,
+      "incoming_file_dependencies": 17
+    },
+    {
+      "file": "src/callback.c",
+      "source_file_unit": "callback.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 15,
+      "outgoing_file_dependencies": 11,
+      "incoming_file_dependencies": 7
+    },
+    {
+      "file": "src/complete.c",
+      "source_file_unit": "complete.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 10,
+      "outgoing_file_dependencies": 4,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/date.c",
+      "source_file_unit": "date.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 59,
+      "outgoing_file_dependencies": 3,
+      "incoming_file_dependencies": 11
+    },
+    {
+      "file": "src/delete.c",
+      "source_file_unit": "delete.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 11,
+      "outgoing_file_dependencies": 9,
+      "incoming_file_dependencies": 6
+    },
+    {
+      "file": "src/expr.c",
+      "source_file_unit": "expr.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 183,
+      "outgoing_file_dependencies": 10,
+      "incoming_file_dependencies": 20
+    },
+    {
+      "file": "src/fault.c",
+      "source_file_unit": "fault.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 10,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 6
+    },
+    {
+      "file": "src/fkey.c",
+      "source_file_unit": "fkey.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 19,
+      "outgoing_file_dependencies": 13,
+      "incoming_file_dependencies": 3
+    },
+    {
+      "file": "src/func.c",
+      "source_file_unit": "func.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 129,
+      "outgoing_file_dependencies": 15,
+      "incoming_file_dependencies": 4
+    },
+    {
+      "file": "src/global.c",
+      "source_file_unit": "global.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 21,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 36
+    },
+    {
+      "file": "src/hash.c",
+      "source_file_unit": "hash.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 9,
+      "outgoing_file_dependencies": 4,
+      "incoming_file_dependencies": 8
+    },
+    {
+      "file": "src/hash.h",
+      "source_file_unit": "hash.h",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 21,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 12
+    },
+    {
+      "file": "src/insert.c",
+      "source_file_unit": "insert.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 44,
+      "outgoing_file_dependencies": 16,
+      "incoming_file_dependencies": 5
+    },
+    {
+      "file": "src/json.c",
+      "source_file_unit": "json.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 248,
+      "outgoing_file_dependencies": 12,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/legacy.c",
+      "source_file_unit": "legacy.c",
+      "track": "stage6-public-api-extensions",
+      "active_entity_count": 1,
+      "outgoing_file_dependencies": 8,
+      "incoming_file_dependencies": 2
+    },
+    {
+      "file": "src/loadext.c",
+      "source_file_unit": "loadext.c",
+      "track": "stage6-public-api-extensions",
+      "active_entity_count": 23,
+      "outgoing_file_dependencies": 8,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/main.c",
+      "source_file_unit": "main.c",
+      "track": "stage6-public-api-extensions",
+      "active_entity_count": 121,
+      "outgoing_file_dependencies": 39,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/malloc.c",
+      "source_file_unit": "malloc.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 54,
+      "outgoing_file_dependencies": 5,
+      "incoming_file_dependencies": 49
+    },
+    {
+      "file": "src/mem1.c",
+      "source_file_unit": "mem1.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 11,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 2
+    },
+    {
+      "file": "src/memdb.c",
+      "source_file_unit": "memdb.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 57,
+      "outgoing_file_dependencies": 9,
+      "incoming_file_dependencies": 2
+    },
+    {
+      "file": "src/memjournal.c",
+      "source_file_unit": "memjournal.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 34,
+      "outgoing_file_dependencies": 3,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/msvc.h",
+      "source_file_unit": "msvc.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 1,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/mutex.c",
+      "source_file_unit": "mutex.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 8,
+      "outgoing_file_dependencies": 2,
+      "incoming_file_dependencies": 18
+    },
+    {
+      "file": "src/mutex.h",
+      "source_file_unit": "mutex.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 2,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/mutex_noop.c",
+      "source_file_unit": "mutex_noop.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 8,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/mutex_unix.c",
+      "source_file_unit": "mutex_unix.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 13,
+      "outgoing_file_dependencies": 1,
+      "incoming_file_dependencies": 2
+    },
+    {
+      "file": "src/os.c",
+      "source_file_unit": "os.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 41,
+      "outgoing_file_dependencies": 2,
+      "incoming_file_dependencies": 17
+    },
+    {
+      "file": "src/os.h",
+      "source_file_unit": "os.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 16,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/os_common.h",
+      "source_file_unit": "os_common.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 8,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/os_setup.h",
+      "source_file_unit": "os_setup.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 6,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/os_unix.c",
+      "source_file_unit": "os_unix.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 247,
+      "outgoing_file_dependencies": 9,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/pager.c",
+      "source_file_unit": "pager.c",
+      "track": "stage3-storage-transactions",
+      "active_entity_count": 235,
+      "outgoing_file_dependencies": 15,
+      "incoming_file_dependencies": 10
+    },
+    {
+      "file": "src/pager.h",
+      "source_file_unit": "pager.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 36,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 15
+    },
+    {
+      "file": "src/pcache.c",
+      "source_file_unit": "pcache.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 59,
+      "outgoing_file_dependencies": 4,
+      "incoming_file_dependencies": 2
+    },
+    {
+      "file": "src/pcache.h",
+      "source_file_unit": "pcache.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 21,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 4
+    },
+    {
+      "file": "src/pcache1.c",
+      "source_file_unit": "pcache1.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 91,
+      "outgoing_file_dependencies": 6,
+      "incoming_file_dependencies": 3
+    },
+    {
+      "file": "src/pragma.c",
+      "source_file_unit": "pragma.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 46,
+      "outgoing_file_dependencies": 25,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/prepare.c",
+      "source_file_unit": "prepare.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 22,
+      "outgoing_file_dependencies": 18,
+      "incoming_file_dependencies": 8
+    },
+    {
+      "file": "src/printf.c",
+      "source_file_unit": "printf.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 77,
+      "outgoing_file_dependencies": 4,
+      "incoming_file_dependencies": 35
+    },
+    {
+      "file": "src/random.c",
+      "source_file_unit": "random.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 13,
+      "outgoing_file_dependencies": 3,
+      "incoming_file_dependencies": 10
+    },
+    {
+      "file": "src/resolve.c",
+      "source_file_unit": "resolve.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 29,
+      "outgoing_file_dependencies": 4,
+      "incoming_file_dependencies": 12
+    },
+    {
+      "file": "src/rowset.c",
+      "source_file_unit": "rowset.c",
+      "track": "stage4-vdbe-runtime",
+      "active_entity_count": 33,
+      "outgoing_file_dependencies": 2,
+      "incoming_file_dependencies": 2
+    },
+    {
+      "file": "src/select.c",
+      "source_file_unit": "select.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 152,
+      "outgoing_file_dependencies": 18,
+      "incoming_file_dependencies": 8
+    },
+    {
+      "file": "src/sqlite3ext.h",
+      "source_file_unit": "sqlite3ext.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 283,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/sqliteInt.h",
+      "source_file_unit": "sqliteInt.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 1533,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 61
+    },
+    {
+      "file": "src/sqliteLimit.h",
+      "source_file_unit": "sqliteLimit.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 20,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/status.c",
+      "source_file_unit": "status.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 19,
+      "outgoing_file_dependencies": 7,
+      "incoming_file_dependencies": 3
+    },
+    {
+      "file": "src/table.c",
+      "source_file_unit": "table.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 12,
+      "outgoing_file_dependencies": 4,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/threads.c",
+      "source_file_unit": "threads.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 9,
+      "outgoing_file_dependencies": 2,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/tokenize.c",
+      "source_file_unit": "tokenize.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 41,
+      "outgoing_file_dependencies": 7,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/trigger.c",
+      "source_file_unit": "trigger.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 32,
+      "outgoing_file_dependencies": 20,
+      "incoming_file_dependencies": 2
+    },
+    {
+      "file": "src/update.c",
+      "source_file_unit": "update.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 7,
+      "outgoing_file_dependencies": 16,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/upsert.c",
+      "source_file_unit": "upsert.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 8,
+      "outgoing_file_dependencies": 10,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/utf.c",
+      "source_file_unit": "utf.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 13,
+      "outgoing_file_dependencies": 4,
+      "incoming_file_dependencies": 7
+    },
+    {
+      "file": "src/util.c",
+      "source_file_unit": "util.c",
+      "track": "stage2-foundational-services",
+      "active_entity_count": 72,
+      "outgoing_file_dependencies": 6,
+      "incoming_file_dependencies": 43
+    },
+    {
+      "file": "src/vacuum.c",
+      "source_file_unit": "vacuum.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 4,
+      "outgoing_file_dependencies": 18,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/vdbe.c",
+      "source_file_unit": "vdbe.c",
+      "track": "stage4-vdbe-runtime",
+      "active_entity_count": 23,
+      "outgoing_file_dependencies": 18,
+      "incoming_file_dependencies": 3
+    },
+    {
+      "file": "src/vdbe.h",
+      "source_file_unit": "vdbe.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 111,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 33
+    },
+    {
+      "file": "src/vdbeInt.h",
+      "source_file_unit": "vdbeInt.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 233,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 8
+    },
+    {
+      "file": "src/vdbeapi.c",
+      "source_file_unit": "vdbeapi.c",
+      "track": "stage4-vdbe-runtime",
+      "active_entity_count": 119,
+      "outgoing_file_dependencies": 14,
+      "incoming_file_dependencies": 16
+    },
+    {
+      "file": "src/vdbeaux.c",
+      "source_file_unit": "vdbeaux.c",
+      "track": "stage4-vdbe-runtime",
+      "active_entity_count": 144,
+      "outgoing_file_dependencies": 17,
+      "incoming_file_dependencies": 29
+    },
+    {
+      "file": "src/vdbeblob.c",
+      "source_file_unit": "vdbeblob.c",
+      "track": "stage4-vdbe-runtime",
+      "active_entity_count": 18,
+      "outgoing_file_dependencies": 14,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/vdbemem.c",
+      "source_file_unit": "vdbemem.c",
+      "track": "stage4-vdbe-runtime",
+      "active_entity_count": 68,
+      "outgoing_file_dependencies": 10,
+      "incoming_file_dependencies": 18
+    },
+    {
+      "file": "src/vdbesort.c",
+      "source_file_unit": "vdbesort.c",
+      "track": "stage4-vdbe-runtime",
+      "active_entity_count": 156,
+      "outgoing_file_dependencies": 13,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/vdbetrace.c",
+      "source_file_unit": "vdbetrace.c",
+      "track": "stage4-vdbe-runtime",
+      "active_entity_count": 2,
+      "outgoing_file_dependencies": 6,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/vtab.c",
+      "source_file_unit": "vtab.c",
+      "track": "stage6-public-api-extensions",
+      "active_entity_count": 43,
+      "outgoing_file_dependencies": 15,
+      "incoming_file_dependencies": 4
+    },
+    {
+      "file": "src/vxworks.h",
+      "source_file_unit": "vxworks.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 4,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/wal.c",
+      "source_file_unit": "wal.c",
+      "track": "stage3-storage-transactions",
+      "active_entity_count": 174,
+      "outgoing_file_dependencies": 11,
+      "incoming_file_dependencies": 0
+    },
+    {
+      "file": "src/wal.h",
+      "source_file_unit": "wal.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 5,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 2
+    },
+    {
+      "file": "src/walker.c",
+      "source_file_unit": "walker.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 12,
+      "outgoing_file_dependencies": 1,
+      "incoming_file_dependencies": 9
+    },
+    {
+      "file": "src/where.c",
+      "source_file_unit": "where.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 111,
+      "outgoing_file_dependencies": 19,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/whereInt.h",
+      "source_file_unit": "whereInt.h",
+      "track": "stage1-internal-model-generated",
+      "active_entity_count": 264,
+      "outgoing_file_dependencies": 0,
+      "incoming_file_dependencies": 3
+    },
+    {
+      "file": "src/wherecode.c",
+      "source_file_unit": "wherecode.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 23,
+      "outgoing_file_dependencies": 9,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/whereexpr.c",
+      "source_file_unit": "whereexpr.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 30,
+      "outgoing_file_dependencies": 15,
+      "incoming_file_dependencies": 1
+    },
+    {
+      "file": "src/window.c",
+      "source_file_unit": "window.c",
+      "track": "stage5-compiler-planner",
+      "active_entity_count": 129,
+      "outgoing_file_dependencies": 16,
+      "incoming_file_dependencies": 0
+    }
+  ],
+  "edges": [
+    {
+      "from": "src/alter.c",
+      "to": "src/btmutex.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/date.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/global.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "global": 2
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 22,
+      "by_kind": {
+        "call": 22
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/resolve.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 275,
+      "by_kind": {
+        "call": 105,
+        "type": 170
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/utf.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/util.c",
+      "unique_reference_count": 19,
+      "by_kind": {
+        "call": 19
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "type": 4
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 48,
+      "by_kind": {
+        "call": 48
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "call": 14
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/alter.c",
+      "to": "src/walker.c",
+      "unique_reference_count": 16,
+      "by_kind": {
+        "call": 16
+      }
+    },
+    {
+      "from": "src/analyze.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/analyze.c",
+      "to": "src/hash.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/analyze.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/analyze.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/analyze.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 61,
+      "by_kind": {
+        "call": 26,
+        "type": 35
+      }
+    },
+    {
+      "from": "src/analyze.c",
+      "to": "src/util.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/analyze.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "type": 4
+      }
+    },
+    {
+      "from": "src/analyze.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 9,
+      "by_kind": {
+        "call": 9
+      }
+    },
+    {
+      "from": "src/analyze.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 21,
+      "by_kind": {
+        "call": 21
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/btmutex.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/hash.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/os.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/pager.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/resolve.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 49,
+      "by_kind": {
+        "call": 9,
+        "type": 40
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/util.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/attach.c",
+      "to": "src/walker.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/auth.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/auth.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/auth.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 15,
+      "by_kind": {
+        "call": 3,
+        "type": 12
+      }
+    },
+    {
+      "from": "src/auth.c",
+      "to": "src/util.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/auth.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/backup.c",
+      "to": "src/btmutex.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/backup.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 22,
+      "by_kind": {
+        "call": 22
+      }
+    },
+    {
+      "from": "src/backup.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "type": 6
+      }
+    },
+    {
+      "from": "src/backup.c",
+      "to": "src/global.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "global": 2
+      }
+    },
+    {
+      "from": "src/backup.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/backup.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/backup.c",
+      "to": "src/os.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/backup.c",
+      "to": "src/pager.c",
+      "unique_reference_count": 20,
+      "by_kind": {
+        "call": 20
+      }
+    },
+    {
+      "from": "src/backup.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "type": 8
+      }
+    },
+    {
+      "from": "src/backup.c",
+      "to": "src/pcache.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/backup.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 15,
+      "by_kind": {
+        "call": 6,
+        "type": 9
+      }
+    },
+    {
+      "from": "src/backup.c",
+      "to": "src/util.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/bitvec.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/bitvec.c",
+      "to": "src/random.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/bitvec.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 20,
+      "by_kind": {
+        "type": 20
+      }
+    },
+    {
+      "from": "src/btmutex.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "type": 10
+      }
+    },
+    {
+      "from": "src/btmutex.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/btmutex.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/bitvec.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/btmutex.c",
+      "unique_reference_count": 66,
+      "by_kind": {
+        "call": 66
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 225,
+      "by_kind": {
+        "call": 15,
+        "type": 210
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/btreeInt.h",
+      "unique_reference_count": 129,
+      "by_kind": {
+        "call": 18,
+        "type": 111
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/date.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/global.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "global": 13
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 23,
+      "by_kind": {
+        "call": 23
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/os.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/pager.c",
+      "unique_reference_count": 104,
+      "by_kind": {
+        "call": 104
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 76,
+      "by_kind": {
+        "type": 76
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/pcache1.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 214,
+      "by_kind": {
+        "call": 53,
+        "type": 161
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/util.c",
+      "unique_reference_count": 62,
+      "by_kind": {
+        "call": 62
+      }
+    },
+    {
+      "from": "src/btree.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 5,
+        "type": 3
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/alter.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/analyze.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/attach.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/auth.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/btmutex.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/date.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 46,
+      "by_kind": {
+        "call": 46
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/global.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "global": 13
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/hash.c",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "call": 14
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/hash.h",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "type": 8
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 60,
+      "by_kind": {
+        "call": 60
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "type": 6
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 11,
+      "by_kind": {
+        "call": 11
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/resolve.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 427,
+      "by_kind": {
+        "call": 106,
+        "type": 321
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/util.c",
+      "unique_reference_count": 64,
+      "by_kind": {
+        "call": 64
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 18,
+      "by_kind": {
+        "type": 18
+      }
+    },
+    {
+      "from": "src/build.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 61,
+      "by_kind": {
+        "call": 61
+      }
+    },
+    {
+      "from": "src/callback.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/callback.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/callback.c",
+      "to": "src/build.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/callback.c",
+      "to": "src/global.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "global": 4
+      }
+    },
+    {
+      "from": "src/callback.c",
+      "to": "src/hash.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/callback.c",
+      "to": "src/hash.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/callback.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/callback.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 30,
+      "by_kind": {
+        "call": 5,
+        "type": 25
+      }
+    },
+    {
+      "from": "src/callback.c",
+      "to": "src/util.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/callback.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/callback.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/complete.c",
+      "to": "src/global.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "global": 1
+      }
+    },
+    {
+      "from": "src/complete.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/complete.c",
+      "to": "src/util.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/complete.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/date.c",
+      "to": "src/global.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "global": 8
+      }
+    },
+    {
+      "from": "src/date.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 25,
+      "by_kind": {
+        "call": 14,
+        "type": 11
+      }
+    },
+    {
+      "from": "src/date.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/delete.c",
+      "to": "src/auth.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/delete.c",
+      "to": "src/build.c",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "call": 14
+      }
+    },
+    {
+      "from": "src/delete.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/delete.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/delete.c",
+      "to": "src/resolve.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/delete.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 74,
+      "by_kind": {
+        "call": 30,
+        "type": 44
+      }
+    },
+    {
+      "from": "src/delete.c",
+      "to": "src/util.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/delete.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "type": 5
+      }
+    },
+    {
+      "from": "src/delete.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 33,
+      "by_kind": {
+        "call": 33
+      }
+    },
+    {
+      "from": "src/expr.c",
+      "to": "src/global.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "global": 1
+      }
+    },
+    {
+      "from": "src/expr.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 29,
+      "by_kind": {
+        "call": 29
+      }
+    },
+    {
+      "from": "src/expr.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/expr.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 572,
+      "by_kind": {
+        "call": 119,
+        "type": 453
+      }
+    },
+    {
+      "from": "src/expr.c",
+      "to": "src/util.c",
+      "unique_reference_count": 37,
+      "by_kind": {
+        "call": 37
+      }
+    },
+    {
+      "from": "src/expr.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 28,
+      "by_kind": {
+        "type": 28
+      }
+    },
+    {
+      "from": "src/expr.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/expr.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 118,
+      "by_kind": {
+        "call": 118
+      }
+    },
+    {
+      "from": "src/expr.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/expr.c",
+      "to": "src/walker.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "call": 13
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/auth.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/build.c",
+      "unique_reference_count": 17,
+      "by_kind": {
+        "call": 17
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/delete.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 25,
+      "by_kind": {
+        "call": 25
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/global.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "global": 1
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/hash.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/hash.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 9,
+      "by_kind": {
+        "call": 9
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/resolve.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 94,
+      "by_kind": {
+        "call": 13,
+        "type": 81
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/util.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "type": 4
+      }
+    },
+    {
+      "from": "src/fkey.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 20,
+      "by_kind": {
+        "call": 20
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/alter.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/callback.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/date.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/global.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "global": 7
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 20,
+      "by_kind": {
+        "call": 20
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 18,
+      "by_kind": {
+        "call": 18
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/random.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 53,
+      "by_kind": {
+        "call": 3,
+        "type": 50
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/utf.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/util.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/vdbe.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 206,
+      "by_kind": {
+        "call": 206
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/func.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/hash.c",
+      "to": "src/fault.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/hash.c",
+      "to": "src/hash.h",
+      "unique_reference_count": 18,
+      "by_kind": {
+        "type": 18
+      }
+    },
+    {
+      "from": "src/hash.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/hash.c",
+      "to": "src/util.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/auth.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/build.c",
+      "unique_reference_count": 28,
+      "by_kind": {
+        "call": 28
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/callback.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/delete.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 29,
+      "by_kind": {
+        "call": 29
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/fkey.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/global.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "global": 2
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/resolve.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 128,
+      "by_kind": {
+        "call": 31,
+        "type": 97
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/util.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 19,
+      "by_kind": {
+        "type": 19
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 69,
+      "by_kind": {
+        "call": 69
+      }
+    },
+    {
+      "from": "src/insert.c",
+      "to": "src/walker.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/json.c",
+      "to": "src/callback.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/json.c",
+      "to": "src/date.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/json.c",
+      "to": "src/func.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/json.c",
+      "to": "src/global.c",
+      "unique_reference_count": 9,
+      "by_kind": {
+        "global": 9
+      }
+    },
+    {
+      "from": "src/json.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 22,
+      "by_kind": {
+        "call": 22
+      }
+    },
+    {
+      "from": "src/json.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "call": 13
+      }
+    },
+    {
+      "from": "src/json.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 95,
+      "by_kind": {
+        "type": 95
+      }
+    },
+    {
+      "from": "src/json.c",
+      "to": "src/utf.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/json.c",
+      "to": "src/util.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/json.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 112,
+      "by_kind": {
+        "call": 112
+      }
+    },
+    {
+      "from": "src/json.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/json.c",
+      "to": "src/vtab.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/legacy.c",
+      "to": "src/global.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "global": 1
+      }
+    },
+    {
+      "from": "src/legacy.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/legacy.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/legacy.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/legacy.c",
+      "to": "src/util.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/legacy.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/legacy.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/legacy.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/loadext.c",
+      "to": "src/global.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "global": 2
+      }
+    },
+    {
+      "from": "src/loadext.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 9,
+      "by_kind": {
+        "call": 9
+      }
+    },
+    {
+      "from": "src/loadext.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 16,
+      "by_kind": {
+        "call": 16
+      }
+    },
+    {
+      "from": "src/loadext.c",
+      "to": "src/os.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/loadext.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/loadext.c",
+      "to": "src/sqlite3ext.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/loadext.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "type": 5
+      }
+    },
+    {
+      "from": "src/loadext.c",
+      "to": "src/util.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/bitvec.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/btmutex.c",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "call": 14
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 17,
+      "by_kind": {
+        "call": 17
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 9,
+      "by_kind": {
+        "type": 9
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/build.c",
+      "unique_reference_count": 9,
+      "by_kind": {
+        "call": 9
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/callback.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/date.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/fault.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/func.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/global.c",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "global": 14
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/hash.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/hash.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/loadext.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 33,
+      "by_kind": {
+        "call": 33
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/mem1.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/memdb.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 99,
+      "by_kind": {
+        "call": 99
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/mutex_unix.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/os.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/os_unix.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/pager.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "type": 3
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/pcache.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/pcache1.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/pragma.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/prepare.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/random.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/select.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 72,
+      "by_kind": {
+        "call": 24,
+        "type": 48
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/status.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/tokenize.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/utf.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/util.c",
+      "unique_reference_count": 37,
+      "by_kind": {
+        "call": 37
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/main.c",
+      "to": "src/vtab.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/malloc.c",
+      "to": "src/global.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "global": 10
+      }
+    },
+    {
+      "from": "src/malloc.c",
+      "to": "src/mem1.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/malloc.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "call": 13
+      }
+    },
+    {
+      "from": "src/malloc.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 27,
+      "by_kind": {
+        "call": 7,
+        "type": 20
+      }
+    },
+    {
+      "from": "src/malloc.c",
+      "to": "src/status.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/memdb.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 2,
+        "type": 1
+      }
+    },
+    {
+      "from": "src/memdb.c",
+      "to": "src/global.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "global": 2
+      }
+    },
+    {
+      "from": "src/memdb.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/memdb.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "call": 14
+      }
+    },
+    {
+      "from": "src/memdb.c",
+      "to": "src/os.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/memdb.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 3,
+        "type": 2
+      }
+    },
+    {
+      "from": "src/memdb.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/memdb.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 2,
+        "type": 2
+      }
+    },
+    {
+      "from": "src/memdb.c",
+      "to": "src/util.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/memjournal.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/memjournal.c",
+      "to": "src/os.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/memjournal.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "type": 5
+      }
+    },
+    {
+      "from": "src/mutex.c",
+      "to": "src/global.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "global": 8
+      }
+    },
+    {
+      "from": "src/mutex.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/mutex_unix.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/os.c",
+      "to": "src/global.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "global": 1
+      }
+    },
+    {
+      "from": "src/os.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 11,
+      "by_kind": {
+        "call": 5,
+        "type": 6
+      }
+    },
+    {
+      "from": "src/os_unix.c",
+      "to": "src/global.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "global": 8
+      }
+    },
+    {
+      "from": "src/os_unix.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 16,
+      "by_kind": {
+        "call": 16
+      }
+    },
+    {
+      "from": "src/os_unix.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 32,
+      "by_kind": {
+        "call": 32
+      }
+    },
+    {
+      "from": "src/os_unix.c",
+      "to": "src/mutex_unix.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/os_unix.c",
+      "to": "src/os.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/os_unix.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 9,
+      "by_kind": {
+        "call": 9
+      }
+    },
+    {
+      "from": "src/os_unix.c",
+      "to": "src/random.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/os_unix.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 25,
+      "by_kind": {
+        "call": 5,
+        "type": 20
+      }
+    },
+    {
+      "from": "src/os_unix.c",
+      "to": "src/util.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/bitvec.c",
+      "unique_reference_count": 18,
+      "by_kind": {
+        "call": 18
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/fault.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/global.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "global": 4
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 16,
+      "by_kind": {
+        "call": 16
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/memdb.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/os.c",
+      "unique_reference_count": 90,
+      "by_kind": {
+        "call": 90
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 164,
+      "by_kind": {
+        "call": 12,
+        "type": 152
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/pcache.c",
+      "unique_reference_count": 42,
+      "by_kind": {
+        "call": 42
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/pcache.h",
+      "unique_reference_count": 27,
+      "by_kind": {
+        "type": 27
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/pcache1.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/random.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 96,
+      "by_kind": {
+        "call": 18,
+        "type": 78
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/util.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/pager.c",
+      "to": "src/wal.h",
+      "unique_reference_count": 25,
+      "by_kind": {
+        "call": 25
+      }
+    },
+    {
+      "from": "src/pcache.c",
+      "to": "src/global.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "global": 13
+      }
+    },
+    {
+      "from": "src/pcache.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "type": 6
+      }
+    },
+    {
+      "from": "src/pcache.c",
+      "to": "src/pcache.h",
+      "unique_reference_count": 51,
+      "by_kind": {
+        "call": 4,
+        "type": 47
+      }
+    },
+    {
+      "from": "src/pcache.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "type": 6
+      }
+    },
+    {
+      "from": "src/pcache1.c",
+      "to": "src/fault.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/pcache1.c",
+      "to": "src/global.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "global": 1
+      }
+    },
+    {
+      "from": "src/pcache1.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 12,
+      "by_kind": {
+        "call": 12
+      }
+    },
+    {
+      "from": "src/pcache1.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/pcache1.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "type": 8
+      }
+    },
+    {
+      "from": "src/pcache1.c",
+      "to": "src/status.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/auth.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "call": 13
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/build.c",
+      "unique_reference_count": 18,
+      "by_kind": {
+        "call": 18
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/callback.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/delete.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 11,
+      "by_kind": {
+        "call": 11
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/fkey.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/func.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/global.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "global": 6
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/hash.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/hash.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/insert.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 12,
+      "by_kind": {
+        "call": 12
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/os.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/pager.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "call": 13
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 43,
+      "by_kind": {
+        "call": 6,
+        "type": 37
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/util.c",
+      "unique_reference_count": 19,
+      "by_kind": {
+        "call": 19
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "type": 8
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 9,
+      "by_kind": {
+        "call": 9
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 37,
+      "by_kind": {
+        "call": 37
+      }
+    },
+    {
+      "from": "src/pragma.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/analyze.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/btmutex.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 11,
+      "by_kind": {
+        "call": 11
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/build.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/callback.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/global.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "global": 3
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/legacy.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 15,
+      "by_kind": {
+        "call": 15
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 34,
+      "by_kind": {
+        "call": 7,
+        "type": 27
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/utf.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/util.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "type": 3
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/prepare.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/printf.c",
+      "to": "src/date.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/printf.c",
+      "to": "src/global.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "global": 2
+      }
+    },
+    {
+      "from": "src/printf.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 17,
+      "by_kind": {
+        "call": 17
+      }
+    },
+    {
+      "from": "src/printf.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 54,
+      "by_kind": {
+        "call": 10,
+        "type": 44
+      }
+    },
+    {
+      "from": "src/random.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/random.c",
+      "to": "src/os.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/random.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/resolve.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/resolve.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 174,
+      "by_kind": {
+        "call": 52,
+        "type": 122
+      }
+    },
+    {
+      "from": "src/resolve.c",
+      "to": "src/util.c",
+      "unique_reference_count": 15,
+      "by_kind": {
+        "call": 15
+      }
+    },
+    {
+      "from": "src/resolve.c",
+      "to": "src/walker.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/rowset.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/rowset.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "type": 10
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/alter.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/auth.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/build.c",
+      "unique_reference_count": 27,
+      "by_kind": {
+        "call": 27
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 124,
+      "by_kind": {
+        "call": 124
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/global.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "global": 3
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/hash.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/hash.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 35,
+      "by_kind": {
+        "call": 35
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/prepare.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/random.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/resolve.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 424,
+      "by_kind": {
+        "call": 22,
+        "type": 402
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/util.c",
+      "unique_reference_count": 31,
+      "by_kind": {
+        "call": 31
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 21,
+      "by_kind": {
+        "type": 21
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 125,
+      "by_kind": {
+        "call": 125
+      }
+    },
+    {
+      "from": "src/select.c",
+      "to": "src/walker.c",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "call": 14
+      }
+    },
+    {
+      "from": "src/status.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 5,
+        "type": 1
+      }
+    },
+    {
+      "from": "src/status.c",
+      "to": "src/global.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "global": 1
+      }
+    },
+    {
+      "from": "src/status.c",
+      "to": "src/hash.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/status.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 2,
+        "type": 1
+      }
+    },
+    {
+      "from": "src/status.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "call": 5,
+        "type": 8
+      }
+    },
+    {
+      "from": "src/status.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/status.c",
+      "to": "src/vdbeInt.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/table.c",
+      "to": "src/legacy.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/table.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/table.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/table.c",
+      "to": "src/util.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/threads.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/threads.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 1,
+        "type": 2
+      }
+    },
+    {
+      "from": "src/tokenize.c",
+      "to": "src/build.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/tokenize.c",
+      "to": "src/global.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "global": 2
+      }
+    },
+    {
+      "from": "src/tokenize.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/tokenize.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/tokenize.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 2,
+        "type": 8
+      }
+    },
+    {
+      "from": "src/tokenize.c",
+      "to": "src/trigger.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/tokenize.c",
+      "to": "src/util.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/alter.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/attach.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/auth.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/build.c",
+      "unique_reference_count": 26,
+      "by_kind": {
+        "call": 26
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/delete.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 29,
+      "by_kind": {
+        "call": 29
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/global.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "global": 1
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/hash.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/hash.h",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "type": 3
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/insert.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "call": 14
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/prepare.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/resolve.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/select.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "call": 13
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 132,
+      "by_kind": {
+        "call": 7,
+        "type": 125
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/util.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "type": 7
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 16,
+      "by_kind": {
+        "call": 16
+      }
+    },
+    {
+      "from": "src/trigger.c",
+      "to": "src/walker.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/auth.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/build.c",
+      "unique_reference_count": 12,
+      "by_kind": {
+        "call": 12
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/delete.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 16,
+      "by_kind": {
+        "call": 16
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/fkey.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/insert.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/prepare.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/resolve.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/select.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 50,
+      "by_kind": {
+        "call": 9,
+        "type": 41
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/trigger.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/util.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "type": 3
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 23,
+      "by_kind": {
+        "call": 23
+      }
+    },
+    {
+      "from": "src/update.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/upsert.c",
+      "to": "src/build.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/upsert.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 12,
+      "by_kind": {
+        "call": 12
+      }
+    },
+    {
+      "from": "src/upsert.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/upsert.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/upsert.c",
+      "to": "src/resolve.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/upsert.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 24,
+      "by_kind": {
+        "call": 2,
+        "type": 22
+      }
+    },
+    {
+      "from": "src/upsert.c",
+      "to": "src/update.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/upsert.c",
+      "to": "src/util.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/upsert.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/upsert.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/utf.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/utf.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 9,
+      "by_kind": {
+        "type": 9
+      }
+    },
+    {
+      "from": "src/utf.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "type": 3
+      }
+    },
+    {
+      "from": "src/utf.c",
+      "to": "src/vdbeInt.h",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/util.c",
+      "to": "src/date.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/util.c",
+      "to": "src/global.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "global": 13
+      }
+    },
+    {
+      "from": "src/util.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/util.c",
+      "to": "src/os.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/util.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/util.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 79,
+      "by_kind": {
+        "call": 11,
+        "type": 68
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/backup.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 15,
+      "by_kind": {
+        "call": 15
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/build.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/date.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/os.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/pager.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/prepare.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/random.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/resolve.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/select.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "type": 8
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/vacuum.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 48,
+      "by_kind": {
+        "call": 48
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "type": 4
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/global.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "global": 6
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 11,
+      "by_kind": {
+        "call": 11
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/pager.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/random.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/rowset.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 58,
+      "by_kind": {
+        "call": 29,
+        "type": 29
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/util.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "call": 13
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 21,
+      "by_kind": {
+        "type": 21
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/vdbeInt.h",
+      "unique_reference_count": 16,
+      "by_kind": {
+        "call": 7,
+        "type": 9
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 30,
+      "by_kind": {
+        "call": 29,
+        "global": 1
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 41,
+      "by_kind": {
+        "call": 41
+      }
+    },
+    {
+      "from": "src/vdbe.c",
+      "to": "src/vdbetrace.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/btmutex.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "call": 14
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 33,
+      "by_kind": {
+        "call": 33
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/os.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/pager.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 40,
+      "by_kind": {
+        "call": 11,
+        "type": 29
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/util.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 58,
+      "by_kind": {
+        "call": 1,
+        "type": 57
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/vdbeInt.h",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 2,
+        "type": 3
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/vdbeapi.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 47,
+      "by_kind": {
+        "call": 47
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/btmutex.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 21,
+      "by_kind": {
+        "call": 21
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "type": 6
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/date.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/fault.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/global.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "global": 1
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 41,
+      "by_kind": {
+        "call": 41
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/os.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/pager.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 12,
+      "by_kind": {
+        "call": 12
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/random.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 140,
+      "by_kind": {
+        "call": 25,
+        "type": 115
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/util.c",
+      "unique_reference_count": 11,
+      "by_kind": {
+        "call": 11
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 152,
+      "by_kind": {
+        "call": 22,
+        "type": 130
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/vdbeInt.h",
+      "unique_reference_count": 33,
+      "by_kind": {
+        "call": 8,
+        "type": 25
+      }
+    },
+    {
+      "from": "src/vdbeaux.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 23,
+      "by_kind": {
+        "call": 23
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/btmutex.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "call": 8,
+        "type": 6
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/util.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/vdbe.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "type": 6
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/vdbeInt.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/vdbeblob.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vdbemem.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/vdbemem.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/vdbemem.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 20,
+      "by_kind": {
+        "call": 20
+      }
+    },
+    {
+      "from": "src/vdbemem.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/vdbemem.c",
+      "to": "src/rowset.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vdbemem.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 45,
+      "by_kind": {
+        "call": 10,
+        "type": 35
+      }
+    },
+    {
+      "from": "src/vdbemem.c",
+      "to": "src/utf.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vdbemem.c",
+      "to": "src/util.c",
+      "unique_reference_count": 12,
+      "by_kind": {
+        "call": 12
+      }
+    },
+    {
+      "from": "src/vdbemem.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 50,
+      "by_kind": {
+        "type": 50
+      }
+    },
+    {
+      "from": "src/vdbemem.c",
+      "to": "src/vdbeInt.h",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/btmutex.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/btree.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/btree.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/global.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "global": 1
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 24,
+      "by_kind": {
+        "call": 24
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/os.c",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "call": 14
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 43,
+      "by_kind": {
+        "call": 1,
+        "type": 42
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/threads.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/util.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "type": 3
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/vdbeInt.h",
+      "unique_reference_count": 21,
+      "by_kind": {
+        "type": 21
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/vdbesort.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vdbetrace.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/vdbetrace.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 1,
+        "type": 5
+      }
+    },
+    {
+      "from": "src/vdbetrace.c",
+      "to": "src/util.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vdbetrace.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/vdbetrace.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vdbetrace.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/auth.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/build.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "call": 13
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/date.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/hash.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/hash.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 29,
+      "by_kind": {
+        "call": 29
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/mutex.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/prepare.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/select.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 70,
+      "by_kind": {
+        "call": 8,
+        "type": 62
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/util.c",
+      "unique_reference_count": 11,
+      "by_kind": {
+        "call": 11
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "type": 2
+      }
+    },
+    {
+      "from": "src/vtab.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/wal.c",
+      "to": "src/fault.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/wal.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "call": 14
+      }
+    },
+    {
+      "from": "src/wal.c",
+      "to": "src/os.c",
+      "unique_reference_count": 37,
+      "by_kind": {
+        "call": 37
+      }
+    },
+    {
+      "from": "src/wal.c",
+      "to": "src/pager.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/wal.c",
+      "to": "src/pager.h",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "type": 7
+      }
+    },
+    {
+      "from": "src/wal.c",
+      "to": "src/pcache.h",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "type": 3
+      }
+    },
+    {
+      "from": "src/wal.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/wal.c",
+      "to": "src/random.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/wal.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 67,
+      "by_kind": {
+        "call": 7,
+        "type": 60
+      }
+    },
+    {
+      "from": "src/wal.c",
+      "to": "src/util.c",
+      "unique_reference_count": 9,
+      "by_kind": {
+        "call": 9
+      }
+    },
+    {
+      "from": "src/wal.c",
+      "to": "src/wal.h",
+      "unique_reference_count": 55,
+      "by_kind": {
+        "call": 3,
+        "type": 52
+      }
+    },
+    {
+      "from": "src/walker.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 37,
+      "by_kind": {
+        "call": 8,
+        "type": 29
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/build.c",
+      "unique_reference_count": 12,
+      "by_kind": {
+        "call": 12
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/delete.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 54,
+      "by_kind": {
+        "call": 54
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/global.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "global": 6
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/insert.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 23,
+      "by_kind": {
+        "call": 23
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/prepare.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/select.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 258,
+      "by_kind": {
+        "call": 4,
+        "type": 254
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/util.c",
+      "unique_reference_count": 24,
+      "by_kind": {
+        "call": 24
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "type": 8
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 46,
+      "by_kind": {
+        "call": 46
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/vtab.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/walker.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/whereInt.h",
+      "unique_reference_count": 115,
+      "by_kind": {
+        "type": 115
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/wherecode.c",
+      "unique_reference_count": 6,
+      "by_kind": {
+        "call": 6
+      }
+    },
+    {
+      "from": "src/where.c",
+      "to": "src/whereexpr.c",
+      "unique_reference_count": 9,
+      "by_kind": {
+        "call": 9
+      }
+    },
+    {
+      "from": "src/wherecode.c",
+      "to": "src/build.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/wherecode.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 39,
+      "by_kind": {
+        "call": 39
+      }
+    },
+    {
+      "from": "src/wherecode.c",
+      "to": "src/insert.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/wherecode.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 10,
+      "by_kind": {
+        "call": 10
+      }
+    },
+    {
+      "from": "src/wherecode.c",
+      "to": "src/printf.c",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "call": 13
+      }
+    },
+    {
+      "from": "src/wherecode.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 80,
+      "by_kind": {
+        "call": 6,
+        "type": 74
+      }
+    },
+    {
+      "from": "src/wherecode.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 13,
+      "by_kind": {
+        "type": 13
+      }
+    },
+    {
+      "from": "src/wherecode.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 47,
+      "by_kind": {
+        "call": 47
+      }
+    },
+    {
+      "from": "src/wherecode.c",
+      "to": "src/whereInt.h",
+      "unique_reference_count": 39,
+      "by_kind": {
+        "call": 3,
+        "type": 36
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 41,
+      "by_kind": {
+        "call": 41
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/func.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/global.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "global": 3
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/resolve.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/select.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 74,
+      "by_kind": {
+        "type": 74
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/utf.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/util.c",
+      "unique_reference_count": 5,
+      "by_kind": {
+        "call": 5
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "type": 1
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 2,
+      "by_kind": {
+        "call": 2
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/vtab.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/whereexpr.c",
+      "to": "src/whereInt.h",
+      "unique_reference_count": 48,
+      "by_kind": {
+        "call": 18,
+        "type": 30
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/alter.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/build.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/callback.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/expr.c",
+      "unique_reference_count": 54,
+      "by_kind": {
+        "call": 54
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/malloc.c",
+      "unique_reference_count": 7,
+      "by_kind": {
+        "call": 7
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/prepare.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/select.c",
+      "unique_reference_count": 17,
+      "by_kind": {
+        "call": 17
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/sqliteInt.h",
+      "unique_reference_count": 112,
+      "by_kind": {
+        "call": 2,
+        "type": 110
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/util.c",
+      "unique_reference_count": 8,
+      "by_kind": {
+        "call": 8
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/vdbe.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/vdbe.h",
+      "unique_reference_count": 14,
+      "by_kind": {
+        "type": 14
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/vdbeapi.c",
+      "unique_reference_count": 50,
+      "by_kind": {
+        "call": 50
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/vdbeaux.c",
+      "unique_reference_count": 70,
+      "by_kind": {
+        "call": 70
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/vdbemem.c",
+      "unique_reference_count": 3,
+      "by_kind": {
+        "call": 3
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/walker.c",
+      "unique_reference_count": 4,
+      "by_kind": {
+        "call": 4
+      }
+    },
+    {
+      "from": "src/window.c",
+      "to": "src/where.c",
+      "unique_reference_count": 1,
+      "by_kind": {
+        "call": 1
+      }
+    }
+  ]
+}

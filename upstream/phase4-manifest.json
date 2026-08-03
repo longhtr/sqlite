@@ -1,0 +1,58 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-4-vfs-abstraction-and-test-vfs",
+  "profile": "sqlite-3.53.4-core-default-threadsafe1",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 50,
+  "slices": {
+    "vfs_registration": {
+      "status": "pass",
+      "implementation": "src/core/vfs.zig",
+      "scope": ["register", "find default/by-name", "duplicate rejection", "unregister"],
+      "hybrid_evidence": "vfs-test"
+    },
+    "in_memory_vfs": {
+      "status": "pass",
+      "implementation": "src/core/vfs.zig",
+      "scope": ["named and temporary files", "read/write/short-read", "truncate", "sync", "size", "delete/access/full-pathname", "logical locks", "rollback-journal SQLite workload"],
+      "hybrid_evidence": "vfs-test"
+    },
+    "faulting_vfs": {
+      "status": "pass",
+      "implementation": "src/core/vfs.zig",
+      "methods": 19,
+      "modes": ["named one-shot", "named sticky", "short read/write", "compound"],
+      "hard_bound": 100000,
+      "oom": "pass-bounded-one-shot-and-sticky"
+    },
+    "abi_adapter": {
+      "status": "pass",
+      "implementation": "src/core/vfs.zig",
+      "layouts": {"sqlite3_file": 8, "sqlite3_io_methods": 152, "sqlite3_vfs": 168},
+      "versions": {"vfs": 3, "io_methods": 3},
+      "hybrid_evidence": "vfs-test"
+    },
+    "durable_volatile_store": {
+      "status": "pass",
+      "implementation": "src/core/vfs.zig",
+      "scope": ["volatile writes", "sync promotion", "crash discard", "rollback recovery", "journal deletion commit"],
+      "differential": "vfs-differential",
+      "profile": "rollback-delete-full"
+    }
+  },
+  "phase_owned_deferrals": [
+    {"item": "WAL shared-memory implementation on the in-memory VFS", "owning_phase": "phase-10"},
+    {"item": "production Unix VFS", "owning_phase": "phase-15"},
+    {"item": "production Windows VFS", "owning_phase": "phase-16"},
+    {"item": "public sqlite3_vfs_register/find/unregister exports from the native library", "owning_phase": "phase-17"}
+  ],
+  "exit_gates": {
+    "registration_version_filename_result_and_core_file_tests": "pass",
+    "selected_oracle_trace_and_durable_volatile_model": "pass",
+    "bounded_named_fault_matrix": "pass",
+    "source_mapping": "pass"
+  }
+}

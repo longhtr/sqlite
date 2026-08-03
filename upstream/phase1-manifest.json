@@ -1,0 +1,34 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-1-foundational-utilities",
+  "profile": "sqlite-3.53.4-core-default-threadsafe1",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 159,
+  "slices": {
+    "byteorder": {"status": "pass", "implementation": "src/core/byteorder.zig", "differential": "byteorder-differential", "cases": 24, "allocates": false},
+    "varint": {"status": "pass", "implementation": "src/core/varint.zig", "differential": "varint-differential", "cases": 24, "allocates": false},
+    "bitvec": {"status": "pass", "implementation": "src/core/bitvec.zig", "differential": "bitvec-differential", "cases": 24, "allocates": true, "oom": "pass-exhaustive-one-shot-and-sticky"},
+    "hash": {"status": "pass", "implementation": "src/core/hash.zig", "differential": "hash-differential", "cases": 24, "allocates": true, "oom": "pass-bounded-one-shot-and-sticky-program-sweeps"},
+    "utf": {"status": "pass", "implementation": "src/core/utf.zig", "differential": "utf-differential", "cases": 24, "allocates": false},
+    "string": {"status": "pass", "implementation": "src/core/string.zig", "differential": "string-differential", "cases": 24, "allocates": false},
+    "numeric": {"status": "pass", "implementation": ["src/core/numeric.zig", "src/core/float.zig"], "differential": "numeric-differential", "cases": 24, "allocates": false},
+    "random": {"status": "pass", "implementation": "src/core/random.zig", "differential": "random-differential", "cases": 24, "allocates": false},
+    "formatting_subset": {"status": "pass", "scope": ["sqlite3Int64ToText"], "implementation": "src/core/numeric.zig", "differential": "numeric-differential", "allocates": false},
+    "limits_and_configuration": {"status": "pass", "implementation": ["config/limits.zig", "config/features.zig"], "verification": "limits-test", "checked_limit_count": 27, "checked_feature_count": 14, "allocates": false}
+  },
+  "phase_owned_deferrals": [
+    {"item": "Mem-coupled UTF translation and BOM mutation", "owning_phase": "phase-2-and-phase-11"},
+    {"item": "PRNG static mutex, VFS entropy adapter, and public ABI", "owning_phase": "phase-2-phase-4-and-phase-17"},
+    {"item": "general SQL formatter and floating-point rendering", "owning_phase": "phase-11-and-phase-17", "reason": "outside the declared Phase 1 formatting subset"}
+  ],
+  "exit_gates": {
+    "unit": "pass",
+    "cross_engine": "pass",
+    "allocating_utility_oom": "pass",
+    "source_mapping": "pass",
+    "profile_limits": "pass"
+  }
+}

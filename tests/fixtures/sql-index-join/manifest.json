@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "phase": "phase-13-index-join-slice",
+  "status": "bounded-regression-evidence",
+  "profile": "covering-index-and-self-pk-join-v1",
+  "database": "tests/fixtures/btree-mutation/index-without-rowid-1024.db",
+  "queries": [
+    "SELECT v,id FROM t INDEXED BY t_v",
+    "SELECT id,id FROM t JOIN t USING(id)"
+  ],
+  "rows_per_query": 300,
+  "differential_observations": 604,
+  "features": [
+    "covering index order",
+    "index record columns",
+    "bounded same-table primary-key USING join",
+    "generated cursor loop"
+  ]
+}

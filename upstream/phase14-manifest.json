@@ -1,0 +1,11 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version":1,"phase":"phase-14-advanced-planner-statistics","profile":"sqlite-3.53.4-bounded-planner-v1","baseline_checkin":"bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc","status":"bounded-regression-evidence","mapped_entity_count":28,"public_symbol_count_added":0,"total_exported_sqlite_symbol_count":44,
+  "slices":["phase14-rowid-planner-manifest.json","phase14-index-order-manifest.json"],"differential_observations":38,
+  "completed_families":["rowid predicate seek and filtering","rowid and covering-index order","constant LIMIT","persistent covering-index selection","B-tree entry-count statistics","self-primary-key join elimination","sort avoidance","automatic-index suppression"],
+  "normalized_plans":["seek-rowid","rewind-filter-next","last-filter-prev","last-prev-limit","constant-empty","covering-index-last-prev-limit"],
+  "documented_nonclaims":["general column and compound predicates","multi-table join enumeration","ephemeral automatic-index construction","temporary external sorting","sqlite_stat1/stat4 ANALYZE feedback","non-BINARY collations and planner callbacks","human-readable EXPLAIN QUERY PLAN text"],
+  "integration_owner":"Phase 17 API/callback integration and post-profile compatibility expansion",
+  "exit_gates":{"versioned_sql_logic_and_planner_corpus":"pass-38-observations","performance_budgets":"pass-two-second-budgets","normalized_plan_diagnostics":"pass-six-classes","oom_and_io":"pass","nondeterministic_collation_authorizer_vtab_differences":"resolved-or-documented","debug_release_safe_release_fast":"pass","exact_exports":"pass-44"}
+}

@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-result-column-metadata-ownership",
+  "title": "VDBE result-column metadata allocation and string ownership",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3VdbeSetNumCols and sqlite3VdbeSetColName own the pre-execution result-column metadata matrix. Count replacement releases prior Mem values/allocation, allocates COLNAME_N cells per column, and name assignment applies SQLite static/transient/dynamic string ownership.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      },
+      {
+        "path": "src/vdbe.h",
+        "sha256": "c2f07fd77827a922a77d8bde1c873536056e7269898d4bd2b4088f8222cd6259"
+      },
+      {
+        "path": "src/vdbeInt.h",
+        "sha256": "60f87bb47cae281d4a9d3aecbdecd39a77fe91f7c5266d5e9985cf8b75ea44b5"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeSetNumCols::line-2866",
+      "src/vdbeaux.c::function::sqlite3VdbeSetColName::line-2891",
+      "src/vdbeInt.h::member::aColName::line-485",
+      "src/vdbeInt.h::member::nResAlloc::line-498",
+      "src/vdbe.h::macro::COLNAME_NAME::line-159",
+      "src/vdbe.h::macro::COLNAME_DECLTYPE::line-160",
+      "src/vdbe.h::macro::COLNAME_N::line-170"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeSetNumCols::behavior::if::line-2870-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetNumCols::behavior::if::line-2877-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetNumCols::behavior::return::line-2877-column-24::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetColName::behavior::assert::line-2900-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetColName::behavior::assert::line-2901-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetColName::behavior::if::line-2902-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetColName::behavior::assert::line-2903-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetColName::behavior::return::line-2904-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetColName::behavior::assert::line-2906-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetColName::behavior::assert::line-2909-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetColName::behavior::return::line-2910-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Runtime result-row values",
+      "Column-name public API accessors",
+      "Additional COLNAME_DATABASE/TABLE/COLUMN variants disabled by pinned metadata mode",
+      "General Mem operations beyond used initialization/text ownership"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-make-ready-bulk-allocation-and-rewind",
+      "vdbe-builder-state-representations",
+      "connection-allocation-for-vdbe-growth"
+    ],
+    "external_source_responsibilities": [
+      "Source-equivalent Mem release/init/set-text implementation"
+    ],
+    "caller_closure": "Both active result-column configuration functions, storage fields, and active COLNAME representation are assigned. Public access and final VDBE destruction remain follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "Vdbe, nonnegative result-column count; valid column/variant; nullable terminated name and static/transient/dynamic owner strategy"
+    ],
+    "outputs": [
+      "nResColumn/nResAlloc, COLNAME_N initialized null Mem cells, or configured text cell/result code"
+    ],
+    "ownership": "Replacing count releases every prior Mem value then the matrix allocation. New matrix is connection-owned. Static text is borrowed, transient is copied, dynamic input ownership transfers to the Mem cell.",
+    "state_and_results": "Counts publish before fallible matrix allocation and remain set on OOM with null aColName. SetColName indexes idx+variant*nResAlloc. Sticky OOM returns NOMEM before cell access.",
+    "locks_callbacks_io": "Caller holds connection mutex. Dynamic/custom text destructor may run during replacement/final cleanup; no I/O.",
+    "failure_and_continuation": "Matrix allocation OOM leaves exact counts and null owner. SetColName under sticky OOM returns NOMEM without mutation. Reconfiguration after success releases all prior string owners."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeSetNumCols::line-2866",
+      "relation": "source-result-column-owner-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::setColumnCount"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeSetColName::line-2891",
+      "relation": "source-result-column-owner-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::setColumnName"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::aColName::line-485",
+      "relation": "source-result-column-owner-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.aColName"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::nResAlloc::line-498",
+      "relation": "source-result-column-owner-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.nResAlloc"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::macro::COLNAME_NAME::line-159",
+      "relation": "source-result-column-owner-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::column_name.name"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::macro::COLNAME_DECLTYPE::line-160",
+      "relation": "source-result-column-owner-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::column_name.declared_type"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::macro::COLNAME_N::line-170",
+      "relation": "source-result-column-owner-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::column_name.count"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C destructor sentinels SQLITE_STATIC/TRANSIENT/DYNAMIC map to the existing typed Zig StringOwnership union.",
+    "Uninitialized Mem fields such as zMalloc are intentionally not observed unless szMalloc establishes ownership."
+  ],
+  "oracle": {
+    "protocol": "The shared worker creates a Vdbe, allocates two-column metadata, sets static/transient/dynamic names in distinct matrix cells, replaces the matrix with one column, then forces initial matrix OOM and verifies sticky SetColName continuation. C and Zig compare 363 observations.",
+    "internal_observations": [
+      "published counts and matrix presence",
+      "initial Mem flags/database owner",
+      "static/transient/dynamic result and flags",
+      "text bytes and pointer identity",
+      "owned allocation predicate only when szMalloc is active",
+      "replacement cleanup",
+      "allocation OOM counts/null/mallocFailed",
+      "post-OOM SetColName NOMEM/no access"
+    ],
+    "normalization": "Text contents, pointer identity where contractually meaningful, flags/counts/results and null ownership are exact. Uninitialized non-owning fields are ignored."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Deterministic matrix-allocation OOM and subsequent SetColName NOMEM are reached; successful replacement releases three ownership strategies.",
+    "io_crash_concurrency": "No I/O; caller mutex and destructor reentrancy remain integration obligations.",
+    "malformed_input": "Source assertions constrain column/variant bounds and prior SetNumCols; tests satisfy exact matrix indexing.",
+    "continuation": "Successful replacement remains configurable; failed allocation preserves counts and sticky OOM for ordinary statement cleanup.",
+    "performance": "One contiguous Mem matrix and direct transposed variant indexing preserve source shape.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build vdbe-mem-differential",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig with source-corresponding vdbe_mem ownership",
+    "native_call_path": "Symbolic worker reaches exact Vdbe/Mem/Sqlite3 owners and all active string strategies. Public column APIs and final destruction remain partially handwritten.",
+    "bounded_owner_retired": "No. Integrate public statement owner and P4-aware teardown."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires statement/public integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Integrate public column metadata access with source Vdbe owner.",
+    "Complete P4-aware Vdbe destruction for final matrix cleanup.",
+    "Independent fidelity review remains open."
+  ]
+}

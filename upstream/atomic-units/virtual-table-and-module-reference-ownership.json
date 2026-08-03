@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "id": "virtual-table-and-module-reference-ownership",
+  "title": "Virtual-table and module reference ownership",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3VtabLock/Unlock and sqlite3VtabModuleUnref are the complete nested reference lifecycle consumed by P4_VTAB: VTable references protect disconnection, final unlock invokes xDisconnect, consumes a Module reference, runs optional module destructor, and releases both internal wrappers.",
+    "source_files": [
+      {
+        "path": "src/vtab.c",
+        "sha256": "511babb71798ebebf9c3249b1388c844809349d242babaf44dee412f870508e1"
+      },
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vtab.c::function::sqlite3VtabModuleUnref::line-164",
+      "src/vtab.c::function::sqlite3VtabLock::line-184",
+      "src/vtab.c::function::sqlite3VtabUnlock::line-205",
+      "src/sqliteInt.h::struct::Module::line-2218",
+      "src/sqliteInt.h::struct::VTable::line-2410",
+      "src/sqliteInt.h::member::nRefModule::line-2221",
+      "src/sqliteInt.h::member::pAux::line-2222",
+      "src/sqliteInt.h::member::xDestroy::line-2223",
+      "src/sqliteInt.h::member::pEpoTab::line-2224",
+      "src/sqliteInt.h::member::db::line-2411",
+      "src/sqliteInt.h::member::pMod::line-2412",
+      "src/sqliteInt.h::member::pVtab::line-2413",
+      "src/sqliteInt.h::member::nRef::line-2414"
+    ],
+    "behavioral_block_ids": [
+      "src/vtab.c::function::sqlite3VtabModuleUnref::behavior::assert::line-165-column-3::ordinal-0",
+      "src/vtab.c::function::sqlite3VtabModuleUnref::behavior::if::line-167-column-3::ordinal-0",
+      "src/vtab.c::function::sqlite3VtabModuleUnref::behavior::if::line-168-column-5::ordinal-0",
+      "src/vtab.c::function::sqlite3VtabModuleUnref::behavior::assert::line-171-column-5::ordinal-0",
+      "src/vtab.c::function::sqlite3VtabUnlock::behavior::assert::line-208-column-3::ordinal-0",
+      "src/vtab.c::function::sqlite3VtabUnlock::behavior::assert::line-209-column-3::ordinal-0",
+      "src/vtab.c::function::sqlite3VtabUnlock::behavior::assert::line-210-column-3::ordinal-0",
+      "src/vtab.c::function::sqlite3VtabUnlock::behavior::if::line-214-column-3::ordinal-0",
+      "src/vtab.c::function::sqlite3VtabUnlock::behavior::if::line-216-column-5::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Module registration/hash ownership",
+      "Deferred disconnect-list processing",
+      "Public virtual-table implementation-owned memory beyond xDisconnect",
+      "Top-level P4 dispatch"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "connection-allocation-for-vdbe-growth",
+      "vdbe-builder-state-representations"
+    ],
+    "external_source_responsibilities": [
+      "Pinned sqlite3_module.xDisconnect and sqlite3_vtab.pModule ABI fields",
+      "Connection open/zombie state and caller mutex"
+    ],
+    "caller_closure": "All active VTable/Module reference functions, internal wrapper representations and lifecycle-driving fields are assigned. Registration/deferred lists and P4 dispatch remain follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "live VTable with positive nRef, db in OPEN/ZOMBIE state, Module with positive nRefModule",
+      "optional public vtab and module xDestroy/pAux"
+    ],
+    "outputs": [
+      "nested lock increment, nonfinal decrement, or final disconnect/module-unref/wrapper release"
+    ],
+    "ownership": "VTable lock creates one claim. Final unlock invokes public xDisconnect when present, consumes one Module claim, then releases VTable. Final Module claim invokes xDestroy(pAux), requires no eponymous table, and releases Module.",
+    "state_and_results": "Callbacks run before corresponding internal wrapper frees. xDisconnect result is ignored exactly as source.",
+    "locks_callbacks_io": "Caller holds connection mutex. xDisconnect and xDestroy are synchronous callbacks; no direct I/O.",
+    "failure_and_continuation": "No allocation/OOM. Positive counts and valid connection state are asserted; final callbacks and frees occur once."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vtab.c::function::sqlite3VtabModuleUnref::line-164",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::vtabModuleUnref"
+      ]
+    },
+    {
+      "source_entity_id": "src/vtab.c::function::sqlite3VtabLock::line-184",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::vtabLock"
+      ]
+    },
+    {
+      "source_entity_id": "src/vtab.c::function::sqlite3VtabUnlock::line-205",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::vtabUnlock"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::struct::Module::line-2218",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::Module"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::struct::VTable::line-2410",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::VTable"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::nRefModule::line-2221",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Module.nRefModule"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pAux::line-2222",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Module.pAux"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::xDestroy::line-2223",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Module.xDestroy"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pEpoTab::line-2224",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Module.pEpoTab"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::db::line-2411",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VTable.db"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pMod::line-2412",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VTable.pMod"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pVtab::line-2413",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VTable.pVtab"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::nRef::line-2414",
+      "relation": "source-vtab-module-reference-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VTable.nRef"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Pinned public sqlite3_module/sqlite3_vtab ABI prefixes are represented as exact extern Zig structures solely to invoke xDisconnect.",
+    "C ignores xDisconnect return; Zig explicitly discards it."
+  ],
+  "oracle": {
+    "protocol": "The shared worker allocates exact Module/VTable wrappers across absent/present public-vtab, absent/present module-destructor, and final/nonfinal Module-reference cases; it locks VTable 1->2, unlocks 2->1, then final-unlocks 1->0. C and Zig compare intermediate counts, conditional callback ordering/counts, and both internal wrappers returned to connection lookaside in a 363-observation trace.",
+    "internal_observations": [
+      "lock and nonfinal unlock counts",
+      "no early disconnect",
+      "xDisconnect runs exactly when a public vtab is present",
+      "module xDestroy runs exactly when configured",
+      "VTable retirement and final/nonfinal Module ownership"
+    ],
+    "normalization": "Addresses normalize to owning lookaside free-list membership. Counts and callback totals are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "No allocation in assigned lifecycle; all test owners are returned exactly once.",
+    "io_crash_concurrency": "Synchronous callbacks are reached; production mutex/deferred-disconnect concurrency remains integration work.",
+    "malformed_input": "Assertions enforce positive refs, OPEN/ZOMBIE db and null pEpoTab at final module release.",
+    "continuation": "Nonfinal VTable remains valid; final internal wrappers become inaccessible after callback completion.",
+    "performance": "Constant-time reference operations and final callbacks preserve source shape.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding virtual-table/P4 lifecycle closure",
+    "native_call_path": "Symbolic worker reaches exact wrapper owners and public callbacks. P4_VTAB dispatch and production virtual-table registry are pending.",
+    "bounded_owner_retired": "No. Connect P4 and production vtab owners first."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires P4/registry integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Connect P4_VTAB lock/unlock dispatch.",
+    "Port remaining P4 TableRef/SubrtnSig dispatch and operation destruction.",
+    "Independent fidelity review remains open."
+  ]
+}

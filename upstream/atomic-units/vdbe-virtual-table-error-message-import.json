@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-virtual-table-error-message-import",
+  "title": "Virtual-table global-to-connection error-message import",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3VtabImportErrmsg crosses allocator domains: it conditionally consumes sqlite3_vtab.zErrMsg from the global allocator, replaces the Vdbe connection-owned error, and clears the virtual-table owner even when duplication fails.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VtabImportErrmsg::line-5673"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VtabImportErrmsg::behavior::if::line-5674-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Virtual-table method invocation",
+      "Creation of the module error message",
+      "General Vdbe error formatting/result transfer",
+      "Vdbe final destruction"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "connection-allocation-for-vdbe-growth",
+      "global-allocator-core-for-connection-growth",
+      "virtual-table-and-module-reference-ownership"
+    ],
+    "external_source_responsibilities": [
+      "Exact sqlite3_vtab.zErrMsg and Vdbe.zErrMsg layout owners"
+    ],
+    "caller_closure": "The active import function is assigned. Vtab callbacks that populate the public field and final Vdbe destruction remain dependency/integration work."
+  },
+  "contracts": {
+    "inputs": [
+      "Vdbe with optional connection-owned zErrMsg and sqlite3_vtab with optional global-owned zErrMsg"
+    ],
+    "outputs": [
+      "unchanged state when incoming message is null; otherwise connection duplicate or null on OOM, and cleared incoming owner"
+    ],
+    "ownership": "An incoming message causes the prior Vdbe message to be consumed, attempts a connection-owned duplicate, always consumes the original global allocation, and clears sqlite3_vtab.zErrMsg.",
+    "state_and_results": "No return value. Null incoming state leaves even the prior Vdbe message unchanged.",
+    "locks_callbacks_io": "No callback or I/O; caller holds connection mutex. Global and connection allocators are both invoked.",
+    "failure_and_continuation": "Duplicate OOM leaves Vdbe.zErrMsg null, marks sticky connection OOM, and still frees/clears the original virtual-table message."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VtabImportErrmsg::line-5673",
+      "relation": "source-cross-allocator-error-import-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::importVtabError"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "sqlite3_free maps to the source-shaped process memory manager while sqlite3DbStrDup/free map to the connection allocator; both preserve their distinct allocator domains."
+  ],
+  "oracle": {
+    "protocol": "The shared worker imports a live global message over a live connection message, verifies the null-incoming no-op, then disables lookaside and forces the connection duplicate allocation to fail. C and Zig compare all owner states in a 363-observation trace.",
+    "internal_observations": [
+      "incoming owner cleared",
+      "successful text duplicate",
+      "old owner replacement",
+      "null-incoming prior-message preservation",
+      "OOM null destination and consumed incoming owner"
+    ],
+    "normalization": "Pointers normalize to null/non-null and free-list membership; message bytes and sticky OOM state are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Deterministic no-lookaside duplication OOM verifies null destination, sticky OOM, and unconditional source-owner consumption.",
+    "io_crash_concurrency": "No I/O or callback; connection mutex remains integration obligation.",
+    "malformed_input": "The source accepts only live messages from the documented allocator domains; worker creates those exact owners.",
+    "continuation": "Null input preserves prior error; success remains readable; OOM leaves both message fields null and cleanup safe.",
+    "performance": "One conditional, at most one connection duplicate, and two frees preserve source complexity.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build test",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig virtual-table error boundary",
+    "native_call_path": "Symbolic worker reaches exact PublicVtab, Vdbe, global allocator, and connection allocator. Runtime vtab call sites remain handwritten.",
+    "bounded_owner_retired": "No. Connect virtual-table callback failure paths and Vdbe deletion."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires callback integration, destruction closure, and independent review."
+  },
+  "known_blockers": [
+    "Integrate virtual-table callback error paths.",
+    "Complete Vdbe error-message destruction.",
+    "Independent fidelity review remains open."
+  ]
+}

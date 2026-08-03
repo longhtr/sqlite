@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "phase": "phase-13-scoped-advanced-slice",
+  "status": "bounded-regression-evidence",
+  "profile": "upsert-window-pragma-vacuum-v1",
+  "cases": [
+    {
+      "family": "upsert",
+      "sql": "INSERT INTO t(id,v) VALUES(1,'ignored') ON CONFLICT DO NOTHING"
+    },
+    {
+      "family": "window",
+      "sql": "SELECT row_number() OVER ()"
+    },
+    {
+      "family": "pragma",
+      "sql": "PRAGMA user_version"
+    },
+    {
+      "family": "vacuum",
+      "sql": "VACUUM"
+    }
+  ],
+  "case_count": 4,
+  "differential_observations": 4,
+  "deferred_to_phase17": [
+    "persistent views and triggers",
+    "ATTACH/DETACH connection topology",
+    "general window frames",
+    "writable pragmas",
+    "non-empty-freelist VACUUM"
+  ]
+}

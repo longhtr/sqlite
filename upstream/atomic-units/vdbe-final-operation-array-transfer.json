@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-final-operation-array-transfer",
+  "title": "VDBE finalized operation-array ownership transfer",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3VdbeTakeOpArray is the unique no-copy ownership boundary that finalizes labels/metadata and detaches the operation allocation from its builder Vdbe for subprogram ownership. Its preconditions, outputs and nulling mutation are atomic.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeTakeOpArray::line-1122"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeTakeOpArray::behavior::assert::line-1124-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeTakeOpArray::behavior::assert::line-1127-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeTakeOpArray::behavior::return::line-1132-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "P4 destruction after transfer",
+      "SubProgram construction and linkage",
+      "MakeReady main-program packaging",
+      "Runtime opcode execution"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-final-label-fixup-and-program-flags",
+      "vdbe-operation-append-core",
+      "vdbe-builder-state-representations"
+    ],
+    "external_source_responsibilities": [
+      "Caller assumes ownership and eventually invokes source-equivalent operation-array destruction"
+    ],
+    "caller_closure": "The complete active transfer function, final fixup call, count/max-argument outputs, pointer identity and Vdbe ownership nulling are assigned. Destination SubProgram and P4 teardown remain follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "Vdbe with nonnull aOp, no sticky OOM, zero btreeMask",
+      "in/out maximum argument count and output operation count"
+    ],
+    "outputs": [
+      "same operation allocation pointer, exact nOp, updated max argument count, null Vdbe.aOp"
+    ],
+    "ownership": "Ownership moves without copying from Vdbe to caller. Labels are finalized/freed before transfer. Vdbe no longer frees the detached array.",
+    "state_and_results": "nOp remains as historical metadata while aOp becomes null. Jump P2, reader/write flags and maximum virtual-table arguments are finalized first.",
+    "locks_callbacks_io": "Caller holds connection mutex. No callback or I/O.",
+    "failure_and_continuation": "Source asserts away OOM and btree use; no fallible allocation occurs. Returned bytes remain valid until caller-owned P4-aware destruction."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeTakeOpArray::line-1122",
+      "relation": "source-no-copy-owner-transfer-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::takeOperationArray"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C returns VdbeOp* and nulls the field; Zig returns [*]VdbeOp and performs the same nullable-field transition."
+  ],
+  "oracle": {
+    "protocol": "The shared builder creates Init, unresolved jump label and target, then both workers call TakeOpArray. The 363-observation trace compares returned pointer identity, detached aOp nulling, operation count, final P2, max arguments and label retirement.",
+    "internal_observations": [
+      "returned pointer equals former aOp",
+      "machine aOp null",
+      "operation count",
+      "resolved detached P2",
+      "max argument output",
+      "nLabel/aLabel retirement"
+    ],
+    "normalization": "Pointer address is normalized only to exact identity with the former owner. Counts, targets and null transitions are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "No allocation; source rejects sticky OOM. Preceding builder/fixup OOM paths are covered by dependency traces.",
+    "io_crash_concurrency": "No I/O/callback. Production mutex and subprogram lifetime remain integration obligations.",
+    "malformed_input": "Source assertions constrain nonnull array, no OOM and zero btree mask.",
+    "continuation": "Detached owner is retained through observation and explicitly freed between cases; builder does not double-free it.",
+    "performance": "O(1) no-copy owner transfer after the dependency reverse fixup scan.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding transfer path",
+    "native_call_path": "Symbolic worker executes append -> label resolve -> transfer on exact owners. Production subprogram compiler is not migrated.",
+    "bounded_owner_retired": "No. SubProgram/P4 teardown and compiler migration remain open."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires destination owner integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Port P4-aware operation-array destruction and SubProgram destination ownership.",
+    "Migrate production compiler/subprogram construction to source VDBE owners.",
+    "Independent fidelity review remains open."
+  ]
+}

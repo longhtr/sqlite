@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-operation-access-mutation-and-jump-patching",
+  "title": "VDBE operation access, operand mutation, and jump patching",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These accessors and mutators form the source builder patching interface: current/last/addressed operation access, OOM dummy fallback, exact operand changes, typeof flagging, and jump-here/pop optimization. They share one INIT-state and dummy-continuation contract.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeCurrentAddr::line-1065",
+      "src/vdbeaux.c::function::sqlite3VdbeGetOp::line-1695",
+      "src/vdbeaux.c::function::sqlite3VdbeGetLastOp::line-1710",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeOpcode::line-1281",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP1::line-1285",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP2::line-1289",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP3::line-1293",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP5::line-1297",
+      "src/vdbeaux.c::function::sqlite3VdbeTypeofColumn::line-1307",
+      "src/vdbeaux.c::function::sqlite3VdbeJumpHere::line-1321",
+      "src/vdbeaux.c::function::sqlite3VdbeJumpHereOrPopInst::line-1338"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeCurrentAddr::behavior::assert::line-1066-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCurrentAddr::behavior::return::line-1067-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeOpcode::behavior::assert::line-1282-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP1::behavior::assert::line-1286-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP2::behavior::assert::line-1290-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP3::behavior::assert::line-1294-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP5::behavior::assert::line-1298-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP5::behavior::if::line-1299-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeTypeofColumn::behavior::if::line-1312-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeJumpHereOrPopInst::behavior::if::line-1339-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeJumpHereOrPopInst::behavior::assert::line-1340-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeJumpHereOrPopInst::behavior::assert::line-1343-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeGetOp::behavior::assert::line-1699-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeGetOp::behavior::assert::line-1700-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeGetOp::behavior::if::line-1701-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeGetOp::behavior::return::line-1702-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeGetOp::behavior::return::line-1704-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeGetLastOp::behavior::return::line-1711-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "P4 payload replacement/destruction",
+      "Opcode append/growth",
+      "Final label sweep",
+      "Debug-only ReleaseReg skipping and VDBE coverage source lines inactive in pinned profile"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-operation-append-core",
+      "vdbe-builder-state-representations",
+      "connection-allocation-for-vdbe-growth"
+    ],
+    "external_source_responsibilities": [
+      "Generated canonical opcode and OPFLAG_TYPEOFARG values"
+    ],
+    "caller_closure": "All active release-profile operation access/mutation and jump-patching functions are assigned, including OOM dummy reads and last-jump removal. P4 changes remain a separate ownership unit."
+  },
+  "contracts": {
+    "inputs": [
+      "INIT Vdbe and valid address, except arbitrary GetOp address after sticky OOM",
+      "operand/opcode/P5/destination or jump address"
+    ],
+    "outputs": [
+      "selected operation pointer/current address, patched operand/opcode/P5, typeof flag, jump target, or decremented nOp"
+    ],
+    "ownership": "No owner changes or allocations. OOM GetOp returns a process-static zero dummy rather than touching operation storage.",
+    "state_and_results": "ChangeP5 and typeof target the last operation. JumpHere writes current nOp. JumpHereOrPop decrements nOp only for an immediately preceding Once/If/FkIfZero with unused P4; otherwise patches P2.",
+    "locks_callbacks_io": "Caller holds connection mutex. No callback or I/O.",
+    "failure_and_continuation": "After sticky OOM, GetOp returns zero dummy so read-only builder continuation remains valid. Mutations require source assertion preconditions."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeCurrentAddr::line-1065",
+      "relation": "source-operation-access-or-mutation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::currentAddress"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeGetOp::line-1695",
+      "relation": "source-operation-access-or-mutation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::getOperation"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeGetLastOp::line-1710",
+      "relation": "source-operation-access-or-mutation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::getLastOperation"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeChangeOpcode::line-1281",
+      "relation": "source-operation-access-or-mutation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::changeOpcode"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeChangeP1::line-1285",
+      "relation": "source-operation-access-or-mutation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::changeP1"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeChangeP2::line-1289",
+      "relation": "source-operation-access-or-mutation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::changeP2"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeChangeP3::line-1293",
+      "relation": "source-operation-access-or-mutation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::changeP3"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeChangeP5::line-1297",
+      "relation": "source-operation-access-or-mutation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::changeP5"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeTypeofColumn::line-1307",
+      "relation": "source-operation-access-or-mutation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::typeofColumn"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeJumpHere::line-1321",
+      "relation": "source-operation-access-or-mutation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::jumpHere"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeJumpHereOrPopInst::line-1338",
+      "relation": "source-operation-access-or-mutation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::jumpHereOrPopInstruction"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C function-static zero VdbeOp is a module-static zero Zig VdbeOp.",
+    "C u8/u16 opcode/P5 values map to enum(u8)/u16 exact fields.",
+    "Inactive debug/coverage branches are excluded by the pinned profile."
+  ],
+  "oracle": {
+    "protocol": "The shared builder appends and mutates operations, reads current/addressed/last state, applies P5 and typeof flags, patches and removes jumps, then forces sticky OOM and reads an out-of-range address through the dummy. All are compared in a 363-observation trace.",
+    "internal_observations": [
+      "current address and real pointer selection",
+      "all opcode/P1/P2/P3/P5 fields",
+      "typeof OPFLAG bit and nonmatching no-op",
+      "JumpHere current target",
+      "JumpHereOrPop nOp decrement and nonlast patch",
+      "OOM dummy zero fields and non-real identity"
+    ],
+    "normalization": "Pointer values normalize to real-array identity versus dummy. All operation fields/counts are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Sticky OOM dummy retrieval with invalid address is reached; it returns exact zero fields without touching aOp.",
+    "io_crash_concurrency": "No I/O/callback. Production compiler mutex remains integration obligation.",
+    "malformed_input": "Source assertions constrain INIT state, addresses, jump opcode/P4 shape and nonempty last-operation access.",
+    "continuation": "Mutation results remain append/fixup compatible; popped slot is overwritten by later append under source nOp semantics.",
+    "performance": "Direct indexed access, static dummy, and constant-time patches preserve source complexity.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build opcodes-test",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding builder patch interface",
+    "native_call_path": "Symbolic worker reaches exact Vdbe operation bytes and OOM owner. Production compiler remains handwritten.",
+    "bounded_owner_retired": "No. Compiler migration and P4/destruction remain open."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires compiler integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Port P4 replacement/ownership and operation destruction.",
+    "Migrate production compiler to source VDBE patching interface.",
+    "Independent fidelity review remains open."
+  ]
+}

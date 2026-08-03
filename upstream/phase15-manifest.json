@@ -1,0 +1,11 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version":1,"phase":"phase-15-native-unix-vfs","profile":"sqlite-3.53.4-linux-aarch64-btrfs-v1","baseline_checkin":"bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc","status":"bounded-regression-evidence","mapped_entity_count":47,"public_symbol_count_added":0,"total_exported_sqlite_symbol_count":44,
+  "corpus":{"manifest":"tests/fixtures/unix-vfs/manifest.json","phase_specific_unit_cases":9,"cross_process_observations":2},
+  "implemented":["pread/pwrite native files","short-read zero fill","fsync and directory sync","truncate/delete/access/full pathname","URI filenames and temporary names","Linux OFD byte-range database locks","process-death lock release","mmap fetch/unfetch","file-backed shared-memory map and locks","randomness sleep and time","open/pread/pwrite/fsync system-call overrides","io_methods version 3"],
+  "durability":["rollback commit and reopen through native VFS","WAL commit checkpoint stale-shm rebuild through native VFS","cross-process native rollback writer to canonical SQLite reader","cross-process native WAL writer to canonical SQLite reader"],
+  "target_evidence":{"linux-aarch64-btrfs":"native-pass","linux-x86_64-ext4":"deferred-target-expansion","macos":"out-of-profile","windows":"Phase 16"},
+  "not_claimed":["AFP dotlock flock proxy or NFS locking variants","dynamic loading through this VFS","x86_64/ext4 native execution","macOS Unix VFS"],
+  "exit_gates":{"cross_process_locking":"pass","process_kill_and_lock_release":"pass","sync_short_read_mmap_uri_overrides":"pass","rollback_native_vfs":"pass","wal_native_vfs":"pass","cross_engine_interoperability":"pass","debug_release_safe_release_fast":"pass","exact_exports":"pass-44"}
+}

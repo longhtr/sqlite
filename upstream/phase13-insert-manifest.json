@@ -1,0 +1,36 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-13-insert-slice",
+  "profile": "sqlite-3.53.4-single-row-table-insert-v1",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 18,
+  "public_symbol_count_added": 0,
+  "total_exported_sqlite_symbol_count": 44,
+  "corpus": {"manifest": "tests/fixtures/sql-insert/manifest.json", "cases": 5, "differential_observations": 9},
+  "supported": {
+    "statements": ["single-row INSERT VALUES", "INSERT OR REPLACE"],
+    "columns": ["explicit list", "implicit full list", "omitted columns become NULL", "INTEGER PRIMARY KEY explicit or automatic"],
+    "values": ["Phase 13 scalar expressions", "numbered and named bindings"],
+    "constraints": ["rowid uniqueness", "replace"],
+    "generated_program": ["expression registers", "contiguous argument registers", "native mutation callback", "Halt"]
+  },
+  "evidence": {
+    "sql_api_oracle_differential": "pass-9-mutation-state-observations",
+    "rollback": "pass-constraint-and-five-vfs-faults-with-continuation",
+    "wal": "pass-reader-visibility-and-checkpoint",
+    "oom": "pass-all-prepare-bind-record-and-btree-allocation-sites",
+    "exports": "pass-exact-44-symbol-partition"
+  },
+  "not_applicable_in_profile": ["statement journal: one target row and no triggers", "savepoint rollback: no public transaction/savepoint grammar", "trigger rollback: triggers outside this slice"],
+  "not_yet_complete": ["multi-row VALUES", "INSERT SELECT", "RETURNING", "UPSERT", "indexes", "foreign keys", "triggers", "WITHOUT ROWID"],
+  "slice_exit_gates": {
+    "native_tokenizer_to_vdbe_path": "pass",
+    "sql_api_oracle_differential": "pass",
+    "generated_program_diagnostics": "pass",
+    "oom_and_io": "pass",
+    "rollback_and_wal": "pass"
+  }
+}

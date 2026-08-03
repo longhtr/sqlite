@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-goto-and-explain-parent-stack-wrappers",
+  "title": "VDBE unconditional goto and EXPLAIN parent-stack wrappers",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These source-shaped code-generation wrappers preserve unconditional jump operands and the addrExplain parent chain used to nest and pop EXPLAIN QUERY PLAN nodes.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeGoto::line-369",
+      "src/vdbeaux.c::function::sqlite3VdbeExplainParent::line-493",
+      "src/vdbeaux.c::function::sqlite3VdbeExplainPop::line-548"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeGoto::behavior::return::line-370-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeExplainParent::behavior::if::line-495-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeExplainParent::behavior::return::line-495-column-32::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeExplainParent::behavior::return::line-497-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Formatted OP_Explain allocation and append",
+      "Scan-status attachment",
+      "General operation append and mutation",
+      "EXPLAIN listing execution"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-operation-append-core",
+      "vdbe-operation-access-mutation-and-jump-patching"
+    ],
+    "external_source_responsibilities": [],
+    "caller_closure": "All three active wrapper functions are assigned; formatted Explain generation and consumers remain outside this unit."
+  },
+  "contracts": {
+    "inputs": [
+      "INIT-state Vdbe and destination, or Parse with zero/valid addrExplain"
+    ],
+    "outputs": [
+      "OP_Goto with P1/P3 zero and exact P2 destination; current parent address; popped parent state"
+    ],
+    "ownership": "No allocation or ownership transfer.",
+    "state_and_results": "Goto returns appended address. Parent zero short-circuits without dereferencing pVdbe. Nonzero parent reads operation P2. Pop replaces addrExplain with that P2.",
+    "locks_callbacks_io": "No callback or I/O; parser connection mutex is caller obligation.",
+    "failure_and_continuation": "Goto inherits sticky OOM behavior from AddOp3. Parent/pop perform no allocation."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeGoto::line-369",
+      "relation": "source-control-flow-wrapper-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::addGoto"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeExplainParent::line-493",
+      "relation": "source-control-flow-wrapper-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::explainParent"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeExplainPop::line-548",
+      "relation": "source-control-flow-wrapper-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::explainPop"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The Parse pVdbe opaque pointer is aligned-cast to the exact source-layout Vdbe only after the zero-parent short circuit."
+  ],
+  "oracle": {
+    "protocol": "The shared symbolic worker appends a Goto, verifies exact operands/address, exercises the zero-parent short circuit, then reads and pops a nonzero parent through an operation P2. C and Zig compare the results in a 363-observation trace.",
+    "internal_observations": [
+      "Goto opcode/address/P1/P2/P3/P4/P5",
+      "zero-parent result without Vdbe ownership",
+      "nonzero parent P2",
+      "addrExplain after pop"
+    ],
+    "normalization": "Opcode and every integer field are exact; no pointer values are compared."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Goto dependency coverage exercises sticky and one-shot append OOM; parent/pop allocate nothing.",
+    "io_crash_concurrency": "No I/O or callbacks.",
+    "malformed_input": "Source requires valid nonzero addrExplain; worker uses a packaged operation.",
+    "continuation": "Resulting operation remains mutable and parent state remains available to subsequent code generation.",
+    "performance": "One append wrapper or one indexed read preserves constant-time source shape.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig operation/code-generation helpers",
+    "native_call_path": "Symbolic worker reaches exact Parse, Vdbe, and Op state; parser Explain call sites remain handwritten.",
+    "bounded_owner_retired": "No. Integrate parser Explain generation and consumers."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires parser integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Integrate source parser code generation with these wrappers.",
+    "Complete formatted OP_Explain ownership.",
+    "Independent fidelity review remains open."
+  ]
+}

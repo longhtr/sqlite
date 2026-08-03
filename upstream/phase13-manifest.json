@@ -1,0 +1,10 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version":1,"phase":"phase-13-frontend-code-generation","profile":"sqlite-3.53.4-bounded-core-sql-v1","baseline_checkin":"bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc","status":"bounded-regression-evidence","mapped_entity_count":128,"public_symbol_count":6,"total_exported_sqlite_symbol_count":44,
+  "slices":["phase13-schema-manifest.json","phase13-expression-manifest.json","phase13-table-scan-manifest.json","phase13-insert-manifest.json","phase13-update-delete-manifest.json","phase13-index-join-manifest.json","phase13-advanced-manifest.json"],
+  "differential_observations":952,
+  "completed_families":["schema and simple DDL","expression and table-scan SELECT","single-row INSERT","bounded UPDATE and DELETE","covering indexes and bounded joins","scoped UPSERT window PRAGMA VACUUM"],
+  "deferred_owners":{"phase-14":["cost-based planning","general predicates and joins","sorting and statistics"],"phase-17":["persistent views/triggers","ATTACH/DETACH","general advanced SQL and remaining public API"]},
+  "exit_gates":{"all_slice_manifests":"pass","native_no_upstream_core_c":"pass","sql_api_differentials":"pass","program_diagnostics":"pass","oom_and_io":"pass","rollback_wal_write_slices":"pass","debug_release_safe_release_fast":"pass","exact_exports":"pass"}
+}

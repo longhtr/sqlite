@@ -1,0 +1,49 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-12-core-public-statement-api",
+  "profile": "sqlite-3.53.4-native-program-statement-lifecycle-v1",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 43,
+  "public_api": {
+    "phase12_symbol_count": 33,
+    "total_exported_sqlite_symbol_count": 38,
+    "manifest": "upstream/api-manifest.json",
+    "export_verification": "exact-no-unclaimed-sqlite-symbols"
+  },
+  "corpus": {
+    "manifest": "tests/fixtures/statement/manifest.json",
+    "native_programs": 2,
+    "canonical_header_assertions": 60,
+    "client": "tests/api/statement_client.c",
+    "fixture_bridge": "tests/api/statement_bridge.zig"
+  },
+  "slices": {
+    "statement_lifecycle": {"status": "pass", "scope": ["step", "ROW suspension", "DONE", "reset", "finalize", "busy state", "NULL-handle classification"]},
+    "binding": {"status": "pass", "scope": ["NULL", "int", "int64", "double", "UTF-8 text", "UTF-16LE", "text64 UTF-8/UTF-16BE", "blob/blob64", "zeroblob/zeroblob64", "clear bindings", "parameter count/name/index", "range and busy errors"]},
+    "columns": {"status": "pass", "scope": ["count", "data count", "type", "int/int64/double", "text/text16", "blob", "bytes/bytes16", "column name", "conversion lifetime"]},
+    "destructor_and_reentrancy": {"status": "pass", "scope": ["STATIC", "TRANSIENT", "custom destructor", "replacement", "rejected bind", "finalize", "reentrant bind returns MISUSE", "exactly-once invocation"]},
+    "encoding_and_lengths": {"status": "pass", "scope": ["negative UTF-8 and native UTF-16 lengths", "explicit 64-bit lengths", "odd UTF-16 truncation", "negative blob/zeroblob MISUSE profile", "UTF-8/UTF-16 conversion"]},
+    "error_state": {"status": "pass", "scope": ["extended SQLITE_CONSTRAINT_UNIQUE from step/finalize", "reset prior-result propagation", "sticky NOMEM conversion", "RANGE", "MISUSE"]},
+    "allocation": {"status": "pass", "scope": ["statement", "bindings", "column caches", "VDBE registers/cursors/frames", "text/blob conversion", "all-allocation-site ownership"]},
+    "canonical_header_client": {"status": "pass", "command": "statement-api-client", "assertions": 60, "scope": ["ABI signatures", "lifetime", "destructors", "reentrancy", "encoding", "negative lengths", "misuse", "extended codes"]},
+    "exports": {"status": "pass", "command": "verify-exports", "claimed": 38, "phase12": 33, "unexpected": 0},
+    "prepare_entrypoints": {"status": "pass", "scope": ["no native frontend/code generator exists in Phase 12", "public prepare symbols intentionally absent", "no nonfunctional prepare stub"]}
+  },
+  "phase_owned_deferrals": [
+    {"item": "sqlite3_prepare/v2/v3 and UTF-16 prepare over native SQL code generation", "owning_phase": "phase-13"},
+    {"item": "sqlite3_open/close connection lifecycle and connection error APIs", "owning_phase": "phase-17"},
+    {"item": "bind_value, bind_pointer, column_value, UTF-16 metadata names, origin metadata, SQL text, status and scanstatus", "owning_phase": "phase-17-public-api-completion"},
+    {"item": "generated write programs and transaction/statement-journal behavior", "owning_phase": "phase-13"}
+  ],
+  "exit_gates": {
+    "canonical_header_client_lifecycle": "pass",
+    "destructor_reentrancy_encoding_lengths_misuse": "pass",
+    "exact_export_partition": "pass",
+    "allocation_and_extended_errors": "pass",
+    "prepare_scope_no_stub": "pass",
+    "source_and_api_mapping": "pass"
+  }
+}

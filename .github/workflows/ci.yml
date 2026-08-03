@@ -1,0 +1,40 @@
+name: phase17-public-api-ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  quick-aarch64-linux:
+    runs-on: [self-hosted, linux, ARM64, sqlite-zig]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify pinned Zig
+        run: zig version
+      - name: Quick gates in all release modes
+        run: tools/ci_quick.sh
+
+  upstream-aarch64-linux:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, linux, ARM64, sqlite-zig]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pinned upstream public test partition
+        run: zig build test-upstream
+      - name: Publish upstream test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upstream-aarch64-test-logs
+          path: |
+            .reference-build/upstream-tests/testrunner.log
+            .reference-build/upstream-tests/testrunner.db
+          if-no-files-found: warn

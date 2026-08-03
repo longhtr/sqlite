@@ -1,0 +1,316 @@
+{
+  "schema_version": 1,
+  "id": "connection-allocation-for-vdbe-growth",
+  "title": "Connection lookaside, reallocation, and OOM state for VDBE growth",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These connection-aware malloc.c routines form the direct allocation and failure closure reached by growOpArray: size measurement, two-size lookaside allocation/free, lookaside-to-heap and heap reallocation, sticky OOM, Parse propagation, and OOM clear.",
+    "source_files": [
+      {
+        "path": "src/malloc.c",
+        "sha256": "19f728f9a323aec82906a3e1c5f0e656a308a6892136e58c5cfd0c6c3832c961"
+      },
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      }
+    ],
+    "source_entity_ids": [
+      "src/malloc.c::function::isLookaside::line-333",
+      "src/malloc.c::function::lookasideMallocSize::line-348",
+      "src/malloc.c::function::sqlite3DbMallocSize::line-355",
+      "src/malloc.c::function::measureAllocationSize::line-410",
+      "src/malloc.c::function::sqlite3DbFreeNN::line-419",
+      "src/malloc.c::function::sqlite3DbFree::line-495",
+      "src/malloc.c::function::dbMallocRawFinish::line-604",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::line-643",
+      "src/malloc.c::function::sqlite3DbRealloc::line-699",
+      "src/malloc.c::function::dbReallocFinish::line-715",
+      "src/malloc.c::function::sqlite3OomFault::line-827",
+      "src/malloc.c::function::sqlite3OomClear::line-854",
+      "src/sqliteInt.h::macro::AtomicStore::line-239",
+      "src/sqliteInt.h::macro::DisableLookaside::line-1617",
+      "src/sqliteInt.h::macro::EnableLookaside::line-1618",
+      "src/sqliteInt.h::macro::LOOKASIDE_SMALL::line-1625"
+    ],
+    "behavioral_block_ids": [
+      "src/malloc.c::function::isLookaside::behavior::return::line-334-column-3::ordinal-0",
+      "src/malloc.c::function::lookasideMallocSize::behavior::return::line-350-column-3::ordinal-0",
+      "src/malloc.c::function::lookasideMallocSize::behavior::conditional::line-350-column-10::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocSize::behavior::assert::line-356-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocSize::behavior::if::line-366-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocSize::behavior::if::line-367-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocSize::behavior::if::line-369-column-7::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocSize::behavior::assert::line-370-column-9::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocSize::behavior::return::line-371-column-9::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocSize::behavior::if::line-374-column-7::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocSize::behavior::assert::line-375-column-9::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocSize::behavior::return::line-376-column-9::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocSize::behavior::return::line-380-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::assert::line-420-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::assert::line-421-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::if::line-422-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::if::line-423-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::if::line-425-column-7::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::assert::line-427-column-9::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::return::line-433-column-9::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::if::line-436-column-7::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::assert::line-438-column-9::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::return::line-444-column-9::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::if::line-447-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::return::line-449-column-7::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::assert::line-452-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::assert::line-453-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFreeNN::behavior::assert::line-454-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFree::behavior::assert::line-496-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbFree::behavior::if::line-497-column-3::ordinal-0",
+      "src/malloc.c::function::dbMallocRawFinish::behavior::assert::line-606-column-3::ordinal-0",
+      "src/malloc.c::function::dbMallocRawFinish::behavior::if::line-608-column-3::ordinal-0",
+      "src/malloc.c::function::dbMallocRawFinish::behavior::return::line-611-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::assert::line-646-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::assert::line-647-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::assert::line-648-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::if::line-649-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::if::line-650-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::if::line-652-column-11::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::return::line-653-column-7::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::return::line-655-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::if::line-658-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::if::line-659-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::return::line-662-column-7::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::if::line-663-column-11::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::return::line-666-column-7::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::if::line-670-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::return::line-673-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::if::line-674-column-9::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::return::line-677-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3DbMallocRawNN::behavior::return::line-689-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbRealloc::behavior::assert::line-700-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbRealloc::behavior::if::line-701-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbRealloc::behavior::return::line-701-column-14::ordinal-0",
+      "src/malloc.c::function::sqlite3DbRealloc::behavior::assert::line-702-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbRealloc::behavior::if::line-703-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3DbRealloc::behavior::if::line-705-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3DbRealloc::behavior::if::line-706-column-7::ordinal-0",
+      "src/malloc.c::function::sqlite3DbRealloc::behavior::return::line-706-column-32::ordinal-0",
+      "src/malloc.c::function::sqlite3DbRealloc::behavior::if::line-709-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3DbRealloc::behavior::if::line-710-column-7::ordinal-0",
+      "src/malloc.c::function::sqlite3DbRealloc::behavior::return::line-710-column-37::ordinal-0",
+      "src/malloc.c::function::sqlite3DbRealloc::behavior::return::line-713-column-3::ordinal-0",
+      "src/malloc.c::function::dbReallocFinish::behavior::assert::line-717-column-3::ordinal-0",
+      "src/malloc.c::function::dbReallocFinish::behavior::assert::line-718-column-3::ordinal-0",
+      "src/malloc.c::function::dbReallocFinish::behavior::if::line-719-column-3::ordinal-0",
+      "src/malloc.c::function::dbReallocFinish::behavior::if::line-720-column-5::ordinal-0",
+      "src/malloc.c::function::dbReallocFinish::behavior::if::line-722-column-7::ordinal-0",
+      "src/malloc.c::function::dbReallocFinish::behavior::assert::line-727-column-7::ordinal-0",
+      "src/malloc.c::function::dbReallocFinish::behavior::assert::line-728-column-7::ordinal-0",
+      "src/malloc.c::function::dbReallocFinish::behavior::if::line-731-column-7::ordinal-0",
+      "src/malloc.c::function::dbReallocFinish::behavior::return::line-738-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3OomFault::behavior::if::line-828-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3OomFault::behavior::if::line-830-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3OomFault::behavior::if::line-834-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3OomFault::behavior::for::line-838-column-7::ordinal-0",
+      "src/malloc.c::function::sqlite3OomFault::behavior::return::line-844-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3OomClear::behavior::if::line-855-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3OomClear::behavior::assert::line-858-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3OomClear::behavior::conditional::line-859-column-5::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Public and connection-null allocation entrypoints",
+      "String duplication and zeroing convenience wrappers",
+      "Realloc-or-free ownership transfer",
+      "Global memory alarm, hard/soft limit, status, and allocator configuration ownership"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "active-profile-limit-constants",
+      "vdbe-builder-state-representations",
+      "connection-allocation-state-representations",
+      "global-allocator-core-for-connection-growth",
+      "pthread-mutex-enter-leave-core"
+    ],
+    "external_source_responsibilities": [],
+    "caller_closure": "All connection-aware source functions directly reached by VDBE operation growth are assigned. Admission is blocked until global allocator/status and the additional owner-state representations are atomic units at source-translated or later."
+  },
+  "contracts": {
+    "inputs": [
+      "Connection-owned optional lookaside storage and sticky OOM state",
+      "Requested byte count and optional prior allocation",
+      "Global process allocator result and usable size"
+    ],
+    "outputs": [
+      "Lookaside or heap allocation with source size semantics",
+      "Preserved old allocation on realloc failure",
+      "mallocFailed/lookaside-disable/interrupt/Parse error propagation on OOM"
+    ],
+    "ownership": "Lookaside slots return to the correct big/small free list. Heap blocks return to the process allocator. Realloc preserves old ownership on failure; successful lookaside growth copies the full old slot and returns it.",
+    "state_and_results": "Allocation statistics, pnBytesFreed measurement mode, mallocFailed stickiness, nVdbeExec interrupt, Parse/outer-Parse error state, and OOM clear follow active malloc.c order.",
+    "locks_callbacks_io": "Requires the connection mutex as a caller invariant. No I/O or application callback occurs.",
+    "failure_and_continuation": "One-shot and sticky heap failures set OOM exactly once, preserve existing VDBE operations, reject later connection allocations, and resume only after OOM/fault clear."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/malloc.c::function::isLookaside::line-333",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::isLookaside"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::lookasideMallocSize::line-348",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::lookasideAllocationSize"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3DbMallocSize::line-355",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::allocationSize"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::measureAllocationSize::line-410",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::measureAllocationSize"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3DbFreeNN::line-419",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::freeNN"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3DbFree::line-495",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::free"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::dbMallocRawFinish::line-604",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::mallocRawFinish"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3DbMallocRawNN::line-643",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::mallocRawNN"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3DbRealloc::line-699",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::realloc"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::dbReallocFinish::line-715",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::reallocFinish"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3OomFault::line-827",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::oomFault"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3OomClear::line-854",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::oomClear"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::macro::AtomicStore::line-239",
+      "relation": "one-to-one-macro-helper-or-constant-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/db_allocator.zig::function::atomicStoreInterrupt"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::macro::DisableLookaside::line-1617",
+      "relation": "one-to-one-macro-helper-or-constant-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::function::disableLookaside"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::macro::EnableLookaside::line-1618",
+      "relation": "one-to-one-macro-helper-or-constant-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::function::enableLookaside"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::macro::LOOKASIDE_SMALL::line-1625",
+      "relation": "one-to-one-macro-helper-or-constant-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::lookaside_small"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Zig pointer range checks use integer addresses instead of SQLITE_WITHIN while preserving the same half-open lookaside interval.",
+    "The fixed out-of-memory sqlite3ErrorMsg call is folded to its exact post-mallocFailed Parse state because formatting cannot allocate after the sticky fault.",
+    "The process allocator is a typed Manager dependency rather than global C method-table calls; admission waits for that source unit.",
+    "C AtomicStore uses relaxed ordering; Zig uses @atomicStore with monotonic ordering, the corresponding Zig spelling for relaxed atomics."
+  ],
+  "oracle": {
+    "protocol": "The shared VDBE builder symbolic program drives lookaside allocation, allocator-reported size, successful growth, limit OOM, reached one-shot/sticky heap failures, sticky persistence, Parse propagation, and continuation through both C and Zig. Native allocator tests separately exercise big/small return lists and pnBytesFreed measurement.",
+    "internal_observations": [
+      "lookaside versus heap capacity",
+      "nOp/aOp preservation across failure",
+      "mallocFailed and lookaside-disable state",
+      "Parse nErr/rc and connection error offset",
+      "one-shot/sticky persistence and explicit clear",
+      "big/small free-list ownership and measured size"
+    ],
+    "normalization": "Pointer values are not compared; allocation class, exact size/capacity, state, event order, and operation bytes are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "363-observation C/Zig trace reaches limit, one-shot, and sticky allocation failures and continuation; promotion waits for dependency admission.",
+    "io_crash_concurrency": "No I/O; mutex-held behavior needs its dependency dossier.",
+    "malformed_input": "Internal trusted sizes; global maximum-allocation enforcement belongs to the process allocator dependency.",
+    "continuation": "Existing operation ownership and post-clear append are differentially observed.",
+    "performance": "Two-size lookaside fast paths and geometric growth allocation counts are preserved; no standalone benchmark credit.",
+    "commands": [
+      "zig test src/core/internal_vdbe_mem_test.zig -lc",
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/db_allocator.zig candidate",
+    "native_call_path": "Source-corresponding vdbe_aux operation growth calls this candidate directly; handwritten production Program construction remains separate.",
+    "bounded_owner_retired": "No. Existing public/global allocation and handwritten compiler ownership remain until dependency and compiler integration."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Connection allocation and OOM traces pass; final compiler ownership, assurance, and independent review remain."
+  },
+  "known_blockers": [
+    "The global allocation core is source-translated; its alarm-event trace remains open but the connection allocation paths have their own exact builder differential.",
+    "Connection-owner integration, debug held assertions, complete caller closure, assurance, and independent review remain open."
+  ]
+}

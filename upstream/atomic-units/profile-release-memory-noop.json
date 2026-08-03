@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "id": "profile-release-memory-noop",
+  "title": "Pinned-profile sqlite3_release_memory no-op",
+  "status": "assurance-passed",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The pinned profile omits SQLITE_ENABLE_MEMORY_MANAGEMENT, making sqlite3_release_memory an unconditional result-zero no-op used both publicly and by allocator alarm handoff.",
+    "source_files": [
+      {
+        "path": "src/malloc.c",
+        "sha256": "19f728f9a323aec82906a3e1c5f0e656a308a6892136e58c5cfd0c6c3832c961"
+      }
+    ],
+    "source_entity_ids": [
+      "src/malloc.c::function::sqlite3_release_memory::line-23"
+    ],
+    "behavioral_block_ids": [
+      "src/malloc.c::function::sqlite3_release_memory::behavior::return::line-31-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "SQLITE_ENABLE_MEMORY_MANAGEMENT builds and page-cache release behavior",
+      "Allocator mutex release/reacquire around calls to this function"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Pinned build-profile proof that SQLITE_ENABLE_MEMORY_MANAGEMENT is omitted"
+    ],
+    "caller_closure": "The one selected source body has no runtime dependency and is shared by the public export and global allocator alarm path."
+  },
+  "contracts": {
+    "inputs": [
+      "Any signed byte-count request"
+    ],
+    "outputs": [
+      "SQLITE_OK/zero"
+    ],
+    "ownership": "No allocation, release, or ownership transfer occurs.",
+    "state_and_results": "The argument is unused and no global state changes.",
+    "locks_callbacks_io": "No lock, callback, or I/O occurs inside this function.",
+    "failure_and_continuation": "Cannot fail; callers continue with unchanged memory state."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3_release_memory::line-23",
+      "relation": "one-source-function-to-internal-and-public-zig-entrypoints",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::releaseMemory",
+        "src/core/public_api.zig::function::sqlite3_release_memory"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The internal Zig function and exported Zig C-ABI transport both route to the same no-op owner."
+  ],
+  "oracle": {
+    "protocol": "Pinned-profile C and Zig public/infrastructure probes call the function with representative and boundary signed values and compare zero results and unchanged memory statistics.",
+    "internal_observations": [
+      "return value",
+      "absence of allocation/status changes"
+    ],
+    "normalization": "None."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": true,
+    "oom": "No allocation; exact no-op remains valid under OOM.",
+    "io_crash_concurrency": "No I/O or internal lock. Allocator caller lock handoff is separately assigned.",
+    "malformed_input": "All c_int values are ignored identically.",
+    "continuation": "No state mutation.",
+    "performance": "Constant-time no-op.",
+    "commands": [
+      "zig build infrastructure-differential",
+      "zig build test -j2"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/memory.zig releaseMemory",
+    "native_call_path": "src/core/public_api.zig exports sqlite3_release_memory and memory.Manager alarm handoff calls the same native owner.",
+    "bounded_owner_retired": "No competing production C or Zig owner."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Independent review must confirm the selected profile predicate, public/internal routing, and no hidden state mutation."
+  },
+  "known_blockers": []
+}

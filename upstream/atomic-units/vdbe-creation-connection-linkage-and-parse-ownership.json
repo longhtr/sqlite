@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-creation-connection-linkage-and-parse-ownership",
+  "title": "VDBE creation, connection linkage, and Parse ownership",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3VdbeCreate atomically allocates the statement object, initializes the zero-required tail, links it at the connection head, establishes Parse ownership, and appends mandatory OP_Init. sqlite3VdbeParser is the inverse owner accessor. The intrusive-list fields have no independent behavior outside this lifecycle.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      },
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      },
+      {
+        "path": "src/vdbeInt.h",
+        "sha256": "60f87bb47cae281d4a9d3aecbdecd39a77fe91f7c5266d5e9985cf8b75ea44b5"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeCreate::line-25",
+      "src/vdbeaux.c::function::sqlite3VdbeParser::line-52",
+      "src/sqliteInt.h::member::pVdbe::line-1671",
+      "src/sqliteInt.h::member::pVdbe::line-3885",
+      "src/vdbeInt.h::member::ppVPrev::line-460",
+      "src/vdbeInt.h::member::pVNext::line-460"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeCreate::behavior::if::line-29-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCreate::behavior::return::line-29-column-14::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCreate::behavior::if::line-32-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCreate::behavior::assert::line-38-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCreate::behavior::assert::line-41-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCreate::behavior::assert::line-42-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCreate::behavior::assert::line-43-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCreate::behavior::assert::line-44-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeCreate::behavior::return::line-46-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeParser::behavior::return::line-53-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "VDBE MakeReady allocation and execution-state transition",
+      "P4 ownership and operation-array destruction",
+      "Unlinking and VDBE deletion",
+      "Parser/code-generator production migration"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-builder-state-representations",
+      "vdbe-operation-append-core",
+      "connection-allocation-for-vdbe-growth"
+    ],
+    "external_source_responsibilities": [
+      "Connection mutex ownership at production call sites",
+      "Parse initialization before first VDBE creation"
+    ],
+    "caller_closure": "Creation, intrusive head linkage, Parse/Vdbe bidirectional ownership, parser accessor, mandatory Init append, object-allocation OOM and Init-append OOM are assigned. Readiness, deletion and production compiler ownership remain follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "initialized Parse with db, null aLabel, zero nLabel and szOpAlloc",
+      "connection allocator/lookaside and current pVdbe head"
+    ],
+    "outputs": [
+      "new Vdbe at db.pVdbe, Parse pVdbe owner, reciprocal intrusive links, INIT-state tail, attempted OP_Init(0,1)"
+    ],
+    "ownership": "The connection owns the allocated Vdbe through pVdbe. Parse records the same owner. The prior head remains connection-owned and its ppVPrev is retargeted to the new pVNext slot.",
+    "state_and_results": "Only bytes from aOp through the Vdbe tail are zeroed, matching offsetof semantics. db/pVNext/ppVPrev/pParse are assigned explicitly; mandatory Init append may leave a linked zero-op Vdbe under sticky OOM.",
+    "locks_callbacks_io": "Caller holds the connection mutex. No callback or I/O occurs.",
+    "failure_and_continuation": "Object allocation failure returns null and does not mutate linkage. Operation allocation failure returns the linked Vdbe, leaves nOp zero and sticky connection OOM, allowing ordinary VDBE cleanup."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeCreate::line-25",
+      "relation": "source-creation-link-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::create"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeParser::line-52",
+      "relation": "source-creation-link-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::parser"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pVdbe::line-1671",
+      "relation": "source-creation-link-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Sqlite3.pVdbe"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pVdbe::line-3885",
+      "relation": "source-creation-link-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.pVdbe"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::ppVPrev::line-460",
+      "relation": "source-creation-link-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.ppVPrev"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::pVNext::line-460",
+      "relation": "source-creation-link-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.pVNext"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C memset begins at offsetof(Vdbe,aOp); Zig byte memset uses @offsetOf and @sizeOf over the same verified extern layout.",
+    "C Parse uses its Vdbe declaration; Zig crosses the generated Parse/Vdbe declaration cycle with an ABI-identical pointer cast.",
+    "Intrusive ppVPrev pointer-to-owner-slot identity is retained directly rather than replaced by a container."
+  ],
+  "oracle": {
+    "protocol": "The shared symbolic builder worker creates one and two linked statements and injects deterministic object-allocation and initial-operation-allocation faults with lookaside disabled. C and Zig compare ownership/accessor identity, list links, state, Init operands/capacity, and OOM Parse/connection state in a 363-observation trace.",
+    "internal_observations": [
+      "db head and Parse owner pointer identity",
+      "parser accessor identity",
+      "pVNext and ppVPrev reciprocal slot identity",
+      "INIT state and OP_Init operands",
+      "object OOM no-mutation path",
+      "Init append OOM linked continuation path"
+    ],
+    "normalization": "Pointer values are normalized to exact identity/relationship booleans. Counts, state, operands, OOM flags and result codes are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Both Vdbe object-allocation failure and second-allocation OP_Init failure are deterministically reached and compared; cleanup returns lookaside/global storage.",
+    "io_crash_concurrency": "No I/O or callback. Production mutex/cross-statement lifecycle remains integration work.",
+    "malformed_input": "Source assertions require zero labels/allocation metadata and initialized Parse/db; worker exercises valid entry contracts.",
+    "continuation": "Linked VdBE after Init OOM is observed and safely retired; normal one/two-node lists are retired between cases.",
+    "performance": "Single allocation, tail memset, O(1) intrusive head insertion and one opcode append preserve source shape.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test",
+      "zig build internal-parse-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding VDBE builder",
+    "native_call_path": "Symbolic native worker calls create against exact Parse/Sqlite3/Vdbe owners. Production handwritten compiler still owns executable programs.",
+    "bounded_owner_retired": "No. Production ownership waits for P4/MakeReady/deletion and compiler migration."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires lifecycle integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Port and integrate P4 ownership, MakeReady/operation transfer, and deletion.",
+    "Switch compiler ownership from handwritten Program to source VDBE builder and retire the duplicate.",
+    "Independent fidelity review remains open."
+  ]
+}

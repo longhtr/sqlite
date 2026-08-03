@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "phase": "phase-12-statement-api",
+  "profile": "native-program-statement-lifecycle-v1",
+  "programs": [
+    {
+      "name": "bindings",
+      "parameters": [
+        ":integer",
+        "@text",
+        "$blob",
+        "?4"
+      ],
+      "columns": [
+        "integer",
+        "text",
+        "blob",
+        "utf16"
+      ]
+    },
+    {
+      "name": "error",
+      "result_code": 2067
+    }
+  ],
+  "implemented_symbols": [
+    "sqlite3_bind_blob",
+    "sqlite3_bind_blob64",
+    "sqlite3_bind_double",
+    "sqlite3_bind_int",
+    "sqlite3_bind_int64",
+    "sqlite3_bind_null",
+    "sqlite3_bind_parameter_count",
+    "sqlite3_bind_parameter_index",
+    "sqlite3_bind_parameter_name",
+    "sqlite3_bind_text",
+    "sqlite3_bind_text16",
+    "sqlite3_bind_text64",
+    "sqlite3_bind_zeroblob",
+    "sqlite3_bind_zeroblob64",
+    "sqlite3_clear_bindings",
+    "sqlite3_column_blob",
+    "sqlite3_column_bytes",
+    "sqlite3_column_bytes16",
+    "sqlite3_column_count",
+    "sqlite3_column_double",
+    "sqlite3_column_int",
+    "sqlite3_column_int64",
+    "sqlite3_column_name",
+    "sqlite3_column_text",
+    "sqlite3_column_text16",
+    "sqlite3_column_type",
+    "sqlite3_data_count",
+    "sqlite3_finalize",
+    "sqlite3_reset",
+    "sqlite3_step",
+    "sqlite3_stmt_busy",
+    "sqlite3_stmt_isexplain",
+    "sqlite3_stmt_readonly"
+  ],
+  "implemented_symbol_count": 33,
+  "canonical_header_assertions": 60,
+  "public_prepare_profile": "absent-until-native-frontend-codegen-phase-13",
+  "encodings": [
+    "utf-8",
+    "utf-16le-native-target"
+  ]
+}

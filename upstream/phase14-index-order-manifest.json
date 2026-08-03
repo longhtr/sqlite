@@ -1,0 +1,11 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version":1,"phase":"phase-14-index-order-slice","profile":"sqlite-3.53.4-covering-order-cost-v1","baseline_checkin":"bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc","status":"bounded-regression-evidence","mapped_entity_count":12,"public_symbol_count_added":0,"total_exported_sqlite_symbol_count":44,
+  "corpus":{"manifest":"tests/fixtures/sql-index-planner/manifest.json","queries":1,"differential_observations":7,"native_runtime_budget_seconds":2.0},
+  "supported":["automatic persistent covering-index candidate selection","ascending and descending covering order","constant LIMIT","sort avoidance","ephemeral automatic-index suppression when a covering index exists","same-primary-key self-join elimination retained from Phase 13"],
+  "statistics_profile":["exact native B-tree entry counts","schema root-page and covering-column metadata","deterministic binary-collation cost tie-break"],
+  "evidence":{"sql_api_oracle_differential":"pass-7-observations","normalized_plan":"covering-index-last-prev-limit","performance_budget":"pass","oom_io":"retained-schema-index-and-btree-cursor-partitions","exports":"pass-exact-44-symbol-partition"},
+  "documented_callback_scope":{"nondeterministic_functions":"no planner invocation in bounded corpus","collations":"BINARY only","authorizer":"Phase 17 API owner","virtual_tables":"Phase 17 API owner"},
+  "slice_exit_gates":{"sql_logic_and_planner_corpus":"pass-bounded","performance_and_plan_diagnostics":"pass-bounded","callback_behavior":"resolved-or-documented","oom_and_io":"pass"}
+}

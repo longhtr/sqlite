@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "id": "global-library-initialize-shutdown",
+  "title": "Top-level recursive and concurrent library initialization/shutdown coordinator",
+  "status": "scaffolded",
+  "admission_ready": false,
+  "scope": {
+    "rationale": "These two top-level source functions serialize initialization, support same-thread recursion, initialize mutex/malloc/pcache/OS layers in order, preserve completed layers across late failures, and shut layers down in reverse order. The production public exports now route through one Coordinator owner.",
+    "source_files": [
+      {
+        "path": "src/main.c",
+        "sha256": "318f5b725d7c1403a442e59cd1565672a6fe0c6b24c4c5d06a9c74c32b17f1de"
+      }
+    ],
+    "source_entity_ids": [
+      "src/main.c::function::sqlite3_initialize::line-190",
+      "src/main.c::function::sqlite3_shutdown::line-372"
+    ],
+    "behavioral_block_ids": [
+      "src/main.c::function::sqlite3_initialize::behavior::assert::line-207-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-214-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::return::line-216-column-5::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-228-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::return::line-228-column-12::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-239-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-242-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-244-column-5::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-247-column-7::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-252-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-260-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::return::line-261-column-5::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-278-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-288-column-5::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-291-column-5::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-296-column-5::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-300-column-5::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-310-column-5::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::if::line-326-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::assert::line-327-column-5::ordinal-0",
+      "src/main.c::function::sqlite3_initialize::behavior::return::line-361-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_shutdown::behavior::if::line-380-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_shutdown::behavior::if::line-389-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_shutdown::behavior::if::line-393-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_shutdown::behavior::if::line-409-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_shutdown::behavior::return::line-414-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Individual mutex, malloc, pcache, and OS initialization implementations",
+      "sqlite3_config mutation and individual subsystem configuration",
+      "WSD initialization for SQLITE_OMIT_WSD builds",
+      "SQL-level connection initialization"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "global-allocator-init-shutdown",
+      "mutex-static-and-dynamic-allocation",
+      "pthread-mutex-enter-leave-core",
+      "mutex-method-selection-and-lifecycle",
+      "global-initialization-state-representations",
+      "pcache-process-lifecycle-and-static-buffer",
+      "os-unix-process-lifecycle-and-default-vfs"
+    ],
+    "external_source_responsibilities": [],
+    "caller_closure": "The two public lifecycle coordinators are assigned. Subsystem hooks are dependencies; mutex, allocator, PCache, and scoped OS/VFS lifecycle owners are concrete."
+  },
+  "contracts": {
+    "inputs": [
+      "Process-global configuration and any concurrent/recursive initialize or shutdown call"
+    ],
+    "outputs": [
+      "SQLITE_OK or first subsystem initialization failure, with exact final/progress and partial per-layer process state"
+    ],
+    "ownership": "Coordinator owns process lifecycle state and borrows subsystem owners. Initialization hooks acquire their own resources; late failure preserves completed layers for retry or shutdown.",
+    "state_and_results": "Repeated initialize and shutdown are idempotent. Same-thread recursive initialization returns OK. Other threads wait. Failure restores uninitialized state and permits retry.",
+    "locks_callbacks_io": "A process init lock/condition serializes callers. Hooks run outside the coordinator lock in mutex, malloc, pcache, then OS order and reverse shutdown order.",
+    "failure_and_continuation": "First failed hook preserves prior successful layers, clears progress, wakes waiters, and allows deterministic retry; shutdown later clears partial state."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/main.c::function::sqlite3_initialize::line-190",
+      "relation": "one-source-lifecycle-to-coordinator-and-production-export",
+      "zig_declaration_ids": [
+        "src/core/global.zig::function::Coordinator.initialize",
+        "src/core/public_api.zig::function::sqlite3_initialize"
+      ]
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3_shutdown::line-372",
+      "relation": "one-source-lifecycle-to-coordinator-and-production-export",
+      "zig_declaration_ids": [
+        "src/core/global.zig::function::Coordinator.shutdown",
+        "src/core/public_api.zig::function::sqlite3_shutdown"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C uses Sqlite3Config flags, a recursive static master mutex, and nRefInitMutex; Coordinator uses an explicit state enum, owner thread id, pthread mutex, and condition variable, while still allocating configured STATIC_MAIN and recursive init handles so callback and OOM behavior is preserved.",
+    "C names fixed PCache/OS functions; Coordinator uses staged hook transport backed by concrete process PCache and Unix/mem VFS owners, with the scoped OS owner trace-equivalent.",
+    "Production exports and internal process users now share process_coordinator. memory.processManager asserts startup, and only builtin test compilation may locally start the test process Manager; production no longer has a memory-only lazy-start/shutdown path."
+  ],
+  "oracle": {
+    "protocol": "Infrastructure C/Zig differential runs 100 repeated configure/init/idempotent-init/shutdown cycles, an eight-thread 100-call race, and a configured-mutex/configured-PCache failure-retry trace. The latter compares failure result, partial isMutexInit/isMallocInit/isPCacheInit/isInit state, repeated xMutexInit on recursive/retry calls, successful retry, reverse shutdown, and final state. Native tests additionally cover recursive init-mutex allocation OOM, production owner identity, callback counts, automatic-extension reset, directory clearing after allocator shutdown, partial failure, and reconfiguration.",
+    "internal_observations": [
+      "return codes",
+      "hook ordering/counts, including repeated xMutexInit on recursive and retry calls",
+      "single initialization under contention",
+      "same-thread recursion",
+      "partial layer preservation and retry",
+      "idempotent shutdown",
+      "configuration misuse while initialized"
+    ],
+    "normalization": "Private lock/condition identities and explicit-state versus flag representation are ignored; events, state transitions, and results are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Allocator failure, recursive init-mutex allocation failure, PCache failure, and late-hook partial-state preservation/retry are tested; per-cache allocation OOM remains outside the lifecycle unit.",
+    "io_crash_concurrency": "Concurrent and recursive init are tested; PCache and scoped OS/VFS hooks are trace-equivalent with the complete active Linux Unix table.",
+    "malformed_input": "Not input-driven; invalid configuration timing returns misuse.",
+    "continuation": "Failure retry and repeated shutdown are tested.",
+    "performance": "Condition-variable serialization differs from source init-mutex refcount and needs review.",
+    "commands": [
+      "zig test src/core/global.zig -lc",
+      "zig build infrastructure-differential",
+      "zig build test -j2"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/global.zig process_coordinator",
+    "native_call_path": "src/core/public_api.zig sqlite3_initialize/shutdown and auto-initializing utility paths call global.initializeProcess/shutdownProcess.",
+    "bounded_owner_retired": "Direct public start/stop of memory.process_manager was retired; one production Coordinator now owns process lifecycle."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires exact top-level lifecycle/refcount event traces, public configuration consolidation, assurance, and independent review."
+  },
+  "known_blockers": [
+    "Port and integrate source builtin-function registry reset/registration performed inside sqlite3_initialize before this unit can be source-translated.",
+    "Complete nRefInitMutex waiter-lifetime and configured lock-callback event equivalence; retry/recursive xMutexInit and init-mutex OOM are now covered.",
+    "Configured mutex methods and typed process configuration are wired into lifecycle; consolidation into the final public configuration domain and independent review remain open."
+  ]
+}

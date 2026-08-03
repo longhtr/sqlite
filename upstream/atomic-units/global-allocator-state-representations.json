@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "id": "global-allocator-state-representations",
+  "title": "Global allocator configuration, limits, mutex, and method-table state representations",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These are the complete private mem0 identities and the Sqlite3Config identities directly read by the admitted global allocation core. They consolidate into the process-lifetime Manager owner.",
+    "source_files": [
+      {
+        "path": "src/malloc.c",
+        "sha256": "19f728f9a323aec82906a3e1c5f0e656a308a6892136e58c5cfd0c6c3832c961"
+      },
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      },
+      {
+        "path": "src/global.c",
+        "sha256": "3587266a1a73e09914a4820186cbceb8bd22e0fe63d7e169fa59532adce938de"
+      }
+    ],
+    "source_entity_ids": [
+      "src/malloc.c::macro::SQLITE_MAX_MEMORY::line-39",
+      "src/malloc.c::struct::Mem0Global::line-45",
+      "src/malloc.c::member::mutex::line-46",
+      "src/malloc.c::member::alarmThreshold::line-47",
+      "src/malloc.c::member::hardLimit::line-48",
+      "src/malloc.c::member::nearlyFull::line-54",
+      "src/malloc.c::variable::mem0::line-55",
+      "src/malloc.c::macro::mem0::line-57",
+      "src/sqliteInt.h::macro::sqlite3GlobalConfig::line-1307",
+      "src/sqliteInt.h::struct::Sqlite3Config::line-4285",
+      "src/sqliteInt.h::member::bMemstat::line-4286",
+      "src/sqliteInt.h::member::m::line-4301",
+      "src/global.c::variable::sqlite3Config::line-238",
+      "src/sqliteInt.h::member::pPage::line-4309",
+      "src/sqliteInt.h::member::szPage::line-4310",
+      "src/sqliteInt.h::member::nPage::line-4311"
+    ],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": [
+      "Configuration API and initialization/shutdown sequencing",
+      "sqlite3MallocMutex accessor behavior",
+      "Public sqlite3_mem_methods ABI layout, which is generated separately",
+      "Sqlite3Config fields unrelated to allocator or static page-cache initialization"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "global-status-primitives"
+    ],
+    "external_source_responsibilities": [
+      "Pinned default SQLITE_MAX_MEMORY value and writable-static-data profile",
+      "Configured allocator method callback validity and initialization lifecycle"
+    ],
+    "caller_closure": "All global configuration, limit, nearly-full, mutex, method-table, and status storage read or written by the six-function global allocator core is represented."
+  },
+  "contracts": {
+    "inputs": [
+      "Pinned profile defaults and pre-initialization allocator configuration"
+    ],
+    "outputs": [
+      "One process-lifetime allocator owner with backend callbacks, status enablement, limits, nearly-full state, mutex, and static page-cache configuration"
+    ],
+    "ownership": "Manager owns copied backend callback transport and process-lifetime status/limit state; backend context ownership remains with its configurator.",
+    "state_and_results": "Default hard/soft limits are zero, memory status is enabled, and callback state is initialized before sqlite3Malloc-family calls.",
+    "locks_callbacks_io": "Manager.lock represents mem0.mutex. Backend represents sqlite3GlobalConfig.m. No I/O.",
+    "failure_and_continuation": "Representation carries failed backend initialization without partial started state; sequencing behavior is separately assigned."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/malloc.c::macro::SQLITE_MAX_MEMORY::line-39",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.hard_limit"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::struct::Mem0Global::line-45",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::constant::Manager"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::member::mutex::line-46",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.lock"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::member::alarmThreshold::line-47",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.soft_limit"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::member::hardLimit::line-48",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.hard_limit"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::member::nearlyFull::line-54",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.nearly_full"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::variable::mem0::line-55",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::variable::process_manager"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::macro::mem0::line-57",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::variable::process_manager"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::macro::sqlite3GlobalConfig::line-1307",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::variable::process_manager"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::struct::Sqlite3Config::line-4285",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::constant::Manager"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::bMemstat::line-4286",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.memory_status"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::m::line-4301",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.backend"
+      ]
+    },
+    {
+      "source_entity_id": "src/global.c::variable::sqlite3Config::line-238",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::variable::process_manager"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pPage::line-4309",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.static_page"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::szPage::line-4310",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.static_page_size"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::nPage::line-4311",
+      "relation": "private-global-state-consolidation",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::field::Manager.static_page_count"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C mem0 and the allocator-relevant subset of sqlite3Config are consolidated into one Manager.",
+    "SQLITE_MAX_MEMORY is zero in the pinned profile and is represented by Manager.hard_limit defaulting to zero.",
+    "The C sqlite3_mem_methods object is normalized to Backend callbacks after configuration; MethodsBackend preserves the public ABI transport.",
+    "Writable-static-data indirection is absent in the pinned profile; both C macros resolve to direct process globals."
+  ],
+  "oracle": {
+    "protocol": "Infrastructure C/Zig differentials compare configured backend lifecycle/copies, memory-status behavior, limits, nearly-full effects, statistics, shutdown, and shuffled reinitialization. Native tests inspect default and transition state.",
+    "internal_observations": [
+      "default limits and status mode",
+      "copied backend callbacks and context",
+      "single process owner",
+      "soft/hard/nearly-full transitions",
+      "mutex-protected state",
+      "valid and invalid static page-cache configuration state"
+    ],
+    "normalization": "Private C and Zig global addresses and aggregate field offsets may differ; callback event order and all state values are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "No representation allocation; backend initialization failure leaves started false.",
+    "io_crash_concurrency": "No I/O. Manager mutex protects allocator/status state, but source mutex subsystem integration remains open.",
+    "malformed_input": "Invalid callback/configuration inputs belong to configuration behavior.",
+    "continuation": "Manager can stop and restart while retaining source-corresponding process status ownership.",
+    "performance": "Private state consolidation removes indirection; callback invocation remains direct.",
+    "commands": [
+      "zig test src/core/memory.zig -lc",
+      "zig build infrastructure-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/memory.zig process_manager and Manager",
+    "native_call_path": "db_allocator heap fallback reaches ensureProcessManager; public memory APIs route through the same process owner.",
+    "bounded_owner_retired": "Allocator-specific status scalar fields were retired in favor of source-corresponding ten-slot arrays."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Must verify default profile values, state consolidation, callback lifetime, and initialization/mutex boundaries."
+  },
+  "known_blockers": [
+    "Configuration/init/shutdown behavior is not part of this representation unit.",
+    "Final mutex subsystem ownership and independent review remain open."
+  ]
+}

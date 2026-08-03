@@ -1,0 +1,29 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "schema_version": 2,
+  "phase": "historical-phase-17-bounded-api-work",
+  "profile": "sqlite-3.53.4-linux-core-public-api-v10",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "completion_claim": false,
+  "project_completion_claim": false,
+  "mapped_entity_count": 238,
+  "exported_sqlite_symbol_count": 286,
+  "fidelity_evidenced_symbol_count": 5,
+  "provisional_bounded_symbol_count": 281,
+  "deferred_profile_symbol_count": 82,
+  "corpus": {
+    "manifest": "tests/fixtures/phase17/manifest.json",
+    "canonical_header_assertions": 166,
+    "client": "tests/api/phase17_connection_client.c"
+  },
+  "evidence_scope": [
+    "selected connection and statement lifetimes",
+    "selected values, blobs, callbacks, formatting, backup, WAL, extension, and virtual-table examples",
+    "exact presence of 286 exported symbols in the provisional partition",
+    "Debug, ReleaseSafe, and ReleaseFast regression runs"
+  ],
+  "warning": "This manifest does not establish complete API semantics, complete active-source coverage, or completion of the SQLite C-to-Zig port.",
+  "project_completion_claim": false,
+  "evidence_interpretation": "Bounded regression evidence only; not proof that the complete upstream subsystem or SQLite port is finished."
+}

@@ -1,0 +1,69 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-7-read-only-btree-records",
+  "profile": "sqlite-3.53.4-core-default-threadsafe1-rollback-readonly-binary-collation",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 55,
+  "corpus": {
+    "manifest": "tests/fixtures/btree/manifest.json",
+    "fixture_count": 8,
+    "page_sizes": [512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
+    "encodings": ["utf-8", "utf-16le", "utf-16be"],
+    "auto_vacuum_modes": ["none", "incremental", "full"],
+    "classes": ["table", "index", "without-rowid", "overflow", "freelist-and-reuse", "schema-churn", "large-rowid"],
+    "tree_entries_compared": 24616
+  },
+  "slices": {
+    "database_and_schema": {
+      "status": "pass",
+      "scope": ["database encoding", "usable size", "declared page count", "sqlite_schema traversal", "root discovery"]
+    },
+    "page_cell_and_overflow": {
+      "status": "pass",
+      "scope": ["four B-tree page kinds", "cell pointer arrays", "local payload formula", "overflow chains", "cycle and depth bounds"]
+    },
+    "cursor_traversal_and_seek": {
+      "status": "pass",
+      "scope": ["table first/last/next/previous", "table integer seek", "index interior keys", "ascending BINARY index seek", "WITHOUT ROWID traversal"]
+    },
+    "record_decoding": {
+      "status": "pass",
+      "scope": ["record headers", "all serial types", "signed integers", "binary64", "text/blob", "UTF-8", "UTF-16LE", "UTF-16BE"]
+    },
+    "oracle_differential": {
+      "status": "pass",
+      "command": "btree-differential",
+      "observations": 88,
+      "scope": ["root pages", "complete ordered tree digests", "record values", "table seeks", "index seeks", "overflow values"]
+    },
+    "hybrid_select": {
+      "status": "pass",
+      "command": "btree-hybrid-select",
+      "select_cells": 192,
+      "scope": ["public C SELECT", "C VDBE and function callback", "Zig pager/B-tree/record path", "typed value equality"]
+    },
+    "fault_and_ownership": {
+      "status": "pass",
+      "scope": ["malformed page type", "invalid tree links", "pager read faults", "cursor cleanup"],
+      "oom": "pass-bounded-sticky"
+    }
+  },
+  "phase_owned_deferrals": [
+    {"item": "database mutation, page allocation, balancing, freelist mutation, and pointer-map updates", "owning_phase": "phase-9"},
+    {"item": "rollback journal writes and hot-journal recovery", "owning_phase": "phase-8"},
+    {"item": "WAL reads and writes", "owning_phase": "phase-10"},
+    {"item": "descending, NOCASE, RTRIM, and application-defined index seek collations", "owning_phase": "phase-11-and-phase-13"},
+    {"item": "fully native VDBE, SQL statement lifecycle, and public database API", "owning_phase": "phase-11-through-phase-17"}
+  ],
+  "exit_gates": {
+    "cursor_seeks_and_scans_match": "pass",
+    "record_values_match": "pass",
+    "overflow_reads_match": "pass",
+    "hybrid_public_select_matches": "pass",
+    "bounded_fault_and_allocation_ownership": "pass",
+    "source_mapping": "pass"
+  }
+}

@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-final-label-fixup-and-program-flags",
+  "title": "VDBE final label fixup, reader/write flags, and virtual-table argument sizing",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "resolveP2Values is the source builder finalization scan that consumes resolved labels, patches negative jump P2 operands, computes maximum VUpdate/VFilter argument demand, derives read-only/reader flags, and releases Parse label storage. Its reverse scan and generated opcode-property coupling form one atomic unit.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      },
+      {
+        "path": "src/vdbeInt.h",
+        "sha256": "60f87bb47cae281d4a9d3aecbdecd39a77fe91f7c5266d5e9985cf8b75ea44b5"
+      },
+      {
+        "path": "src/global.c",
+        "sha256": "3587266a1a73e09914a4820186cbceb8bd22e0fe63d7e169fa59532adce938de"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::resolveP2Values::line-871",
+      "src/vdbeInt.h::member::readOnly::line-507",
+      "src/vdbeInt.h::member::bIsReader::line-508",
+      "src/vdbeInt.h::member::btreeMask::line-510",
+      "src/global.c::variable::sqlite3OpcodeProperty::line-366"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-877-column-3::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-881-column-3::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::while::line-882-column-3::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::if::line-889-column-5::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::switch::line-892-column-7::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::case::line-893-column-9::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::if::line-894-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::case::line-897-column-9::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::case::line-898-column-9::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::break::line-900-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::case::line-903-column-9::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::case::line-905-column-9::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::case::line-906-column-9::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::break::line-909-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::case::line-911-column-9::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-912-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::goto::line-913-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::case::line-916-column-9::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::if::line-917-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::break::line-918-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::case::line-920-column-9::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-925-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-926-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-927-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::if::line-929-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::default::line-934-column-9::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::if::line-935-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-939-column-13::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-940-column-13::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-941-column-13::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-947-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-951-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::break::line-953-column-11::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-959-column-7::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-961-column-5::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::label::line-964-column-1::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::if::line-965-column-3::ordinal-0",
+      "src/vdbeaux.c::function::resolveP2Values::behavior::assert::line-971-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "VDBE MakeReady allocation and execution-state transition",
+      "Opcode execution semantics",
+      "Debug-only subroutine jump validation",
+      "Generated opcode production beyond consumed properties/max-jump ordering"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-label-resolution-progress-and-reuse",
+      "vdbe-operation-append-core",
+      "vdbe-builder-state-representations",
+      "connection-allocation-for-vdbe-growth"
+    ],
+    "external_source_responsibilities": [
+      "Generated mkopcodeh opcode ordering, jump properties, and maximum jump opcode",
+      "DbMask population by compiler callers"
+    ],
+    "caller_closure": "The complete active reverse finalization scan, consumed labels, flags, property table and max-vtab-argument output are assigned. MakeReady callers and compiler mask population remain follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "INIT-state Vdbe ending in a reverse-reachable OP_Init, Parse resolved-label array, initial max-vtab-argument count, generated opcode properties"
+    ],
+    "outputs": [
+      "Patched nonnegative jump P2 operands, updated max argument count, readOnly/bIsReader flags, freed aLabel and reset nLabel"
+    ],
+    "ownership": "Parse label storage is connection-owned and freed exactly once after the scan; aLabel becomes null and nLabel becomes zero. Operations remain Vdbe-owned.",
+    "state_and_results": "The scan runs backward and stops at OP_Init. Transaction/control opcodes derive reader/write flags. VUpdate uses P2; VFilter uses the immediately preceding Integer P1. Negative jump labels resolve through ADDR and generated jump properties.",
+    "locks_callbacks_io": "Caller holds the connection mutex. No callback or I/O occurs.",
+    "failure_and_continuation": "Source requires mallocFailed==0 on entry. All labels must already resolve. Finalized operation bytes and flags remain valid for MakeReady; label owner is retired even when no labels existed."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::resolveP2Values::line-871",
+      "relation": "source-finalization-scan-or-state-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::resolveP2Values"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::readOnly::line-507",
+      "relation": "source-finalization-scan-or-state-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeFlags.readOnly"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::bIsReader::line-508",
+      "relation": "source-finalization-scan-or-state-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeFlags.bIsReader"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::btreeMask::line-510",
+      "relation": "source-finalization-scan-or-state-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.btreeMask"
+      ]
+    },
+    {
+      "source_entity_id": "src/global.c::variable::sqlite3OpcodeProperty::line-366",
+      "relation": "source-finalization-scan-or-state-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/generated/opcodes.zig::constant::properties"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C generated sqlite3OpcodeProperty[] is the generated Zig properties array indexed by enum(u8).",
+    "C goto exits the reverse loop at OP_Init; Zig uses a structured loop break without changing visited operation order.",
+    "Vdbe bitfields are exact packed Zig VdbeFlags fields."
+  ],
+  "oracle": {
+    "protocol": "The shared symbolic builder program emits Init/jump/label/Transaction and VFilter/VUpdate programs, then C and Zig run finalization and compare inspected P2, maximum virtual-table arguments, reader/write flags, nLabel, and aLabel ownership as part of a 363-observation trace.",
+    "internal_observations": [
+      "reverse scan output jump target",
+      "maximum VUpdate/VFilter argument count",
+      "readOnly and bIsReader",
+      "nLabel reset and aLabel free",
+      "generated opcode/property decisions"
+    ],
+    "normalization": "Opcode, P2, maximum arguments, flags, counts and null ownership are exact; allocation addresses are ignored."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Entry requires no sticky OOM; preceding label growth OOM/continuation is covered by the same 363-observation worker.",
+    "io_crash_concurrency": "No I/O or callback; caller mutex remains integration obligation.",
+    "malformed_input": "Source assertions constrain OP_Init placement, VFilter/Integer adjacency, jump labels and targets; symbolic programs exercise each active special case family.",
+    "continuation": "Final bytes and metadata are observed after label owner retirement; MakeReady integration remains open.",
+    "performance": "Reverse scan, max-jump fast filter, generated property lookup and stop point preserve source order.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build opcodes-test",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding builder finalization",
+    "native_call_path": "Symbolic native worker reaches exact operation/Parse/Vdbe owners; production handwritten compiler does not yet call finalization.",
+    "bounded_owner_retired": "No. Production ownership waits for VDBE create/P4/readiness/deletion and compiler migration."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires MakeReady/compiler integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Port and integrate VDBE creation, P4 ownership, MakeReady/operation transfer, and deletion.",
+    "Switch compiler ownership from handwritten Program to source builder and retire the duplicate.",
+    "Independent fidelity review remains open."
+  ]
+}

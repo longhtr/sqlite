@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "phase": "phase-10-wal",
+  "profile": "sqlite-3.53.4-wal-full-4096",
+  "generator": "tools/generate_wal_fixtures.py",
+  "fixtures": [
+    {
+      "name": "base-4096.db",
+      "size": 8192,
+      "sha256": "a9bcd16ee61fe8965418da36ced9d125f30b716ab7909a3de415b6193154f1c3",
+      "page_size": 4096,
+      "read_version": 2,
+      "write_version": 2
+    }
+  ],
+  "events": [
+    "header-write",
+    "header-sync",
+    "frame-header-write",
+    "frame-page-write",
+    "wal-sync",
+    "index-publish",
+    "checkpoint-db-write",
+    "checkpoint-db-sync",
+    "wal-reset"
+  ]
+}

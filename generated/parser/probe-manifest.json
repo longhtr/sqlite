@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "generator": "upstream/sqlite/tool/lemon.c",
+  "template": "upstream/sqlite/tool/lempar.c",
+  "grammar": "tests/fixtures/parser_probe.y",
+  "outputs": {
+    "generated/parser/parser_probe.c": "fd6268920c9b6136cb2a36226e77ba80b6f3d4b20772e69b450468504420ed95",
+    "generated/parser/parser_probe.h": "1adf2637999f8ff8af7577af6f1ee410984fbbba0392798388eba47054545c45",
+    "generated/parser/parser_probe.sql": "c7f8360289b0ebdad683e0c6685b49dcb32f81ae748e7f8b762f30df0701e99a"
+  },
+  "purpose": "Phase 0 deterministic Lemon metadata and Zig semantic-action bridge"
+}

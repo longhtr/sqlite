@@ -1,0 +1,43 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-11-vdbe-core",
+  "profile": "sqlite-3.53.4-handcrafted-oracle-derived-vdbe-core-v1",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 66,
+  "implemented_opcode_count": 68,
+  "corpus": {
+    "manifest": "tests/fixtures/vdbe/manifest.json",
+    "programs": 9,
+    "row_register_halt_observations": 31,
+    "oracle": "pinned SQLite SQL-derived VDBE behavior",
+    "layout_boundary": "no private C Vdbe, VdbeOp, Mem, cursor, or frame layout crosses into Zig"
+  },
+  "slices": {
+    "program_representation": {"status": "pass", "scope": ["instructions", "P1-P5 operands", "borrowed P4 literals and indices", "function table", "subprogram table", "versioned corpus"]},
+    "registers": {"status": "pass", "scope": ["NULL", "integer", "real", "owned UTF-8 text", "owned blob", "deep copy", "move", "cast", "numeric affinity", "comparison", "three-valued boolean"]},
+    "opcode_loop": {"status": "pass", "implemented": 68, "scope": ["control flow", "arithmetic", "comparison", "affinity", "result", "cursor", "callback", "frame", "coroutine", "halt"]},
+    "cursors": {"status": "pass", "scope": ["in-memory oracle-derived rowsets", "native read-only B-tree cursor", "rewind", "last", "next", "previous", "seek rowid", "rowid", "column", "count", "close"]},
+    "frames_and_coroutines": {"status": "pass", "scope": ["subprogram call/return", "recursion guard", "parameter copy", "yield/resume/end", "frame cleanup"]},
+    "callbacks_and_destructors": {"status": "pass", "scope": ["scalar callback arguments/results", "exact callback error propagation", "single destructor invocation", "owned result cleanup"]},
+    "result_and_halt": {"status": "pass", "scope": ["row suspension", "resume", "column register window", "DONE", "sticky error halt", "HaltIfNull"]},
+    "interrupt_and_limits": {"status": "pass", "scope": ["explicit interrupt", "progress callback", "instruction budget", "sticky interrupt state"]},
+    "allocation_and_errors": {"status": "pass", "scope": ["bounded all-allocation-site injection", "malformed register/cursor/jump/subprogram", "callback error", "cursor ownership"]},
+    "oracle_differential": {"status": "pass", "command": "vdbe-differential", "programs": 9, "observations": 31, "scope": ["registers", "rows", "callbacks", "cursor order and seek", "frames", "coroutines", "casts", "result code", "halt state"]}
+  },
+  "phase_owned_deferrals": [
+    {"item": "public sqlite3_stmt prepare/bind/step/reset/finalize/column lifecycle", "owning_phase": "phase-12"},
+    {"item": "SQL code generation, schema opcodes, write transactions, statement journals, aggregates, and generated mutation programs", "owning_phase": "phase-13"},
+    {"item": "sorters, planner-sensitive opcodes, custom collations, virtual tables, window functions, and statistics", "owning_phase": "phase-14-and-later"},
+    {"item": "private C VDBE structure ABI", "owning_phase": "permanently-forbidden-boundary"}
+  ],
+  "exit_gates": {
+    "program_register_row_callback_result_halt_differential": "pass",
+    "opcode_jump_resume_cursor_frame_destructor": "pass",
+    "interrupt_oom_and_error_paths": "pass",
+    "native_btree_cursor_integration": "pass",
+    "source_mapping": "pass"
+  }
+}

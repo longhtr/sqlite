@@ -1,0 +1,447 @@
+{
+  "schema_version": 1,
+  "id": "btree-interface-flags-and-payload",
+  "title": "B-tree interface flags, opaque handles, and insertion payload",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The active btree.h entities are representation contracts rather than function bodies: opaque handle aliases, exact BtreePayload fields, open/table/meta/hint/cursor/mutation flags, active defaults/header identity, and the non-debug seek-count expansion. The native module translates each declaration and compile-time checks payload layout against C.",
+    "source_files": [
+      {
+        "path": "src/btree.h",
+        "sha256": "0ec3e384349a75947f0cd087e3a3629f8b2628d2d0129e9973fdef47f01c9296"
+      }
+    ],
+    "source_entity_ids": [
+      "src/btree.h::macro::BTREE_APPEND::line-271",
+      "src/btree.h::macro::BTREE_APPLICATION_ID::line-160",
+      "src/btree.h::macro::BTREE_AUTOVACUUM_FULL::line-33",
+      "src/btree.h::macro::BTREE_AUTOVACUUM_INCR::line-34",
+      "src/btree.h::macro::BTREE_AUTOVACUUM_NONE::line-32",
+      "src/btree.h::macro::BTREE_AUXDELETE::line-270",
+      "src/btree.h::macro::BTREE_BLOBKEY::line-123",
+      "src/btree.h::macro::BTREE_BULKLOAD::line-205",
+      "src/btree.h::macro::BTREE_DATA_VERSION::line-161",
+      "src/btree.h::macro::BTREE_DEFAULT_CACHE_SIZE::line-155",
+      "src/btree.h::macro::BTREE_FILE_FORMAT::line-154",
+      "src/btree.h::macro::BTREE_FORDELETE::line-232",
+      "src/btree.h::macro::BTREE_FREE_PAGE_COUNT::line-152",
+      "src/btree.h::macro::BTREE_HINT_RANGE::line-190",
+      "src/btree.h::macro::BTREE_INCR_VACUUM::line-159",
+      "src/btree.h::macro::BTREE_INTKEY::line-122",
+      "src/btree.h::macro::BTREE_LARGEST_ROOT_PAGE::line-156",
+      "src/btree.h::macro::BTREE_MEMORY::line-61",
+      "src/btree.h::macro::BTREE_OMIT_JOURNAL::line-60",
+      "src/btree.h::macro::BTREE_PREFORMAT::line-272",
+      "src/btree.h::macro::BTREE_SAVEPOSITION::line-269",
+      "src/btree.h::macro::BTREE_SCHEMA_VERSION::line-153",
+      "src/btree.h::macro::BTREE_SEEK_EQ::line-206",
+      "src/btree.h::macro::BTREE_SINGLE::line-62",
+      "src/btree.h::macro::BTREE_TEXT_ENCODING::line-157",
+      "src/btree.h::macro::BTREE_UNORDERED::line-63",
+      "src/btree.h::macro::BTREE_USER_VERSION::line-158",
+      "src/btree.h::macro::BTREE_WRCSR::line-231",
+      "src/btree.h::typedef::BtCursor::line-40",
+      "src/btree.h::typedef::BtShared::line-41",
+      "src/btree.h::typedef::Btree::line-39",
+      "src/btree.h::struct::BtreePayload::line-307",
+      "src/btree.h::typedef::BtreePayload::line-42",
+      "src/btree.h::macro::SQLITE_BTREE_H::line-17",
+      "src/btree.h::macro::SQLITE_DEFAULT_AUTOVACUUM::line-29",
+      "src/btree.h::macro::SQLITE_N_BTREE_META::line-22",
+      "src/btree.h::member::aMem::line-311",
+      "src/btree.h::member::nData::line-313",
+      "src/btree.h::member::nKey::line-309",
+      "src/btree.h::member::nMem::line-312",
+      "src/btree.h::member::nZero::line-314",
+      "src/btree.h::member::pData::line-310",
+      "src/btree.h::member::pKey::line-308",
+      "src/btree.h::macro::sqlite3BtreeSeekCount::line-361"
+    ],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": [
+      "B-tree function prototypes are not source-inventory entities and their implementations remain in btree.c",
+      "Debug seek instrumentation and inactive compile profiles",
+      "Cursor/page/shared-cache behavior beyond flag representation"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "btree-sharability-and-vdbe-usage-lock-masks",
+      "vdbe-record-serial-type-length-and-value-decode"
+    ],
+    "external_source_responsibilities": [
+      "Exact Mem representation for decomposed index keys",
+      "B-tree cursor and page implementation"
+    ],
+    "caller_closure": "All 44 active btree.h source entities are translated; executable B-tree interfaces remain assigned separately."
+  },
+  "contracts": {
+    "inputs": [
+      "open/create/cursor/insert flags and BtreePayload key/data/value decomposition"
+    ],
+    "outputs": [
+      "exact constants, opaque identity types, payload ABI, and active seek-count zero"
+    ],
+    "ownership": "Payload borrows key/data and Mem arrays for the insertion call; opaque Btree/BtCursor/BtShared identities own no storage here.",
+    "state_and_results": "Table and index payload modes select valid fields exactly as source comments specify; metadata indices preserve database-header positions and data-version virtual slot.",
+    "locks_callbacks_io": "No behavior in this representation unit; consumers retain B-tree mutex/VFS contracts.",
+    "failure_and_continuation": "No allocation or failure path; invalid flag/payload combinations are consumer responsibilities."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_APPEND::line-271",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_APPEND"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_APPLICATION_ID::line-160",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_APPLICATION_ID"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_AUTOVACUUM_FULL::line-33",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_AUTOVACUUM_FULL"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_AUTOVACUUM_INCR::line-34",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_AUTOVACUUM_INCR"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_AUTOVACUUM_NONE::line-32",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_AUTOVACUUM_NONE"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_AUXDELETE::line-270",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_AUXDELETE"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_BLOBKEY::line-123",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_BLOBKEY"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_BULKLOAD::line-205",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_BULKLOAD"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_DATA_VERSION::line-161",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_DATA_VERSION"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_DEFAULT_CACHE_SIZE::line-155",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_DEFAULT_CACHE_SIZE"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_FILE_FORMAT::line-154",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_FILE_FORMAT"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_FORDELETE::line-232",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_FORDELETE"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_FREE_PAGE_COUNT::line-152",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_FREE_PAGE_COUNT"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_HINT_RANGE::line-190",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_HINT_RANGE"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_INCR_VACUUM::line-159",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_INCR_VACUUM"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_INTKEY::line-122",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_INTKEY"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_LARGEST_ROOT_PAGE::line-156",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_LARGEST_ROOT_PAGE"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_MEMORY::line-61",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_MEMORY"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_OMIT_JOURNAL::line-60",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_OMIT_JOURNAL"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_PREFORMAT::line-272",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_PREFORMAT"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_SAVEPOSITION::line-269",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_SAVEPOSITION"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_SCHEMA_VERSION::line-153",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_SCHEMA_VERSION"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_SEEK_EQ::line-206",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_SEEK_EQ"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_SINGLE::line-62",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_SINGLE"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_TEXT_ENCODING::line-157",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_TEXT_ENCODING"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_UNORDERED::line-63",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_UNORDERED"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_USER_VERSION::line-158",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_USER_VERSION"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::BTREE_WRCSR::line-231",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BTREE_WRCSR"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::typedef::BtCursor::line-40",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BtCursor"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::typedef::BtShared::line-41",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BtShared"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::typedef::Btree::line-39",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::Btree"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::struct::BtreePayload::line-307",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BtreePayload"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::typedef::BtreePayload::line-42",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::BtreePayload"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::SQLITE_BTREE_H::line-17",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::SQLITE_BTREE_H"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::SQLITE_DEFAULT_AUTOVACUUM::line-29",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::SQLITE_DEFAULT_AUTOVACUUM"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::SQLITE_N_BTREE_META::line-22",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::constant::SQLITE_N_BTREE_META"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::member::aMem::line-311",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::field::BtreePayload.aMem"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::member::nData::line-313",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::field::BtreePayload.nData"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::member::nKey::line-309",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::field::BtreePayload.nKey"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::member::nMem::line-312",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::field::BtreePayload.nMem"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::member::nZero::line-314",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::field::BtreePayload.nZero"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::member::pData::line-310",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::field::BtreePayload.pData"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::member::pKey::line-308",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::field::BtreePayload.pKey"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.h::macro::sqlite3BtreeSeekCount::line-361",
+      "relation": "source-btree-interface-representation-to-native",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_api.zig::function::seekCount"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C forward-declared Btree/BtCursor/BtShared become Zig opaque types.",
+    "Nullable borrowed C pointers use optional Zig pointers; ABI size and payload offsets are exact.",
+    "The active non-debug sqlite3BtreeSeekCount macro is a typed function returning zero."
+  ],
+  "oracle": {
+    "protocol": "The amalgamation layout worker emits BtreePayload size, alignment, and all seven field offsets/sizes. Zig checks every fact at compile time and unit tests active constants/defaults and seek-count expansion.",
+    "internal_observations": [
+      "payload size/alignment",
+      "seven field offsets and sizes",
+      "metadata and mutation flag values",
+      "non-debug seek count"
+    ],
+    "normalization": "Integer constants and layout facts are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O, lock, or concurrency behavior.",
+    "malformed_input": "Representation only; consumers validate payload/flags.",
+    "continuation": "Pure constants and borrowed payload preserve caller state.",
+    "performance": "Compile-time constants and direct extern layout.",
+    "commands": [
+      "zig build internal-vdbe-layout-test",
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/btree_api.zig exported by src/root.zig",
+    "native_call_path": "Available to native B-tree/VDBE owners; broad B-tree consumers are not migrated.",
+    "bounded_owner_retired": "No; integrate payload into native insertion and cursor APIs."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires B-tree consumer integration, broader target ABI validation, assurance, and independent review."
+  },
+  "known_blockers": [
+    "Use BtreePayload in source-shaped insertion path.",
+    "Translate cursor/open/meta API behavior and all B-tree ownership.",
+    "Validate release targets and independently review."
+  ]
+}

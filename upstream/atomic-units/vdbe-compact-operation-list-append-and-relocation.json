@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-compact-operation-list-append-and-relocation",
+  "title": "VDBE compact operation-list append and jump relocation",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3VdbeAddOpList consumes the generated compact VdbeOpList representation, reserves the whole batch atomically, expands every operand, and relocates positive jump P2 values by one shared insertion base. Representation and expansion behavior form one atomic unit.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      },
+      {
+        "path": "src/vdbe.h",
+        "sha256": "c2f07fd77827a922a77d8bde1c873536056e7269898d4bd2b4088f8222cd6259"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeAddOpList::line-1142",
+      "src/vdbe.h::struct::VdbeOpList::line-115",
+      "src/vdbe.h::typedef::VdbeOpList::line-121",
+      "src/vdbe.h::member::opcode::line-116",
+      "src/vdbe.h::member::p1::line-117",
+      "src/vdbe.h::member::p2::line-118",
+      "src/vdbe.h::member::p3::line-119"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeAddOpList::behavior::assert::line-1150-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOpList::behavior::assert::line-1151-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOpList::behavior::if::line-1152-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOpList::behavior::return::line-1153-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOpList::behavior::for::line-1156-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOpList::behavior::assert::line-1160-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOpList::behavior::if::line-1161-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAddOpList::behavior::return::line-1183-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "P4 payload attachment and destruction",
+      "Generated operation-list producers",
+      "Final label fixup and operation transfer",
+      "Runtime opcode execution"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-operation-append-core",
+      "vdbe-builder-state-representations",
+      "connection-allocation-for-vdbe-growth"
+    ],
+    "external_source_responsibilities": [
+      "Generated opcode properties identify jump opcodes"
+    ],
+    "caller_closure": "The complete active compact-list type and append function, one-shot growth decision, per-entry initialization, jump relocation and no-mutation failure are assigned. Generated list callers and P4 follow-on ownership remain open."
+  },
+  "contracts": {
+    "inputs": [
+      "positive compact-list count and INIT Vdbe",
+      "compact signed-byte operands with nonnegative P2",
+      "source line metadata (inactive in pinned coverage profile)"
+    ],
+    "outputs": [
+      "pointer to first expanded Op, incremented nOp, relocated positive jump P2 values, zero P4/P5"
+    ],
+    "ownership": "Compact input remains caller-owned/static. Expanded operations are Vdbe-owned in aOp. Growth preserves existing owner or returns null without appending.",
+    "state_and_results": "All list entries reserve as one batch. Jump P2>0 adds pre-append nOp; zero and non-jump operands remain unchanged.",
+    "locks_callbacks_io": "Caller holds connection mutex. No callback or I/O.",
+    "failure_and_continuation": "Growth/limit OOM returns null and leaves nOp/operation bytes unchanged with sticky connection OOM."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeAddOpList::line-1142",
+      "relation": "source-compact-list-expansion-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::addOperationList"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::struct::VdbeOpList::line-115",
+      "relation": "source-compact-list-expansion-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::VdbeOpList"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::typedef::VdbeOpList::line-121",
+      "relation": "source-compact-list-expansion-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::VdbeOpList"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::opcode::line-116",
+      "relation": "source-compact-list-expansion-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeOpList.opcode"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::p1::line-117",
+      "relation": "source-compact-list-expansion-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeOpList.p1"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::p2::line-118",
+      "relation": "source-compact-list-expansion-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeOpList.p2"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbe.h::member::p3::line-119",
+      "relation": "source-compact-list-expansion-or-representation-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeOpList.p3"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C u8 opcode is represented by enum(u8) with verified canonical values; signed char operands are Zig i8.",
+    "Pinned profile omits VDBE coverage source-line storage, so source_line is intentionally consumed without output."
+  ],
+  "oracle": {
+    "protocol": "The shared worker appends a compact Integer/Goto/Noop list after a preexisting instruction and under a zero operation limit. The 363-observation trace compares return/first identity, capacity/count, all expanded operands, jump-base relocation, P4/P5 initialization and null/no-mutation failure.",
+    "internal_observations": [
+      "first operation pointer identity",
+      "batch nOp/capacity",
+      "all opcode and P1/P2/P3 values",
+      "positive jump insertion-base relocation",
+      "P4_NOTUSED/null and P5 zero",
+      "limit failure null result and unchanged count"
+    ],
+    "normalization": "Pointer values normalize to identity with aOp[base]. Every expanded field and count is exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Zero-limit growth failure is reached and compared; allocator realloc failure semantics are covered by the shared append dependency trace.",
+    "io_crash_concurrency": "No I/O/callback. Production compiler mutex remains integration obligation.",
+    "malformed_input": "Source assertions constrain positive count, INIT state and nonnegative compact P2.",
+    "continuation": "Successful list remains mutable/finalizable; failure leaves no partial entries and sticky OOM follows existing builder continuation rules.",
+    "performance": "One reserve decision, linear expansion, direct generated property lookup and insertion-base reuse preserve source complexity.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build opcodes-test",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding builder",
+    "native_call_path": "Symbolic worker reaches compact-list append against exact Vdbe/Parse/Sqlite3 owners. Generated production compiler lists are not migrated.",
+    "bounded_owner_retired": "No. Compiler ownership and P4/destruction remain open."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires generated-caller integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Migrate generated compiler list callers to source VDBE ownership.",
+    "Port P4 ownership and operation-array/object destruction.",
+    "Independent fidelity review remains open."
+  ]
+}

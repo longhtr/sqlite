@@ -1,0 +1,11 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version":1,"phase":"phase-14-rowid-planner-slice","profile":"sqlite-3.53.4-rowid-predicate-order-limit-v1","baseline_checkin":"bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc","status":"bounded-regression-evidence","mapped_entity_count":16,"public_symbol_count_added":0,"total_exported_sqlite_symbol_count":44,
+  "corpus":{"manifest":"tests/fixtures/sql-planner/manifest.json","queries":8,"differential_observations":31,"native_runtime_budget_seconds":2.0},
+  "supported":["INTEGER PRIMARY KEY equality seek","six rowid comparison operators","ascending and descending rowid order","constant non-negative LIMIT","zero-limit constant empty result"],
+  "normalized_plans":["seek-rowid","rewind-filter-next","last-filter-prev","last-prev-limit","constant-empty"],
+  "evidence":{"sql_api_oracle_differential":"pass-31-observations","normalized_opcode_diagnostics":"pass","performance_budget":"pass","oom":"pass-all-planned-prepare-and-first-row-sites","io":"retained-native-btree-read-fault-partition","exports":"pass-exact-44-symbol-partition"},
+  "not_yet_complete":["column predicates","AND OR IN BETWEEN LIKE","cost-based index selection","join ordering","automatic indexes","temporary sorting","sqlite_stat tables","planner callback interactions"],
+  "slice_exit_gates":{"sql_logic_and_planner_corpus":"pass-bounded","performance_and_plan_diagnostics":"pass-bounded","callback_behavior":"not-applicable-no-callbacks-in-profile","oom_and_io":"pass"}
+}

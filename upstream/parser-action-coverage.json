@@ -1,0 +1,4891 @@
+{
+  "schema_version": 2,
+  "sqlite_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "grammar": {
+    "source": "upstream/sqlite/src/parse.y",
+    "source_sha256": "19628d51a728421581e9075c7b4fd2c67218c5ad30718c7ae7ab0717c9e93185"
+  },
+  "scope": "typed local semantic-value flow and owner contracts only",
+  "warning": "Action contracts are scaffolding and grant no source-translation, integration, or fidelity credit. Concrete SQLite owners, exact side effects/error/OOM/cleanup, resolver/compiler execution, and broad native evidence remain required.",
+  "summary": {
+    "canonical_semantic_action_rules": 348,
+    "typed_local_flow_contract_rules": 348,
+    "semantic_action_rules_without_typed_contract": 0,
+    "source_translated_action_rules": 0,
+    "subsystem_integrated_action_rules": 0
+  },
+  "actions": [
+    {
+      "rule_id": 0,
+      "identity": "src/parse.y::rule::0::explain ::= EXPLAIN",
+      "text": "explain ::= EXPLAIN",
+      "source_line": 173,
+      "generated_action_sha256": "09fbcdb06b0c7a4fb7015fed96bb27d9c2b5e35d349ad2748e01e35e25487281",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 1,
+      "identity": "src/parse.y::rule::1::explain ::= EXPLAIN QUERY PLAN",
+      "text": "explain ::= EXPLAIN QUERY PLAN",
+      "source_line": 174,
+      "generated_action_sha256": "b1b5db3a8bc1485aab3025b88bd727d164f94da33331da638cb1422218be3ad4",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 2,
+      "identity": "src/parse.y::rule::2::cmdx ::= cmd",
+      "text": "cmdx ::= cmd",
+      "source_line": 176,
+      "generated_action_sha256": "ce74de3bcf4814e3c13d3a6f276f95b4d53b3edaeb3d5aac2a63023d5247cff2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 3,
+      "identity": "src/parse.y::rule::3::cmd ::= BEGIN transtype trans_opt",
+      "text": "cmd ::= BEGIN transtype trans_opt",
+      "source_line": 181,
+      "generated_action_sha256": "953021d2b64c95326f0dc5f95d3721768e0f30b10cb396e1db5969ef9c58944f",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 4,
+      "identity": "src/parse.y::rule::4::transtype ::=",
+      "text": "transtype ::=",
+      "source_line": 186,
+      "generated_action_sha256": "400dee56b70c07da601d200593fc8bd06964eb7183600a312377457f4f762f61",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 5,
+      "identity": "src/parse.y::rule::5::transtype ::= DEFERRED",
+      "text": "transtype ::= DEFERRED",
+      "source_line": 187,
+      "generated_action_sha256": "af2026585c7e704d179417b2d189c152e8b57391a413d3c12884ff01cdf88826",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 6,
+      "identity": "src/parse.y::rule::6::transtype ::= IMMEDIATE",
+      "text": "transtype ::= IMMEDIATE",
+      "source_line": 187,
+      "generated_action_sha256": "af2026585c7e704d179417b2d189c152e8b57391a413d3c12884ff01cdf88826",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 7,
+      "identity": "src/parse.y::rule::7::transtype ::= EXCLUSIVE",
+      "text": "transtype ::= EXCLUSIVE",
+      "source_line": 187,
+      "generated_action_sha256": "af2026585c7e704d179417b2d189c152e8b57391a413d3c12884ff01cdf88826",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 8,
+      "identity": "src/parse.y::rule::8::cmd ::= COMMIT|END trans_opt",
+      "text": "cmd ::= COMMIT|END trans_opt",
+      "source_line": 190,
+      "generated_action_sha256": "e247496ba6ebd02c9a46d4f873ebde654ba1efdd2e423ad6e2ddbab558eb6a25",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 9,
+      "identity": "src/parse.y::rule::9::cmd ::= ROLLBACK trans_opt",
+      "text": "cmd ::= ROLLBACK trans_opt",
+      "source_line": 190,
+      "generated_action_sha256": "e247496ba6ebd02c9a46d4f873ebde654ba1efdd2e423ad6e2ddbab558eb6a25",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 10,
+      "identity": "src/parse.y::rule::10::cmd ::= SAVEPOINT nm",
+      "text": "cmd ::= SAVEPOINT nm",
+      "source_line": 195,
+      "generated_action_sha256": "f302b530d9f9aece812e362a00831cedba99dfbae9ccfe66d7cdd21a2bd4b7ef",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 11,
+      "identity": "src/parse.y::rule::11::cmd ::= RELEASE savepoint_opt nm",
+      "text": "cmd ::= RELEASE savepoint_opt nm",
+      "source_line": 198,
+      "generated_action_sha256": "05eccca2953c70705c8aa21c449fc18b82dae171227d02b5ea99a586bd7582bf",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 12,
+      "identity": "src/parse.y::rule::12::cmd ::= ROLLBACK trans_opt TO savepoint_opt nm",
+      "text": "cmd ::= ROLLBACK trans_opt TO savepoint_opt nm",
+      "source_line": 201,
+      "generated_action_sha256": "a1befed3294f88c1f318d7e9b102d3a18986b3a4300fc4b9556e4d576a527160",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 13,
+      "identity": "src/parse.y::rule::13::create_table ::= createkw temp TABLE ifnotexists nm dbnm",
+      "text": "create_table ::= createkw temp TABLE ifnotexists nm dbnm",
+      "source_line": 208,
+      "generated_action_sha256": "544545ca57d61d87cf5b94e31b38b4c3e116c11a85ee6a9e65843bbf29e1e836",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 14,
+      "identity": "src/parse.y::rule::14::createkw ::= CREATE",
+      "text": "createkw ::= CREATE",
+      "source_line": 211,
+      "generated_action_sha256": "c9b6a3fc1f69c985c80f211195a8c0f47f2adb8c841cfee6ff71042c78f4df18",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 15,
+      "identity": "src/parse.y::rule::15::ifnotexists ::=",
+      "text": "ifnotexists ::=",
+      "source_line": 216,
+      "generated_action_sha256": "bbf02502e82adb12c8bc793ef785a3b45218b007f727b0fc3ae782789927a45b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 16,
+      "identity": "src/parse.y::rule::16::ifnotexists ::= IF NOT EXISTS",
+      "text": "ifnotexists ::= IF NOT EXISTS",
+      "source_line": 217,
+      "generated_action_sha256": "d04e3c67504ab13fabeecce6fa121bc97a334dca78dfb76cadd93fd436c18589",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 17,
+      "identity": "src/parse.y::rule::17::temp ::= TEMP",
+      "text": "temp ::= TEMP",
+      "source_line": 220,
+      "generated_action_sha256": "0bdc995384b16b9bb15437d0521f670981542a3e5af6efc878c6f6747f7039ab",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 18,
+      "identity": "src/parse.y::rule::18::temp ::=",
+      "text": "temp ::=",
+      "source_line": 216,
+      "generated_action_sha256": "bbf02502e82adb12c8bc793ef785a3b45218b007f727b0fc3ae782789927a45b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 19,
+      "identity": "src/parse.y::rule::19::create_table_args ::= LP columnlist conslist_opt RP table_option_set",
+      "text": "create_table_args ::= LP columnlist conslist_opt RP table_option_set",
+      "source_line": 223,
+      "generated_action_sha256": "34d72c24a85513b2a3011bac9c046f4144476476bf2a35adebd2177a661c2e93",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 20,
+      "identity": "src/parse.y::rule::20::create_table_args ::= AS select",
+      "text": "create_table_args ::= AS select",
+      "source_line": 226,
+      "generated_action_sha256": "4edc546f3d754067d1767cdb9ed53654390faacab6f43f304277ed0e136c6be2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 21,
+      "identity": "src/parse.y::rule::21::table_option_set ::=",
+      "text": "table_option_set ::=",
+      "source_line": 232,
+      "generated_action_sha256": "30f4f3083ff628535acb5123a53fe43b70a46a737bf9d7eedb0f1e8c746c2fb7",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 22,
+      "identity": "src/parse.y::rule::22::table_option_set ::= table_option_set COMMA table_option",
+      "text": "table_option_set ::= table_option_set COMMA table_option",
+      "source_line": 234,
+      "generated_action_sha256": "931ac8cec49e0c7c03219b3a02c5796d09ef156e4aa4218b67c7b0b3b7a52b00",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 23,
+      "identity": "src/parse.y::rule::23::table_option ::= WITHOUT nm",
+      "text": "table_option ::= WITHOUT nm",
+      "source_line": 235,
+      "generated_action_sha256": "5dd407bc2dc3e7f48d89f94c096fc39668ae447b7ebfd8ffd3e3c10cdf0dc897",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 24,
+      "identity": "src/parse.y::rule::24::table_option ::= nm",
+      "text": "table_option ::= nm",
+      "source_line": 243,
+      "generated_action_sha256": "d2dba6131f7a75ec4a563a72f7c529dca342c773cb0bb28c6c669339ef114643",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 25,
+      "identity": "src/parse.y::rule::25::columnname ::= nm typetoken",
+      "text": "columnname ::= nm typetoken",
+      "source_line": 253,
+      "generated_action_sha256": "d62615278b9c399f0d269ca17b0c018bd95d488b57be3a2be65c5e2f4c1df974",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 26,
+      "identity": "src/parse.y::rule::26::typetoken ::=",
+      "text": "typetoken ::=",
+      "source_line": 347,
+      "generated_action_sha256": "2576b29ea9f8fff9cebbc42740465df775df38ff1ff605bf93c62576b50b00da",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 27,
+      "identity": "src/parse.y::rule::27::typetoken ::= typename LP signed RP",
+      "text": "typetoken ::= typename LP signed RP",
+      "source_line": 349,
+      "generated_action_sha256": "8d4fb04587f9cc1d0662d10ab83ef64604d49396b2489a9c4add9cbb309f821f",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 28,
+      "identity": "src/parse.y::rule::28::typetoken ::= typename LP signed COMMA signed RP",
+      "text": "typetoken ::= typename LP signed COMMA signed RP",
+      "source_line": 352,
+      "generated_action_sha256": "56e3d737e966862e3e8e08729295107ed646860913eae10e4495818d8f042213",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 29,
+      "identity": "src/parse.y::rule::29::typename ::= typename ID|STRING",
+      "text": "typename ::= typename ID|STRING",
+      "source_line": 357,
+      "generated_action_sha256": "6ac711dc13b8a4c2365254fd1dd49cd96dceedc622445a85bd080309bef1d94b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 30,
+      "identity": "src/parse.y::rule::30::scanpt ::=",
+      "text": "scanpt ::=",
+      "source_line": 375,
+      "generated_action_sha256": "34c38703bfa0a948c80e4f17f1090435b3fac4cb76cc24d6447c568f9f5d255c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 31,
+      "identity": "src/parse.y::rule::31::scantok ::=",
+      "text": "scantok ::=",
+      "source_line": 379,
+      "generated_action_sha256": "37181af6b7a4a5b75f4d02c70bd609ad394d281d1a858a85dc32ffde603db160",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 32,
+      "identity": "src/parse.y::rule::32::ccons ::= CONSTRAINT nm",
+      "text": "ccons ::= CONSTRAINT nm",
+      "source_line": 389,
+      "generated_action_sha256": "350d0dd36aafe91886847a88ed2fa7bd8ea6e8c3681e864525096aef3fece884",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 33,
+      "identity": "src/parse.y::rule::33::ccons ::= DEFAULT scantok term",
+      "text": "ccons ::= DEFAULT scantok term",
+      "source_line": 391,
+      "generated_action_sha256": "5e8153af8cb2f65ddfc8d7ea01cc98e87d4cefeb6aadd86d2cf1ba2249b4d26b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 34,
+      "identity": "src/parse.y::rule::34::ccons ::= DEFAULT LP expr RP",
+      "text": "ccons ::= DEFAULT LP expr RP",
+      "source_line": 393,
+      "generated_action_sha256": "3f7a78489698a25a8a2f99fc4113b1ccd30a6405e2723a3ed2f63e7583eaf644",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 35,
+      "identity": "src/parse.y::rule::35::ccons ::= DEFAULT PLUS scantok term",
+      "text": "ccons ::= DEFAULT PLUS scantok term",
+      "source_line": 395,
+      "generated_action_sha256": "e236135bc1ff9aff3b19ca1ceee936c07077670f6a8355d6e0666be13669d75c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 36,
+      "identity": "src/parse.y::rule::36::ccons ::= DEFAULT MINUS scantok term",
+      "text": "ccons ::= DEFAULT MINUS scantok term",
+      "source_line": 396,
+      "generated_action_sha256": "2b67c111e942550b9b7345c5900385c5099f688a32887de688090f7737c62288",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 37,
+      "identity": "src/parse.y::rule::37::ccons ::= DEFAULT scantok ID|INDEXED",
+      "text": "ccons ::= DEFAULT scantok ID|INDEXED",
+      "source_line": 400,
+      "generated_action_sha256": "61adfd17e95aadc2e8a376f97437a5c26f4ee90d5c6b75886c319873366c08ea",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 38,
+      "identity": "src/parse.y::rule::38::ccons ::= NOT NULL onconf",
+      "text": "ccons ::= NOT NULL onconf",
+      "source_line": 413,
+      "generated_action_sha256": "901e630195040a925f9507010400361b2b57bc4777eb104f87816db55171268a",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 39,
+      "identity": "src/parse.y::rule::39::ccons ::= PRIMARY KEY sortorder onconf autoinc",
+      "text": "ccons ::= PRIMARY KEY sortorder onconf autoinc",
+      "source_line": 415,
+      "generated_action_sha256": "05f56e880ae27ad4a7a839e1b3dc78b084b7cccaf9a4511c185e1d0669a61488",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 40,
+      "identity": "src/parse.y::rule::40::ccons ::= UNIQUE onconf",
+      "text": "ccons ::= UNIQUE onconf",
+      "source_line": 416,
+      "generated_action_sha256": "c7e599174037224bfa3296fddc79685b3fca3abb768103c02cd8723846657783",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 41,
+      "identity": "src/parse.y::rule::41::ccons ::= CHECK LP expr RP",
+      "text": "ccons ::= CHECK LP expr RP",
+      "source_line": 418,
+      "generated_action_sha256": "0b8661d1b773ded6a41c3edc98392de9d93d2de23add4d4878deaf3616eb4b28",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 42,
+      "identity": "src/parse.y::rule::42::ccons ::= REFERENCES nm eidlist_opt refargs",
+      "text": "ccons ::= REFERENCES nm eidlist_opt refargs",
+      "source_line": 420,
+      "generated_action_sha256": "f02ac2ba9e93424f72babaf57258be3b5cc90c296676a0615cc86c2dc3d76bfd",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 43,
+      "identity": "src/parse.y::rule::43::ccons ::= defer_subclause",
+      "text": "ccons ::= defer_subclause",
+      "source_line": 421,
+      "generated_action_sha256": "6153a78083fa8f9206a7efff43aaba3ca8ce8fe72bda7ae456657439cf2594cc",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 44,
+      "identity": "src/parse.y::rule::44::ccons ::= COLLATE ID|STRING",
+      "text": "ccons ::= COLLATE ID|STRING",
+      "source_line": 422,
+      "generated_action_sha256": "2922bad5f7a4683ff32c7639f1f09a67e20241b06b7302051de7ef63898bf024",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 45,
+      "identity": "src/parse.y::rule::45::generated ::= LP expr RP",
+      "text": "generated ::= LP expr RP",
+      "source_line": 425,
+      "generated_action_sha256": "98709fc0be01a3879e1e0b4ac5031b6d771d17e2d44835bce05c12f349a90aea",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 46,
+      "identity": "src/parse.y::rule::46::generated ::= LP expr RP ID",
+      "text": "generated ::= LP expr RP ID",
+      "source_line": 426,
+      "generated_action_sha256": "a580be6b57d907fec25272999c3b37102d6fa50a5bae155827f8076b8a2542b2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 47,
+      "identity": "src/parse.y::rule::47::autoinc ::=",
+      "text": "autoinc ::=",
+      "source_line": 216,
+      "generated_action_sha256": "bbf02502e82adb12c8bc793ef785a3b45218b007f727b0fc3ae782789927a45b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 48,
+      "identity": "src/parse.y::rule::48::autoinc ::= AUTOINCR",
+      "text": "autoinc ::= AUTOINCR",
+      "source_line": 431,
+      "generated_action_sha256": "89b1e8a1b348526240b92a1263fef6ff4e05b19c2823ab1463239be15ef837a6",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 49,
+      "identity": "src/parse.y::rule::49::refargs ::=",
+      "text": "refargs ::=",
+      "source_line": 439,
+      "generated_action_sha256": "300d4f142fc6c88d3dacc97b243e912c7f9b519a3988798f5853e6c2be5771ad",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 50,
+      "identity": "src/parse.y::rule::50::refargs ::= refargs refarg",
+      "text": "refargs ::= refargs refarg",
+      "source_line": 440,
+      "generated_action_sha256": "09a80eb9e6e8f2bd7a65380acacaa3441b837f48933a72a837aea02297bdb806",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 51,
+      "identity": "src/parse.y::rule::51::refarg ::= MATCH nm",
+      "text": "refarg ::= MATCH nm",
+      "source_line": 442,
+      "generated_action_sha256": "26355b95a88969b425f159530b13da9d8cb0750667884802e2537e731305c320",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 52,
+      "identity": "src/parse.y::rule::52::refarg ::= ON INSERT refact",
+      "text": "refarg ::= ON INSERT refact",
+      "source_line": 443,
+      "generated_action_sha256": "c021eb9515d5d18a6c99300d9792616f0c8b3890e1cf2180267ee1d8a01f4979",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 53,
+      "identity": "src/parse.y::rule::53::refarg ::= ON DELETE refact",
+      "text": "refarg ::= ON DELETE refact",
+      "source_line": 444,
+      "generated_action_sha256": "f0ab1dab342f3b90353258357c971156abf205bb91b7c9293ee065aa77928af2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 54,
+      "identity": "src/parse.y::rule::54::refarg ::= ON UPDATE refact",
+      "text": "refarg ::= ON UPDATE refact",
+      "source_line": 445,
+      "generated_action_sha256": "81249c0d0f328cf208a01a191f2427951c6ca464c92962f8ae69e6571dfdcea2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 55,
+      "identity": "src/parse.y::rule::55::refact ::= SET NULL",
+      "text": "refact ::= SET NULL",
+      "source_line": 447,
+      "generated_action_sha256": "89362909f0a8a17b23a11031390d42b04017c7644b663f83b7ee78ae2a7e72f4",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 56,
+      "identity": "src/parse.y::rule::56::refact ::= SET DEFAULT",
+      "text": "refact ::= SET DEFAULT",
+      "source_line": 448,
+      "generated_action_sha256": "05f08e38788f5f7d6f586a29c4f902dbe548a8e42c0a97e06d5e43a2ef50fc45",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 57,
+      "identity": "src/parse.y::rule::57::refact ::= CASCADE",
+      "text": "refact ::= CASCADE",
+      "source_line": 449,
+      "generated_action_sha256": "3a2ea9a54fa00942f34a3dd54ddcb6a8144736d283e721e2d2338f27966fd416",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 58,
+      "identity": "src/parse.y::rule::58::refact ::= RESTRICT",
+      "text": "refact ::= RESTRICT",
+      "source_line": 450,
+      "generated_action_sha256": "9330cb56da890807dbb55f3f42bb1f5f9cbaf4f209615ab477eb4d34c51c6899",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 59,
+      "identity": "src/parse.y::rule::59::refact ::= NO ACTION",
+      "text": "refact ::= NO ACTION",
+      "source_line": 451,
+      "generated_action_sha256": "9f1febdd050b23771bf10a2c6d597d9c39dd24f4a3181db9e03f97b430a885c5",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 60,
+      "identity": "src/parse.y::rule::60::defer_subclause ::= NOT DEFERRABLE init_deferred_pred_opt",
+      "text": "defer_subclause ::= NOT DEFERRABLE init_deferred_pred_opt",
+      "source_line": 453,
+      "generated_action_sha256": "a988a1162f7c085205a51d12ecf40fb60ca971b5c0cdb11795930ec2f75715eb",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 61,
+      "identity": "src/parse.y::rule::61::defer_subclause ::= DEFERRABLE init_deferred_pred_opt",
+      "text": "defer_subclause ::= DEFERRABLE init_deferred_pred_opt",
+      "source_line": 454,
+      "generated_action_sha256": "6b18b6d2300a16ab941a733af20ebae5e767659245666be9db19edc76205d1a2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 62,
+      "identity": "src/parse.y::rule::62::init_deferred_pred_opt ::=",
+      "text": "init_deferred_pred_opt ::=",
+      "source_line": 216,
+      "generated_action_sha256": "bbf02502e82adb12c8bc793ef785a3b45218b007f727b0fc3ae782789927a45b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 63,
+      "identity": "src/parse.y::rule::63::init_deferred_pred_opt ::= INITIALLY DEFERRED",
+      "text": "init_deferred_pred_opt ::= INITIALLY DEFERRED",
+      "source_line": 457,
+      "generated_action_sha256": "99e1d2cc7c0014d0f26ef48c272d6d3816a08f7a316625e9ea211db7a59ead3b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 64,
+      "identity": "src/parse.y::rule::64::init_deferred_pred_opt ::= INITIALLY IMMEDIATE",
+      "text": "init_deferred_pred_opt ::= INITIALLY IMMEDIATE",
+      "source_line": 458,
+      "generated_action_sha256": "b402cccc85e8aed49871cc61060790e3133c3ad52795fad5107471c0e8b67ffc",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 65,
+      "identity": "src/parse.y::rule::65::conslist_opt ::=",
+      "text": "conslist_opt ::=",
+      "source_line": 347,
+      "generated_action_sha256": "2576b29ea9f8fff9cebbc42740465df775df38ff1ff605bf93c62576b50b00da",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 66,
+      "identity": "src/parse.y::rule::66::tconscomma ::= COMMA",
+      "text": "tconscomma ::= COMMA",
+      "source_line": 464,
+      "generated_action_sha256": "bbe95e777238e69d2435c19125d05eb467b15b452a41383f7b91d78428c37a4a",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 67,
+      "identity": "src/parse.y::rule::67::tcons ::= CONSTRAINT nm",
+      "text": "tcons ::= CONSTRAINT nm",
+      "source_line": 389,
+      "generated_action_sha256": "350d0dd36aafe91886847a88ed2fa7bd8ea6e8c3681e864525096aef3fece884",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 68,
+      "identity": "src/parse.y::rule::68::tcons ::= PRIMARY KEY LP sortlist autoinc RP onconf",
+      "text": "tcons ::= PRIMARY KEY LP sortlist autoinc RP onconf",
+      "source_line": 468,
+      "generated_action_sha256": "c386d1f4fc80835b0e496ded5f429e9ab18756b4970fb6749f666df6facbc44a",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 69,
+      "identity": "src/parse.y::rule::69::tcons ::= UNIQUE LP sortlist RP onconf",
+      "text": "tcons ::= UNIQUE LP sortlist RP onconf",
+      "source_line": 470,
+      "generated_action_sha256": "c8a3d5f95de730c56343415a9eb4172e0a1a3a8fd21445eeaef49b1751675bcd",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 70,
+      "identity": "src/parse.y::rule::70::tcons ::= CHECK LP expr RP onconf",
+      "text": "tcons ::= CHECK LP expr RP onconf",
+      "source_line": 473,
+      "generated_action_sha256": "57a44a719691a5884f49acb21c6ecfac95e6743572e6b10eea3de0df3025a30a",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 71,
+      "identity": "src/parse.y::rule::71::tcons ::= FOREIGN KEY LP eidlist RP REFERENCES nm eidlist_opt refargs defer_subclause_opt",
+      "text": "tcons ::= FOREIGN KEY LP eidlist RP REFERENCES nm eidlist_opt refargs defer_subclause_opt",
+      "source_line": 475,
+      "generated_action_sha256": "9560f8121c2974c2092336156e9a4032004f446b3dfebb76c418c32d618ac77e",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 72,
+      "identity": "src/parse.y::rule::72::defer_subclause_opt ::=",
+      "text": "defer_subclause_opt ::=",
+      "source_line": 216,
+      "generated_action_sha256": "bbf02502e82adb12c8bc793ef785a3b45218b007f727b0fc3ae782789927a45b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 73,
+      "identity": "src/parse.y::rule::73::onconf ::=",
+      "text": "onconf ::=",
+      "source_line": 489,
+      "generated_action_sha256": "4c62bca3d7c223b5af1451a23dcbbb4b2db83755b0a9eb6c8589e379b1bba7c8",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 74,
+      "identity": "src/parse.y::rule::74::onconf ::= ON CONFLICT resolvetype",
+      "text": "onconf ::= ON CONFLICT resolvetype",
+      "source_line": 490,
+      "generated_action_sha256": "1b6612b64e7bce19f0117f89d928dff98bd5efa68ecceb039d6c3acb48e52fcc",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 75,
+      "identity": "src/parse.y::rule::75::orconf ::=",
+      "text": "orconf ::=",
+      "source_line": 489,
+      "generated_action_sha256": "4c62bca3d7c223b5af1451a23dcbbb4b2db83755b0a9eb6c8589e379b1bba7c8",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 76,
+      "identity": "src/parse.y::rule::76::orconf ::= OR resolvetype",
+      "text": "orconf ::= OR resolvetype",
+      "source_line": 454,
+      "generated_action_sha256": "6b18b6d2300a16ab941a733af20ebae5e767659245666be9db19edc76205d1a2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 77,
+      "identity": "src/parse.y::rule::77::resolvetype ::= IGNORE",
+      "text": "resolvetype ::= IGNORE",
+      "source_line": 494,
+      "generated_action_sha256": "02bee30a8292992f493e66f38025a8552b263c2bba608c508e99e339366b8d8b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 78,
+      "identity": "src/parse.y::rule::78::resolvetype ::= REPLACE",
+      "text": "resolvetype ::= REPLACE",
+      "source_line": 495,
+      "generated_action_sha256": "23136b1a7d76e703132a6ca5cff2f2eab8a1735b8e0d3947325ba624b31971bd",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 79,
+      "identity": "src/parse.y::rule::79::cmd ::= DROP TABLE ifexists fullname",
+      "text": "cmd ::= DROP TABLE ifexists fullname",
+      "source_line": 499,
+      "generated_action_sha256": "a81ed488c9368d2fa8f7beba9209027702fe829aa3964ede6a14bd3258db09ba",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 80,
+      "identity": "src/parse.y::rule::80::ifexists ::= IF EXISTS",
+      "text": "ifexists ::= IF EXISTS",
+      "source_line": 457,
+      "generated_action_sha256": "99e1d2cc7c0014d0f26ef48c272d6d3816a08f7a316625e9ea211db7a59ead3b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 81,
+      "identity": "src/parse.y::rule::81::ifexists ::=",
+      "text": "ifexists ::=",
+      "source_line": 216,
+      "generated_action_sha256": "bbf02502e82adb12c8bc793ef785a3b45218b007f727b0fc3ae782789927a45b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 82,
+      "identity": "src/parse.y::rule::82::cmd ::= createkw temp VIEW ifnotexists nm dbnm eidlist_opt AS select",
+      "text": "cmd ::= createkw temp VIEW ifnotexists nm dbnm eidlist_opt AS select",
+      "source_line": 510,
+      "generated_action_sha256": "7ee7e48b20631cbe082c502b7b42fdb2d283e54f86924ea10e1e47c775cfc4a0",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 83,
+      "identity": "src/parse.y::rule::83::cmd ::= DROP VIEW ifexists fullname",
+      "text": "cmd ::= DROP VIEW ifexists fullname",
+      "source_line": 513,
+      "generated_action_sha256": "bf644d6f7c62f069f4f94a8c43a4dbf0777a3cfb2bb2d32d1cab4d690c375e62",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 84,
+      "identity": "src/parse.y::rule::84::cmd ::= select",
+      "text": "cmd ::= select",
+      "source_line": 520,
+      "generated_action_sha256": "21ca992d016d6cb8cda194018a8c39070882bd0242342bc864f86c4a8cca7856",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 85,
+      "identity": "src/parse.y::rule::85::select ::= WITH wqlist selectnowith",
+      "text": "select ::= WITH wqlist selectnowith",
+      "source_line": 609,
+      "generated_action_sha256": "18253c839fdf86e0917ffd731d47d811eb39c8d4b7f52362ab876e2cc070e3db",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 86,
+      "identity": "src/parse.y::rule::86::select ::= WITH RECURSIVE wqlist selectnowith",
+      "text": "select ::= WITH RECURSIVE wqlist selectnowith",
+      "source_line": 611,
+      "generated_action_sha256": "c62a88454953175bc26f849d740c50b0d078ce04bfe32467804baad20c23cbbb",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 87,
+      "identity": "src/parse.y::rule::87::select ::= selectnowith",
+      "text": "select ::= selectnowith",
+      "source_line": 614,
+      "generated_action_sha256": "721b5f867b1cfa5a93d592b8e2dce04506abde36dac47fce3d6b4c1552df75cc",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 88,
+      "identity": "src/parse.y::rule::88::selectnowith ::= selectnowith multiselect_op oneselect",
+      "text": "selectnowith ::= selectnowith multiselect_op oneselect",
+      "source_line": 623,
+      "generated_action_sha256": "ade06261060d3a5b3b91eb4a83f1cd7e2b000907b9b77f7486323d851fc93032",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 89,
+      "identity": "src/parse.y::rule::89::multiselect_op ::= UNION",
+      "text": "multiselect_op ::= UNION",
+      "source_line": 646,
+      "generated_action_sha256": "a391d7a9b644db37072dc56ccaf88e95c913057e965d199a77d46f4eeae3e90f",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 90,
+      "identity": "src/parse.y::rule::90::multiselect_op ::= UNION ALL",
+      "text": "multiselect_op ::= UNION ALL",
+      "source_line": 647,
+      "generated_action_sha256": "35321fcbe9ce00e97e439ccdfc8b5fc4748d344c29e8da2d6c1c4d08fbbd4723",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 91,
+      "identity": "src/parse.y::rule::91::multiselect_op ::= EXCEPT|INTERSECT",
+      "text": "multiselect_op ::= EXCEPT|INTERSECT",
+      "source_line": 646,
+      "generated_action_sha256": "a391d7a9b644db37072dc56ccaf88e95c913057e965d199a77d46f4eeae3e90f",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 92,
+      "identity": "src/parse.y::rule::92::oneselect ::= SELECT distinct selcollist from where_opt groupby_opt having_opt orderby_opt limit_opt",
+      "text": "oneselect ::= SELECT distinct selcollist from where_opt groupby_opt having_opt orderby_opt limit_opt",
+      "source_line": 653,
+      "generated_action_sha256": "e4a1fa8c736aaaf2aee00fc7b0780a65d4c59f11775973faf791dc9d492f697d",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 93,
+      "identity": "src/parse.y::rule::93::oneselect ::= SELECT distinct selcollist from where_opt groupby_opt having_opt window_clause orderby_opt limit_opt",
+      "text": "oneselect ::= SELECT distinct selcollist from where_opt groupby_opt having_opt window_clause orderby_opt limit_opt",
+      "source_line": 659,
+      "generated_action_sha256": "135df2e4c8228d051ea60219202e221c6ff3e1e771da2dd7a1fb6cbf519e7393",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 94,
+      "identity": "src/parse.y::rule::94::values ::= VALUES LP nexprlist RP",
+      "text": "values ::= VALUES LP nexprlist RP",
+      "source_line": 675,
+      "generated_action_sha256": "dfe9e2522bcbb1ea3031bd488cb2b2543cfe9eccea83ce8780cd8572061920e4",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 95,
+      "identity": "src/parse.y::rule::95::oneselect ::= mvalues",
+      "text": "oneselect ::= mvalues",
+      "source_line": 682,
+      "generated_action_sha256": "f0f747d3c1f912ba89c8859cec67f348d6253deddd25ca9848dc382163ac856c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 96,
+      "identity": "src/parse.y::rule::96::mvalues ::= values COMMA LP nexprlist RP",
+      "text": "mvalues ::= values COMMA LP nexprlist RP",
+      "source_line": 686,
+      "generated_action_sha256": "c68b2be3e0476e93ad63d52cab74a42da2422ef68923966005f86f422aa4c51e",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 97,
+      "identity": "src/parse.y::rule::97::mvalues ::= mvalues COMMA LP nexprlist RP",
+      "text": "mvalues ::= mvalues COMMA LP nexprlist RP",
+      "source_line": 686,
+      "generated_action_sha256": "c68b2be3e0476e93ad63d52cab74a42da2422ef68923966005f86f422aa4c51e",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 98,
+      "identity": "src/parse.y::rule::98::distinct ::= DISTINCT",
+      "text": "distinct ::= DISTINCT",
+      "source_line": 697,
+      "generated_action_sha256": "12646b26683b8c6d76312cb8349487e00cda5d81f460200adc9cd268a092c247",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 99,
+      "identity": "src/parse.y::rule::99::distinct ::= ALL",
+      "text": "distinct ::= ALL",
+      "source_line": 698,
+      "generated_action_sha256": "fea07c353c5fc8b445c04159cc69b5359f9093ee5495e809f57f7f22bdbf364f",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 100,
+      "identity": "src/parse.y::rule::100::distinct ::=",
+      "text": "distinct ::=",
+      "source_line": 216,
+      "generated_action_sha256": "bbf02502e82adb12c8bc793ef785a3b45218b007f727b0fc3ae782789927a45b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 101,
+      "identity": "src/parse.y::rule::101::sclp ::=",
+      "text": "sclp ::=",
+      "source_line": 711,
+      "generated_action_sha256": "eefcf7a498f5ac3dcd4dc2eac919f9e69d470d3692e0c21ca3013120bd952932",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 102,
+      "identity": "src/parse.y::rule::102::selcollist ::= sclp scanpt expr scanpt as",
+      "text": "selcollist ::= sclp scanpt expr scanpt as",
+      "source_line": 712,
+      "generated_action_sha256": "b0b2f2d89097d79059295f3b30c21fe74e1e25bb9a5d7c378c75ea272ad60caa",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 103,
+      "identity": "src/parse.y::rule::103::selcollist ::= sclp scanpt STAR",
+      "text": "selcollist ::= sclp scanpt STAR",
+      "source_line": 717,
+      "generated_action_sha256": "d56a9d180da13e9258acae29a962b625839ea2ed7c13cfc7edb80079c8cfc54b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 104,
+      "identity": "src/parse.y::rule::104::selcollist ::= sclp scanpt nm DOT STAR",
+      "text": "selcollist ::= sclp scanpt nm DOT STAR",
+      "source_line": 722,
+      "generated_action_sha256": "96c47afd90dd03c96bba40c69f42880818b500d7d68037cfc9f2d71957dd56d8",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 105,
+      "identity": "src/parse.y::rule::105::as ::= AS nm",
+      "text": "as ::= AS nm",
+      "source_line": 735,
+      "generated_action_sha256": "89324c24e291fbda29968f0f5cc47136e35b45ea5cf48a86f366cb32f64a872c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 106,
+      "identity": "src/parse.y::rule::106::as ::=",
+      "text": "as ::=",
+      "source_line": 347,
+      "generated_action_sha256": "2576b29ea9f8fff9cebbc42740465df775df38ff1ff605bf93c62576b50b00da",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 107,
+      "identity": "src/parse.y::rule::107::from ::=",
+      "text": "from ::=",
+      "source_line": 749,
+      "generated_action_sha256": "8fb7ed10a149b077cee73c9767b18bf4c54abdba0419349467eb6add09324b23",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 108,
+      "identity": "src/parse.y::rule::108::from ::= FROM seltablist",
+      "text": "from ::= FROM seltablist",
+      "source_line": 750,
+      "generated_action_sha256": "3467a6ca7f62646d1c9d193c5390e93cb57c992bfe489cfd728974843ecdaa13",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 109,
+      "identity": "src/parse.y::rule::109::stl_prefix ::= seltablist joinop",
+      "text": "stl_prefix ::= seltablist joinop",
+      "source_line": 758,
+      "generated_action_sha256": "bcce63d648940da435a644f18cba8f177510a1a5c0213af8d2d7e3d259aa7d5c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 110,
+      "identity": "src/parse.y::rule::110::stl_prefix ::=",
+      "text": "stl_prefix ::=",
+      "source_line": 749,
+      "generated_action_sha256": "8fb7ed10a149b077cee73c9767b18bf4c54abdba0419349467eb6add09324b23",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 111,
+      "identity": "src/parse.y::rule::111::seltablist ::= stl_prefix nm dbnm as on_using",
+      "text": "seltablist ::= stl_prefix nm dbnm as on_using",
+      "source_line": 762,
+      "generated_action_sha256": "a188a9666e370307562c2f3a488fd9c5df24c6b93963ff109220eb9b48bc20e7",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 112,
+      "identity": "src/parse.y::rule::112::seltablist ::= stl_prefix nm dbnm as indexed_by on_using",
+      "text": "seltablist ::= stl_prefix nm dbnm as indexed_by on_using",
+      "source_line": 765,
+      "generated_action_sha256": "de214b07e1c82a278ed002bfcda78e8983851739b14b5b726ffa7e635d3dfb90",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 113,
+      "identity": "src/parse.y::rule::113::seltablist ::= stl_prefix nm dbnm LP exprlist RP as on_using",
+      "text": "seltablist ::= stl_prefix nm dbnm LP exprlist RP as on_using",
+      "source_line": 769,
+      "generated_action_sha256": "21549220256c7f95d648ed23fd17b1657493689cd62235cd2eab0dbb7ad726d7",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 114,
+      "identity": "src/parse.y::rule::114::seltablist ::= stl_prefix LP select RP as on_using",
+      "text": "seltablist ::= stl_prefix LP select RP as on_using",
+      "source_line": 774,
+      "generated_action_sha256": "c1200960d4b5b1d9582b8f32f286ba49681fba7c3aa514b6cde160681c32a598",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 115,
+      "identity": "src/parse.y::rule::115::seltablist ::= stl_prefix LP seltablist RP as on_using",
+      "text": "seltablist ::= stl_prefix LP seltablist RP as on_using",
+      "source_line": 777,
+      "generated_action_sha256": "cae45a7e970857a37c3eb02b7b3306fd76e07c0769c581cef16dcbfd49843a08",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 116,
+      "identity": "src/parse.y::rule::116::dbnm ::=",
+      "text": "dbnm ::=",
+      "source_line": 820,
+      "generated_action_sha256": "f0886221deeb7b5832987fb0a7534c91a89e1dace24454e920c702e097e381ba",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 117,
+      "identity": "src/parse.y::rule::117::dbnm ::= DOT nm",
+      "text": "dbnm ::= DOT nm",
+      "source_line": 735,
+      "generated_action_sha256": "89324c24e291fbda29968f0f5cc47136e35b45ea5cf48a86f366cb32f64a872c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 118,
+      "identity": "src/parse.y::rule::118::fullname ::= nm",
+      "text": "fullname ::= nm",
+      "source_line": 825,
+      "generated_action_sha256": "863be21189c769869c193f0e06ad820fa2267a218dee11e98b15e907927a6d3c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 119,
+      "identity": "src/parse.y::rule::119::fullname ::= nm DOT nm",
+      "text": "fullname ::= nm DOT nm",
+      "source_line": 829,
+      "generated_action_sha256": "36dd55d74a0bc5f4b0fbdcf9b0f51e3aa0e60ee610c4562c91dbc9b4897ede5b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 120,
+      "identity": "src/parse.y::rule::120::xfullname ::= nm",
+      "text": "xfullname ::= nm",
+      "source_line": 825,
+      "generated_action_sha256": "863be21189c769869c193f0e06ad820fa2267a218dee11e98b15e907927a6d3c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 121,
+      "identity": "src/parse.y::rule::121::xfullname ::= nm DOT nm",
+      "text": "xfullname ::= nm DOT nm",
+      "source_line": 829,
+      "generated_action_sha256": "36dd55d74a0bc5f4b0fbdcf9b0f51e3aa0e60ee610c4562c91dbc9b4897ede5b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 122,
+      "identity": "src/parse.y::rule::122::xfullname ::= nm AS nm",
+      "text": "xfullname ::= nm AS nm",
+      "source_line": 844,
+      "generated_action_sha256": "3a5bfab61821f20cee21e3b8308c5f420243f9f01307fbd46bb920d115166ef7",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 123,
+      "identity": "src/parse.y::rule::123::xfullname ::= nm DOT nm AS nm",
+      "text": "xfullname ::= nm DOT nm AS nm",
+      "source_line": 854,
+      "generated_action_sha256": "52738380ae130da514de705ec4d0971eb9ec1b677a65afa82c7ce1ca4bad024b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 124,
+      "identity": "src/parse.y::rule::124::joinop ::= COMMA|JOIN",
+      "text": "joinop ::= COMMA|JOIN",
+      "source_line": 867,
+      "generated_action_sha256": "6476e9b56685e9fe96284199bcee2ac4872e99f6bbd39532f4201dc340f92f81",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 125,
+      "identity": "src/parse.y::rule::125::joinop ::= JOIN_KW JOIN",
+      "text": "joinop ::= JOIN_KW JOIN",
+      "source_line": 869,
+      "generated_action_sha256": "8c435fd55171c3b664fef181421e0358e2a96c5a30b8250b7e09bb803cd5e05f",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 126,
+      "identity": "src/parse.y::rule::126::joinop ::= JOIN_KW nm JOIN",
+      "text": "joinop ::= JOIN_KW nm JOIN",
+      "source_line": 871,
+      "generated_action_sha256": "1329c1351ff3b1449950ac03d8c7af674b97d7e711a469439d26239dade5738e",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 127,
+      "identity": "src/parse.y::rule::127::joinop ::= JOIN_KW nm nm JOIN",
+      "text": "joinop ::= JOIN_KW nm nm JOIN",
+      "source_line": 873,
+      "generated_action_sha256": "5fc2db3075947c8d1cd1906df9668375abc360e98e58c159e4addc624371f6f1",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 128,
+      "identity": "src/parse.y::rule::128::on_using ::= ON expr",
+      "text": "on_using ::= ON expr",
+      "source_line": 894,
+      "generated_action_sha256": "1ea1abd5f09f3260900070b992c28a15eb0b33fb61cd8cdb35e9febec795e371",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 129,
+      "identity": "src/parse.y::rule::129::on_using ::= USING LP idlist RP",
+      "text": "on_using ::= USING LP idlist RP",
+      "source_line": 895,
+      "generated_action_sha256": "90316beed97c1226dc79169e33177c266e44cd488a21a45177ca45dec8202f0c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 130,
+      "identity": "src/parse.y::rule::130::on_using ::=",
+      "text": "on_using ::=",
+      "source_line": 896,
+      "generated_action_sha256": "391bebffaac46afdb5375ace771b2df7524cba77e2a806f7be75af3f97516485",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 131,
+      "identity": "src/parse.y::rule::131::indexed_opt ::=",
+      "text": "indexed_opt ::=",
+      "source_line": 820,
+      "generated_action_sha256": "f0886221deeb7b5832987fb0a7534c91a89e1dace24454e920c702e097e381ba",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 132,
+      "identity": "src/parse.y::rule::132::indexed_by ::= INDEXED BY nm",
+      "text": "indexed_by ::= INDEXED BY nm",
+      "source_line": 912,
+      "generated_action_sha256": "cc7592acb33f7cb7a9a1f2b191daa631bbbf39a11aa83873475eb2668dbd5ac9",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 133,
+      "identity": "src/parse.y::rule::133::indexed_by ::= NOT INDEXED",
+      "text": "indexed_by ::= NOT INDEXED",
+      "source_line": 913,
+      "generated_action_sha256": "78755cb53ae0ceacee4afa75956430d50f82a5f6cf3132a3571a4e7681d083d9",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 134,
+      "identity": "src/parse.y::rule::134::orderby_opt ::=",
+      "text": "orderby_opt ::=",
+      "source_line": 711,
+      "generated_action_sha256": "eefcf7a498f5ac3dcd4dc2eac919f9e69d470d3692e0c21ca3013120bd952932",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 135,
+      "identity": "src/parse.y::rule::135::orderby_opt ::= ORDER BY sortlist",
+      "text": "orderby_opt ::= ORDER BY sortlist",
+      "source_line": 926,
+      "generated_action_sha256": "5ced3eec8102b72d45be2c3caf5e546fb7693e5f81af924882b48b9765f2d1bb",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 136,
+      "identity": "src/parse.y::rule::136::sortlist ::= sortlist COMMA expr sortorder nulls",
+      "text": "sortlist ::= sortlist COMMA expr sortorder nulls",
+      "source_line": 927,
+      "generated_action_sha256": "37dc096fc5fae07c475ff0fe623e5524db5c4012089de8bfe2574aa6bf47c722",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 137,
+      "identity": "src/parse.y::rule::137::sortlist ::= expr sortorder nulls",
+      "text": "sortlist ::= expr sortorder nulls",
+      "source_line": 931,
+      "generated_action_sha256": "f48c665ffd217cae06c239cf2dfb9879043cf91a362311a92abbc52b0e9c0460",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 138,
+      "identity": "src/parse.y::rule::138::sortorder ::= ASC",
+      "text": "sortorder ::= ASC",
+      "source_line": 938,
+      "generated_action_sha256": "92851667d71bc32af0c33e531c24d9261bc0f9232d7f2739bb1d53e243844ed6",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 139,
+      "identity": "src/parse.y::rule::139::sortorder ::= DESC",
+      "text": "sortorder ::= DESC",
+      "source_line": 939,
+      "generated_action_sha256": "43746f09577ed7943cbaee828905fdb7ed26239b79098f0b72c30f2ae29d48ca",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 140,
+      "identity": "src/parse.y::rule::140::sortorder ::=",
+      "text": "sortorder ::=",
+      "source_line": 940,
+      "generated_action_sha256": "471003b888d78af78d28829ffbfabf94fbd4238a6616ead835c157fd6742771b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 141,
+      "identity": "src/parse.y::rule::141::nulls ::= NULLS FIRST",
+      "text": "nulls ::= NULLS FIRST",
+      "source_line": 943,
+      "generated_action_sha256": "151f6559cfbc38be37b599824a612eda78721844c4f1721e1c998b6796c1d18e",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 142,
+      "identity": "src/parse.y::rule::142::nulls ::= NULLS LAST",
+      "text": "nulls ::= NULLS LAST",
+      "source_line": 944,
+      "generated_action_sha256": "f2d6a640ceb451d1c0b93b505ec4aa9d9cb6767e578de3de40e52db167c73516",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 143,
+      "identity": "src/parse.y::rule::143::nulls ::=",
+      "text": "nulls ::=",
+      "source_line": 940,
+      "generated_action_sha256": "471003b888d78af78d28829ffbfabf94fbd4238a6616ead835c157fd6742771b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 144,
+      "identity": "src/parse.y::rule::144::groupby_opt ::=",
+      "text": "groupby_opt ::=",
+      "source_line": 711,
+      "generated_action_sha256": "eefcf7a498f5ac3dcd4dc2eac919f9e69d470d3692e0c21ca3013120bd952932",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 145,
+      "identity": "src/parse.y::rule::145::groupby_opt ::= GROUP BY nexprlist",
+      "text": "groupby_opt ::= GROUP BY nexprlist",
+      "source_line": 926,
+      "generated_action_sha256": "5ced3eec8102b72d45be2c3caf5e546fb7693e5f81af924882b48b9765f2d1bb",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 146,
+      "identity": "src/parse.y::rule::146::having_opt ::=",
+      "text": "having_opt ::=",
+      "source_line": 954,
+      "generated_action_sha256": "f3274d013fbd5e5ade33e8771c040d9bf41295a41a0cb30544fd7cfb8f7a2535",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 147,
+      "identity": "src/parse.y::rule::147::having_opt ::= HAVING expr",
+      "text": "having_opt ::= HAVING expr",
+      "source_line": 955,
+      "generated_action_sha256": "387ae31b99adeeacf7db38f95882bde625c3d0b0efe636499cb4a30e504df0a7",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 148,
+      "identity": "src/parse.y::rule::148::limit_opt ::=",
+      "text": "limit_opt ::=",
+      "source_line": 954,
+      "generated_action_sha256": "f3274d013fbd5e5ade33e8771c040d9bf41295a41a0cb30544fd7cfb8f7a2535",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 149,
+      "identity": "src/parse.y::rule::149::limit_opt ::= LIMIT expr",
+      "text": "limit_opt ::= LIMIT expr",
+      "source_line": 969,
+      "generated_action_sha256": "4f3cd9116f02ceb129d88a931c417f7e55650cd7b8dfe06eae0c1f9c527bbff5",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 150,
+      "identity": "src/parse.y::rule::150::limit_opt ::= LIMIT expr OFFSET expr",
+      "text": "limit_opt ::= LIMIT expr OFFSET expr",
+      "source_line": 971,
+      "generated_action_sha256": "b2b2f3f6c5aba87153385de9a153aeebb14553567813187512568c4a944eed1e",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 151,
+      "identity": "src/parse.y::rule::151::limit_opt ::= LIMIT expr COMMA expr",
+      "text": "limit_opt ::= LIMIT expr COMMA expr",
+      "source_line": 973,
+      "generated_action_sha256": "49643066bd369517836869e91833c37dbc8cbc3015cab29056c7e6b2db8845d5",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 152,
+      "identity": "src/parse.y::rule::152::cmd ::= with DELETE FROM xfullname indexed_opt where_opt_ret",
+      "text": "cmd ::= with DELETE FROM xfullname indexed_opt where_opt_ret",
+      "source_line": 991,
+      "generated_action_sha256": "8f184f0fb2b51c14765c33db4c5629c07509838876a1d9e805f4708790141aca",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 153,
+      "identity": "src/parse.y::rule::153::where_opt ::=",
+      "text": "where_opt ::=",
+      "source_line": 954,
+      "generated_action_sha256": "f3274d013fbd5e5ade33e8771c040d9bf41295a41a0cb30544fd7cfb8f7a2535",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 154,
+      "identity": "src/parse.y::rule::154::where_opt ::= WHERE expr",
+      "text": "where_opt ::= WHERE expr",
+      "source_line": 955,
+      "generated_action_sha256": "387ae31b99adeeacf7db38f95882bde625c3d0b0efe636499cb4a30e504df0a7",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 155,
+      "identity": "src/parse.y::rule::155::where_opt_ret ::=",
+      "text": "where_opt_ret ::=",
+      "source_line": 954,
+      "generated_action_sha256": "f3274d013fbd5e5ade33e8771c040d9bf41295a41a0cb30544fd7cfb8f7a2535",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 156,
+      "identity": "src/parse.y::rule::156::where_opt_ret ::= WHERE expr",
+      "text": "where_opt_ret ::= WHERE expr",
+      "source_line": 955,
+      "generated_action_sha256": "387ae31b99adeeacf7db38f95882bde625c3d0b0efe636499cb4a30e504df0a7",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 157,
+      "identity": "src/parse.y::rule::157::where_opt_ret ::= RETURNING selcollist",
+      "text": "where_opt_ret ::= RETURNING selcollist",
+      "source_line": 1007,
+      "generated_action_sha256": "526386a1cd6ef45e67c5d19e7623054c25e1b32adc0c8ac9c9a40333fcb5083b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 158,
+      "identity": "src/parse.y::rule::158::where_opt_ret ::= WHERE expr RETURNING selcollist",
+      "text": "where_opt_ret ::= WHERE expr RETURNING selcollist",
+      "source_line": 1009,
+      "generated_action_sha256": "ae4befb7774a02efcf92a09f1fd71a1e60292a132c375c9b548466b78c75fb8f",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 159,
+      "identity": "src/parse.y::rule::159::cmd ::= with UPDATE orconf xfullname indexed_opt SET setlist from where_opt_ret",
+      "text": "cmd ::= with UPDATE orconf xfullname indexed_opt SET setlist from where_opt_ret",
+      "source_line": 1041,
+      "generated_action_sha256": "aeff15d092c665ad44a35adc8c4ce81ef49c82f8ab52e575bc7aa1c00504b348",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 160,
+      "identity": "src/parse.y::rule::160::setlist ::= setlist COMMA nm EQ expr",
+      "text": "setlist ::= setlist COMMA nm EQ expr",
+      "source_line": 1065,
+      "generated_action_sha256": "7d5c92bb98db8cfa8f7efc9d7ae9cff68d742fea617ea0ce011260e0f73baab7",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 161,
+      "identity": "src/parse.y::rule::161::setlist ::= setlist COMMA LP idlist RP EQ expr",
+      "text": "setlist ::= setlist COMMA LP idlist RP EQ expr",
+      "source_line": 1069,
+      "generated_action_sha256": "db32b4e63f869ba70b4331493eb94531ec0eca514160ca19f554944a39edf097",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 162,
+      "identity": "src/parse.y::rule::162::setlist ::= nm EQ expr",
+      "text": "setlist ::= nm EQ expr",
+      "source_line": 1072,
+      "generated_action_sha256": "10d865b30cd9747431ae03fc77162a32f6d38abed302ae5d3819cee1471d2b7f",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 163,
+      "identity": "src/parse.y::rule::163::setlist ::= LP idlist RP EQ expr",
+      "text": "setlist ::= LP idlist RP EQ expr",
+      "source_line": 1076,
+      "generated_action_sha256": "9e6ecbae69c652bd6b00ee0916e3daa6d0649d82540cae50d57c6db8f17b716d",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 164,
+      "identity": "src/parse.y::rule::164::cmd ::= with insert_cmd INTO xfullname idlist_opt select upsert",
+      "text": "cmd ::= with insert_cmd INTO xfullname idlist_opt select upsert",
+      "source_line": 1083,
+      "generated_action_sha256": "7d4057e0907e4a79646ea7e19cb6d5eb91e5a0528a3c1a17a4b901659fbcaa6e",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 165,
+      "identity": "src/parse.y::rule::165::cmd ::= with insert_cmd INTO xfullname idlist_opt DEFAULT VALUES returning",
+      "text": "cmd ::= with insert_cmd INTO xfullname idlist_opt DEFAULT VALUES returning",
+      "source_line": 1087,
+      "generated_action_sha256": "5e4255b338ced8de9a82c6d3671226dba583b7c96d7890f2ad17d7aa36a47f35",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 166,
+      "identity": "src/parse.y::rule::166::upsert ::=",
+      "text": "upsert ::=",
+      "source_line": 1098,
+      "generated_action_sha256": "1caf088233d4fff29793af26b0325648ab16adbbf19308643a0c743191e6f27e",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 167,
+      "identity": "src/parse.y::rule::167::upsert ::= RETURNING selcollist",
+      "text": "upsert ::= RETURNING selcollist",
+      "source_line": 1099,
+      "generated_action_sha256": "9f421c9a0329eef66cee858e17fa45c971d0bff6ee07b6afc5f94fcce30f88fc",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 168,
+      "identity": "src/parse.y::rule::168::upsert ::= ON CONFLICT LP sortlist RP where_opt DO UPDATE SET setlist where_opt upsert",
+      "text": "upsert ::= ON CONFLICT LP sortlist RP where_opt DO UPDATE SET setlist where_opt upsert",
+      "source_line": 1102,
+      "generated_action_sha256": "2fa8c019cfe924eff3741cb262da05f270a09038abb80a708348f7eac511f568",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 169,
+      "identity": "src/parse.y::rule::169::upsert ::= ON CONFLICT LP sortlist RP where_opt DO NOTHING upsert",
+      "text": "upsert ::= ON CONFLICT LP sortlist RP where_opt DO NOTHING upsert",
+      "source_line": 1104,
+      "generated_action_sha256": "37b067bc0f380d98aab7244b8073ff9e7661e2ef278fa81675e59c243296cd21",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 170,
+      "identity": "src/parse.y::rule::170::upsert ::= ON CONFLICT DO NOTHING returning",
+      "text": "upsert ::= ON CONFLICT DO NOTHING returning",
+      "source_line": 1106,
+      "generated_action_sha256": "9fc4ab55320e7a814908e52483bf21d3647b3b9b03894be89159c4a35441e95c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 171,
+      "identity": "src/parse.y::rule::171::upsert ::= ON CONFLICT DO UPDATE SET setlist where_opt returning",
+      "text": "upsert ::= ON CONFLICT DO UPDATE SET setlist where_opt returning",
+      "source_line": 1108,
+      "generated_action_sha256": "e2938ee02652227130906d66852aa935778b83c4dc8eb856ef39c35527454963",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 172,
+      "identity": "src/parse.y::rule::172::returning ::= RETURNING selcollist",
+      "text": "returning ::= RETURNING selcollist",
+      "source_line": 1110,
+      "generated_action_sha256": "a4929509f8214a4af574e6fd2a3895d0b594eb0d057ee60ba0d7371227ba4e32",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 173,
+      "identity": "src/parse.y::rule::173::insert_cmd ::= INSERT orconf",
+      "text": "insert_cmd ::= INSERT orconf",
+      "source_line": 454,
+      "generated_action_sha256": "6b18b6d2300a16ab941a733af20ebae5e767659245666be9db19edc76205d1a2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 174,
+      "identity": "src/parse.y::rule::174::insert_cmd ::= REPLACE",
+      "text": "insert_cmd ::= REPLACE",
+      "source_line": 495,
+      "generated_action_sha256": "23136b1a7d76e703132a6ca5cff2f2eab8a1735b8e0d3947325ba624b31971bd",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 175,
+      "identity": "src/parse.y::rule::175::idlist_opt ::=",
+      "text": "idlist_opt ::=",
+      "source_line": 1122,
+      "generated_action_sha256": "eb684ae9aa4a7aaacf163b44c373dda57da063afea95d2b9e9b9710253dd30f9",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 176,
+      "identity": "src/parse.y::rule::176::idlist_opt ::= LP idlist RP",
+      "text": "idlist_opt ::= LP idlist RP",
+      "source_line": 1123,
+      "generated_action_sha256": "65700c5fb31e87cbaf412688ee8406689a1265e206f8de0fe5050212ccc67259",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 177,
+      "identity": "src/parse.y::rule::177::idlist ::= idlist COMMA nm",
+      "text": "idlist ::= idlist COMMA nm",
+      "source_line": 1125,
+      "generated_action_sha256": "122cde78eb2d3b58e376a973030077000ef2b6547834bc5c9a48129df28b3347",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 178,
+      "identity": "src/parse.y::rule::178::idlist ::= nm",
+      "text": "idlist ::= nm",
+      "source_line": 1127,
+      "generated_action_sha256": "0508950a6776fd719ca2b9e24f326a39d58b7471b9f2180aae06192a0ecc99cd",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 179,
+      "identity": "src/parse.y::rule::179::expr ::= LP expr RP",
+      "text": "expr ::= LP expr RP",
+      "source_line": 1176,
+      "generated_action_sha256": "02c3fee0597423543c6227c407d273961ee61eb2096fb8d9be69ba387c3f05fd",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 180,
+      "identity": "src/parse.y::rule::180::expr ::= ID|INDEXED|JOIN_KW",
+      "text": "expr ::= ID|INDEXED|JOIN_KW",
+      "source_line": 1177,
+      "generated_action_sha256": "5dc7920944958d7f9e7c8b3dcced528ae988e4040c42d3cb4ec45c6c25d74c9c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 181,
+      "identity": "src/parse.y::rule::181::expr ::= nm DOT nm",
+      "text": "expr ::= nm DOT nm",
+      "source_line": 1178,
+      "generated_action_sha256": "55fe07758efc495643e485830e05fbfa5f8921d33d3a9dc7a5c957778177951a",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 182,
+      "identity": "src/parse.y::rule::182::expr ::= nm DOT nm DOT nm",
+      "text": "expr ::= nm DOT nm DOT nm",
+      "source_line": 1183,
+      "generated_action_sha256": "ac735c05847ced74048bf9a4ea4f6b4bbfc1d2a50fe473f44a5a885bfa9291b6",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 183,
+      "identity": "src/parse.y::rule::183::term ::= NULL|FLOAT|BLOB",
+      "text": "term ::= NULL|FLOAT|BLOB",
+      "source_line": 1193,
+      "generated_action_sha256": "5d1633b1e63d3f4ff83990b5ae3197dfbefadbbce37fe5197c269139fb9951c9",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 184,
+      "identity": "src/parse.y::rule::184::term ::= STRING",
+      "text": "term ::= STRING",
+      "source_line": 1193,
+      "generated_action_sha256": "5d1633b1e63d3f4ff83990b5ae3197dfbefadbbce37fe5197c269139fb9951c9",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 185,
+      "identity": "src/parse.y::rule::185::term ::= INTEGER",
+      "text": "term ::= INTEGER",
+      "source_line": 1195,
+      "generated_action_sha256": "414a89144f69b1e21328e61326200f32a38664b5dcfb2738b568d0a10701b74c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 186,
+      "identity": "src/parse.y::rule::186::expr ::= VARIABLE",
+      "text": "expr ::= VARIABLE",
+      "source_line": 1204,
+      "generated_action_sha256": "c0d370f5d3e8c396b28f8430fcf7dcda602af8eda0c24f5994c35ff953b36dec",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 187,
+      "identity": "src/parse.y::rule::187::expr ::= expr COLLATE ID|STRING",
+      "text": "expr ::= expr COLLATE ID|STRING",
+      "source_line": 1224,
+      "generated_action_sha256": "10e88ba8ebbf199329b3f6ed8eade199ec1d56d57acb03ec371144ab2e348f8d",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 188,
+      "identity": "src/parse.y::rule::188::expr ::= CAST LP expr AS typetoken RP",
+      "text": "expr ::= CAST LP expr AS typetoken RP",
+      "source_line": 1228,
+      "generated_action_sha256": "6af4b7b7a87f546861d737f7ab1da632f561d1d56d44bfa028402cb3f7c2d317",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 189,
+      "identity": "src/parse.y::rule::189::expr ::= ID|INDEXED|JOIN_KW LP distinct exprlist RP",
+      "text": "expr ::= ID|INDEXED|JOIN_KW LP distinct exprlist RP",
+      "source_line": 1235,
+      "generated_action_sha256": "76576282491afe87d3df0fe8d5a689f0d2f92e9280eca09dc042d75acae2e3d3",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 190,
+      "identity": "src/parse.y::rule::190::expr ::= ID|INDEXED|JOIN_KW LP distinct exprlist ORDER BY sortlist RP",
+      "text": "expr ::= ID|INDEXED|JOIN_KW LP distinct exprlist ORDER BY sortlist RP",
+      "source_line": 1238,
+      "generated_action_sha256": "919b78bb7aa8f7bc202c252d3f5162029fb4dda0aff1c2a0e6ffe97045e50dc1",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 191,
+      "identity": "src/parse.y::rule::191::expr ::= ID|INDEXED|JOIN_KW LP STAR RP",
+      "text": "expr ::= ID|INDEXED|JOIN_KW LP STAR RP",
+      "source_line": 1242,
+      "generated_action_sha256": "1e35082effb570a7177d5358d41d5ce65185794a90bdba66c62cac4988f8c4d2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 192,
+      "identity": "src/parse.y::rule::192::expr ::= ID|INDEXED|JOIN_KW LP distinct exprlist RP filter_over",
+      "text": "expr ::= ID|INDEXED|JOIN_KW LP distinct exprlist RP filter_over",
+      "source_line": 1306,
+      "generated_action_sha256": "580ddaee844742ac9ffa508f6b06eb7e79aa77f56ef1c675b28cb91704f1a648",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 193,
+      "identity": "src/parse.y::rule::193::expr ::= ID|INDEXED|JOIN_KW LP distinct exprlist ORDER BY sortlist RP filter_over",
+      "text": "expr ::= ID|INDEXED|JOIN_KW LP distinct exprlist ORDER BY sortlist RP filter_over",
+      "source_line": 1310,
+      "generated_action_sha256": "11f33f6c493c5f38cc2279f9b382c517fd8a2d23063f65e01a3a194823dd6ed4",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 194,
+      "identity": "src/parse.y::rule::194::expr ::= ID|INDEXED|JOIN_KW LP STAR RP filter_over",
+      "text": "expr ::= ID|INDEXED|JOIN_KW LP STAR RP filter_over",
+      "source_line": 1315,
+      "generated_action_sha256": "77418fd83f8fab9e948e739ce1598d0aa509ecfd8d2b1948cbc0eb6f591c4c98",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 195,
+      "identity": "src/parse.y::rule::195::term ::= CTIME_KW",
+      "text": "term ::= CTIME_KW",
+      "source_line": 1329,
+      "generated_action_sha256": "bfec784c81258004946293b6bbf24dec61fc73c6321c01ed648f97c4c92f3857",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 196,
+      "identity": "src/parse.y::rule::196::expr ::= LP nexprlist COMMA expr RP",
+      "text": "expr ::= LP nexprlist COMMA expr RP",
+      "source_line": 1333,
+      "generated_action_sha256": "b32dcdad5a9088fc0743834454931eb26995e32ccb911839adc367c4495bc997",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 197,
+      "identity": "src/parse.y::rule::197::expr ::= expr AND expr",
+      "text": "expr ::= expr AND expr",
+      "source_line": 1348,
+      "generated_action_sha256": "87138f83bcdfa6389b26503c7d3e1bf84ec71c0a57e5994a28b2ba09d4104c75",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 198,
+      "identity": "src/parse.y::rule::198::expr ::= expr OR expr",
+      "text": "expr ::= expr OR expr",
+      "source_line": 1349,
+      "generated_action_sha256": "b637431aea4b954e192445e6a27bf712f2258ffdcc7b7cf4e69ed776e0f3aaad",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 199,
+      "identity": "src/parse.y::rule::199::expr ::= expr LT|GT|GE|LE expr",
+      "text": "expr ::= expr LT|GT|GE|LE expr",
+      "source_line": 1349,
+      "generated_action_sha256": "b637431aea4b954e192445e6a27bf712f2258ffdcc7b7cf4e69ed776e0f3aaad",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 200,
+      "identity": "src/parse.y::rule::200::expr ::= expr EQ|NE expr",
+      "text": "expr ::= expr EQ|NE expr",
+      "source_line": 1349,
+      "generated_action_sha256": "b637431aea4b954e192445e6a27bf712f2258ffdcc7b7cf4e69ed776e0f3aaad",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 201,
+      "identity": "src/parse.y::rule::201::expr ::= expr BITAND|BITOR|LSHIFT|RSHIFT expr",
+      "text": "expr ::= expr BITAND|BITOR|LSHIFT|RSHIFT expr",
+      "source_line": 1349,
+      "generated_action_sha256": "b637431aea4b954e192445e6a27bf712f2258ffdcc7b7cf4e69ed776e0f3aaad",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 202,
+      "identity": "src/parse.y::rule::202::expr ::= expr PLUS|MINUS expr",
+      "text": "expr ::= expr PLUS|MINUS expr",
+      "source_line": 1349,
+      "generated_action_sha256": "b637431aea4b954e192445e6a27bf712f2258ffdcc7b7cf4e69ed776e0f3aaad",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 203,
+      "identity": "src/parse.y::rule::203::expr ::= expr STAR|SLASH|REM expr",
+      "text": "expr ::= expr STAR|SLASH|REM expr",
+      "source_line": 1349,
+      "generated_action_sha256": "b637431aea4b954e192445e6a27bf712f2258ffdcc7b7cf4e69ed776e0f3aaad",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 204,
+      "identity": "src/parse.y::rule::204::expr ::= expr CONCAT expr",
+      "text": "expr ::= expr CONCAT expr",
+      "source_line": 1349,
+      "generated_action_sha256": "b637431aea4b954e192445e6a27bf712f2258ffdcc7b7cf4e69ed776e0f3aaad",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 205,
+      "identity": "src/parse.y::rule::205::likeop ::= NOT LIKE_KW|MATCH",
+      "text": "likeop ::= NOT LIKE_KW|MATCH",
+      "source_line": 1362,
+      "generated_action_sha256": "9b10113092a5a40e99b95785821824d08e923a4eeb0c8be6546c240f484788b9",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 206,
+      "identity": "src/parse.y::rule::206::expr ::= expr likeop expr",
+      "text": "expr ::= expr likeop expr",
+      "source_line": 1363,
+      "generated_action_sha256": "bb0a7745e406d1b03f341d423cf1aa6e1f9d1f48f3f754b58285b466e4821061",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 207,
+      "identity": "src/parse.y::rule::207::expr ::= expr likeop expr ESCAPE expr",
+      "text": "expr ::= expr likeop expr ESCAPE expr",
+      "source_line": 1373,
+      "generated_action_sha256": "447cd8ae5fcd4d4e36a3b36c0e1e67179d606de87f083f73b7baeb50363426eb",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 208,
+      "identity": "src/parse.y::rule::208::expr ::= expr ISNULL|NOTNULL",
+      "text": "expr ::= expr ISNULL|NOTNULL",
+      "source_line": 1429,
+      "generated_action_sha256": "29dc70fdbebfcec7662dfb9716be02eb5e4472111794c37fb9a68b06e935d14a",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 209,
+      "identity": "src/parse.y::rule::209::expr ::= expr NOT NULL",
+      "text": "expr ::= expr NOT NULL",
+      "source_line": 1430,
+      "generated_action_sha256": "dca74f089106fad83a45555db6e03e133f40cc951f079328206cd492c5f68110",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 210,
+      "identity": "src/parse.y::rule::210::expr ::= expr IS expr",
+      "text": "expr ::= expr IS expr",
+      "source_line": 1435,
+      "generated_action_sha256": "f743cabb8f78023278d8863d19e84b439e8bc88adbe7b752b962e76cfcdf66a7",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 211,
+      "identity": "src/parse.y::rule::211::expr ::= expr IS NOT expr",
+      "text": "expr ::= expr IS NOT expr",
+      "source_line": 1438,
+      "generated_action_sha256": "b09f508c6fd9e109ec2ce50e12c486cb0560e14f6e0bd2e787ad02cb62f247a0",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 212,
+      "identity": "src/parse.y::rule::212::expr ::= expr IS NOT DISTINCT FROM expr",
+      "text": "expr ::= expr IS NOT DISTINCT FROM expr",
+      "source_line": 1441,
+      "generated_action_sha256": "1b2771ad75aa9874c55df17797e2074ac7c602a38754751efb28fd5f02b4e3b8",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 213,
+      "identity": "src/parse.y::rule::213::expr ::= expr IS DISTINCT FROM expr",
+      "text": "expr ::= expr IS DISTINCT FROM expr",
+      "source_line": 1444,
+      "generated_action_sha256": "67c345649ab29d67a59d0ffd7f3b2cf66fa7d5744c92277d4f4baaf5bba15b4c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 214,
+      "identity": "src/parse.y::rule::214::expr ::= NOT expr",
+      "text": "expr ::= NOT expr",
+      "source_line": 1449,
+      "generated_action_sha256": "503cff2ed9ab54571311070b552f9a1b43eae674f003820ab14956ba6c7a21b8",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 215,
+      "identity": "src/parse.y::rule::215::expr ::= BITNOT expr",
+      "text": "expr ::= BITNOT expr",
+      "source_line": 1449,
+      "generated_action_sha256": "503cff2ed9ab54571311070b552f9a1b43eae674f003820ab14956ba6c7a21b8",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 216,
+      "identity": "src/parse.y::rule::216::expr ::= PLUS|MINUS expr",
+      "text": "expr ::= PLUS|MINUS expr",
+      "source_line": 1452,
+      "generated_action_sha256": "53d10f4c76894c222a1e9f7ce6b1cd7413383ce806c9a81cb8632007f0ecdb07",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 217,
+      "identity": "src/parse.y::rule::217::expr ::= expr PTR expr",
+      "text": "expr ::= expr PTR expr",
+      "source_line": 1466,
+      "generated_action_sha256": "1ac38dc21a73aff876a59c6331617a50c33347c6eb85fe8e4b0429ef4a510314",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 218,
+      "identity": "src/parse.y::rule::218::between_op ::= BETWEEN",
+      "text": "between_op ::= BETWEEN",
+      "source_line": 1473,
+      "generated_action_sha256": "9c022798621d09ac0a126c080594e0f52ab90f3dc044c7b145becd56d2b2be96",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 219,
+      "identity": "src/parse.y::rule::219::between_op ::= NOT BETWEEN",
+      "text": "between_op ::= NOT BETWEEN",
+      "source_line": 457,
+      "generated_action_sha256": "99e1d2cc7c0014d0f26ef48c272d6d3816a08f7a316625e9ea211db7a59ead3b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 220,
+      "identity": "src/parse.y::rule::220::expr ::= expr between_op expr AND expr",
+      "text": "expr ::= expr between_op expr AND expr",
+      "source_line": 1475,
+      "generated_action_sha256": "b169e2e29e451f794ff0ae26bc38e22986422b76a4c6c837d193e12412569877",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 221,
+      "identity": "src/parse.y::rule::221::in_op ::= IN",
+      "text": "in_op ::= IN",
+      "source_line": 1473,
+      "generated_action_sha256": "9c022798621d09ac0a126c080594e0f52ab90f3dc044c7b145becd56d2b2be96",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 222,
+      "identity": "src/parse.y::rule::222::in_op ::= NOT IN",
+      "text": "in_op ::= NOT IN",
+      "source_line": 457,
+      "generated_action_sha256": "99e1d2cc7c0014d0f26ef48c272d6d3816a08f7a316625e9ea211db7a59ead3b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 223,
+      "identity": "src/parse.y::rule::223::expr ::= expr in_op LP exprlist RP",
+      "text": "expr ::= expr in_op LP exprlist RP",
+      "source_line": 1491,
+      "generated_action_sha256": "432ed1040f48c568ea7dd7c9eaf311d448280603d7e3bda779daab5b6ec257f9",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 224,
+      "identity": "src/parse.y::rule::224::expr ::= LP select RP",
+      "text": "expr ::= LP select RP",
+      "source_line": 1544,
+      "generated_action_sha256": "2fad3460cf97ef7d805676e47513455e9945b2093d06465f35b6baf28fe41fd1",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 225,
+      "identity": "src/parse.y::rule::225::expr ::= expr in_op LP select RP",
+      "text": "expr ::= expr in_op LP select RP",
+      "source_line": 1548,
+      "generated_action_sha256": "a984e4ab020fb7e0f7509e613a7c0ffc84fb60a1ad74755e9a94031e178c988c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 226,
+      "identity": "src/parse.y::rule::226::expr ::= expr in_op nm dbnm paren_exprlist",
+      "text": "expr ::= expr in_op nm dbnm paren_exprlist",
+      "source_line": 1553,
+      "generated_action_sha256": "cf7f803411dfe7f6990165d6c3fd66646d6e972b57697caaf101842d5c9f4228",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 227,
+      "identity": "src/parse.y::rule::227::expr ::= EXISTS LP select RP",
+      "text": "expr ::= EXISTS LP select RP",
+      "source_line": 1561,
+      "generated_action_sha256": "9d9dd93b38e596a447aed2f27adeba2b5f0020940fc21025655691f7f41b072b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 228,
+      "identity": "src/parse.y::rule::228::expr ::= CASE case_operand case_exprlist case_else END",
+      "text": "expr ::= CASE case_operand case_exprlist case_else END",
+      "source_line": 1569,
+      "generated_action_sha256": "aebc1a604d13f8b6490671bca715d93ee040da779937908869884fe8df2ce5a0",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 229,
+      "identity": "src/parse.y::rule::229::case_exprlist ::= case_exprlist WHEN expr THEN expr",
+      "text": "case_exprlist ::= case_exprlist WHEN expr THEN expr",
+      "source_line": 1581,
+      "generated_action_sha256": "cdc1a7afc417502de772aa218508d1a071f1921ac136f53154daf612f25edec5",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 230,
+      "identity": "src/parse.y::rule::230::case_exprlist ::= WHEN expr THEN expr",
+      "text": "case_exprlist ::= WHEN expr THEN expr",
+      "source_line": 1585,
+      "generated_action_sha256": "3b7bd877ae5042aa832aade483f4879c9e280d19a893dc2e1124bc081b01eec2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 231,
+      "identity": "src/parse.y::rule::231::case_else ::= ELSE expr",
+      "text": "case_else ::= ELSE expr",
+      "source_line": 955,
+      "generated_action_sha256": "387ae31b99adeeacf7db38f95882bde625c3d0b0efe636499cb4a30e504df0a7",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 232,
+      "identity": "src/parse.y::rule::232::case_else ::=",
+      "text": "case_else ::=",
+      "source_line": 954,
+      "generated_action_sha256": "f3274d013fbd5e5ade33e8771c040d9bf41295a41a0cb30544fd7cfb8f7a2535",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 233,
+      "identity": "src/parse.y::rule::233::case_operand ::=",
+      "text": "case_operand ::=",
+      "source_line": 954,
+      "generated_action_sha256": "f3274d013fbd5e5ade33e8771c040d9bf41295a41a0cb30544fd7cfb8f7a2535",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 234,
+      "identity": "src/parse.y::rule::234::exprlist ::=",
+      "text": "exprlist ::=",
+      "source_line": 711,
+      "generated_action_sha256": "eefcf7a498f5ac3dcd4dc2eac919f9e69d470d3692e0c21ca3013120bd952932",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 235,
+      "identity": "src/parse.y::rule::235::nexprlist ::= nexprlist COMMA expr",
+      "text": "nexprlist ::= nexprlist COMMA expr",
+      "source_line": 1606,
+      "generated_action_sha256": "079ad54fae6e0e3672323798801b20b50e8ed328cb7e99131191ca7462b4c596",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 236,
+      "identity": "src/parse.y::rule::236::nexprlist ::= expr",
+      "text": "nexprlist ::= expr",
+      "source_line": 1608,
+      "generated_action_sha256": "adfbc7c6941f102479f32ec32924eadcb7faf1894fbdee5c2977526253ca78e5",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 237,
+      "identity": "src/parse.y::rule::237::paren_exprlist ::=",
+      "text": "paren_exprlist ::=",
+      "source_line": 711,
+      "generated_action_sha256": "eefcf7a498f5ac3dcd4dc2eac919f9e69d470d3692e0c21ca3013120bd952932",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 238,
+      "identity": "src/parse.y::rule::238::paren_exprlist ::= LP exprlist RP",
+      "text": "paren_exprlist ::= LP exprlist RP",
+      "source_line": 1616,
+      "generated_action_sha256": "e1f1b2ee8b46c6f98d321511d9ad434deaa059dceb05d8fd4dccf8636ee2a710",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 239,
+      "identity": "src/parse.y::rule::239::cmd ::= createkw uniqueflag INDEX ifnotexists nm dbnm ON nm LP sortlist RP where_opt",
+      "text": "cmd ::= createkw uniqueflag INDEX ifnotexists nm dbnm ON nm LP sortlist RP where_opt",
+      "source_line": 1623,
+      "generated_action_sha256": "dbf7ade79ca49d0bb9b568052fa8fa20ae7d476f6f279f79dcfab8eca5b34adf",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 240,
+      "identity": "src/parse.y::rule::240::uniqueflag ::= UNIQUE",
+      "text": "uniqueflag ::= UNIQUE",
+      "source_line": 1633,
+      "generated_action_sha256": "e57ff20dfab01a0559234c4b0f5b3b39c5c4a4bfd1415edc09d650a1516e9044",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 241,
+      "identity": "src/parse.y::rule::241::uniqueflag ::=",
+      "text": "uniqueflag ::=",
+      "source_line": 1634,
+      "generated_action_sha256": "345c9e4036b86a98dcfbbc790ebe32d5ecfa165c97d2d229a44fb95114076aa9",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 242,
+      "identity": "src/parse.y::rule::242::eidlist_opt ::=",
+      "text": "eidlist_opt ::=",
+      "source_line": 711,
+      "generated_action_sha256": "eefcf7a498f5ac3dcd4dc2eac919f9e69d470d3692e0c21ca3013120bd952932",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 243,
+      "identity": "src/parse.y::rule::243::eidlist_opt ::= LP eidlist RP",
+      "text": "eidlist_opt ::= LP eidlist RP",
+      "source_line": 1616,
+      "generated_action_sha256": "e1f1b2ee8b46c6f98d321511d9ad434deaa059dceb05d8fd4dccf8636ee2a710",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 244,
+      "identity": "src/parse.y::rule::244::eidlist ::= eidlist COMMA nm collate sortorder",
+      "text": "eidlist ::= eidlist COMMA nm collate sortorder",
+      "source_line": 1684,
+      "generated_action_sha256": "9349e117f9527576856a6176ec3cd1b2529663a7f103de0063e07dca6bc7a022",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 245,
+      "identity": "src/parse.y::rule::245::eidlist ::= nm collate sortorder",
+      "text": "eidlist ::= nm collate sortorder",
+      "source_line": 1687,
+      "generated_action_sha256": "7c91f80c1c1f1bca107c148ed743c50f9c8b542afccab4e327e47aa424ecef9e",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 246,
+      "identity": "src/parse.y::rule::246::collate ::=",
+      "text": "collate ::=",
+      "source_line": 216,
+      "generated_action_sha256": "bbf02502e82adb12c8bc793ef785a3b45218b007f727b0fc3ae782789927a45b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 247,
+      "identity": "src/parse.y::rule::247::collate ::= COLLATE ID|STRING",
+      "text": "collate ::= COLLATE ID|STRING",
+      "source_line": 457,
+      "generated_action_sha256": "99e1d2cc7c0014d0f26ef48c272d6d3816a08f7a316625e9ea211db7a59ead3b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 248,
+      "identity": "src/parse.y::rule::248::cmd ::= DROP INDEX ifexists fullname",
+      "text": "cmd ::= DROP INDEX ifexists fullname",
+      "source_line": 1698,
+      "generated_action_sha256": "4d42eaf13acd95a8c4e1e0ee4946a5cf5f8667bfca8b5186b9fec8282592bffd",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 249,
+      "identity": "src/parse.y::rule::249::cmd ::= VACUUM vinto",
+      "text": "cmd ::= VACUUM vinto",
+      "source_line": 1705,
+      "generated_action_sha256": "c9a0ff2594433032bd6b77c94f5cdf6a6f643b6fc772045d79c30b6ff4359580",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 250,
+      "identity": "src/parse.y::rule::250::cmd ::= VACUUM nm vinto",
+      "text": "cmd ::= VACUUM nm vinto",
+      "source_line": 1706,
+      "generated_action_sha256": "5bf40d867cc8e99c40d9e3bf76a570352f5c2c627798c420d5e199430097601e",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 251,
+      "identity": "src/parse.y::rule::251::vinto ::= INTO expr",
+      "text": "vinto ::= INTO expr",
+      "source_line": 955,
+      "generated_action_sha256": "387ae31b99adeeacf7db38f95882bde625c3d0b0efe636499cb4a30e504df0a7",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 252,
+      "identity": "src/parse.y::rule::252::vinto ::=",
+      "text": "vinto ::=",
+      "source_line": 954,
+      "generated_action_sha256": "f3274d013fbd5e5ade33e8771c040d9bf41295a41a0cb30544fd7cfb8f7a2535",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 253,
+      "identity": "src/parse.y::rule::253::cmd ::= PRAGMA nm dbnm",
+      "text": "cmd ::= PRAGMA nm dbnm",
+      "source_line": 1714,
+      "generated_action_sha256": "825001648f328764803a1a33caa6e343c93bfe2b7a9e59f81d99a9f19bdb6f6f",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 254,
+      "identity": "src/parse.y::rule::254::cmd ::= PRAGMA nm dbnm EQ nmnum",
+      "text": "cmd ::= PRAGMA nm dbnm EQ nmnum",
+      "source_line": 1715,
+      "generated_action_sha256": "153c85eb0d8e376d47999f62cd4822875aa20ff1fd5ae4b09bcad76e43b20f18",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 255,
+      "identity": "src/parse.y::rule::255::cmd ::= PRAGMA nm dbnm LP nmnum RP",
+      "text": "cmd ::= PRAGMA nm dbnm LP nmnum RP",
+      "source_line": 1716,
+      "generated_action_sha256": "a42f3d74e3ab0133c19a3b81f8bd625ebac9ecbf7cd28ef0034ea085ac94819a",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 256,
+      "identity": "src/parse.y::rule::256::cmd ::= PRAGMA nm dbnm EQ minus_num",
+      "text": "cmd ::= PRAGMA nm dbnm EQ minus_num",
+      "source_line": 1718,
+      "generated_action_sha256": "68e2346312be35f28cef37f3a6f2c1a8248e5c81f684b74503081fd098c82ae5",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 257,
+      "identity": "src/parse.y::rule::257::cmd ::= PRAGMA nm dbnm LP minus_num RP",
+      "text": "cmd ::= PRAGMA nm dbnm LP minus_num RP",
+      "source_line": 1720,
+      "generated_action_sha256": "6658e6b5d601ba90558321e8697a03ec6c801d5df640b477c23879d321e31742",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 258,
+      "identity": "src/parse.y::rule::258::plus_num ::= PLUS INTEGER|FLOAT",
+      "text": "plus_num ::= PLUS INTEGER|FLOAT",
+      "source_line": 735,
+      "generated_action_sha256": "89324c24e291fbda29968f0f5cc47136e35b45ea5cf48a86f366cb32f64a872c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 259,
+      "identity": "src/parse.y::rule::259::minus_num ::= MINUS INTEGER|FLOAT",
+      "text": "minus_num ::= MINUS INTEGER|FLOAT",
+      "source_line": 735,
+      "generated_action_sha256": "89324c24e291fbda29968f0f5cc47136e35b45ea5cf48a86f366cb32f64a872c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 260,
+      "identity": "src/parse.y::rule::260::cmd ::= createkw trigger_decl BEGIN trigger_cmd_list END",
+      "text": "cmd ::= createkw trigger_decl BEGIN trigger_cmd_list END",
+      "source_line": 1736,
+      "generated_action_sha256": "5d343946bc73a46ec9880f8b79027458dca12d255d575af0bf041a25e97e61b6",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 261,
+      "identity": "src/parse.y::rule::261::trigger_decl ::= temp TRIGGER ifnotexists nm dbnm trigger_time trigger_event ON fullname foreach_clause when_clause",
+      "text": "trigger_decl ::= temp TRIGGER ifnotexists nm dbnm trigger_time trigger_event ON fullname foreach_clause when_clause",
+      "source_line": 1745,
+      "generated_action_sha256": "37173338390b9f36f87934a25184e193aebc42ad6a28c914dc50b22b84459ec9",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 262,
+      "identity": "src/parse.y::rule::262::trigger_time ::= BEFORE|AFTER",
+      "text": "trigger_time ::= BEFORE|AFTER",
+      "source_line": 1755,
+      "generated_action_sha256": "23df04c44c288fa8c8d5c679f5458babbbaef17b27bfeda7e7eba54f129600d1",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 263,
+      "identity": "src/parse.y::rule::263::trigger_time ::= INSTEAD OF",
+      "text": "trigger_time ::= INSTEAD OF",
+      "source_line": 1756,
+      "generated_action_sha256": "0967912f9aa32f872aa87b0e5b6a67872da780f249073b32af294221074386e1",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 264,
+      "identity": "src/parse.y::rule::264::trigger_time ::=",
+      "text": "trigger_time ::=",
+      "source_line": 1757,
+      "generated_action_sha256": "32c162955a6b490e7205f20f41e1ec19c7b4b40c26f8038e0adb6b65990e7ba1",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 265,
+      "identity": "src/parse.y::rule::265::trigger_event ::= DELETE|INSERT",
+      "text": "trigger_event ::= DELETE|INSERT",
+      "source_line": 1761,
+      "generated_action_sha256": "b6a74ef1246d34d89aa15ac2b206e1cd17e481695a134e5f7655d5cad72f2c26",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 266,
+      "identity": "src/parse.y::rule::266::trigger_event ::= UPDATE",
+      "text": "trigger_event ::= UPDATE",
+      "source_line": 1761,
+      "generated_action_sha256": "b6a74ef1246d34d89aa15ac2b206e1cd17e481695a134e5f7655d5cad72f2c26",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 267,
+      "identity": "src/parse.y::rule::267::trigger_event ::= UPDATE OF idlist",
+      "text": "trigger_event ::= UPDATE OF idlist",
+      "source_line": 1763,
+      "generated_action_sha256": "15595e50498ffb1808e2825152730c31330ae19b6a29a2b115a914940357a090",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 268,
+      "identity": "src/parse.y::rule::268::when_clause ::=",
+      "text": "when_clause ::=",
+      "source_line": 1770,
+      "generated_action_sha256": "eb4723297cc5b63fa97ef62bf65c84639905c7a9339e9971cf3e08f6a8f26f0d",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 269,
+      "identity": "src/parse.y::rule::269::when_clause ::= WHEN expr",
+      "text": "when_clause ::= WHEN expr",
+      "source_line": 1771,
+      "generated_action_sha256": "2f788a7c5ce8ebe7493f92c193001c7f04afba6681dc94f2c65f67fd9f5583e8",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 270,
+      "identity": "src/parse.y::rule::270::trigger_cmd_list ::= trigger_cmd_list trigger_cmd SEMI",
+      "text": "trigger_cmd_list ::= trigger_cmd_list trigger_cmd SEMI",
+      "source_line": 1775,
+      "generated_action_sha256": "76137f46541a739b828ced828b118015dadea44447b19e63c1556e20d625e543",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 271,
+      "identity": "src/parse.y::rule::271::trigger_cmd_list ::= trigger_cmd SEMI",
+      "text": "trigger_cmd_list ::= trigger_cmd SEMI",
+      "source_line": 1779,
+      "generated_action_sha256": "b57f5b362cde8e79cdbf0fde7e6297df553434bc6f5378bdde961e553300763d",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 272,
+      "identity": "src/parse.y::rule::272::tridxby ::= INDEXED BY nm",
+      "text": "tridxby ::= INDEXED BY nm",
+      "source_line": 1788,
+      "generated_action_sha256": "1d5f23fcf0c712f0cde1614ada784523b56fd9d37119567eb1354035c9400240",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 273,
+      "identity": "src/parse.y::rule::273::tridxby ::= NOT INDEXED",
+      "text": "tridxby ::= NOT INDEXED",
+      "source_line": 1793,
+      "generated_action_sha256": "92dcbba97f817225443bf09800dcf6847b5761b92c21e1a6ce64a59c5a6325f3",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 274,
+      "identity": "src/parse.y::rule::274::trigger_cmd ::= UPDATE orconf xfullname tridxby SET setlist from where_opt scanpt",
+      "text": "trigger_cmd ::= UPDATE orconf xfullname tridxby SET setlist from where_opt scanpt",
+      "source_line": 1806,
+      "generated_action_sha256": "d8c65a61c027e54a72880ed28069e0833492e552cef51c15fb13364461629516",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 275,
+      "identity": "src/parse.y::rule::275::trigger_cmd ::= scanpt insert_cmd INTO xfullname idlist_opt select upsert scanpt",
+      "text": "trigger_cmd ::= scanpt insert_cmd INTO xfullname idlist_opt select upsert scanpt",
+      "source_line": 1810,
+      "generated_action_sha256": "da332b9bf5bd15dda5a8b163a17ed444266e7c58b5a5cebc429bf0f7af1db785",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 276,
+      "identity": "src/parse.y::rule::276::trigger_cmd ::= DELETE FROM xfullname tridxby where_opt scanpt",
+      "text": "trigger_cmd ::= DELETE FROM xfullname tridxby where_opt scanpt",
+      "source_line": 1815,
+      "generated_action_sha256": "fc07bb446aee05305f9482ec19951c389159a0053abff38c4198e6da8fb8f0f8",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 277,
+      "identity": "src/parse.y::rule::277::trigger_cmd ::= scanpt select scanpt",
+      "text": "trigger_cmd ::= scanpt select scanpt",
+      "source_line": 1819,
+      "generated_action_sha256": "d195102c5f401da54ec4fbbefff9d44d5208a1366c916de41821ebce32c529ae",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 278,
+      "identity": "src/parse.y::rule::278::expr ::= RAISE LP IGNORE RP",
+      "text": "expr ::= RAISE LP IGNORE RP",
+      "source_line": 1822,
+      "generated_action_sha256": "8093dc019d9ba80a8347cf281ef5f0d91c5c7f7eccd3bff17c45af49023c16c3",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 279,
+      "identity": "src/parse.y::rule::279::expr ::= RAISE LP raisetype COMMA expr RP",
+      "text": "expr ::= RAISE LP raisetype COMMA expr RP",
+      "source_line": 1828,
+      "generated_action_sha256": "05c076b07c26c032e8cabf59aa754473f6260c024ae99a6ca2bea126b332217b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 280,
+      "identity": "src/parse.y::rule::280::raisetype ::= ROLLBACK",
+      "text": "raisetype ::= ROLLBACK",
+      "source_line": 1837,
+      "generated_action_sha256": "b02c28f752cca4fb45aa4ef477381b606c6f36c80c7cbe77d5be73f6d2613326",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 281,
+      "identity": "src/parse.y::rule::281::raisetype ::= ABORT",
+      "text": "raisetype ::= ABORT",
+      "source_line": 1633,
+      "generated_action_sha256": "e57ff20dfab01a0559234c4b0f5b3b39c5c4a4bfd1415edc09d650a1516e9044",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 282,
+      "identity": "src/parse.y::rule::282::raisetype ::= FAIL",
+      "text": "raisetype ::= FAIL",
+      "source_line": 1839,
+      "generated_action_sha256": "1f2aff526f15063ca4590049be98a7dbcdafe3692ca95855971a9e052dbe5c41",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 283,
+      "identity": "src/parse.y::rule::283::cmd ::= DROP TRIGGER ifexists fullname",
+      "text": "cmd ::= DROP TRIGGER ifexists fullname",
+      "source_line": 1844,
+      "generated_action_sha256": "b26f4c9158a6d80114026e319f0bd640939c6fcfd74dfad5ebd078e688fe9c15",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 284,
+      "identity": "src/parse.y::rule::284::cmd ::= ATTACH database_kw_opt expr AS expr key_opt",
+      "text": "cmd ::= ATTACH database_kw_opt expr AS expr key_opt",
+      "source_line": 1851,
+      "generated_action_sha256": "c52516a2f0803dea84bc0136b87692d0522d87b77a7da9748808c7c2ce302485",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 285,
+      "identity": "src/parse.y::rule::285::cmd ::= DETACH database_kw_opt expr",
+      "text": "cmd ::= DETACH database_kw_opt expr",
+      "source_line": 1854,
+      "generated_action_sha256": "727373fcb4ca38e2b5bd107a5bf9d1f8d4f9d305ea3b4c1b7ea58251f9cb999a",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 286,
+      "identity": "src/parse.y::rule::286::key_opt ::=",
+      "text": "key_opt ::=",
+      "source_line": 1770,
+      "generated_action_sha256": "eb4723297cc5b63fa97ef62bf65c84639905c7a9339e9971cf3e08f6a8f26f0d",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 287,
+      "identity": "src/parse.y::rule::287::key_opt ::= KEY expr",
+      "text": "key_opt ::= KEY expr",
+      "source_line": 1771,
+      "generated_action_sha256": "2f788a7c5ce8ebe7493f92c193001c7f04afba6681dc94f2c65f67fd9f5583e8",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 288,
+      "identity": "src/parse.y::rule::288::cmd ::= REINDEX",
+      "text": "cmd ::= REINDEX",
+      "source_line": 1869,
+      "generated_action_sha256": "b821ea4d2e5c3b7be72a6f2cd0003d5e6b6424f0b92d269d4dd2dc825d6c6b18",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 289,
+      "identity": "src/parse.y::rule::289::cmd ::= REINDEX nm dbnm",
+      "text": "cmd ::= REINDEX nm dbnm",
+      "source_line": 1870,
+      "generated_action_sha256": "543d0c43cfb06bc433ff63d2a38cf3d9a59427598dcb6127c4eacdc267c714b5",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 290,
+      "identity": "src/parse.y::rule::290::cmd ::= ANALYZE",
+      "text": "cmd ::= ANALYZE",
+      "source_line": 1875,
+      "generated_action_sha256": "73b30126fde3d4c60dcb40e73c75c389ff9979adf2b2d521679e0e35c9c7d6e3",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 291,
+      "identity": "src/parse.y::rule::291::cmd ::= ANALYZE nm dbnm",
+      "text": "cmd ::= ANALYZE nm dbnm",
+      "source_line": 1876,
+      "generated_action_sha256": "c21fc973bf87c6c42bbf9f8a742e59f606fd7bbbaac3856f0179503fbc9bcfb0",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 292,
+      "identity": "src/parse.y::rule::292::cmd ::= ALTER TABLE fullname RENAME TO nm",
+      "text": "cmd ::= ALTER TABLE fullname RENAME TO nm",
+      "source_line": 1882,
+      "generated_action_sha256": "45f11030b60e105498c7ad656bccef540ea0a75e1907818286a2bb5f74523b56",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 293,
+      "identity": "src/parse.y::rule::293::cmd ::= alter_add carglist",
+      "text": "cmd ::= alter_add carglist",
+      "source_line": 1889,
+      "generated_action_sha256": "85e3db2d347112e76c0840969ff33fe025f7f627a2d74f76ecf26ef1a7e2235f",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 294,
+      "identity": "src/parse.y::rule::294::alter_add ::= ALTER TABLE fullname ADD kwcolumn_opt nm typetoken",
+      "text": "alter_add ::= ALTER TABLE fullname ADD kwcolumn_opt nm typetoken",
+      "source_line": 1893,
+      "generated_action_sha256": "2450690bcb4ce5b7850a5d6144a891fa8df0cae990aedd4cac323a9541e0cb98",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 295,
+      "identity": "src/parse.y::rule::295::cmd ::= ALTER TABLE fullname DROP kwcolumn_opt nm",
+      "text": "cmd ::= ALTER TABLE fullname DROP kwcolumn_opt nm",
+      "source_line": 1900,
+      "generated_action_sha256": "b34cf938bde1873bb36679c03a01e0a7d3ed19df35a5f6886861b5d8a2d0ad38",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 296,
+      "identity": "src/parse.y::rule::296::cmd ::= ALTER TABLE fullname RENAME kwcolumn_opt nm TO nm",
+      "text": "cmd ::= ALTER TABLE fullname RENAME kwcolumn_opt nm TO nm",
+      "source_line": 1903,
+      "generated_action_sha256": "3971f378dd91d1ed145518ccba4e5e3742169295bc7a5ae931fdeb4c02069787",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 297,
+      "identity": "src/parse.y::rule::297::cmd ::= ALTER TABLE fullname DROP CONSTRAINT nm",
+      "text": "cmd ::= ALTER TABLE fullname DROP CONSTRAINT nm",
+      "source_line": 1906,
+      "generated_action_sha256": "b0ddd8ee5b348c69d627133ca1c31ac008f19def64b6dea8d2048c15187fd4f3",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 298,
+      "identity": "src/parse.y::rule::298::cmd ::= ALTER TABLE fullname ALTER kwcolumn_opt nm DROP NOT NULL",
+      "text": "cmd ::= ALTER TABLE fullname ALTER kwcolumn_opt nm DROP NOT NULL",
+      "source_line": 1909,
+      "generated_action_sha256": "160fc0cfe5b7ea7ba04adee9abe407a8d8b5dbaa510e48f4b0f14e6d614c9886",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 299,
+      "identity": "src/parse.y::rule::299::cmd ::= ALTER TABLE fullname ALTER kwcolumn_opt nm SET NOT NULL onconf",
+      "text": "cmd ::= ALTER TABLE fullname ALTER kwcolumn_opt nm SET NOT NULL onconf",
+      "source_line": 1912,
+      "generated_action_sha256": "d456adf9e60e894a8753e19abd4ef3a1b8464e5ee96f1fd403797855fad747f0",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 300,
+      "identity": "src/parse.y::rule::300::cmd ::= ALTER TABLE fullname ADD CONSTRAINT nm CHECK LP expr RP onconf",
+      "text": "cmd ::= ALTER TABLE fullname ADD CONSTRAINT nm CHECK LP expr RP onconf",
+      "source_line": 1915,
+      "generated_action_sha256": "dc32dc9e1190f507ee9be82b494432798095cb0d4519a6e35410d51843cf3615",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 301,
+      "identity": "src/parse.y::rule::301::cmd ::= ALTER TABLE fullname ADD CHECK LP expr RP onconf",
+      "text": "cmd ::= ALTER TABLE fullname ADD CHECK LP expr RP onconf",
+      "source_line": 1918,
+      "generated_action_sha256": "0350be3e68018bdf406428949dca9052f1fc8bb59e8aeee8bef4194542950739",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 302,
+      "identity": "src/parse.y::rule::302::cmd ::= create_vtab",
+      "text": "cmd ::= create_vtab",
+      "source_line": 1930,
+      "generated_action_sha256": "1e271a7c40fdac50c070e5e6549888b8f9b964c33b4a8df702583819407926df",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 303,
+      "identity": "src/parse.y::rule::303::cmd ::= create_vtab LP vtabarglist RP",
+      "text": "cmd ::= create_vtab LP vtabarglist RP",
+      "source_line": 1931,
+      "generated_action_sha256": "ff7b78a6503d0f51fcc7405b4f60da139755108e12b7e29c8abef801779d2b65",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 304,
+      "identity": "src/parse.y::rule::304::create_vtab ::= createkw VIRTUAL TABLE ifnotexists nm dbnm USING nm",
+      "text": "create_vtab ::= createkw VIRTUAL TABLE ifnotexists nm dbnm USING nm",
+      "source_line": 1933,
+      "generated_action_sha256": "2f272271bada7655de9a687c948095fa8e7b78370abbde8d3f913894502da25d",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 305,
+      "identity": "src/parse.y::rule::305::vtabarg ::=",
+      "text": "vtabarg ::=",
+      "source_line": 1938,
+      "generated_action_sha256": "d8d9f6efb32dffc920d4525c0fd603e00f6667ef8696c0ec364b90bde07d4beb",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 306,
+      "identity": "src/parse.y::rule::306::vtabargtoken ::= ANY",
+      "text": "vtabargtoken ::= ANY",
+      "source_line": 1940,
+      "generated_action_sha256": "cb09a9997d4cdd7606b040b2e2e44e9c4834c3ca331d9b8458b294af395b0205",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 307,
+      "identity": "src/parse.y::rule::307::vtabargtoken ::= lp anylist RP",
+      "text": "vtabargtoken ::= lp anylist RP",
+      "source_line": 1940,
+      "generated_action_sha256": "cb09a9997d4cdd7606b040b2e2e44e9c4834c3ca331d9b8458b294af395b0205",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 308,
+      "identity": "src/parse.y::rule::308::lp ::= LP",
+      "text": "lp ::= LP",
+      "source_line": 1940,
+      "generated_action_sha256": "cb09a9997d4cdd7606b040b2e2e44e9c4834c3ca331d9b8458b294af395b0205",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 309,
+      "identity": "src/parse.y::rule::309::with ::= WITH wqlist",
+      "text": "with ::= WITH wqlist",
+      "source_line": 1957,
+      "generated_action_sha256": "5b477edfb4b844e609238e3785c04437a7fbfb5069e26ee14cb5c08425a87e5c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 310,
+      "identity": "src/parse.y::rule::310::with ::= WITH RECURSIVE wqlist",
+      "text": "with ::= WITH RECURSIVE wqlist",
+      "source_line": 1957,
+      "generated_action_sha256": "5b477edfb4b844e609238e3785c04437a7fbfb5069e26ee14cb5c08425a87e5c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 311,
+      "identity": "src/parse.y::rule::311::wqas ::= AS",
+      "text": "wqas ::= AS",
+      "source_line": 1961,
+      "generated_action_sha256": "b47e8a3fa217b49a7afb31a9b6cf1399811d3edcaeb97cf2d7058912b286fe3d",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 312,
+      "identity": "src/parse.y::rule::312::wqas ::= AS MATERIALIZED",
+      "text": "wqas ::= AS MATERIALIZED",
+      "source_line": 1962,
+      "generated_action_sha256": "7936539ead2363db3d5833f2c87f757264a98fb35f98628a88e3b5419aba6b18",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 313,
+      "identity": "src/parse.y::rule::313::wqas ::= AS NOT MATERIALIZED",
+      "text": "wqas ::= AS NOT MATERIALIZED",
+      "source_line": 1963,
+      "generated_action_sha256": "6c65cf0cd2112c9e235bca717ef1a8a57e6386df7e4eeebdd71c2faa4b520eec",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 314,
+      "identity": "src/parse.y::rule::314::wqitem ::= withnm eidlist_opt wqas LP select RP",
+      "text": "wqitem ::= withnm eidlist_opt wqas LP select RP",
+      "source_line": 1964,
+      "generated_action_sha256": "312ec98fc53f3af973af30cf7ae5f819bf896a27a68b87c633613af3faed3aa3",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 315,
+      "identity": "src/parse.y::rule::315::withnm ::= nm",
+      "text": "withnm ::= nm",
+      "source_line": 1967,
+      "generated_action_sha256": "b658ffb717d9854494b0d69b3478c9c378aab28973a20de1154c214819e411b2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 316,
+      "identity": "src/parse.y::rule::316::wqlist ::= wqitem",
+      "text": "wqlist ::= wqitem",
+      "source_line": 1968,
+      "generated_action_sha256": "f3c923e8963b56c2684aea3db9db307a06b48aac8e8d2bd3d9dbd7200fb01ad0",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 317,
+      "identity": "src/parse.y::rule::317::wqlist ::= wqlist COMMA wqitem",
+      "text": "wqlist ::= wqlist COMMA wqitem",
+      "source_line": 1971,
+      "generated_action_sha256": "6e60a89e85ceadb1118c42f4f4d3bf8a0fb07dce741a97166077d76ff57a33d2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 318,
+      "identity": "src/parse.y::rule::318::windowdefn_list ::= windowdefn_list COMMA windowdefn",
+      "text": "windowdefn_list ::= windowdefn_list COMMA windowdefn",
+      "source_line": 1987,
+      "generated_action_sha256": "20fd2b0fdddfbc5d3a06bfc783a36c92f651fe5410dac33863c0f971e7a2da92",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 319,
+      "identity": "src/parse.y::rule::319::windowdefn ::= nm AS LP window RP",
+      "text": "windowdefn ::= nm AS LP window RP",
+      "source_line": 1996,
+      "generated_action_sha256": "a453173aede73068ea67d52bf66b1ff524aa9474f51d596486a3601e830928c2",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 320,
+      "identity": "src/parse.y::rule::320::window ::= PARTITION BY nexprlist orderby_opt frame_opt",
+      "text": "window ::= PARTITION BY nexprlist orderby_opt frame_opt",
+      "source_line": 2030,
+      "generated_action_sha256": "6fc10806c62bf837fd7296f09114adcaaab7dbd0df27af33ba4af5dcc584532b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 321,
+      "identity": "src/parse.y::rule::321::window ::= nm PARTITION BY nexprlist orderby_opt frame_opt",
+      "text": "window ::= nm PARTITION BY nexprlist orderby_opt frame_opt",
+      "source_line": 2033,
+      "generated_action_sha256": "701797c6e974ca722ab3d2c2529373b499e69185385f5908aafe96cf07e83669",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 322,
+      "identity": "src/parse.y::rule::322::window ::= ORDER BY sortlist frame_opt",
+      "text": "window ::= ORDER BY sortlist frame_opt",
+      "source_line": 2036,
+      "generated_action_sha256": "2cf42f4861bc26f0bef2db16264afb953f4b0c7ace520fcd5838defd4df40ee0",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 323,
+      "identity": "src/parse.y::rule::323::window ::= nm ORDER BY sortlist frame_opt",
+      "text": "window ::= nm ORDER BY sortlist frame_opt",
+      "source_line": 2039,
+      "generated_action_sha256": "38535192e3e40d7d04ac625a8b3c23715848dd8dc817a616c41e086296418b58",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 324,
+      "identity": "src/parse.y::rule::324::window ::= nm frame_opt",
+      "text": "window ::= nm frame_opt",
+      "source_line": 2043,
+      "generated_action_sha256": "7b32576fa8fa3b3ec3c37b0374d6e15dbe8fffb7bbf14714c12598efc7efd790",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 325,
+      "identity": "src/parse.y::rule::325::frame_opt ::=",
+      "text": "frame_opt ::=",
+      "source_line": 2047,
+      "generated_action_sha256": "e162e2828cc83188f4f3043d0384cda2804ff80809d3366b39a29aa9662e5a32",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 326,
+      "identity": "src/parse.y::rule::326::frame_opt ::= range_or_rows frame_bound_s frame_exclude_opt",
+      "text": "frame_opt ::= range_or_rows frame_bound_s frame_exclude_opt",
+      "source_line": 2050,
+      "generated_action_sha256": "5cbd70ead530dd0fcc39752cb408dec597f2953fb41579fac420392103f67466",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 327,
+      "identity": "src/parse.y::rule::327::frame_opt ::= range_or_rows BETWEEN frame_bound_s AND frame_bound_e frame_exclude_opt",
+      "text": "frame_opt ::= range_or_rows BETWEEN frame_bound_s AND frame_bound_e frame_exclude_opt",
+      "source_line": 2054,
+      "generated_action_sha256": "22b4be0fe83e4b98995ba9257e73bed175af7daf9d97c7a24abb502e4362b40b",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 328,
+      "identity": "src/parse.y::rule::328::range_or_rows ::= RANGE|ROWS|GROUPS",
+      "text": "range_or_rows ::= RANGE|ROWS|GROUPS",
+      "source_line": 187,
+      "generated_action_sha256": "af2026585c7e704d179417b2d189c152e8b57391a413d3c12884ff01cdf88826",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 329,
+      "identity": "src/parse.y::rule::329::frame_bound_s ::= frame_bound",
+      "text": "frame_bound_s ::= frame_bound",
+      "source_line": 2060,
+      "generated_action_sha256": "6d519e69b905b5656c8e6df5ad008e2e3008ff9649e6fde2e1bf4bb2804c0c14",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 330,
+      "identity": "src/parse.y::rule::330::frame_bound_s ::= UNBOUNDED PRECEDING",
+      "text": "frame_bound_s ::= UNBOUNDED PRECEDING",
+      "source_line": 2061,
+      "generated_action_sha256": "31e7689187fcceab207745895c5878068ef97819960e0aaf167ea88dd114aaf6",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 331,
+      "identity": "src/parse.y::rule::331::frame_bound_e ::= frame_bound",
+      "text": "frame_bound_e ::= frame_bound",
+      "source_line": 2060,
+      "generated_action_sha256": "6d519e69b905b5656c8e6df5ad008e2e3008ff9649e6fde2e1bf4bb2804c0c14",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 332,
+      "identity": "src/parse.y::rule::332::frame_bound_e ::= UNBOUNDED FOLLOWING",
+      "text": "frame_bound_e ::= UNBOUNDED FOLLOWING",
+      "source_line": 2061,
+      "generated_action_sha256": "31e7689187fcceab207745895c5878068ef97819960e0aaf167ea88dd114aaf6",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 333,
+      "identity": "src/parse.y::rule::333::frame_bound ::= expr PRECEDING|FOLLOWING",
+      "text": "frame_bound ::= expr PRECEDING|FOLLOWING",
+      "source_line": 2066,
+      "generated_action_sha256": "8957554c9a4b3b79148c4f9ca5c9ed964bb5e199837714bf40f8e9252f46ce5a",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 334,
+      "identity": "src/parse.y::rule::334::frame_bound ::= CURRENT ROW",
+      "text": "frame_bound ::= CURRENT ROW",
+      "source_line": 2061,
+      "generated_action_sha256": "31e7689187fcceab207745895c5878068ef97819960e0aaf167ea88dd114aaf6",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 335,
+      "identity": "src/parse.y::rule::335::frame_exclude_opt ::=",
+      "text": "frame_exclude_opt ::=",
+      "source_line": 2070,
+      "generated_action_sha256": "e22759b36b58911091c05b23e076fec047a215a2779de1dcf34552065d57646e",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 336,
+      "identity": "src/parse.y::rule::336::frame_exclude_opt ::= EXCLUDE frame_exclude",
+      "text": "frame_exclude_opt ::= EXCLUDE frame_exclude",
+      "source_line": 2071,
+      "generated_action_sha256": "6c82c07a420f384bef738fef95854616ddb07b6a1ad3c3a1e4d037007f8260b7",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 337,
+      "identity": "src/parse.y::rule::337::frame_exclude ::= NO OTHERS",
+      "text": "frame_exclude ::= NO OTHERS",
+      "source_line": 2074,
+      "generated_action_sha256": "0e4cebb1f37877d7d4a99bdce14816c7c0d4b27f35bfaf56961c5ac915546f86",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 338,
+      "identity": "src/parse.y::rule::338::frame_exclude ::= CURRENT ROW",
+      "text": "frame_exclude ::= CURRENT ROW",
+      "source_line": 2074,
+      "generated_action_sha256": "0e4cebb1f37877d7d4a99bdce14816c7c0d4b27f35bfaf56961c5ac915546f86",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 339,
+      "identity": "src/parse.y::rule::339::frame_exclude ::= GROUP|TIES",
+      "text": "frame_exclude ::= GROUP|TIES",
+      "source_line": 2076,
+      "generated_action_sha256": "68191be021a954cd75b2f54b5dcdb69373e2642bd6f7cf1334d0ec677ab0d336",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 340,
+      "identity": "src/parse.y::rule::340::window_clause ::= WINDOW windowdefn_list",
+      "text": "window_clause ::= WINDOW windowdefn_list",
+      "source_line": 2081,
+      "generated_action_sha256": "ea5ff34dc783cc426c2502189f26ada1e07a06298e5de8fe946a6f416394986c",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 341,
+      "identity": "src/parse.y::rule::341::filter_over ::= filter_clause over_clause",
+      "text": "filter_over ::= filter_clause over_clause",
+      "source_line": 2083,
+      "generated_action_sha256": "61c36b2443216f25803610ff8e7d7ed11505838ae49de5d00f3e98284193df5f",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 342,
+      "identity": "src/parse.y::rule::342::filter_over ::= over_clause",
+      "text": "filter_over ::= over_clause",
+      "source_line": 2091,
+      "generated_action_sha256": "13a62b9d0e1979db3b880585c22ab8a6bd55b2dd1d74e6e55ee0614a5260ca77",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 343,
+      "identity": "src/parse.y::rule::343::filter_over ::= filter_clause",
+      "text": "filter_over ::= filter_clause",
+      "source_line": 2094,
+      "generated_action_sha256": "15b88226e58d4976c3cc897c3be4ad911e5d76f1f39fab17715301e80ef9921d",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 344,
+      "identity": "src/parse.y::rule::344::over_clause ::= OVER LP window RP",
+      "text": "over_clause ::= OVER LP window RP",
+      "source_line": 2104,
+      "generated_action_sha256": "5afdd951cef2a5010992a414e3e6cd354d0486fc7b354f873570d331dee49ea1",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 345,
+      "identity": "src/parse.y::rule::345::over_clause ::= OVER nm",
+      "text": "over_clause ::= OVER nm",
+      "source_line": 2108,
+      "generated_action_sha256": "16d8ca8fdae59b4f06f4e1de017da83b92127eaa90dc3bd32901910abc3fb4de",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 346,
+      "identity": "src/parse.y::rule::346::filter_clause ::= FILTER LP WHERE expr RP",
+      "text": "filter_clause ::= FILTER LP WHERE expr RP",
+      "source_line": 2115,
+      "generated_action_sha256": "6d6f519b864854b3c43e165d11e84b38e7a2f5de86c7d97f35ea9e6424fa1d96",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    },
+    {
+      "rule_id": 347,
+      "identity": "src/parse.y::rule::347::term ::= QNUMBER",
+      "text": "term ::= QNUMBER",
+      "source_line": 2141,
+      "generated_action_sha256": "22b400b6c892856781df763acb51c592984d33387961cd40574371ee972100c1",
+      "status": "typed-local-flow-contract",
+      "implementation_credit": false,
+      "fidelity_claim": false,
+      "evidence": [
+        "src/core/parser.zig",
+        "src/core/parser.zig unit tests"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-3-tokenizer-and-parser-bridge",
+  "profile": "sqlite-3.53.4-core-default-threadsafe1",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 41,
+  "slices": {
+    "token_definitions": {
+      "status": "pass",
+      "source": "generated/parser/sqlite_parse.h",
+      "generator": "tools/generate_token_metadata.py",
+      "outputs": {
+        "src/core/generated/tokens.zig": "10e0d388dfd9cd0b7ec25cec1c0dad96a0f757d5f751c3613a70dcef62876543",
+        "src/core/generated/keywords.zig": "d078b7c9adbce1d992b10a1ba167b64ed296e06c1781cfa41acf8b6e809d4e26",
+        "src/core/generated/fallback.zig": "51daf1a94d6d3378549d118a0b6fae76e39667e547459eb870bbd026eeb1c00c"
+      }
+    },
+    "tokenizer": {
+      "status": "pass",
+      "implementation": "src/core/tokenizer.zig",
+      "scope": ["all 256 initial-byte classes", "147 keywords", "numeric and variable edge cases", "comments and quoting", "window/over/filter contextual classification"],
+      "differential": "tokenizer-differential",
+      "cases": 24
+    },
+    "parser_bridge": {
+      "status": "pass",
+      "strategy": "native Zig tokenizer linked into the pinned C-generated SQLite Lemon parser",
+      "generator_inventory": {"states": 600, "rules": 412, "symbols": 322, "semantic_action_mappings": 348},
+      "differential": "parser-accept-differential",
+      "cases": 24
+    },
+    "parse_allocation_hooks": {
+      "status": "pass",
+      "evidence": "parser-spike",
+      "scope": ["Zig allocation/free callbacks", "deterministic allocation failure", "zero outstanding allocations"]
+    },
+    "semantic_action_spike": {
+      "status": "pass",
+      "evidence": "parser-spike",
+      "scope": ["generated reduction dispatches Zig action", "syntax-error dispatch", "deterministic regeneration"]
+    }
+  },
+  "phase_owned_deferrals": [
+    {"item": "native execution of the 600-state Lemon table", "owning_phase": "future-parser-native-execution", "reason": "ADR-0004 retains the C table executor until all 348 semantic actions are native"},
+    {"item": "native Parse semantic actions and SQL code generation", "owning_phase": "phase-13"},
+    {"item": "native public prepare API", "owning_phase": "phase-12-and-phase-13"}
+  ],
+  "exit_gates": {
+    "token_type_length_error_and_edge_stream_parity": "pass",
+    "prepare_through_c_parser_acceptance_parity": "pass",
+    "deterministic_zig_action_and_table_spike": "pass",
+    "source_mapping": "pass"
+  }
+}

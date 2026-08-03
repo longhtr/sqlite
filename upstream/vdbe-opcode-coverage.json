@@ -1,0 +1,1764 @@
+{
+  "schema_version": 1,
+  "sqlite_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "scope": "canonical opcode identity to bounded handwritten Zig runtime name mapping",
+  "warning": "A mapped case proves name-level runtime presence only, not complete SQLite semantics or fidelity.",
+  "summary": {
+    "canonical_opcode_identities": 192,
+    "canonical_execution_cases": 190,
+    "canonical_non_execution_identities": 2,
+    "canonical_execution_cases_with_bounded_runtime_mapping": 98,
+    "canonical_execution_cases_without_bounded_runtime_mapping": 92,
+    "canonical_non_execution_identities_represented": 1,
+    "bounded_runtime_opcodes": 102,
+    "bounded_runtime_opcodes_mapped_to_canonical_execution_cases": 98,
+    "bounded_runtime_opcodes_mapped_to_non_execution_identities": 1,
+    "transitional_runtime_only_opcodes": 3,
+    "source_translated_execution_cases": 0,
+    "subsystem_integrated_execution_cases": 0
+  },
+  "transitional_runtime_opcodes": [
+    {
+      "runtime_opcode": "open_data",
+      "reason": "opens a Program-owned in-memory table rather than a canonical SQLite cursor"
+    },
+    {
+      "runtime_opcode": "to_blob",
+      "reason": "bounded convenience conversion; canonical SQLite emits Cast with blob affinity"
+    },
+    {
+      "runtime_opcode": "to_text",
+      "reason": "bounded convenience conversion; canonical SQLite emits Cast with text affinity"
+    }
+  ],
+  "opcodes": [
+    {
+      "canonical_name": "Savepoint",
+      "number": 0,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "AutoCommit",
+      "number": 1,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Transaction",
+      "number": 2,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Checkpoint",
+      "number": 3,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "JournalMode",
+      "number": 4,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Vacuum",
+      "number": 5,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "VFilter",
+      "number": 6,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "VUpdate",
+      "number": 7,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Init",
+      "number": 8,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "init",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Goto",
+      "number": 9,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "goto",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Gosub",
+      "number": 10,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "gosub",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "InitCoroutine",
+      "number": 11,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "init_coroutine",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Yield",
+      "number": 12,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "yield",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "MustBeInt",
+      "number": 13,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "must_be_int",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Jump",
+      "number": 14,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "jump",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Once",
+      "number": 15,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "once",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "If",
+      "number": 16,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "if_",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IfNot",
+      "number": 17,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "if_not",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IsType",
+      "number": 18,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "is_type",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Not",
+      "number": 19,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "not",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IfNullRow",
+      "number": 20,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "if_null_row",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SeekLT",
+      "number": 21,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SeekLE",
+      "number": 22,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SeekGE",
+      "number": 23,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SeekGT",
+      "number": 24,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IfNotOpen",
+      "number": 25,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "if_not_open",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IfNoHope",
+      "number": 26,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "NoConflict",
+      "number": 27,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "NotFound",
+      "number": 28,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Found",
+      "number": 29,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SeekRowid",
+      "number": 30,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "seek_rowid",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "NotExists",
+      "number": 31,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Last",
+      "number": 32,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "last",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IfSizeBetween",
+      "number": 33,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "if_size_between",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SorterSort",
+      "number": 34,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Sort",
+      "number": 35,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Rewind",
+      "number": 36,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "rewind",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IfEmpty",
+      "number": 37,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "if_empty",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SorterNext",
+      "number": 38,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Prev",
+      "number": 39,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "prev",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Next",
+      "number": 40,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "next",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IdxLE",
+      "number": 41,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IdxGT",
+      "number": 42,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Or",
+      "number": 43,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "or_",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "And",
+      "number": 44,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "and_",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IdxLT",
+      "number": 45,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IdxGE",
+      "number": 46,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IFindKey",
+      "number": 47,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "RowSetRead",
+      "number": 48,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "row_set_read",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "RowSetTest",
+      "number": 49,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "row_set_test",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Program",
+      "number": 50,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "program",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IsNull",
+      "number": 51,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "is_null",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "NotNull",
+      "number": 52,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "not_null",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Ne",
+      "number": 53,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "ne",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Eq",
+      "number": 54,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "eq",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Gt",
+      "number": 55,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "gt",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Le",
+      "number": 56,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "le",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Lt",
+      "number": 57,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "lt",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Ge",
+      "number": 58,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "ge",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ElseEq",
+      "number": 59,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "else_eq",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "FkIfZero",
+      "number": 60,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IfPos",
+      "number": 61,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "if_pos",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IfNotZero",
+      "number": 62,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "if_not_zero",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "DecrJumpZero",
+      "number": 63,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "decr_jump_zero",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IncrVacuum",
+      "number": 64,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "VNext",
+      "number": 65,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Filter",
+      "number": 66,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "PureFunc",
+      "number": 67,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "pure_func",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Function",
+      "number": 68,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "function",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Return",
+      "number": 69,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "return_",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "EndCoroutine",
+      "number": 70,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "end_coroutine",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "HaltIfNull",
+      "number": 71,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "halt_if_null",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Halt",
+      "number": 72,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "halt",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Integer",
+      "number": 73,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "integer",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Int64",
+      "number": 74,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "int64",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "String",
+      "number": 75,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "string",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "BeginSubrtn",
+      "number": 76,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "begin_subrtn",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Null",
+      "number": 77,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "null_",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SoftNull",
+      "number": 78,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "soft_null",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Blob",
+      "number": 79,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "blob",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Variable",
+      "number": 80,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "variable",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Move",
+      "number": 81,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "move",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Copy",
+      "number": 82,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "copy",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SCopy",
+      "number": 83,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "scopy",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IntCopy",
+      "number": 84,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "int_copy",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "FkCheck",
+      "number": 85,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ResultRow",
+      "number": 86,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "result_row",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "CollSeq",
+      "number": 87,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "AddImm",
+      "number": 88,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "add_imm",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "RealAffinity",
+      "number": 89,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "real_affinity",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Cast",
+      "number": 90,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "cast",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Permutation",
+      "number": 91,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "permutation",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Compare",
+      "number": 92,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "compare_values",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IsTrue",
+      "number": 93,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "is_true",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ZeroOrNull",
+      "number": 94,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "zero_or_null",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Offset",
+      "number": 95,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Column",
+      "number": 96,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "column",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "TypeCheck",
+      "number": 97,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Affinity",
+      "number": 98,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "affinity",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "MakeRecord",
+      "number": 99,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "make_record",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Count",
+      "number": 100,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "count",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ReadCookie",
+      "number": 101,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SetCookie",
+      "number": 102,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "BitAnd",
+      "number": 103,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "bit_and",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "BitOr",
+      "number": 104,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "bit_or",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ShiftLeft",
+      "number": 105,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "shift_left",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ShiftRight",
+      "number": 106,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "shift_right",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Add",
+      "number": 107,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "add",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Subtract",
+      "number": 108,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "subtract",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Multiply",
+      "number": 109,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "multiply",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Divide",
+      "number": 110,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "divide",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Remainder",
+      "number": 111,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "remainder",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Concat",
+      "number": 112,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "concat",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ReopenIdx",
+      "number": 113,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "OpenRead",
+      "number": 114,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "open_read",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "BitNot",
+      "number": 115,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "bit_not",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "OpenWrite",
+      "number": 116,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "OpenDup",
+      "number": 117,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "String8",
+      "number": 118,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "string8",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "OpenAutoindex",
+      "number": 119,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "OpenEphemeral",
+      "number": 120,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SorterOpen",
+      "number": 121,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SequenceTest",
+      "number": 122,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "sequence_test",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "OpenPseudo",
+      "number": 123,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Close",
+      "number": 124,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "close",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ColumnsUsed",
+      "number": 125,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SeekScan",
+      "number": 126,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SeekHit",
+      "number": 127,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Sequence",
+      "number": 128,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "sequence",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "NewRowid",
+      "number": 129,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Insert",
+      "number": 130,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "RowCell",
+      "number": 131,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Delete",
+      "number": 132,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ResetCount",
+      "number": 133,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SorterCompare",
+      "number": 134,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SorterData",
+      "number": 135,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "RowData",
+      "number": 136,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "row_data",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Rowid",
+      "number": 137,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "rowid",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "NullRow",
+      "number": 138,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "null_row",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SeekEnd",
+      "number": 139,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "seek_end",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IdxInsert",
+      "number": 140,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SorterInsert",
+      "number": 141,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IdxDelete",
+      "number": 142,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "DeferredSeek",
+      "number": 143,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IdxRowid",
+      "number": 144,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "idx_rowid",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "FinishSeek",
+      "number": 145,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Destroy",
+      "number": 146,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Clear",
+      "number": 147,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ResetSorter",
+      "number": 148,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "CreateBtree",
+      "number": 149,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SqlExec",
+      "number": 150,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ParseSchema",
+      "number": 151,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "LoadAnalysis",
+      "number": 152,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "DropTable",
+      "number": 153,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Real",
+      "number": 154,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "real",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "DropIndex",
+      "number": 155,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "DropTrigger",
+      "number": 156,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "IntegrityCk",
+      "number": 157,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "RowSetAdd",
+      "number": 158,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "row_set_add",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Param",
+      "number": 159,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "param",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "FkCounter",
+      "number": 160,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "MemMax",
+      "number": 161,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "mem_max",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "OffsetLimit",
+      "number": 162,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "offset_limit",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "AggInverse",
+      "number": 163,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "AggStep",
+      "number": 164,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "AggStep1",
+      "number": 165,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "AggValue",
+      "number": 166,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "AggFinal",
+      "number": 167,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Expire",
+      "number": 168,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "CursorLock",
+      "number": 169,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "CursorUnlock",
+      "number": 170,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "TableLock",
+      "number": 171,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "VBegin",
+      "number": 172,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "VCreate",
+      "number": 173,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "VDestroy",
+      "number": 174,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "VOpen",
+      "number": 175,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "open_virtual",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "VCheck",
+      "number": 176,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "VInitIn",
+      "number": 177,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "VColumn",
+      "number": 178,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "VRename",
+      "number": 179,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Pagecount",
+      "number": 180,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "MaxPgcnt",
+      "number": 181,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ClrSubtype",
+      "number": 182,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "clr_subtype",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "GetSubtype",
+      "number": 183,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "get_subtype",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "SetSubtype",
+      "number": 184,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": "set_subtype",
+      "status": "bounded-runtime-mapped",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "FilterAdd",
+      "number": 185,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Trace",
+      "number": 186,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "CursorHint",
+      "number": 187,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "ReleaseReg",
+      "number": 188,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Noop",
+      "number": 189,
+      "upstream_execution_case": false,
+      "bounded_runtime_opcode": "noop",
+      "status": "represented-non-execution-identity",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Explain",
+      "number": 190,
+      "upstream_execution_case": false,
+      "bounded_runtime_opcode": null,
+      "status": "unrepresented-non-execution-identity",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    },
+    {
+      "canonical_name": "Abortable",
+      "number": 191,
+      "upstream_execution_case": true,
+      "bounded_runtime_opcode": null,
+      "status": "unmapped-execution-case",
+      "implementation_credit": false,
+      "fidelity_claim": false
+    }
+  ]
+}

@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "id": "global-allocator-core-for-connection-growth",
+  "title": "Global allocator, size, free, realloc, statistics, and alarm core",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These six malloc.c functions are the immediate global allocator closure beneath connection heap fallback and reallocation. They combine method-table calls, rounding, statistics, soft/hard alarms, and allocator ownership.",
+    "source_files": [
+      {
+        "path": "src/malloc.c",
+        "sha256": "19f728f9a323aec82906a3e1c5f0e656a308a6892136e58c5cfd0c6c3832c961"
+      }
+    ],
+    "source_entity_ids": [
+      "src/malloc.c::function::sqlite3MallocAlarm::line-217",
+      "src/malloc.c::function::mallocWithAlarm::line-246",
+      "src/malloc.c::function::sqlite3Malloc::line-296",
+      "src/malloc.c::function::sqlite3MallocSize::line-344",
+      "src/malloc.c::function::sqlite3_free::line-391",
+      "src/malloc.c::function::sqlite3Realloc::line-503"
+    ],
+    "behavioral_block_ids": [
+      "src/malloc.c::function::sqlite3MallocAlarm::behavior::if::line-218-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3MallocAlarm::behavior::return::line-218-column-32::ordinal-0",
+      "src/malloc.c::function::mallocWithAlarm::behavior::assert::line-249-column-3::ordinal-0",
+      "src/malloc.c::function::mallocWithAlarm::behavior::assert::line-250-column-3::ordinal-0",
+      "src/malloc.c::function::mallocWithAlarm::behavior::if::line-260-column-3::ordinal-0",
+      "src/malloc.c::function::mallocWithAlarm::behavior::if::line-262-column-5::ordinal-0",
+      "src/malloc.c::function::mallocWithAlarm::behavior::if::line-265-column-7::ordinal-0",
+      "src/malloc.c::function::mallocWithAlarm::behavior::if::line-267-column-9::ordinal-0",
+      "src/malloc.c::function::mallocWithAlarm::behavior::return::line-270-column-11::ordinal-0",
+      "src/malloc.c::function::mallocWithAlarm::behavior::if::line-284-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3Malloc::behavior::if::line-298-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3Malloc::behavior::if::line-300-column-9::ordinal-0",
+      "src/malloc.c::function::sqlite3Malloc::behavior::assert::line-307-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3Malloc::behavior::return::line-308-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3MallocSize::behavior::assert::line-345-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3MallocSize::behavior::return::line-346-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3_free::behavior::if::line-392-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3_free::behavior::return::line-392-column-14::ordinal-0",
+      "src/malloc.c::function::sqlite3_free::behavior::assert::line-393-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3_free::behavior::assert::line-394-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3_free::behavior::if::line-395-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::assert::line-506-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::assert::line-507-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::if::line-508-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::return::line-509-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::if::line-511-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::return::line-513-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::if::line-515-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::return::line-516-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::if::line-523-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::if::line-525-column-9::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::if::line-530-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::if::line-533-column-7::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::return::line-536-column-9::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::if::line-546-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::assert::line-554-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3Realloc::behavior::return::line-555-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Allocator initialization/shutdown and configuration API",
+      "Public autoinitializing malloc/realloc wrappers",
+      "Memory status query API and limit setter API",
+      "Connection lookaside and OOM propagation"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "active-profile-limit-constants",
+      "profile-release-memory-noop",
+      "global-status-primitives",
+      "global-allocator-state-representations",
+      "global-allocator-init-shutdown",
+      "pthread-mutex-enter-leave-core"
+    ],
+    "external_source_responsibilities": [
+      "Configured sqlite3_mem_methods callbacks and roundup/usable-size contracts"
+    ],
+    "caller_closure": "The direct global allocation functions called by connection heap fallback are assigned. Admission remains blocked on allocator configuration/status/mutex state and alarm ordering units."
+  },
+  "contracts": {
+    "inputs": [
+      "Requested byte count and optional prior heap pointer",
+      "Configured allocator method table, memory-stat mode, soft/hard limits, and current statistics"
+    ],
+    "outputs": [
+      "Eight-byte-aligned allocation, preserved prior pointer on failed realloc, exact usable size, and updated status highwaters/counts"
+    ],
+    "ownership": "xMalloc/xRealloc/xFree own heap storage. Failed realloc preserves the old pointer. Zero-size realloc frees it.",
+    "state_and_results": "Maximum-allocation rejection, roundup, memory/malloc-count status, malloc-size highwater, nearly-full state, hard-limit rejection, and alarm ordering follow malloc.c.",
+    "locks_callbacks_io": "STATIC_MEM mutex protects statistics. Alarm path releases it around sqlite3_release_memory and reacquires it. Configured allocator callbacks run in source order. No I/O.",
+    "failure_and_continuation": "Allocator null and hard-limit failures do not corrupt statistics or old realloc ownership; later requests may continue."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3MallocAlarm::line-217",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::releaseMemory"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::mallocWithAlarm::line-246",
+      "relation": "many-to-one-manager-method-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::Manager.alloc"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3Malloc::line-296",
+      "relation": "many-to-one-manager-method-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::Manager.alloc"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3MallocSize::line-344",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::Manager.size"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3_free::line-391",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::Manager.free"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3Realloc::line-503",
+      "relation": "one-to-one-function-candidate",
+      "zig_declaration_ids": [
+        "src/core/memory.zig::function::Manager.realloc"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C global mem0/config method-table state is consolidated in memory.Manager and Backend.",
+    "The pinned release-memory implementation is a no-op, and Manager preserves C's release/reacquire of the allocator mutex around the alarm call; the C/Zig event trace observes the exact handoff.",
+    "C status integer slots are represented by named Manager counters/highwaters."
+  ],
+  "oracle": {
+    "protocol": "The infrastructure differential installs matched exact-size allocators and instrumented mutex methods in C and Zig. It compares roundup, allocation, usable-size, alarm-time STATIC_MEM leave/reenter, hard-limit realloc rejection, free, statistics, nearly-full state, and old-byte preservation as one exact internal event trace. Existing Manager tests additionally cover zero/oversize, memory-stat-disabled, configurable backends, one-shot/sticky failures, initialization failure, and continuation.",
+    "internal_observations": [
+      "allocator callback sequence and rounded sizes",
+      "current/highwater bytes and counts",
+      "old-pointer preservation",
+      "soft/hard limit and nearly-full transitions",
+      "memory-stat disabled path",
+      "alarm mutex handoff"
+    ],
+    "normalization": "Backend pointers are allocation identities; sizes, counters, result nullability, callbacks, and event order are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Manager tests cover one-shot/sticky allocation and realloc failures; the C/Zig trace covers hard-limit rejection with old-pointer and byte preservation.",
+    "io_crash_concurrency": "No I/O. The matched configured-mutex trace proves exact STATIC_MEM release/reacquire around the no-op release-memory alarm; broader global allocator concurrency assurance remains separate.",
+    "malformed_input": "Zero and excessive sizes are tested.",
+    "continuation": "Failed realloc ownership and later successful allocation are tested natively.",
+    "performance": "Roundup, direct backend calls, and alarm-time mutex handoff are preserved; subsystem benchmarks remain open.",
+    "commands": [
+      "zig build infrastructure-differential",
+      "zig build test -j2",
+      "zig build vdbe-builder-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/memory.zig Manager candidate shared by public and connection allocation",
+    "native_call_path": "Public auto-initializing APIs enter global.process_coordinator; connection and VDBE heap fallbacks then call memory.processManager, which asserts that the coordinator has started the one process Manager. The former memory-only lazy-start path is removed.",
+    "bounded_owner_retired": "Yes for allocator lifecycle and allocation state: only global.process_coordinator starts/stops the production process Manager, and tools/verify_config.py rejects reintroduction of a memory-only lifecycle bypass. Top-level lifecycle trace promotion remains a dependency before this unit receives subsystem-integration credit."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Internal allocator callback/status/alarm traces now match. Global initialization/configuration ownership, broader concurrency/performance assurance, and independent review remain."
+  },
+  "known_blockers": [
+    "Allocator lifecycle ownership is consolidated; source-equivalent top-level initialization/refcount event evidence remains required before subsystem-integration promotion.",
+    "Complete broader concurrency/performance assurance through the final process allocator owner.",
+    "Independent fidelity review remains open."
+  ]
+}

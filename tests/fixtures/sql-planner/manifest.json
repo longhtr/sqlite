@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "phase": "phase-14-rowid-planner-slice",
+  "status": "bounded-regression-evidence",
+  "profile": "rowid-predicate-order-limit-v1",
+  "database": "tests/fixtures/btree-mutation/none-512.db",
+  "cases": [
+    {
+      "name": "eq-seek",
+      "sql": "SELECT id,v FROM t WHERE id = 42",
+      "normalized_plan": "seek-rowid"
+    },
+    {
+      "name": "ne-reverse-limit",
+      "sql": "SELECT id FROM t WHERE id != 42 ORDER BY id DESC LIMIT 3",
+      "normalized_plan": "last-filter-prev-limit"
+    },
+    {
+      "name": "lt",
+      "sql": "SELECT id FROM t WHERE id < 3",
+      "normalized_plan": "rewind-filter-next"
+    },
+    {
+      "name": "le",
+      "sql": "SELECT id FROM t WHERE id <= 2",
+      "normalized_plan": "rewind-filter-next"
+    },
+    {
+      "name": "gt-reverse",
+      "sql": "SELECT id FROM t WHERE id > 298 ORDER BY id DESC",
+      "normalized_plan": "last-filter-prev"
+    },
+    {
+      "name": "ge",
+      "sql": "SELECT id FROM t WHERE id >= 299",
+      "normalized_plan": "rewind-filter-next"
+    },
+    {
+      "name": "reverse-limit",
+      "sql": "SELECT id FROM t ORDER BY id DESC LIMIT 3",
+      "normalized_plan": "last-prev-limit"
+    },
+    {
+      "name": "zero-limit",
+      "sql": "SELECT id FROM t ORDER BY id DESC LIMIT 0",
+      "normalized_plan": "constant-empty"
+    }
+  ],
+  "case_count": 8,
+  "differential_observations": 31,
+  "native_runtime_budget_seconds": 2.0
+}

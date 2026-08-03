@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "phase": "phase-6-read-only-pager",
+  "profile": "sqlite-3.53.4-core-default-threadsafe1-rollback-readonly",
+  "generator": "tools/generate_pager_fixtures.py",
+  "fixtures": [
+    {
+      "name": "empty.db",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0,
+      "expected_code": 0,
+      "expected_page_size": 4096,
+      "expected_pages": 0,
+      "page_probes": []
+    },
+    {
+      "name": "valid-empty-512.db",
+      "sha256": "615d4f71cb100cc6b522826f8edd043ba2709aedce22f7b990fe43d1fc3493c6",
+      "size": 512,
+      "expected_code": 0,
+      "expected_page_size": 512,
+      "expected_pages": 1,
+      "page_probes": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "valid-empty-4096.db",
+      "sha256": "344d810db01b9d7d3957000977fd2a911da027b658ca46e7ae8c68e895a7331a",
+      "size": 4096,
+      "expected_code": 0,
+      "expected_page_size": 4096,
+      "expected_pages": 1,
+      "page_probes": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "valid-two-page-4096.db",
+      "sha256": "5e84ac4c5921e2081ae0846d5a69e71c952edd34722abd0e58133382db17e654",
+      "size": 8192,
+      "expected_code": 0,
+      "expected_page_size": 4096,
+      "expected_pages": 2,
+      "page_probes": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "name": "valid-empty-65536.db",
+      "sha256": "95a9f56a7009d4ee7e77eed0bc773bcf802bd1e0c020afc444e0394f2bbaeb99",
+      "size": 65536,
+      "expected_code": 0,
+      "expected_page_size": 65536,
+      "expected_pages": 1,
+      "page_probes": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "truncated-second-page.db",
+      "sha256": "6b778167e46c10c8921a972869113d12841dee889938b3f2e14c863ac6aa541e",
+      "size": 4223,
+      "expected_code": 0,
+      "expected_page_size": 4096,
+      "expected_pages": 2,
+      "page_probes": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "name": "malformed-short-header.db",
+      "sha256": "4b298058e1d5fd3f2fa20ead21773912a5dc38da3c0da0bbc7de1adfb6011f1c",
+      "size": 99,
+      "expected_code": 26,
+      "expected_page_size": null,
+      "expected_pages": null,
+      "page_probes": []
+    },
+    {
+      "name": "malformed-magic.db",
+      "sha256": "0589214410f10a1ab6b3cea4e785db6ef6d0e874a7ca15819f11c0032fe8b341",
+      "size": 4096,
+      "expected_code": 26,
+      "expected_page_size": null,
+      "expected_pages": null,
+      "page_probes": []
+    },
+    {
+      "name": "malformed-page-size.db",
+      "sha256": "720d0b668521fe489d23b4590657e4ba6ebc43886fc088030a1f9fbdaf9eddab",
+      "size": 4096,
+      "expected_code": 26,
+      "expected_page_size": null,
+      "expected_pages": null,
+      "page_probes": []
+    },
+    {
+      "name": "malformed-payload-fractions.db",
+      "sha256": "7782ae9ffb30630dd67b2e927e758a7c8930b49e7b641b3b9dad3203c5edd081",
+      "size": 4096,
+      "expected_code": 26,
+      "expected_page_size": null,
+      "expected_pages": null,
+      "page_probes": []
+    },
+    {
+      "name": "valid-wal-header-without-wal.db",
+      "sha256": "345ed1547d0475517a341a7e77d69b14809799375023457ec9683edd6d3940c6",
+      "size": 4096,
+      "expected_code": 0,
+      "expected_page_size": 4096,
+      "expected_pages": 1,
+      "page_probes": [
+        1,
+        2
+      ]
+    }
+  ]
+}

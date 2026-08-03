@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "id": "active-profile-limit-constants",
+  "title": "Active-profile sqliteLimit.h constants",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The 20 active immutable profile limits/defaults form one dependency-closed value unit; runtime enforcement remains in separately inventoried callers.",
+    "source_files": [
+      {
+        "path": "src/sqliteLimit.h",
+        "sha256": "6eec89d04286198f5e5f64fcb48c1283446809907f7d650caba40605080c3fe9"
+      }
+    ],
+    "source_entity_ids": [
+      "src/sqliteLimit.h::macro::SQLITE_DEFAULT_CACHE_SIZE::line-161",
+      "src/sqliteLimit.h::macro::SQLITE_DEFAULT_PAGE_SIZE::line-214",
+      "src/sqliteLimit.h::macro::SQLITE_DEFAULT_WAL_AUTOCHECKPOINT::line-169",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_ALLOCATION_SIZE::line-43",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_ATTACHED::line-179",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_COLUMN::line-73",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_COMPOUND_SELECT::line-129",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_DEFAULT_PAGE_SIZE::line-229",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_EXPR_DEPTH::line-102",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_FUNCTION_ARG::line-148",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_LENGTH::line-24",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_LIKE_PATTERN_LENGTH::line-257",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_PAGE_COUNT::line-249",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_PAGE_SIZE::line-207",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_PARSER_DEPTH::line-117",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_SQL_LENGTH::line-89",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_TRIGGER_DEPTH::line-268",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_VARIABLE_NUMBER::line-190",
+      "src/sqliteLimit.h::macro::SQLITE_MAX_VDBE_OP::line-137",
+      "src/sqliteLimit.h::macro::SQLITE_MIN_LENGTH::line-26"
+    ],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": [
+      "Runtime limit mutation, allocation enforcement, parser checks, pager checks, and VDBE checks are caller units."
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Production-preprocessor profile selection and runtime consumers; values are independently testable before caller closure."
+    ],
+    "caller_closure": "All macro users remain inventoried in the source/dependency/behavior ledgers and receive no closure credit from this unit."
+  },
+  "contracts": {
+    "inputs": [
+      "Pinned build predicates and SQLITE_* profile defines."
+    ],
+    "outputs": [
+      "Exact signed/unsigned Zig constants exported by config/build_profile.zig."
+    ],
+    "ownership": "Immutable compile-time values; no allocation or destruction.",
+    "state_and_results": "No runtime state or SQLite result path.",
+    "locks_callbacks_io": "Not applicable.",
+    "failure_and_continuation": "Compile/generation mismatch fails verification; no runtime failure path."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_DEFAULT_CACHE_SIZE::line-161",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::default_cache_size"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_DEFAULT_PAGE_SIZE::line-214",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::default_page_size"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_DEFAULT_WAL_AUTOCHECKPOINT::line-169",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::default_wal_autocheckpoint"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_ALLOCATION_SIZE::line-43",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_allocation_size"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_ATTACHED::line-179",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_attached"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_COLUMN::line-73",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_column"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_COMPOUND_SELECT::line-129",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_compound_select"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_DEFAULT_PAGE_SIZE::line-229",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_default_page_size"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_EXPR_DEPTH::line-102",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_expr_depth"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_FUNCTION_ARG::line-148",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_function_arg"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_LENGTH::line-24",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_length"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_LIKE_PATTERN_LENGTH::line-257",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_like_pattern_length"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_PAGE_COUNT::line-249",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_page_count"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_PAGE_SIZE::line-207",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_page_size"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_PARSER_DEPTH::line-117",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_parser_depth"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_SQL_LENGTH::line-89",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_sql_length"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_TRIGGER_DEPTH::line-268",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_trigger_depth"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_VARIABLE_NUMBER::line-190",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_variable_number"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MAX_VDBE_OP::line-137",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::max_vdbe_op"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteLimit.h::macro::SQLITE_MIN_LENGTH::line-26",
+      "relation": "one-to-one-constant",
+      "zig_declaration_ids": [
+        "config/limits.zig::constant::min_length"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C preprocessor integer tokens become explicitly typed Zig constants with widths/signedness that preserve every active value and ordering constraint."
+  ],
+  "oracle": {
+    "protocol": "Compile the pinned production C preprocessor and emit selected values; compare exact decimal values and profile feature facts.",
+    "internal_observations": [
+      "All 20 values",
+      "cross-limit ordering",
+      "page-size and allocation hard bounds"
+    ],
+    "normalization": "Decimal textual transport only; no behavioral normalization."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "not-applicable immutable constants",
+    "io_crash_concurrency": "not-applicable immutable constants",
+    "malformed_input": "not-applicable immutable constants",
+    "continuation": "compile-time only",
+    "performance": "not-applicable direct constants",
+    "commands": [
+      "zig build limits-test",
+      "zig test config/limits.zig",
+      "zig build verify-config"
+    ]
+  },
+  "integration": {
+    "production_owner": "config/limits.zig re-exported through config/build_profile.zig",
+    "native_call_path": "Root and standalone core build modules receive config/build_profile.zig as a named dependency. memory.zig aliases max_allocation_size and pager.zig aliases minimum/maximum/default page size and maximum page count from the one config/limits.zig owner.",
+    "bounded_owner_retired": "Yes for this unit: the duplicate exported limit constants in memory.zig and pager.zig were removed; format-specific numeric literals remain local behavior, not competing limit declarations."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "The prior independent review at 26b5b94890248d5ead84236dff7811b5d5c0752f failed on duplicate memory/pager owners. The implementation pass removed those declarations and injected the canonical build_profile module into standalone core build modules. A different reviewer must rerun the source, owner, and complete differential review before promotion."
+  },
+  "known_blockers": [
+    "Obtain a fresh independent source/owner/evidence review after the duplicate-owner correction; the implementation pass cannot self-promote."
+  ]
+}

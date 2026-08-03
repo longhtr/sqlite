@@ -1,0 +1,2716 @@
+{
+  "compiler": {
+    "driver_sha256": "7e223b99732cf04cb2158da3d1d59a995442df8ce73381bd3c404466ec7c3eeb",
+    "path": "/usr/bin/gcc",
+    "target": "aarch64-redhat-linux"
+  },
+  "constants": {
+    "ADDR_NEG5": 4,
+    "BUILTIN_FUNCTIONS_EMPTY": 1,
+    "CACHE_STALE": 0,
+    "COLNAME_COLUMN": 4,
+    "COLNAME_DATABASE": 2,
+    "COLNAME_DECLTYPE": 1,
+    "COLNAME_N": 2,
+    "COLNAME_NAME": 0,
+    "COLNAME_TABLE": 3,
+    "COLUMN_DECLARED_TYPE_MASK": 16,
+    "COLUMN_DECLARED_TYPE_OFFSET": 8,
+    "COLUMN_NOT_NULL_MASK": 1,
+    "COLUMN_NOT_NULL_OFFSET": 8,
+    "CONFIG_ZERO_TABLES": 1,
+    "CONFIG_ZERO_TAIL": 1,
+    "CONFIG_bCoreMutex": 1,
+    "CONFIG_bExtraSchemaChecks": 1,
+    "CONFIG_bFullMutex": 1,
+    "CONFIG_bLocaltimeFault": 0,
+    "CONFIG_bMemstat": 1,
+    "CONFIG_bOpenUri": 0,
+    "CONFIG_bSmallMalloc": 0,
+    "CONFIG_bUseCis": 1,
+    "CONFIG_iOnceResetThreshold": 2147483646,
+    "CONFIG_iPrngSeed": 0,
+    "CONFIG_mnReq": 0,
+    "CONFIG_mxMemdbSize": 1073741824,
+    "CONFIG_mxMmap": 2147418112,
+    "CONFIG_mxParserStack": 0,
+    "CONFIG_mxReq": 0,
+    "CONFIG_mxStrlen": 2147483646,
+    "CONFIG_nHeap": 0,
+    "CONFIG_nLookaside": 40,
+    "CONFIG_nPage": 20,
+    "CONFIG_nStmtSpill": 65536,
+    "CONFIG_neverCorrupt": 0,
+    "CONFIG_sharedCacheEnabled": 0,
+    "CONFIG_szLookaside": 1200,
+    "CONFIG_szMmap": 0,
+    "CONFIG_szPage": 0,
+    "CONFIG_szPma": 250,
+    "CONFIG_szSorterRef": 2147483647,
+    "CURSOR_COLCACHE_MASK": 16,
+    "CURSOR_COLCACHE_OFFSET": 5,
+    "CURSOR_ISEPHEMERAL_MASK": 1,
+    "CURSOR_ISEPHEMERAL_OFFSET": 5,
+    "CURSOR_ISORDERED_MASK": 4,
+    "CURSOR_ISORDERED_OFFSET": 5,
+    "CURSOR_NOREUSE_MASK": 8,
+    "CURSOR_NOREUSE_OFFSET": 5,
+    "CURSOR_USERANDOMROWID_MASK": 2,
+    "CURSOR_USERANDOMROWID_OFFSET": 5,
+    "CURTYPE_BTREE": 0,
+    "CURTYPE_PSEUDO": 3,
+    "CURTYPE_SORTER": 1,
+    "CURTYPE_VTAB": 2,
+    "DBFLAG_EncodingFixed": 64,
+    "DBFLAG_InternalFunc": 32,
+    "DBFLAG_PreferBuiltin": 2,
+    "DBFLAG_SchemaChange": 1,
+    "DBFLAG_SchemaKnownOk": 16,
+    "DBFLAG_Vacuum": 4,
+    "DBFLAG_VacuumInto": 8,
+    "DB_ResetWanted": 8,
+    "DB_SchemaLoaded": 1,
+    "DB_UnresetViews": 2,
+    "ENC_RESULT": 43,
+    "HI_40": 274877906944,
+    "INDEX_ASCENDING_KEY_BUG_MASK": 2,
+    "INDEX_ASCENDING_KEY_BUG_OFFSET": 100,
+    "INDEX_COVERING_MASK": 32,
+    "INDEX_COVERING_OFFSET": 99,
+    "INDEX_HAS_EXPRESSION_MASK": 8,
+    "INDEX_HAS_EXPRESSION_OFFSET": 100,
+    "INDEX_HAS_STATISTICS_MASK": 128,
+    "INDEX_HAS_STATISTICS_OFFSET": 99,
+    "INDEX_HAS_VIRTUAL_COLUMN_MASK": 4,
+    "INDEX_HAS_VIRTUAL_COLUMN_OFFSET": 100,
+    "INDEX_KIND_MASK": 1,
+    "INDEX_KIND_OFFSET": 99,
+    "INDEX_NO_QUERY_MASK": 1,
+    "INDEX_NO_QUERY_OFFSET": 100,
+    "INDEX_NO_SKIP_SCAN_MASK": 64,
+    "INDEX_NO_SKIP_SCAN_OFFSET": 99,
+    "INDEX_RESIZED_MASK": 16,
+    "INDEX_RESIZED_OFFSET": 99,
+    "INDEX_UNIQUE_NOT_NULL_MASK": 8,
+    "INDEX_UNIQUE_NOT_NULL_OFFSET": 99,
+    "INDEX_UNORDERED_MASK": 4,
+    "INDEX_UNORDERED_OFFSET": 99,
+    "INIT_IMPOSTER_TABLE_MASK": 6,
+    "INIT_IMPOSTER_TABLE_OFFSET": 6,
+    "INIT_ORPHAN_TRIGGER_MASK": 1,
+    "INIT_ORPHAN_TRIGGER_OFFSET": 6,
+    "INIT_REOPEN_MEMDB_MASK": 8,
+    "INIT_REOPEN_MEMDB_OFFSET": 6,
+    "INLINEFUNC_affinity": 4,
+    "INLINEFUNC_coalesce": 0,
+    "INLINEFUNC_expr_compare": 3,
+    "INLINEFUNC_expr_implies_expr": 2,
+    "INLINEFUNC_iif": 5,
+    "INLINEFUNC_implies_nonnull_row": 1,
+    "INLINEFUNC_sqlite_offset": 6,
+    "INLINEFUNC_unlikely": 99,
+    "IS_NULL_CURSOR_HAS_REGISTER": 0,
+    "IS_NULL_CURSOR_HAS_ROW": 0,
+    "IS_NULL_CURSOR_TRUE": 1,
+    "IS_NULL_CURSOR_WRONG_TYPE": 0,
+    "KEYINFO_ORDER_BIGNULL": 2,
+    "KEYINFO_ORDER_DESC": 1,
+    "LOOKASIDE_DISABLED_COUNT": 1,
+    "LOOKASIDE_DISABLED_SIZE": 0,
+    "LOOKASIDE_ENABLED_COUNT": 0,
+    "LOOKASIDE_ENABLED_SIZE": 1200,
+    "LOOKASIDE_NESTED_COUNT": 1,
+    "LOOKASIDE_NESTED_SIZE": 0,
+    "LOOKASIDE_SMALL": 128,
+    "MEMCELLSIZE": 24,
+    "MEM_AffMask": 63,
+    "MEM_Agg": 32768,
+    "MEM_Blob": 16,
+    "MEM_Cleared": 256,
+    "MEM_Dyn": 4096,
+    "MEM_Ephem": 16384,
+    "MEM_FromBind": 64,
+    "MEM_Int": 4,
+    "MEM_IntReal": 32,
+    "MEM_NULL_NOCHNG_FLAGS": 0,
+    "MEM_NULL_NOCHNG_LENGTH": 0,
+    "MEM_NULL_NOCHNG_TRUE": 1,
+    "MEM_NULL_NOCHNG_ZEROS": 0,
+    "MEM_Null": 1,
+    "MEM_Real": 8,
+    "MEM_SET_TYPE_RESULT": 4164,
+    "MEM_Static": 8192,
+    "MEM_Str": 2,
+    "MEM_Subtype": 2048,
+    "MEM_Term": 512,
+    "MEM_TypeMask": 3519,
+    "MEM_Undefined": 0,
+    "MEM_Zero": 1024,
+    "OPT_DISABLED_CLEAR": 0,
+    "OPT_DISABLED_SET": 1,
+    "OPT_ENABLED_CLEAR": 1,
+    "OPT_ENABLED_SET": 0,
+    "P4_COLLSEQ": -2,
+    "P4_DYNAMIC": -7,
+    "P4_EXPR": -10,
+    "P4_FREE_IF_LE": -7,
+    "P4_FUNCCTX": -16,
+    "P4_FUNCDEF": -8,
+    "P4_INDEX": -6,
+    "P4_INT32": -3,
+    "P4_INT64": -14,
+    "P4_INTARRAY": -15,
+    "P4_KEYINFO": -9,
+    "P4_MEM": -11,
+    "P4_NOTUSED": 0,
+    "P4_REAL": -13,
+    "P4_STATIC": -1,
+    "P4_SUBPROGRAM": -4,
+    "P4_SUBRTNSIG": -18,
+    "P4_TABLE": -5,
+    "P4_TABLEREF": -17,
+    "P4_TRANSIENT": 0,
+    "P4_VTAB": -12,
+    "P5_ConstraintCheck": 3,
+    "P5_ConstraintFK": 4,
+    "P5_ConstraintNotNull": 1,
+    "P5_ConstraintUnique": 2,
+    "SAVEPOINT_BEGIN": 0,
+    "SAVEPOINT_RELEASE": 1,
+    "SAVEPOINT_ROLLBACK": 2,
+    "SCHEMA_ENC_RESULT": 42,
+    "SQLITE_AllOpts": 4294967295,
+    "SQLITE_AttachCreate": 68719476736,
+    "SQLITE_AttachWrite": 137438953472,
+    "SQLITE_AutoIndex": 32768,
+    "SQLITE_BalancedMerge": 2097152,
+    "SQLITE_BloomFilter": 524288,
+    "SQLITE_BloomPulldown": 1048576,
+    "SQLITE_CacheSpill": 32,
+    "SQLITE_CellSizeCk": 2097152,
+    "SQLITE_CkptFullFSync": 16,
+    "SQLITE_Comments": 274877906944,
+    "SQLITE_Coroutines": 33554432,
+    "SQLITE_CorruptRdOnly": 8589934592,
+    "SQLITE_CountOfView": 512,
+    "SQLITE_CountRows": 4294967296,
+    "SQLITE_CoverIdxScan": 32,
+    "SQLITE_CursorHints": 1024,
+    "SQLITE_Defensive": 268435456,
+    "SQLITE_DeferFKs": 524288,
+    "SQLITE_DistinctOpt": 16,
+    "SQLITE_DqsDDL": 536870912,
+    "SQLITE_DqsDML": 1073741824,
+    "SQLITE_EnableQPSG": 8388608,
+    "SQLITE_EnableTrigger": 262144,
+    "SQLITE_EnableView": 2147483648,
+    "SQLITE_ExistsToJoin": 1073741824,
+    "SQLITE_FRAME_MAGIC": 2275391262,
+    "SQLITE_FUNC_ANYORDER": 134217728,
+    "SQLITE_FUNC_BUILTIN": 8388608,
+    "SQLITE_FUNC_BYTELEN": 192,
+    "SQLITE_FUNC_CASE": 8,
+    "SQLITE_FUNC_CONSTANT": 2048,
+    "SQLITE_FUNC_COUNT": 256,
+    "SQLITE_FUNC_DIRECT": 524288,
+    "SQLITE_FUNC_ENCMASK": 3,
+    "SQLITE_FUNC_EPHEM": 16,
+    "SQLITE_FUNC_HASH_SZ": 23,
+    "SQLITE_FUNC_HASH_a5": 10,
+    "SQLITE_FUNC_INLINE": 4194304,
+    "SQLITE_FUNC_INTERNAL": 262144,
+    "SQLITE_FUNC_LENGTH": 64,
+    "SQLITE_FUNC_LIKE": 4,
+    "SQLITE_FUNC_MINMAX": 4096,
+    "SQLITE_FUNC_NEEDCOLL": 32,
+    "SQLITE_FUNC_RUNONLY": 32768,
+    "SQLITE_FUNC_SLOCHNG": 8192,
+    "SQLITE_FUNC_TEST": 16384,
+    "SQLITE_FUNC_TYPEOF": 128,
+    "SQLITE_FUNC_UNLIKELY": 1024,
+    "SQLITE_FUNC_UNSAFE": 2097152,
+    "SQLITE_FUNC_WINDOW": 65536,
+    "SQLITE_FactorOutConst": 8,
+    "SQLITE_FkNoAction": 34359738368,
+    "SQLITE_FlttnUnionAll": 8388608,
+    "SQLITE_ForeignKeys": 16384,
+    "SQLITE_Fts3Tokenizer": 4194304,
+    "SQLITE_FullColNames": 4,
+    "SQLITE_FullFSync": 8,
+    "SQLITE_GroupByOrder": 4,
+    "SQLITE_IgnoreChecks": 512,
+    "SQLITE_IndexedExpr": 16777216,
+    "SQLITE_LegacyAlter": 67108864,
+    "SQLITE_LegacyFileFmt": 2,
+    "SQLITE_LoadExtFunc": 131072,
+    "SQLITE_LoadExtension": 65536,
+    "SQLITE_MAX_DB": 12,
+    "SQLITE_MAX_SCHEMA_RETRY": 50,
+    "SQLITE_MinMaxOpt": 65536,
+    "SQLITE_N_LIMIT": 13,
+    "SQLITE_NoCkptOnClose": 2048,
+    "SQLITE_NoSchemaError": 134217728,
+    "SQLITE_NullCallback": 256,
+    "SQLITE_NullUnusedCols": 67108864,
+    "SQLITE_OmitNoopJoin": 256,
+    "SQLITE_OmitOrderBy": 262144,
+    "SQLITE_OnePass": 134217728,
+    "SQLITE_OrderByIdxJoin": 64,
+    "SQLITE_OrderBySubq": 268435456,
+    "SQLITE_PREPARE_MASK": 63,
+    "SQLITE_PREPARE_SAVESQL": 128,
+    "SQLITE_PropagateConst": 32768,
+    "SQLITE_PushDown": 4096,
+    "SQLITE_QueryFlattener": 1,
+    "SQLITE_QueryOnly": 1048576,
+    "SQLITE_ReadUncommit": 17179869184,
+    "SQLITE_RecTriggers": 8192,
+    "SQLITE_ReleaseReg": 4194304,
+    "SQLITE_ResetDatabase": 33554432,
+    "SQLITE_ReverseOrder": 4096,
+    "SQLITE_SO_ASC": 0,
+    "SQLITE_SO_DESC": 1,
+    "SQLITE_SO_UNDEFINED": -1,
+    "SQLITE_STATE_BUSY": 109,
+    "SQLITE_STATE_CLOSED": 206,
+    "SQLITE_STATE_ERROR": 213,
+    "SQLITE_STATE_OPEN": 118,
+    "SQLITE_STATE_SICK": 186,
+    "SQLITE_STATE_ZOMBIE": 167,
+    "SQLITE_SeekScan": 131072,
+    "SQLITE_ShortColNames": 64,
+    "SQLITE_SimplifyJoin": 8192,
+    "SQLITE_SkipScan": 16384,
+    "SQLITE_StarQuery": 536870912,
+    "SQLITE_Stat4": 2048,
+    "SQLITE_StmtScanStatus": 1024,
+    "SQLITE_TRACE_LEGACY": 64,
+    "SQLITE_TRACE_NONLEGACY_MASK": 15,
+    "SQLITE_TRACE_XPROFILE": 128,
+    "SQLITE_Transitive": 128,
+    "SQLITE_TriggerEQP": 16777216,
+    "SQLITE_TrustedSchema": 128,
+    "SQLITE_WindowFunc": 2,
+    "SQLITE_WriteSchema": 1,
+    "SZ_CONTEXT_0": 48,
+    "SZ_DBCLIENTDATA_0": 24,
+    "SZ_DBCLIENTDATA_1": 25,
+    "SZ_DBCLIENTDATA_17": 41,
+    "SZ_KEYINFO_0": 32,
+    "SZ_KEYINFO_5": 72,
+    "SZ_VDBECURSOR_0": 120,
+    "SZ_VDBECURSOR_1": 128,
+    "SZ_VDBECURSOR_5": 160,
+    "VDBE_BISREADER_MASK": 128,
+    "VDBE_BISREADER_OFFSET": 200,
+    "VDBE_CHANGECNTON_MASK": 16,
+    "VDBE_CHANGECNTON_OFFSET": 200,
+    "VDBE_DISPLAY_P4": 1,
+    "VDBE_EXPIRED_MASK": 3,
+    "VDBE_EXPIRED_OFFSET": 200,
+    "VDBE_EXPLAIN_MASK": 12,
+    "VDBE_EXPLAIN_OFFSET": 200,
+    "VDBE_FRAME_MEM_OFFSET": 112,
+    "VDBE_HALT_STATE": 3,
+    "VDBE_HAVEEQPOPS_MASK": 1,
+    "VDBE_HAVEEQPOPS_OFFSET": 201,
+    "VDBE_INIT_STATE": 0,
+    "VDBE_MEM_DYNAMIC_AGG": 1,
+    "VDBE_MEM_DYNAMIC_DYN": 1,
+    "VDBE_MEM_DYNAMIC_NONE": 0,
+    "VDBE_MEM_DYNAMIC_STATIC": 0,
+    "VDBE_READONLY_MASK": 64,
+    "VDBE_READONLY_OFFSET": 200,
+    "VDBE_READY_STATE": 1,
+    "VDBE_RUN_STATE": 2,
+    "VDBE_USESSTMTJOURNAL_MASK": 32,
+    "VDBE_USESSTMTJOURNAL_OFFSET": 200
+  },
+  "inputs": {
+    "amalgamation": "reference/c_oracle/sqlite3.c",
+    "amalgamation_sha256": "b1dd5d74ec7f29055a6684fa06fb3c2f6821c87dd38f9a458dfd2e8a1db28189",
+    "probe": "reference/c_oracle/internal_vdbe_layout.c",
+    "probe_sha256": "2d73b3316da4f5c5faf961b8fdb6e815548d935a5b5c9034227996065b99e2d1"
+  },
+  "output": "src/core/generated/internal_vdbe_layout.zig",
+  "output_sha256": "85d3ccd2d4fae8b3e23418e02ccef43f443f8e6cbd330c0ac84bc6b773936d8c",
+  "profile": "sqlite-3.53.4-core-default-threadsafe1",
+  "schema_version": 1,
+  "sqlite_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "types": {
+    "AuxData": {
+      "alignment": 8,
+      "fields": {
+        "iAuxArg": {
+          "offset": 4,
+          "size": 4
+        },
+        "iAuxOp": {
+          "offset": 0,
+          "size": 4
+        },
+        "pAux": {
+          "offset": 8,
+          "size": 8
+        },
+        "pNextAux": {
+          "offset": 24,
+          "size": 8
+        },
+        "xDeleteAux": {
+          "offset": 16,
+          "size": 8
+        }
+      },
+      "size": 32
+    },
+    "BtLock": {
+      "alignment": 8,
+      "fields": {
+        "eLock": {
+          "offset": 12,
+          "size": 1
+        },
+        "iTable": {
+          "offset": 8,
+          "size": 4
+        },
+        "pBtree": {
+          "offset": 0,
+          "size": 8
+        },
+        "pNext": {
+          "offset": 16,
+          "size": 8
+        }
+      },
+      "size": 24
+    },
+    "Btree": {
+      "alignment": 8,
+      "fields": {
+        "db": {
+          "offset": 0,
+          "size": 8
+        },
+        "hasIncrblobCur": {
+          "offset": 19,
+          "size": 1
+        },
+        "iBDataVersion": {
+          "offset": 28,
+          "size": 4
+        },
+        "inTrans": {
+          "offset": 16,
+          "size": 1
+        },
+        "lock": {
+          "offset": 48,
+          "size": 24
+        },
+        "locked": {
+          "offset": 18,
+          "size": 1
+        },
+        "nBackup": {
+          "offset": 24,
+          "size": 4
+        },
+        "pBt": {
+          "offset": 8,
+          "size": 8
+        },
+        "pNext": {
+          "offset": 32,
+          "size": 8
+        },
+        "pPrev": {
+          "offset": 40,
+          "size": 8
+        },
+        "sharable": {
+          "offset": 17,
+          "size": 1
+        },
+        "wantToLock": {
+          "offset": 20,
+          "size": 4
+        }
+      },
+      "size": 72
+    },
+    "BtreePayload": {
+      "alignment": 8,
+      "fields": {
+        "aMem": {
+          "offset": 24,
+          "size": 8
+        },
+        "nData": {
+          "offset": 36,
+          "size": 4
+        },
+        "nKey": {
+          "offset": 8,
+          "size": 8
+        },
+        "nMem": {
+          "offset": 32,
+          "size": 2
+        },
+        "nZero": {
+          "offset": 40,
+          "size": 4
+        },
+        "pData": {
+          "offset": 16,
+          "size": 8
+        },
+        "pKey": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 48
+    },
+    "BusyHandler": {
+      "alignment": 8,
+      "fields": {
+        "nBusy": {
+          "offset": 16,
+          "size": 4
+        },
+        "pBusyArg": {
+          "offset": 8,
+          "size": 8
+        },
+        "xBusyHandler": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 24
+    },
+    "CollSeq": {
+      "alignment": 8,
+      "fields": {
+        "enc": {
+          "offset": 8,
+          "size": 1
+        },
+        "pUser": {
+          "offset": 16,
+          "size": 8
+        },
+        "xCmp": {
+          "offset": 24,
+          "size": 8
+        },
+        "xDel": {
+          "offset": 32,
+          "size": 8
+        },
+        "zName": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 40
+    },
+    "Column": {
+      "alignment": 8,
+      "fields": {
+        "affinity": {
+          "offset": 9,
+          "size": 1
+        },
+        "colFlags": {
+          "offset": 14,
+          "size": 2
+        },
+        "hName": {
+          "offset": 11,
+          "size": 1
+        },
+        "iDflt": {
+          "offset": 12,
+          "size": 2
+        },
+        "szEst": {
+          "offset": 10,
+          "size": 1
+        },
+        "zCnName": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 16
+    },
+    "Db": {
+      "alignment": 8,
+      "fields": {
+        "bSyncSet": {
+          "offset": 17,
+          "size": 1
+        },
+        "pBt": {
+          "offset": 8,
+          "size": 8
+        },
+        "pSchema": {
+          "offset": 24,
+          "size": 8
+        },
+        "safety_level": {
+          "offset": 16,
+          "size": 1
+        },
+        "zDbSName": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 32
+    },
+    "DbClientData": {
+      "alignment": 8,
+      "fields": {
+        "pData": {
+          "offset": 8,
+          "size": 8
+        },
+        "pNext": {
+          "offset": 0,
+          "size": 8
+        },
+        "xDestructor": {
+          "offset": 16,
+          "size": 8
+        },
+        "zName": {
+          "offset": 24,
+          "size": 1
+        }
+      },
+      "size": 24
+    },
+    "DblquoteStr": {
+      "alignment": 8,
+      "fields": {
+        "pNextStr": {
+          "offset": 0,
+          "size": 8
+        },
+        "z": {
+          "offset": 8,
+          "size": 8
+        }
+      },
+      "size": 16
+    },
+    "FKey": {
+      "alignment": 8,
+      "fields": {
+        "aAction": {
+          "offset": 45,
+          "size": 2
+        },
+        "aCol": {
+          "offset": 64,
+          "size": 16
+        },
+        "apTrigger": {
+          "offset": 48,
+          "size": 16
+        },
+        "isDeferred": {
+          "offset": 44,
+          "size": 1
+        },
+        "nCol": {
+          "offset": 40,
+          "size": 4
+        },
+        "pFrom": {
+          "offset": 0,
+          "size": 8
+        },
+        "pNextFrom": {
+          "offset": 8,
+          "size": 8
+        },
+        "pNextTo": {
+          "offset": 24,
+          "size": 8
+        },
+        "pPrevTo": {
+          "offset": 32,
+          "size": 8
+        },
+        "zTo": {
+          "offset": 16,
+          "size": 8
+        }
+      },
+      "size": 64
+    },
+    "FuncDef": {
+      "alignment": 8,
+      "fields": {
+        "funcFlags": {
+          "offset": 4,
+          "size": 4
+        },
+        "nArg": {
+          "offset": 0,
+          "size": 2
+        },
+        "pNext": {
+          "offset": 16,
+          "size": 8
+        },
+        "pUserData": {
+          "offset": 8,
+          "size": 8
+        },
+        "u": {
+          "offset": 64,
+          "size": 8
+        },
+        "xFinalize": {
+          "offset": 32,
+          "size": 8
+        },
+        "xInverse": {
+          "offset": 48,
+          "size": 8
+        },
+        "xSFunc": {
+          "offset": 24,
+          "size": 8
+        },
+        "xValue": {
+          "offset": 40,
+          "size": 8
+        },
+        "zName": {
+          "offset": 56,
+          "size": 8
+        }
+      },
+      "size": 72
+    },
+    "FuncDefHash": {
+      "alignment": 8,
+      "fields": {
+        "a": {
+          "offset": 0,
+          "size": 184
+        }
+      },
+      "size": 184
+    },
+    "FuncDestructor": {
+      "alignment": 8,
+      "fields": {
+        "nRef": {
+          "offset": 0,
+          "size": 4
+        },
+        "pUserData": {
+          "offset": 16,
+          "size": 8
+        },
+        "xDestroy": {
+          "offset": 8,
+          "size": 8
+        }
+      },
+      "size": 24
+    },
+    "Hash": {
+      "alignment": 8,
+      "fields": {
+        "count": {
+          "offset": 4,
+          "size": 4
+        },
+        "first": {
+          "offset": 8,
+          "size": 8
+        },
+        "ht": {
+          "offset": 16,
+          "size": 8
+        },
+        "htsize": {
+          "offset": 0,
+          "size": 4
+        }
+      },
+      "size": 24
+    },
+    "HashElem": {
+      "alignment": 8,
+      "fields": {
+        "data": {
+          "offset": 16,
+          "size": 8
+        },
+        "h": {
+          "offset": 32,
+          "size": 4
+        },
+        "next": {
+          "offset": 0,
+          "size": 8
+        },
+        "pKey": {
+          "offset": 24,
+          "size": 8
+        },
+        "prev": {
+          "offset": 8,
+          "size": 8
+        }
+      },
+      "size": 40
+    },
+    "Index": {
+      "alignment": 8,
+      "fields": {
+        "aColExpr": {
+          "offset": 80,
+          "size": 8
+        },
+        "aSortOrder": {
+          "offset": 56,
+          "size": 8
+        },
+        "aiColumn": {
+          "offset": 8,
+          "size": 8
+        },
+        "aiRowLogEst": {
+          "offset": 16,
+          "size": 8
+        },
+        "azColl": {
+          "offset": 64,
+          "size": 8
+        },
+        "colNotIdxed": {
+          "offset": 104,
+          "size": 8
+        },
+        "nColumn": {
+          "offset": 96,
+          "size": 2
+        },
+        "nKeyCol": {
+          "offset": 94,
+          "size": 2
+        },
+        "onError": {
+          "offset": 98,
+          "size": 1
+        },
+        "pNext": {
+          "offset": 40,
+          "size": 8
+        },
+        "pPartIdxWhere": {
+          "offset": 72,
+          "size": 8
+        },
+        "pSchema": {
+          "offset": 48,
+          "size": 8
+        },
+        "pTable": {
+          "offset": 24,
+          "size": 8
+        },
+        "szIdxRow": {
+          "offset": 92,
+          "size": 2
+        },
+        "tnum": {
+          "offset": 88,
+          "size": 4
+        },
+        "zColAff": {
+          "offset": 32,
+          "size": 8
+        },
+        "zName": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 112
+    },
+    "KeyInfo": {
+      "alignment": 8,
+      "fields": {
+        "aColl": {
+          "offset": 32,
+          "size": 8
+        },
+        "aSortFlags": {
+          "offset": 24,
+          "size": 8
+        },
+        "db": {
+          "offset": 16,
+          "size": 8
+        },
+        "enc": {
+          "offset": 4,
+          "size": 1
+        },
+        "nAllField": {
+          "offset": 8,
+          "size": 2
+        },
+        "nKeyField": {
+          "offset": 6,
+          "size": 2
+        },
+        "nRef": {
+          "offset": 0,
+          "size": 4
+        }
+      },
+      "size": 32
+    },
+    "Lookaside": {
+      "alignment": 8,
+      "fields": {
+        "anStat": {
+          "offset": 16,
+          "size": 12
+        },
+        "bDisable": {
+          "offset": 0,
+          "size": 4
+        },
+        "bMalloced": {
+          "offset": 8,
+          "size": 1
+        },
+        "nSlot": {
+          "offset": 12,
+          "size": 4
+        },
+        "pEnd": {
+          "offset": 80,
+          "size": 8
+        },
+        "pFree": {
+          "offset": 40,
+          "size": 8
+        },
+        "pInit": {
+          "offset": 32,
+          "size": 8
+        },
+        "pMiddle": {
+          "offset": 64,
+          "size": 8
+        },
+        "pSmallFree": {
+          "offset": 56,
+          "size": 8
+        },
+        "pSmallInit": {
+          "offset": 48,
+          "size": 8
+        },
+        "pStart": {
+          "offset": 72,
+          "size": 8
+        },
+        "pTrueEnd": {
+          "offset": 88,
+          "size": 8
+        },
+        "sz": {
+          "offset": 4,
+          "size": 2
+        },
+        "szTrue": {
+          "offset": 6,
+          "size": 2
+        }
+      },
+      "size": 96
+    },
+    "LookasideSlot": {
+      "alignment": 8,
+      "fields": {
+        "pNext": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 8
+    },
+    "Mem": {
+      "alignment": 8,
+      "fields": {
+        "db": {
+          "offset": 24,
+          "size": 8
+        },
+        "eSubtype": {
+          "offset": 23,
+          "size": 1
+        },
+        "enc": {
+          "offset": 22,
+          "size": 1
+        },
+        "flags": {
+          "offset": 20,
+          "size": 2
+        },
+        "n": {
+          "offset": 16,
+          "size": 4
+        },
+        "szMalloc": {
+          "offset": 32,
+          "size": 4
+        },
+        "u": {
+          "offset": 0,
+          "size": 8
+        },
+        "uTemp": {
+          "offset": 36,
+          "size": 4
+        },
+        "xDel": {
+          "offset": 48,
+          "size": 8
+        },
+        "z": {
+          "offset": 8,
+          "size": 8
+        },
+        "zMalloc": {
+          "offset": 40,
+          "size": 8
+        }
+      },
+      "size": 56
+    },
+    "Module": {
+      "alignment": 8,
+      "fields": {
+        "nRefModule": {
+          "offset": 16,
+          "size": 4
+        },
+        "pAux": {
+          "offset": 24,
+          "size": 8
+        },
+        "pEpoTab": {
+          "offset": 40,
+          "size": 8
+        },
+        "pModule": {
+          "offset": 0,
+          "size": 8
+        },
+        "xDestroy": {
+          "offset": 32,
+          "size": 8
+        },
+        "zName": {
+          "offset": 8,
+          "size": 8
+        }
+      },
+      "size": 48
+    },
+    "PreUpdate": {
+      "alignment": 8,
+      "fields": {
+        "aNew": {
+          "offset": 136,
+          "size": 8
+        },
+        "aRecord": {
+          "offset": 24,
+          "size": 8
+        },
+        "apDflt": {
+          "offset": 160,
+          "size": 8
+        },
+        "iBlobWrite": {
+          "offset": 60,
+          "size": 4
+        },
+        "iKey1": {
+          "offset": 64,
+          "size": 8
+        },
+        "iKey2": {
+          "offset": 72,
+          "size": 8
+        },
+        "iNewReg": {
+          "offset": 56,
+          "size": 4
+        },
+        "keyinfoSpace": {
+          "offset": 168,
+          "size": 32
+        },
+        "oldipk": {
+          "offset": 80,
+          "size": 56
+        },
+        "op": {
+          "offset": 16,
+          "size": 4
+        },
+        "pCsr": {
+          "offset": 8,
+          "size": 8
+        },
+        "pKeyinfo": {
+          "offset": 32,
+          "size": 8
+        },
+        "pNewUnpacked": {
+          "offset": 48,
+          "size": 8
+        },
+        "pPk": {
+          "offset": 152,
+          "size": 8
+        },
+        "pTab": {
+          "offset": 144,
+          "size": 8
+        },
+        "pUnpacked": {
+          "offset": 40,
+          "size": 8
+        },
+        "uKey": {
+          "offset": 168,
+          "size": 32
+        },
+        "v": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 200
+    },
+    "Savepoint": {
+      "alignment": 8,
+      "fields": {
+        "nDeferredCons": {
+          "offset": 8,
+          "size": 8
+        },
+        "nDeferredImmCons": {
+          "offset": 16,
+          "size": 8
+        },
+        "pNext": {
+          "offset": 24,
+          "size": 8
+        },
+        "zName": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 32
+    },
+    "ScanStatus": {
+      "alignment": 8,
+      "fields": {
+        "aAddrRange": {
+          "offset": 4,
+          "size": 24
+        },
+        "addrExplain": {
+          "offset": 0,
+          "size": 4
+        },
+        "addrLoop": {
+          "offset": 28,
+          "size": 4
+        },
+        "addrVisit": {
+          "offset": 32,
+          "size": 4
+        },
+        "iSelectID": {
+          "offset": 36,
+          "size": 4
+        },
+        "nEst": {
+          "offset": 40,
+          "size": 2
+        },
+        "zName": {
+          "offset": 48,
+          "size": 8
+        }
+      },
+      "size": 56
+    },
+    "Schema": {
+      "alignment": 8,
+      "fields": {
+        "cache_size": {
+          "offset": 116,
+          "size": 4
+        },
+        "enc": {
+          "offset": 113,
+          "size": 1
+        },
+        "file_format": {
+          "offset": 112,
+          "size": 1
+        },
+        "fkeyHash": {
+          "offset": 80,
+          "size": 24
+        },
+        "iGeneration": {
+          "offset": 4,
+          "size": 4
+        },
+        "idxHash": {
+          "offset": 32,
+          "size": 24
+        },
+        "pSeqTab": {
+          "offset": 104,
+          "size": 8
+        },
+        "schemaFlags": {
+          "offset": 114,
+          "size": 2
+        },
+        "schema_cookie": {
+          "offset": 0,
+          "size": 4
+        },
+        "tblHash": {
+          "offset": 8,
+          "size": 24
+        },
+        "trigHash": {
+          "offset": 56,
+          "size": 24
+        }
+      },
+      "size": 120
+    },
+    "Sqlite3Interrupt": {
+      "alignment": 8,
+      "fields": {
+        "isInterrupted": {
+          "offset": 0,
+          "size": 4
+        },
+        "notUsed1": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 8
+    },
+    "Sqlite3Trace": {
+      "alignment": 8,
+      "fields": {
+        "xLegacy": {
+          "offset": 0,
+          "size": 8
+        },
+        "xV2": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 8
+    },
+    "SubProgram": {
+      "alignment": 8,
+      "fields": {
+        "aOnce": {
+          "offset": 24,
+          "size": 8
+        },
+        "aOp": {
+          "offset": 0,
+          "size": 8
+        },
+        "nCsr": {
+          "offset": 16,
+          "size": 4
+        },
+        "nMem": {
+          "offset": 12,
+          "size": 4
+        },
+        "nOp": {
+          "offset": 8,
+          "size": 4
+        },
+        "pNext": {
+          "offset": 40,
+          "size": 8
+        },
+        "token": {
+          "offset": 32,
+          "size": 8
+        }
+      },
+      "size": 48
+    },
+    "SubrtnSig": {
+      "alignment": 8,
+      "fields": {
+        "bComplete": {
+          "offset": 4,
+          "size": 1
+        },
+        "iAddr": {
+          "offset": 20,
+          "size": 4
+        },
+        "iTable": {
+          "offset": 16,
+          "size": 4
+        },
+        "regReturn": {
+          "offset": 24,
+          "size": 4
+        },
+        "selId": {
+          "offset": 0,
+          "size": 4
+        },
+        "zAff": {
+          "offset": 8,
+          "size": 8
+        }
+      },
+      "size": 32
+    },
+    "Table": {
+      "alignment": 8,
+      "fields": {
+        "aCol": {
+          "offset": 8,
+          "size": 8
+        },
+        "aHx": {
+          "offset": 104,
+          "size": 16
+        },
+        "eTabType": {
+          "offset": 63,
+          "size": 1
+        },
+        "iPKey": {
+          "offset": 52,
+          "size": 2
+        },
+        "keyConf": {
+          "offset": 62,
+          "size": 1
+        },
+        "nCol": {
+          "offset": 54,
+          "size": 2
+        },
+        "nNVCol": {
+          "offset": 56,
+          "size": 2
+        },
+        "nRowLogEst": {
+          "offset": 58,
+          "size": 2
+        },
+        "nTabRef": {
+          "offset": 44,
+          "size": 4
+        },
+        "pCheck": {
+          "offset": 32,
+          "size": 8
+        },
+        "pIndex": {
+          "offset": 16,
+          "size": 8
+        },
+        "pSchema": {
+          "offset": 96,
+          "size": 8
+        },
+        "pTrigger": {
+          "offset": 88,
+          "size": 8
+        },
+        "szTabRow": {
+          "offset": 60,
+          "size": 2
+        },
+        "tabFlags": {
+          "offset": 48,
+          "size": 4
+        },
+        "tnum": {
+          "offset": 40,
+          "size": 4
+        },
+        "u": {
+          "offset": 64,
+          "size": 24
+        },
+        "u_tab_addColOffset": {
+          "offset": 64,
+          "size": 4
+        },
+        "u_tab_pDfltList": {
+          "offset": 80,
+          "size": 8
+        },
+        "u_tab_pFKey": {
+          "offset": 72,
+          "size": 8
+        },
+        "u_view_pSelect": {
+          "offset": 64,
+          "size": 8
+        },
+        "u_vtab_azArg": {
+          "offset": 72,
+          "size": 8
+        },
+        "u_vtab_nArg": {
+          "offset": 64,
+          "size": 4
+        },
+        "u_vtab_p": {
+          "offset": 80,
+          "size": 8
+        },
+        "zColAff": {
+          "offset": 24,
+          "size": 8
+        },
+        "zName": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 120
+    },
+    "UnpackedRecord": {
+      "alignment": 8,
+      "fields": {
+        "aMem": {
+          "offset": 8,
+          "size": 8
+        },
+        "default_rc": {
+          "offset": 30,
+          "size": 1
+        },
+        "eqSeen": {
+          "offset": 34,
+          "size": 1
+        },
+        "errCode": {
+          "offset": 31,
+          "size": 1
+        },
+        "n": {
+          "offset": 24,
+          "size": 4
+        },
+        "nField": {
+          "offset": 28,
+          "size": 2
+        },
+        "pKeyInfo": {
+          "offset": 0,
+          "size": 8
+        },
+        "r1": {
+          "offset": 32,
+          "size": 1
+        },
+        "r2": {
+          "offset": 33,
+          "size": 1
+        },
+        "u": {
+          "offset": 16,
+          "size": 8
+        }
+      },
+      "size": 40
+    },
+    "ValueList": {
+      "alignment": 8,
+      "fields": {
+        "pCsr": {
+          "offset": 0,
+          "size": 8
+        },
+        "pOut": {
+          "offset": 8,
+          "size": 8
+        }
+      },
+      "size": 16
+    },
+    "Vdbe": {
+      "alignment": 8,
+      "fields": {
+        "aColName": {
+          "offset": 152,
+          "size": 8
+        },
+        "aCounter": {
+          "offset": 212,
+          "size": 36
+        },
+        "aMem": {
+          "offset": 104,
+          "size": 8
+        },
+        "aOp": {
+          "offset": 136,
+          "size": 8
+        },
+        "aVar": {
+          "offset": 128,
+          "size": 8
+        },
+        "apArg": {
+          "offset": 112,
+          "size": 8
+        },
+        "apCsr": {
+          "offset": 120,
+          "size": 8
+        },
+        "btreeMask": {
+          "offset": 204,
+          "size": 4
+        },
+        "cacheCtr": {
+          "offset": 44,
+          "size": 4
+        },
+        "db": {
+          "offset": 0,
+          "size": 8
+        },
+        "eVdbeState": {
+          "offset": 199,
+          "size": 1
+        },
+        "errorAction": {
+          "offset": 196,
+          "size": 1
+        },
+        "expmask": {
+          "offset": 284,
+          "size": 4
+        },
+        "iCurrentTime": {
+          "offset": 72,
+          "size": 8
+        },
+        "iStatement": {
+          "offset": 64,
+          "size": 4
+        },
+        "lockMask": {
+          "offset": 208,
+          "size": 4
+        },
+        "minWriteFileFormat": {
+          "offset": 197,
+          "size": 1
+        },
+        "nChange": {
+          "offset": 56,
+          "size": 8
+        },
+        "nCursor": {
+          "offset": 40,
+          "size": 4
+        },
+        "nFkConstraint": {
+          "offset": 80,
+          "size": 8
+        },
+        "nFrame": {
+          "offset": 280,
+          "size": 4
+        },
+        "nMem": {
+          "offset": 36,
+          "size": 4
+        },
+        "nOp": {
+          "offset": 144,
+          "size": 4
+        },
+        "nOpAlloc": {
+          "offset": 148,
+          "size": 4
+        },
+        "nResAlloc": {
+          "offset": 194,
+          "size": 2
+        },
+        "nResColumn": {
+          "offset": 192,
+          "size": 2
+        },
+        "nStmtDefCons": {
+          "offset": 88,
+          "size": 8
+        },
+        "nStmtDefImmCons": {
+          "offset": 96,
+          "size": 8
+        },
+        "nVar": {
+          "offset": 32,
+          "size": 2
+        },
+        "pAuxData": {
+          "offset": 296,
+          "size": 8
+        },
+        "pDelFrame": {
+          "offset": 272,
+          "size": 8
+        },
+        "pFrame": {
+          "offset": 264,
+          "size": 8
+        },
+        "pFree": {
+          "offset": 256,
+          "size": 8
+        },
+        "pParse": {
+          "offset": 24,
+          "size": 8
+        },
+        "pProgram": {
+          "offset": 288,
+          "size": 8
+        },
+        "pResultRow": {
+          "offset": 160,
+          "size": 8
+        },
+        "pVList": {
+          "offset": 176,
+          "size": 8
+        },
+        "pVNext": {
+          "offset": 16,
+          "size": 8
+        },
+        "pc": {
+          "offset": 48,
+          "size": 4
+        },
+        "ppVPrev": {
+          "offset": 8,
+          "size": 8
+        },
+        "prepFlags": {
+          "offset": 198,
+          "size": 1
+        },
+        "rc": {
+          "offset": 52,
+          "size": 4
+        },
+        "startTime": {
+          "offset": 184,
+          "size": 8
+        },
+        "zErrMsg": {
+          "offset": 168,
+          "size": 8
+        },
+        "zSql": {
+          "offset": 248,
+          "size": 8
+        }
+      },
+      "size": 304
+    },
+    "VdbeCursor": {
+      "alignment": 8,
+      "fields": {
+        "aOffset": {
+          "offset": 80,
+          "size": 8
+        },
+        "aRow": {
+          "offset": 88,
+          "size": 8
+        },
+        "aType": {
+          "offset": 112,
+          "size": 4
+        },
+        "cacheStatus": {
+          "offset": 24,
+          "size": 4
+        },
+        "deferredMoveto": {
+          "offset": 3,
+          "size": 1
+        },
+        "eCurType": {
+          "offset": 0,
+          "size": 1
+        },
+        "iDb": {
+          "offset": 1,
+          "size": 1
+        },
+        "iHdrOffset": {
+          "offset": 56,
+          "size": 4
+        },
+        "isTable": {
+          "offset": 4,
+          "size": 1
+        },
+        "movetoTarget": {
+          "offset": 72,
+          "size": 8
+        },
+        "nField": {
+          "offset": 64,
+          "size": 2
+        },
+        "nHdrParsed": {
+          "offset": 66,
+          "size": 2
+        },
+        "nullRow": {
+          "offset": 2,
+          "size": 1
+        },
+        "pAltCursor": {
+          "offset": 32,
+          "size": 8
+        },
+        "pCache": {
+          "offset": 104,
+          "size": 8
+        },
+        "pKeyInfo": {
+          "offset": 48,
+          "size": 8
+        },
+        "payloadSize": {
+          "offset": 96,
+          "size": 4
+        },
+        "pgnoRoot": {
+          "offset": 60,
+          "size": 4
+        },
+        "seekHit": {
+          "offset": 6,
+          "size": 2
+        },
+        "seekResult": {
+          "offset": 28,
+          "size": 4
+        },
+        "seqCount": {
+          "offset": 16,
+          "size": 8
+        },
+        "szRow": {
+          "offset": 100,
+          "size": 4
+        },
+        "ub": {
+          "offset": 8,
+          "size": 8
+        },
+        "uc": {
+          "offset": 40,
+          "size": 8
+        }
+      },
+      "size": 112
+    },
+    "VdbeFrame": {
+      "alignment": 8,
+      "fields": {
+        "aMem": {
+          "offset": 24,
+          "size": 8
+        },
+        "aOnce": {
+          "offset": 40,
+          "size": 8
+        },
+        "aOp": {
+          "offset": 16,
+          "size": 8
+        },
+        "apCsr": {
+          "offset": 32,
+          "size": 8
+        },
+        "lastRowid": {
+          "offset": 56,
+          "size": 8
+        },
+        "nChange": {
+          "offset": 96,
+          "size": 8
+        },
+        "nChildCsr": {
+          "offset": 92,
+          "size": 4
+        },
+        "nChildMem": {
+          "offset": 88,
+          "size": 4
+        },
+        "nCursor": {
+          "offset": 72,
+          "size": 4
+        },
+        "nDbChange": {
+          "offset": 104,
+          "size": 8
+        },
+        "nMem": {
+          "offset": 84,
+          "size": 4
+        },
+        "nOp": {
+          "offset": 80,
+          "size": 4
+        },
+        "pAuxData": {
+          "offset": 64,
+          "size": 8
+        },
+        "pParent": {
+          "offset": 8,
+          "size": 8
+        },
+        "pc": {
+          "offset": 76,
+          "size": 4
+        },
+        "token": {
+          "offset": 48,
+          "size": 8
+        },
+        "v": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 112
+    },
+    "VdbeOp": {
+      "alignment": 8,
+      "fields": {
+        "opcode": {
+          "offset": 0,
+          "size": 1
+        },
+        "p1": {
+          "offset": 4,
+          "size": 4
+        },
+        "p2": {
+          "offset": 8,
+          "size": 4
+        },
+        "p3": {
+          "offset": 12,
+          "size": 4
+        },
+        "p4": {
+          "offset": 16,
+          "size": 8
+        },
+        "p4type": {
+          "offset": 1,
+          "size": 1
+        },
+        "p5": {
+          "offset": 2,
+          "size": 2
+        }
+      },
+      "size": 24
+    },
+    "VdbeOpList": {
+      "alignment": 1,
+      "fields": {
+        "opcode": {
+          "offset": 0,
+          "size": 1
+        },
+        "p1": {
+          "offset": 1,
+          "size": 1
+        },
+        "p2": {
+          "offset": 2,
+          "size": 1
+        },
+        "p3": {
+          "offset": 3,
+          "size": 1
+        }
+      },
+      "size": 4
+    },
+    "VdbeTxtBlbCache": {
+      "alignment": 8,
+      "fields": {
+        "cacheStatus": {
+          "offset": 20,
+          "size": 4
+        },
+        "colCacheCtr": {
+          "offset": 24,
+          "size": 4
+        },
+        "iCol": {
+          "offset": 16,
+          "size": 4
+        },
+        "iOffset": {
+          "offset": 8,
+          "size": 8
+        },
+        "pCValue": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 32
+    },
+    "sqlite3": {
+      "alignment": 8,
+      "fields": {
+        "aCollSeq": {
+          "offset": 616,
+          "size": 24
+        },
+        "aDb": {
+          "offset": 32,
+          "size": 8
+        },
+        "aDbStatic": {
+          "offset": 664,
+          "size": 64
+        },
+        "aExtension": {
+          "offset": 232,
+          "size": 8
+        },
+        "aFunc": {
+          "offset": 592,
+          "size": 24
+        },
+        "aLimit": {
+          "offset": 136,
+          "size": 52
+        },
+        "aModule": {
+          "offset": 544,
+          "size": 24
+        },
+        "aVTrans": {
+          "offset": 576,
+          "size": 8
+        },
+        "autoCommit": {
+          "offset": 101,
+          "size": 1
+        },
+        "bBenignMalloc": {
+          "offset": 104,
+          "size": 1
+        },
+        "busyHandler": {
+          "offset": 640,
+          "size": 24
+        },
+        "busyTimeout": {
+          "offset": 740,
+          "size": 4
+        },
+        "dbOptFlags": {
+          "offset": 96,
+          "size": 4
+        },
+        "dfltLockMode": {
+          "offset": 105,
+          "size": 1
+        },
+        "eOpenState": {
+          "offset": 113,
+          "size": 1
+        },
+        "enc": {
+          "offset": 100,
+          "size": 1
+        },
+        "errByteOffset": {
+          "offset": 84,
+          "size": 4
+        },
+        "errCode": {
+          "offset": 80,
+          "size": 4
+        },
+        "errMask": {
+          "offset": 88,
+          "size": 4
+        },
+        "flags": {
+          "offset": 48,
+          "size": 8
+        },
+        "iSysErrno": {
+          "offset": 92,
+          "size": 4
+        },
+        "init": {
+          "offset": 192,
+          "size": 16
+        },
+        "isTransactionSavepoint": {
+          "offset": 109,
+          "size": 1
+        },
+        "lastRowid": {
+          "offset": 56,
+          "size": 8
+        },
+        "lookaside": {
+          "offset": 408,
+          "size": 96
+        },
+        "mDbFlags": {
+          "offset": 44,
+          "size": 4
+        },
+        "mTrace": {
+          "offset": 110,
+          "size": 1
+        },
+        "mallocFailed": {
+          "offset": 103,
+          "size": 1
+        },
+        "mutex": {
+          "offset": 24,
+          "size": 8
+        },
+        "nAnalysisLimit": {
+          "offset": 736,
+          "size": 4
+        },
+        "nChange": {
+          "offset": 120,
+          "size": 8
+        },
+        "nDb": {
+          "offset": 40,
+          "size": 4
+        },
+        "nDeferredCons": {
+          "offset": 752,
+          "size": 8
+        },
+        "nDeferredImmCons": {
+          "offset": 760,
+          "size": 8
+        },
+        "nExtension": {
+          "offset": 228,
+          "size": 4
+        },
+        "nFpDigit": {
+          "offset": 114,
+          "size": 1
+        },
+        "nMaxSorterMmap": {
+          "offset": 188,
+          "size": 4
+        },
+        "nProgressOps": {
+          "offset": 536,
+          "size": 4
+        },
+        "nSavepoint": {
+          "offset": 744,
+          "size": 4
+        },
+        "nSchemaLock": {
+          "offset": 72,
+          "size": 4
+        },
+        "nSpill": {
+          "offset": 784,
+          "size": 8
+        },
+        "nSqlExec": {
+          "offset": 112,
+          "size": 1
+        },
+        "nStatement": {
+          "offset": 748,
+          "size": 4
+        },
+        "nTotalChange": {
+          "offset": 128,
+          "size": 8
+        },
+        "nVDestroy": {
+          "offset": 224,
+          "size": 4
+        },
+        "nVTrans": {
+          "offset": 540,
+          "size": 4
+        },
+        "nVdbeActive": {
+          "offset": 208,
+          "size": 4
+        },
+        "nVdbeExec": {
+          "offset": 220,
+          "size": 4
+        },
+        "nVdbeRead": {
+          "offset": 212,
+          "size": 4
+        },
+        "nVdbeWrite": {
+          "offset": 216,
+          "size": 4
+        },
+        "nextAutovac": {
+          "offset": 106,
+          "size": 1
+        },
+        "nextPagesize": {
+          "offset": 116,
+          "size": 4
+        },
+        "noSharedCache": {
+          "offset": 111,
+          "size": 1
+        },
+        "openFlags": {
+          "offset": 76,
+          "size": 4
+        },
+        "pAuthArg": {
+          "offset": 512,
+          "size": 8
+        },
+        "pAutovacPagesArg": {
+          "offset": 320,
+          "size": 8
+        },
+        "pCollNeededArg": {
+          "offset": 384,
+          "size": 8
+        },
+        "pCommitArg": {
+          "offset": 272,
+          "size": 8
+        },
+        "pDbData": {
+          "offset": 776,
+          "size": 8
+        },
+        "pDfltColl": {
+          "offset": 16,
+          "size": 8
+        },
+        "pDisconnect": {
+          "offset": 584,
+          "size": 8
+        },
+        "pErr": {
+          "offset": 392,
+          "size": 8
+        },
+        "pParse": {
+          "offset": 344,
+          "size": 8
+        },
+        "pProfileArg": {
+          "offset": 264,
+          "size": 8
+        },
+        "pProgressArg": {
+          "offset": 528,
+          "size": 8
+        },
+        "pRollbackArg": {
+          "offset": 288,
+          "size": 8
+        },
+        "pSavepoint": {
+          "offset": 728,
+          "size": 8
+        },
+        "pTraceArg": {
+          "offset": 248,
+          "size": 8
+        },
+        "pUpdateArg": {
+          "offset": 304,
+          "size": 8
+        },
+        "pVdbe": {
+          "offset": 8,
+          "size": 8
+        },
+        "pVfs": {
+          "offset": 0,
+          "size": 8
+        },
+        "pVtabCtx": {
+          "offset": 568,
+          "size": 8
+        },
+        "pWalArg": {
+          "offset": 360,
+          "size": 8
+        },
+        "pnBytesFreed": {
+          "offset": 768,
+          "size": 8
+        },
+        "suppressErr": {
+          "offset": 107,
+          "size": 1
+        },
+        "szMmap": {
+          "offset": 64,
+          "size": 8
+        },
+        "temp_store": {
+          "offset": 102,
+          "size": 1
+        },
+        "trace": {
+          "offset": 240,
+          "size": 8
+        },
+        "u1": {
+          "offset": 400,
+          "size": 8
+        },
+        "vtabOnConflict": {
+          "offset": 108,
+          "size": 1
+        },
+        "xAuth": {
+          "offset": 504,
+          "size": 8
+        },
+        "xAutovacDestr": {
+          "offset": 328,
+          "size": 8
+        },
+        "xAutovacPages": {
+          "offset": 336,
+          "size": 8
+        },
+        "xCollNeeded": {
+          "offset": 368,
+          "size": 8
+        },
+        "xCollNeeded16": {
+          "offset": 376,
+          "size": 8
+        },
+        "xCommitCallback": {
+          "offset": 280,
+          "size": 8
+        },
+        "xProfile": {
+          "offset": 256,
+          "size": 8
+        },
+        "xProgress": {
+          "offset": 520,
+          "size": 8
+        },
+        "xRollbackCallback": {
+          "offset": 296,
+          "size": 8
+        },
+        "xUpdateCallback": {
+          "offset": 312,
+          "size": 8
+        },
+        "xWalCallback": {
+          "offset": 352,
+          "size": 8
+        }
+      },
+      "size": 792
+    },
+    "sqlite3_context": {
+      "alignment": 8,
+      "fields": {
+        "argc": {
+          "offset": 42,
+          "size": 2
+        },
+        "argv": {
+          "offset": 48,
+          "size": 8
+        },
+        "enc": {
+          "offset": 40,
+          "size": 1
+        },
+        "iOp": {
+          "offset": 32,
+          "size": 4
+        },
+        "isError": {
+          "offset": 36,
+          "size": 4
+        },
+        "pFunc": {
+          "offset": 8,
+          "size": 8
+        },
+        "pMem": {
+          "offset": 16,
+          "size": 8
+        },
+        "pOut": {
+          "offset": 0,
+          "size": 8
+        },
+        "pVdbe": {
+          "offset": 24,
+          "size": 8
+        },
+        "skipFlag": {
+          "offset": 41,
+          "size": 1
+        }
+      },
+      "size": 48
+    },
+    "sqlite3_pcache_methods2": {
+      "alignment": 8,
+      "fields": {
+        "iVersion": {
+          "offset": 0,
+          "size": 4
+        },
+        "pArg": {
+          "offset": 8,
+          "size": 8
+        },
+        "xCachesize": {
+          "offset": 40,
+          "size": 8
+        },
+        "xCreate": {
+          "offset": 32,
+          "size": 8
+        },
+        "xDestroy": {
+          "offset": 88,
+          "size": 8
+        },
+        "xFetch": {
+          "offset": 56,
+          "size": 8
+        },
+        "xInit": {
+          "offset": 16,
+          "size": 8
+        },
+        "xPagecount": {
+          "offset": 48,
+          "size": 8
+        },
+        "xRekey": {
+          "offset": 72,
+          "size": 8
+        },
+        "xShrink": {
+          "offset": 96,
+          "size": 8
+        },
+        "xShutdown": {
+          "offset": 24,
+          "size": 8
+        },
+        "xTruncate": {
+          "offset": 80,
+          "size": 8
+        },
+        "xUnpin": {
+          "offset": 64,
+          "size": 8
+        }
+      },
+      "size": 104
+    },
+    "struct Sqlite3Config": {
+      "alignment": 8,
+      "fields": {
+        "bCoreMutex": {
+          "offset": 4,
+          "size": 1
+        },
+        "bExtraSchemaChecks": {
+          "offset": 9,
+          "size": 1
+        },
+        "bFullMutex": {
+          "offset": 5,
+          "size": 1
+        },
+        "bLocaltimeFault": {
+          "offset": 408,
+          "size": 4
+        },
+        "bMemstat": {
+          "offset": 0,
+          "size": 4
+        },
+        "bOpenUri": {
+          "offset": 6,
+          "size": 1
+        },
+        "bSmallMalloc": {
+          "offset": 8,
+          "size": 1
+        },
+        "bUseCis": {
+          "offset": 7,
+          "size": 1
+        },
+        "iOnceResetThreshold": {
+          "offset": 424,
+          "size": 4
+        },
+        "iPrngSeed": {
+          "offset": 432,
+          "size": 4
+        },
+        "inProgress": {
+          "offset": 344,
+          "size": 4
+        },
+        "isInit": {
+          "offset": 340,
+          "size": 4
+        },
+        "isMallocInit": {
+          "offset": 352,
+          "size": 4
+        },
+        "isMutexInit": {
+          "offset": 348,
+          "size": 4
+        },
+        "isPCacheInit": {
+          "offset": 356,
+          "size": 4
+        },
+        "m": {
+          "offset": 32,
+          "size": 64
+        },
+        "mnReq": {
+          "offset": 284,
+          "size": 4
+        },
+        "mutex": {
+          "offset": 96,
+          "size": 72
+        },
+        "mxMemdbSize": {
+          "offset": 392,
+          "size": 8
+        },
+        "mxMmap": {
+          "offset": 304,
+          "size": 8
+        },
+        "mxParserStack": {
+          "offset": 328,
+          "size": 4
+        },
+        "mxReq": {
+          "offset": 288,
+          "size": 4
+        },
+        "mxStrlen": {
+          "offset": 12,
+          "size": 4
+        },
+        "nHeap": {
+          "offset": 280,
+          "size": 4
+        },
+        "nLookaside": {
+          "offset": 24,
+          "size": 4
+        },
+        "nPage": {
+          "offset": 324,
+          "size": 4
+        },
+        "nRefInitMutex": {
+          "offset": 360,
+          "size": 4
+        },
+        "nStmtSpill": {
+          "offset": 28,
+          "size": 4
+        },
+        "neverCorrupt": {
+          "offset": 16,
+          "size": 4
+        },
+        "pHeap": {
+          "offset": 272,
+          "size": 8
+        },
+        "pInitMutex": {
+          "offset": 368,
+          "size": 8
+        },
+        "pLogArg": {
+          "offset": 384,
+          "size": 8
+        },
+        "pPage": {
+          "offset": 312,
+          "size": 8
+        },
+        "pcache2": {
+          "offset": 168,
+          "size": 104
+        },
+        "sharedCacheEnabled": {
+          "offset": 332,
+          "size": 4
+        },
+        "szLookaside": {
+          "offset": 20,
+          "size": 4
+        },
+        "szMmap": {
+          "offset": 296,
+          "size": 8
+        },
+        "szPage": {
+          "offset": 320,
+          "size": 4
+        },
+        "szPma": {
+          "offset": 336,
+          "size": 4
+        },
+        "szSorterRef": {
+          "offset": 428,
+          "size": 4
+        },
+        "xAltLocaltime": {
+          "offset": 416,
+          "size": 8
+        },
+        "xLog": {
+          "offset": 376,
+          "size": 8
+        },
+        "xTestCallback": {
+          "offset": 400,
+          "size": 8
+        }
+      },
+      "size": 440
+    },
+    "struct _ht": {
+      "alignment": 8,
+      "fields": {
+        "chain": {
+          "offset": 8,
+          "size": 8
+        },
+        "count": {
+          "offset": 0,
+          "size": 4
+        }
+      },
+      "size": 16
+    },
+    "struct sqlite3InitInfo": {
+      "alignment": 8,
+      "fields": {
+        "azInit": {
+          "offset": 8,
+          "size": 8
+        },
+        "busy": {
+          "offset": 5,
+          "size": 1
+        },
+        "iDb": {
+          "offset": 4,
+          "size": 1
+        },
+        "newTnum": {
+          "offset": 0,
+          "size": 4
+        }
+      },
+      "size": 16
+    },
+    "union MemValue": {
+      "alignment": 8,
+      "fields": {
+        "i": {
+          "offset": 0,
+          "size": 8
+        },
+        "nZero": {
+          "offset": 0,
+          "size": 4
+        },
+        "pDef": {
+          "offset": 0,
+          "size": 8
+        },
+        "r": {
+          "offset": 0,
+          "size": 8
+        },
+        "zPType": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 8
+    },
+    "union p4union": {
+      "alignment": 8,
+      "fields": {
+        "ai": {
+          "offset": 0,
+          "size": 8
+        },
+        "i": {
+          "offset": 0,
+          "size": 4
+        },
+        "p": {
+          "offset": 0,
+          "size": 8
+        },
+        "pColl": {
+          "offset": 0,
+          "size": 8
+        },
+        "pCtx": {
+          "offset": 0,
+          "size": 8
+        },
+        "pFunc": {
+          "offset": 0,
+          "size": 8
+        },
+        "pI64": {
+          "offset": 0,
+          "size": 8
+        },
+        "pIdx": {
+          "offset": 0,
+          "size": 8
+        },
+        "pKeyInfo": {
+          "offset": 0,
+          "size": 8
+        },
+        "pMem": {
+          "offset": 0,
+          "size": 8
+        },
+        "pProgram": {
+          "offset": 0,
+          "size": 8
+        },
+        "pReal": {
+          "offset": 0,
+          "size": 8
+        },
+        "pSubrtnSig": {
+          "offset": 0,
+          "size": 8
+        },
+        "pTab": {
+          "offset": 0,
+          "size": 8
+        },
+        "pVtab": {
+          "offset": 0,
+          "size": 8
+        },
+        "z": {
+          "offset": 0,
+          "size": 8
+        }
+      },
+      "size": 8
+    }
+  }
+}

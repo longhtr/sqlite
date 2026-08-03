@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-unpacked-record-allocation-and-decode",
+  "title": "UnpackedRecord connection allocation and record decode",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These functions allocate the contiguous UnpackedRecord/Mem workspace from the owning connection and decode a record header into bounded Mem fields using the serial-format helpers, including malformed payload nulling.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeAllocUnpackedRecord::line-4222",
+      "src/vdbeaux.c::function::sqlite3VdbeRecordUnpack::line-4242"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeAllocUnpackedRecord::behavior::assert::line-4227-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAllocUnpackedRecord::behavior::if::line-4230-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAllocUnpackedRecord::behavior::return::line-4230-column-12::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAllocUnpackedRecord::behavior::return::line-4234-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeRecordUnpack::behavior::assert::line-4256-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeRecordUnpack::behavior::conditional::line-4257-column-9::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeRecordUnpack::behavior::while::line-4260-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeRecordUnpack::behavior::conditional::line-4263-column-12::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeRecordUnpack::behavior::if::line-4271-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeRecordUnpack::behavior::break::line-4271-column-28::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeRecordUnpack::behavior::if::line-4274-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeRecordUnpack::behavior::assert::line-4275-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeRecordUnpack::behavior::assert::line-4283-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "KeyInfo construction/reference ownership",
+      "Record comparison and collation dispatch",
+      "Record-header creation",
+      "Caller release beyond connection free"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-record-serial-type-length-and-value-decode",
+      "key-info-reference-ownership",
+      "connection-allocation-for-vdbe-growth",
+      "vdbe-builder-state-representations"
+    ],
+    "external_source_responsibilities": [
+      "Source-equivalent getVarint32 and MemSetNull helpers"
+    ],
+    "caller_closure": "Both active allocation and unpack functions are assigned. Exact KeyInfo/UnpackedRecord/Mem owners and serial/varint dependencies are covered; comparison callers remain follow-on work."
+  },
+  "contracts": {
+    "inputs": [
+      "KeyInfo with nKeyField/db; encoded record byte count/pointer and allocated UnpackedRecord capacity"
+    ],
+    "outputs": [
+      "contiguous record plus nKeyField+1 Mem capacity; decoded fields, count, and default_rc=0"
+    ],
+    "ownership": "The allocation is one connection-owned block; aMem is an interior aligned view and must not be separately freed. Decoded text/blob values are ephemeral views into caller-owned record bytes.",
+    "state_and_results": "Allocator publishes pKeyInfo, aligned aMem, and capacity. Unpack initializes enc/db/szMalloc/z before each serial decode, stops at header/data/capacity bounds, and publishes actual nField.",
+    "locks_callbacks_io": "No callback or I/O; allocation caller holds connection mutex.",
+    "failure_and_continuation": "Allocation OOM returns null with sticky connection OOM and no partial owner. If declared field payload exceeds logical nKey, the last decoded field is overwritten with NULL before publishing count."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeAllocUnpackedRecord::line-4222",
+      "relation": "source-unpacked-record-allocation-or-decode-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::function::allocateUnpackedRecord"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeRecordUnpack::line-4242",
+      "relation": "source-unpacked-record-allocation-or-decode-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_record.zig::function::unpackRecord"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "ROUND8P is the identical `(size+7)&~7` interior offset with an explicit Zig alignment assertion.",
+    "The source pointer correction in malformed-record cleanup always selects the last decoded field and is expressed directly as field_count-1."
+  ],
+  "oracle": {
+    "protocol": "The shared worker allocates a four-field workspace and checks one-block interior layout, disables lookaside and forces allocation OOM, decodes a mixed signed/text/NULL record, then decodes a logically truncated 64-bit field from physically safe fixture storage and verifies NULL overwrite. C and Zig compare 363 observations.",
+    "internal_observations": [
+      "allocation/null and sticky OOM",
+      "capacity nKeyField+1",
+      "pKeyInfo identity",
+      "aMem rounded interior offset",
+      "decoded field count/default_rc",
+      "signed scalar and ephemeral text fields",
+      "malformed final-field NULL and cleared ownership state"
+    ],
+    "normalization": "Interior pointer normalizes to exact expected offset; external addresses are not compared. Flags, values, counts, text pointer identity, and OOM state are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "No-lookaside first allocation failure returns null and sets sticky OOM without partial publication.",
+    "io_crash_concurrency": "No I/O/callback; connection mutex remains caller obligation.",
+    "malformed_input": "Logical truncation is exercised with physically initialized backing bytes, matching source corrupt-record NULL repair without undefined fixture access.",
+    "continuation": "Successful blocks are connection-freed once; decoded values remain valid until input bytes expire; OOM is explicitly cleared before continuation.",
+    "performance": "Single contiguous allocation and one header pass preserve source shape and avoid per-field allocation.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_record.zig",
+    "native_call_path": "Symbolic worker reaches exact allocator, KeyInfo, UnpackedRecord, Mem, varint, and serial decode paths. Comparison/opcode callers remain partially handwritten.",
+    "bounded_owner_retired": "No. Integrate record comparison and index opcode consumers."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires record comparison/opcode integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Port and integrate record comparison families.",
+    "Connect index/search opcodes to exact unpacked records.",
+    "Independent fidelity review remains open."
+  ]
+}

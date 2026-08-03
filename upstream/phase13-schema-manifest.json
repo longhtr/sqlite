@@ -1,0 +1,37 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-13-schema-simple-ddl-slice",
+  "profile": "sqlite-3.53.4-create-drop-table-v1",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 20,
+  "public_symbol_count_added": 0,
+  "total_exported_sqlite_symbol_count": 44,
+  "corpus": {"manifest": "tests/fixtures/sql-schema/manifest.json", "cases": 8, "differential_observations": 8},
+  "supported": {
+    "statements": ["CREATE TABLE", "CREATE TABLE IF NOT EXISTS", "DROP TABLE", "DROP TABLE IF EXISTS"],
+    "identifiers": "unquoted table names",
+    "schema": ["sqlite_schema leaf catalog", "canonical five-column records", "schema cookie", "root-page allocation", "freelist return"],
+    "storage": ["atomic catalog/root update", "DELETE/FULL rollback journal", "WAL commit and checkpoint"],
+    "limits": ["non-auto-vacuum", "schema remains one leaf page", "column definitions preserved but not yet resolved"]
+  },
+  "evidence": {
+    "sql_api_oracle_differential": "pass-8-ddl-lifecycle-observations",
+    "rollback": "pass-atomic-create-drop-and-continuation",
+    "wal": "pass-commit-reader-checkpoint",
+    "vfs_faults": "pass-open-lock-write-sync-delete",
+    "oom": "pass-all-btree-schema-allocation-sites",
+    "exports": "pass-exact-44-symbol-partition",
+    "private_layouts": "none"
+  },
+  "not_yet_complete": ["ALTER TABLE", "indexes", "views and triggers", "auto-vacuum DDL", "multi-page sqlite_schema", "table scan/name resolution", "generated DML"],
+  "slice_exit_gates": {
+    "native_tokenizer_to_vdbe_path": "pass",
+    "sql_api_oracle_differential": "pass",
+    "program_diagnostics": "pass",
+    "oom_and_io": "pass",
+    "rollback_and_wal": "pass"
+  }
+}

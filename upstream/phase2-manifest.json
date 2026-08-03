@@ -1,0 +1,68 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-2-memory-and-mutex-infrastructure",
+  "profile": "sqlite-3.53.4-core-default-threadsafe1",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 97,
+  "slices": {
+    "allocator_methods": {
+      "status": "pass",
+      "implementation": "src/core/memory.zig",
+      "scope": ["default system backend", "copied sqlite3_mem_methods adapter", "malloc/free/realloc/size/roundup/init/shutdown"],
+      "differential": "infrastructure-differential",
+      "oom": "pass-bounded-one-shot-and-sticky"
+    },
+    "memory_statistics_and_limits": {
+      "status": "pass",
+      "implementation": "src/core/memory.zig",
+      "scope": ["memory used/highwater", "allocation count", "maximum request", "soft limit", "hard limit"],
+      "differential": "infrastructure-differential"
+    },
+    "lookaside": {
+      "status": "pass",
+      "implementation": "src/core/lookaside.zig",
+      "scope": ["two-size partition", "eligibility", "fallback", "statistics", "busy reconfiguration", "reallocation"],
+      "default": {"slot_size": 1200, "slot_count": 40},
+      "differential": "infrastructure-differential",
+      "oom": "pass-bounded-one-shot-and-sticky"
+    },
+    "scratch_and_temp": {
+      "status": "pass",
+      "disposition": "no dedicated scratch allocator in pinned profile",
+      "evidence": ["preprocessor absence", "deprecated scratch status values remain zero", "temporary heap requests use the configured allocator"]
+    },
+    "mutex": {
+      "status": "pass",
+      "implementation": "src/core/mutex.zig",
+      "compile_time_mode": "SQLITE_THREADSAFE=1",
+      "runtime_modes": ["single-thread", "multi-thread", "serialized"],
+      "scope": ["fast", "recursive", "stable static identities", "copied sqlite3_mutex_methods adapter", "ownership assertions"],
+      "differential": "infrastructure-differential",
+      "race": "pass-first-target-pthread-contention-and-initialization-smoke",
+      "oom": "pass-dynamic-one-shot-and-sticky"
+    },
+    "global_initialization": {
+      "status": "pass",
+      "implementation": "src/core/global.zig",
+      "scope": ["concurrent serialization", "same-thread recursion", "failure unwind", "idempotent initialize/shutdown", "initialization-only reconfiguration", "ordered subsystem hooks"],
+      "differential": "infrastructure-differential",
+      "loop_bound": 100,
+      "race_threads": 8
+    }
+  },
+  "phase_owned_deferrals": [
+    {"item": "public allocator, mutex, status, configuration, initialize, and shutdown ABI exports", "owning_phase": "phase-17"},
+    {"item": "connection OOM propagation into Parse/VDBE interruption state", "owning_phase": "phase-11-and-phase-12"},
+    {"item": "page-cache, VFS, memdb, and builtin-function initialization hook bodies", "owning_phase": "phase-4-phase-5-and-later", "reason": "the Phase 2 coordinator preserves hook ordering without claiming those unported subsystems"},
+    {"item": "THREADSAFE=0 and THREADSAFE=2 compile-time profiles", "owning_phase": "future-profile-expansion", "reason": "not declared by the pinned profile"}
+  ],
+  "exit_gates": {
+    "allocator_statistics_lookaside_configuration_fault_parity": "pass",
+    "initialization_shutdown_reconfiguration_loops": "pass",
+    "declared_mutex_modes_first_target_smoke_and_race": "pass",
+    "source_mapping": "pass"
+  }
+}

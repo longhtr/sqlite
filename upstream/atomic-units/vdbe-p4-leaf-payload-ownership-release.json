@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-p4-leaf-payload-ownership-release",
+  "title": "VDBE P4 ephemeral-function, Mem, and function-context leaf release",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These three source helpers are the leaf destructors used by freeP4 for P4_FUNCDEF, P4_MEM, and P4_FUNCCTX. Their owned fields and SQLITE_FUNC_EPHEM flag completely determine whether nested allocations and functions are consumed.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      },
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      },
+      {
+        "path": "src/vdbeInt.h",
+        "sha256": "60f87bb47cae281d4a9d3aecbdecd39a77fe91f7c5266d5e9985cf8b75ea44b5"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::freeEphemeralFunction::line-1358",
+      "src/vdbeaux.c::function::freeP4Mem::line-1368",
+      "src/vdbeaux.c::function::freeP4FuncCtx::line-1372",
+      "src/sqliteInt.h::macro::SQLITE_FUNC_EPHEM::line-2037",
+      "src/sqliteInt.h::member::funcFlags::line-1977",
+      "src/vdbeInt.h::member::pFunc::line-397",
+      "src/vdbeInt.h::member::szMalloc::line-247",
+      "src/vdbeInt.h::member::zMalloc::line-249"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::freeEphemeralFunction::behavior::assert::line-1359-column-3::ordinal-0",
+      "src/vdbeaux.c::function::freeEphemeralFunction::behavior::if::line-1360-column-3::ordinal-0",
+      "src/vdbeaux.c::function::freeP4Mem::behavior::if::line-1369-column-3::ordinal-0",
+      "src/vdbeaux.c::function::freeP4FuncCtx::behavior::assert::line-1373-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Top-level freeP4 type dispatch",
+      "KeyInfo/VTab/TableRef/SubrtnSig owner families",
+      "General Mem release semantics outside P4_MEM",
+      "P4 attachment/replacement"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "connection-allocation-for-vdbe-growth",
+      "vdbe-builder-state-representations"
+    ],
+    "external_source_responsibilities": [
+      "Callers provide exact P4-owned FuncDef/Mem/Context allocations"
+    ],
+    "caller_closure": "All active leaf destructor functions and discriminating fields/flag are assigned. Top-level P4 dispatch and remaining composite owner families remain follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "connection owner and live FuncDef, P4 Mem, or function Context with a live pFunc",
+      "ephemeral bit, Mem szMalloc/zMalloc, or Context pFunc"
+    ],
+    "outputs": [
+      "conditional ephemeral FuncDef free; nested Mem allocation plus Mem free; nested ephemeral function plus Context free"
+    ],
+    "ownership": "Non-ephemeral FuncDef remains externally owned. Ephemeral FuncDef is consumed. P4_MEM always consumes Mem and consumes zMalloc exactly when szMalloc is nonzero. P4_FUNCCTX consumes its ephemeral pFunc when applicable and always consumes Context.",
+    "state_and_results": "No return value; free-list ownership transitions are final. FuncDef and Context.pFunc are required live owners, matching the source dereference contract.",
+    "locks_callbacks_io": "Caller holds connection mutex. No callback or I/O.",
+    "failure_and_continuation": "No allocation or OOM. Inputs must be live allocations of the expected P4 type; final owners become inaccessible."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::freeEphemeralFunction::line-1358",
+      "relation": "source-p4-leaf-owner-or-discriminator-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::freeEphemeralFunction"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::freeP4Mem::line-1368",
+      "relation": "source-p4-leaf-owner-or-discriminator-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::freeP4Mem"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::freeP4FuncCtx::line-1372",
+      "relation": "source-p4-leaf-owner-or-discriminator-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::freeP4FunctionContext"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::macro::SQLITE_FUNC_EPHEM::line-2037",
+      "relation": "source-p4-leaf-owner-or-discriminator-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::constant::function_flag_ephemeral"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::funcFlags::line-1977",
+      "relation": "source-p4-leaf-owner-or-discriminator-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::FuncDef.funcFlags"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::pFunc::line-397",
+      "relation": "source-p4-leaf-owner-or-discriminator-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Context.pFunc"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::szMalloc::line-247",
+      "relation": "source-p4-leaf-owner-or-discriminator-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Mem.szMalloc"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::zMalloc::line-249",
+      "relation": "source-p4-leaf-owner-or-discriminator-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Mem.zMalloc"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "SQLITE_FUNC_EPHEM is an exact u32 Zig constant used against FuncDef.funcFlags.",
+    "C char*/void* free casts become exact aligned opaque-pointer casts into the same connection allocator."
+  ],
+  "oracle": {
+    "protocol": "The shared worker allocates required live static and ephemeral FuncDef owners, Context values with both static and ephemeral pFunc, and P4 Mem values both with and without owned zMalloc. C and Zig invoke each leaf helper and compare lookaside free-list membership for every consumed and retained owner in a 363-observation trace.",
+    "internal_observations": [
+      "static FuncDef remains allocated",
+      "ephemeral FuncDef is returned",
+      "Context is always returned; its FuncDef is returned only when ephemeral",
+      "Mem is always returned; zMalloc is returned exactly when szMalloc is nonzero"
+    ],
+    "normalization": "Addresses normalize to membership in the owning connection free lists. Type flags and consumed-owner booleans are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "No allocation. Every assigned nested and outer owner is observed returned exactly once.",
+    "io_crash_concurrency": "No I/O/callback; caller mutex remains integration obligation.",
+    "malformed_input": "Source assumes valid P4 type/object pair; helper tests use exact layouts and live allocations.",
+    "continuation": "Static function remains usable until test cleanup; consumed owners are removed from worker tracking.",
+    "performance": "Constant-time flag checks and at most two connection frees preserve source shape.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding P4 lifecycle closure",
+    "native_call_path": "Symbolic worker reaches exact FuncDef/Context/Mem/Sqlite3 owners. Top-level freeP4 is not yet connected.",
+    "bounded_owner_retired": "No. Complete remaining P4 families and dispatch first."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires top-level P4/destruction integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Port remaining P4 owner families and top-level freeP4 dispatch.",
+    "Integrate P4 replacement, operation-array destruction, and VDBE deletion.",
+    "Independent fidelity review remains open."
+  ]
+}

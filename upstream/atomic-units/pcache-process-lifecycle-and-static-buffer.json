@@ -1,0 +1,341 @@
+{
+  "schema_version": 1,
+  "id": "pcache-process-lifecycle-and-static-buffer",
+  "title": "Default/configured PCache lifecycle and pcache1 static buffer setup",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These are the process PCache method owner, active pcache1 lifecycle/static-buffer state, default selection, init/shutdown, and post-OS buffer setup executed by sqlite3_initialize/shutdown.",
+    "source_files": [
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      },
+      {
+        "path": "src/pcache.c",
+        "sha256": "084c50d96fcb880ff5513ec1f203ef1eaa15b29fe75c1ca4e572315f5c141ecc"
+      },
+      {
+        "path": "src/pcache1.c",
+        "sha256": "b5bfbbac157325f96f0023c0856533cd6ce94180bcbbd1d4069e5a60a242de3d"
+      }
+    ],
+    "source_entity_ids": [
+      "src/sqliteInt.h::member::pcache2::line-4303",
+      "src/pcache1.c::struct::PgFreeslot::line-209",
+      "src/pcache1.c::member::pNext::line-210",
+      "src/pcache1.c::struct::PCacheGlobal::line-216",
+      "src/pcache1.c::member::grp::line-217",
+      "src/pcache1.c::member::isInit::line-224",
+      "src/pcache1.c::member::separateCache::line-225",
+      "src/pcache1.c::member::nInitPage::line-226",
+      "src/pcache1.c::member::szSlot::line-227",
+      "src/pcache1.c::member::nSlot::line-228",
+      "src/pcache1.c::member::nReserve::line-229",
+      "src/pcache1.c::member::pStart::line-230",
+      "src/pcache1.c::member::pEnd::line-230",
+      "src/pcache1.c::member::mutex::line-232",
+      "src/pcache1.c::member::pFree::line-233",
+      "src/pcache1.c::member::nFreeSlot::line-234",
+      "src/pcache1.c::member::bUnderPressure::line-235",
+      "src/pcache1.c::variable::pcache1_g::line-236",
+      "src/pcache1.c::macro::pcache1::line-243",
+      "src/pcache.c::function::sqlite3PcacheInitialize::line-299",
+      "src/pcache.c::function::sqlite3PcacheShutdown::line-309",
+      "src/pcache1.c::function::sqlite3PCacheBufferSetup::line-271",
+      "src/pcache1.c::function::pcache1Init::line-697",
+      "src/pcache1.c::function::pcache1Shutdown::line-750",
+      "src/pcache1.c::function::sqlite3PCacheSetDefault::line-1194",
+      "src/pcache1.c::function::sqlite3HeaderSizePcache1::line-1216",
+      "src/pcache1.c::function::sqlite3Pcache1Mutex::line-1222"
+    ],
+    "behavioral_block_ids": [
+      "src/pcache.c::function::sqlite3PcacheInitialize::behavior::if::line-300-column-3::ordinal-0",
+      "src/pcache.c::function::sqlite3PcacheInitialize::behavior::assert::line-305-column-5::ordinal-0",
+      "src/pcache.c::function::sqlite3PcacheInitialize::behavior::return::line-307-column-3::ordinal-0",
+      "src/pcache.c::function::sqlite3PcacheShutdown::behavior::if::line-310-column-3::ordinal-0",
+      "src/pcache1.c::function::sqlite3PCacheBufferSetup::behavior::if::line-272-column-3::ordinal-0",
+      "src/pcache1.c::function::sqlite3PCacheBufferSetup::behavior::if::line-274-column-5::ordinal-0",
+      "src/pcache1.c::function::sqlite3PCacheBufferSetup::behavior::if::line-275-column-5::ordinal-0",
+      "src/pcache1.c::function::sqlite3PCacheBufferSetup::behavior::conditional::line-279-column-24::ordinal-0",
+      "src/pcache1.c::function::sqlite3PCacheBufferSetup::behavior::while::line-283-column-5::ordinal-0",
+      "src/pcache1.c::function::pcache1Init::behavior::assert::line-699-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Init::behavior::if::line-727-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Init::behavior::if::line-732-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Init::behavior::return::line-742-column-3::ordinal-0",
+      "src/pcache1.c::function::pcache1Shutdown::behavior::assert::line-752-column-3::ordinal-0",
+      "src/pcache1.c::function::sqlite3HeaderSizePcache1::behavior::return::line-1216-column-52::ordinal-0",
+      "src/pcache1.c::function::sqlite3Pcache1Mutex::behavior::return::line-1223-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Per-database PCache object creation/fetch/unpin/rekey/truncate/destroy",
+      "Page allocation from heap/static slots after lifecycle setup",
+      "Application-defined sqlite3_pcache_methods2 callback transport beyond lifecycle selection",
+      "PCache status counters and release-memory behavior"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "mutex-static-and-dynamic-allocation",
+      "mutex-method-selection-and-lifecycle",
+      "global-allocator-state-representations"
+    ],
+    "external_source_responsibilities": [
+      "Final typed sqlite3_pcache_methods2 configuration API"
+    ],
+    "caller_closure": "Default lifecycle, layer state, mutex-mode choice, initial-page mode, static free-list construction, and shutdown are concrete production owners; native Cache and production Pager consume the shared lifecycle for static slots, heap overflow accounting, and PCache status locking."
+  },
+  "contracts": {
+    "inputs": [
+      "Core mutex mode, configured static page pointer/size/count, and selected default/custom PCache lifecycle"
+    ],
+    "outputs": [
+      "Initialized PCache process state and optional rounded static-slot free list, or exact lifecycle result"
+    ],
+    "ownership": "Configured static page memory remains caller-owned. Lifecycle borrows it and writes intrusive FreeSlot links. Process PCache state owns no heap allocation.",
+    "state_and_results": "Default methods are selected when absent. separateCache and nInitPage follow core-mutex/static-page rules. Buffer setup rounds size down to eight, computes reserve, clears pressure, and links exactly n slots.",
+    "locks_callbacks_io": "Initialization borrows STATIC_LRU/STATIC_PMEM identities when core mutexing is active. Buffer setup is serialized by global initialization. No I/O.",
+    "failure_and_continuation": "Lifecycle init result propagates. Successful PCache state survives a later OS failure and is skipped on retry; shutdown clears all pcache1 state."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pcache2::line-4303",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::Lifecycle"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::struct::PgFreeslot::line-209",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::FreeSlot"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::pNext::line-210",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::FreeSlot.next"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::struct::PCacheGlobal::line-216",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::Lifecycle"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::grp::line-217",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::Lifecycle"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::isInit::line-224",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.initialized"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::separateCache::line-225",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.separate_cache"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nInitPage::line-226",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.initial_pages"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::szSlot::line-227",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.slot_size"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nSlot::line-228",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.slot_count"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nReserve::line-229",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.reserve_count"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::pStart::line-230",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.start"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::pEnd::line-230",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.end"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::mutex::line-232",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.static_mutexes"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::pFree::line-233",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.free"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::nFreeSlot::line-234",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.free_slot_count"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::member::bUnderPressure::line-235",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.under_pressure"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::variable::pcache1_g::line-236",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::Lifecycle"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::macro::pcache1::line-243",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::constant::Lifecycle"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache.c::function::sqlite3PcacheInitialize::line-299",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Lifecycle.initialize"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache.c::function::sqlite3PcacheShutdown::line-309",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Lifecycle.shutdown"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::sqlite3PCacheBufferSetup::line-271",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Lifecycle.setupBuffer"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Init::line-697",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Lifecycle.initialize"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Shutdown::line-750",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Lifecycle.shutdown"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::sqlite3PCacheSetDefault::line-1194",
+      "relation": "pcache-lifecycle-state-or-operation",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Lifecycle.initialize"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::sqlite3HeaderSizePcache1::line-1216",
+      "relation": "pcache-layout-or-status-mutex-query",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.pageLayout"
+      ]
+    },
+    {
+      "source_entity_id": "src/pcache1.c::function::sqlite3Pcache1Mutex::line-1222",
+      "relation": "pcache-layout-or-status-mutex-query",
+      "zig_declaration_ids": [
+        "src/core/page_cache.zig::field::Lifecycle.slot_mutex"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Private PCacheGlobal lifecycle/static-buffer fields are consolidated into page_cache.Lifecycle; PGroup and per-cache accounting belong to the cross-cache LRU unit.",
+    "Two source static mutex pointers are represented by static_mutexes plus the process mutex dependency; their stable identities are owned by mutex.process_static_mutexes.",
+    "sqlite3_pcache_methods2 default selection becomes a concrete Lifecycle production owner; final custom PCache method transport remains open."
+  ],
+  "oracle": {
+    "protocol": "Native lifecycle tests compare separate/unified mode, initial pages, max pinned, eight-byte slot rounding, reserve threshold, intrusive free-list length/order bounds, null storage, pressure reset, and shutdown. Global tests prove production PCache ordering, partial failure preservation, retry skip, and reverse shutdown. Infrastructure differential compares static-page configuration through global initialization.",
+    "internal_observations": [
+      "default initialization and mode",
+      "STATIC_LRU/PMEM selection",
+      "initial page setting",
+      "slot size/count/free/reserve/start/end",
+      "intrusive free-list count",
+      "post-init setup order",
+      "late OS failure retention",
+      "shutdown clearing"
+    ],
+    "normalization": "Private struct layout and mutex addresses are normalized; booleans, counts, pointer range, free-list topology, callback order, and results are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": true,
+    "oom": "Lifecycle allocates no heap. Per-page and custom callback OOM remain outside scope.",
+    "io_crash_concurrency": "No I/O. Global serialization and static mutex mode are tested; per-cache contention remains outside scope.",
+    "malformed_input": "Null storage, zero count, sub-valid manager settings, and size rounding are tested.",
+    "continuation": "Late failure retry and shutdown clearing are tested.",
+    "performance": "Static free-list setup is one linear pass matching source; native Cache consumes it through the shared process lifecycle.",
+    "commands": [
+      "zig test src/core/page_cache.zig -lc",
+      "zig test src/core/global.zig -lc",
+      "zig build infrastructure-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/page_cache.zig Lifecycle and src/core/global.zig process_pcache",
+    "native_call_path": "process_coordinator initializes page_cache.process_lifecycle before OS and sets its static buffer after OS; Pager-created Cache owners consume the active lifecycle and return slots before shutdown.",
+    "bounded_owner_retired": "The process PCache hook is no longer a no-op; one process_pcache owner supplies lifecycle state."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Must verify source field closure, custom method boundary, static pointer safety, free-list topology, mode rules, and independent lifecycle/allocation review."
+  },
+  "known_blockers": [
+    "Static slots and signed nInitPage bulk-local allocation policy are consumed by production Cache; custom PCache methods remain separate.",
+    "Application-defined PCache methods and independent review remain open."
+  ]
+}

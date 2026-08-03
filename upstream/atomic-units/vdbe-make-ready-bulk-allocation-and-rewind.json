@@ -1,0 +1,356 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-make-ready-bulk-allocation-and-rewind",
+  "title": "VDBE MakeReady bulk allocation, Parse transfer, and rewind",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "MakeReady is the one-way packaging boundary from Parse-owned builder metadata to execution-ready Vdbe arrays. ReusableSpace/allocSpace, Mem initialization, rewind, transferred VList, array/count fields, and execution defaults form one inseparable ownership unit.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      },
+      {
+        "path": "src/vdbeInt.h",
+        "sha256": "60f87bb47cae281d4a9d3aecbdecd39a77fe91f7c5266d5e9985cf8b75ea44b5"
+      },
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::struct::ReusableSpace::line-2550",
+      "src/vdbeaux.c::function::allocSpace::line-2570",
+      "src/vdbeaux.c::function::initMemArray::line-2155",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::line-2647",
+      "src/vdbeaux.c::function::sqlite3VdbeRewind::line-2593",
+      "src/vdbeaux.c::member::pSpace::line-2551",
+      "src/vdbeaux.c::member::nFree::line-2552",
+      "src/vdbeaux.c::member::nNeeded::line-2553",
+      "src/vdbeInt.h::member::nVar::line-462",
+      "src/vdbeInt.h::member::nMem::line-463",
+      "src/vdbeInt.h::member::nCursor::line-464",
+      "src/vdbeInt.h::member::cacheCtr::line-465",
+      "src/vdbeInt.h::member::pc::line-466",
+      "src/vdbeInt.h::member::rc::line-467",
+      "src/vdbeInt.h::member::iStatement::line-469",
+      "src/vdbeInt.h::member::nFkConstraint::line-471",
+      "src/vdbeInt.h::member::aMem::line-474",
+      "src/vdbeInt.h::member::apArg::line-475",
+      "src/vdbeInt.h::member::apCsr::line-476",
+      "src/vdbeInt.h::member::aVar::line-477",
+      "src/vdbeInt.h::member::nResColumn::line-497",
+      "src/vdbeInt.h::member::errorAction::line-499",
+      "src/vdbeInt.h::member::minWriteFileFormat::line-500",
+      "src/vdbeInt.h::member::usesStmtJournal::line-506",
+      "src/vdbeInt.h::member::pFree::line-518",
+      "src/vdbeInt.h::member::pVList::line-488",
+      "src/sqliteInt.h::member::pVList::line-3987"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::initMemArray::behavior::assert::line-2156-column-3::ordinal-0",
+      "src/vdbeaux.c::function::initMemArray::behavior::if::line-2157-column-3::ordinal-0",
+      "src/vdbeaux.c::function::initMemArray::behavior::do::line-2158-column-5::ordinal-0",
+      "src/vdbeaux.c::function::allocSpace::behavior::assert::line-2575-column-3::ordinal-0",
+      "src/vdbeaux.c::function::allocSpace::behavior::if::line-2576-column-3::ordinal-0",
+      "src/vdbeaux.c::function::allocSpace::behavior::if::line-2578-column-5::ordinal-0",
+      "src/vdbeaux.c::function::allocSpace::behavior::assert::line-2585-column-3::ordinal-0",
+      "src/vdbeaux.c::function::allocSpace::behavior::return::line-2586-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeRewind::behavior::assert::line-2597-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeRewind::behavior::assert::line-2598-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeRewind::behavior::assert::line-2604-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::assert::line-2659-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::assert::line-2660-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::assert::line-2661-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::assert::line-2662-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::assert::line-2663-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::assert::line-2664-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::assert::line-2668-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::if::line-2680-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::assert::line-2688-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::assert::line-2690-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::assert::line-2691-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::if::line-2695-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::if::line-2696-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::if::line-2717-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::if::line-2720-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeMakeReady::behavior::if::line-2731-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "P4 ownership and operation-array destruction",
+      "Runtime cursor opening/closing and Mem value destruction",
+      "Opcode execution",
+      "Final Parse destruction and production compiler migration"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-creation-connection-linkage-and-parse-ownership",
+      "vdbe-final-label-fixup-and-program-flags",
+      "vdbe-builder-state-representations",
+      "connection-allocation-for-vdbe-growth"
+    ],
+    "external_source_responsibilities": [
+      "Parse nMem/nTab/nVar/nMaxArg/isMultiWrite/mayAbort/explain population",
+      "Verified Mem/Vdbe/Op layouts and 8-byte allocator alignment"
+    ],
+    "caller_closure": "The complete active MakeReady, reusable-tail allocator, Mem-array initialization, VList transfer and Rewind state transition are assigned. Runtime teardown and production compiler ownership remain follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "INIT Vdbe with at least OP_Init and allocator-reported szOpAlloc",
+      "matching Parse sizing/flag metadata with no sticky OOM"
+    ],
+    "outputs": [
+      "resolved operation metadata, transferred VList, aMem/aVar/apArg/apCsr and counts, optional pFree allocation, READY execution defaults"
+    ],
+    "ownership": "Unused aligned opcode-tail bytes are reused first. One connection allocation owns only unmet array demand through pFree. Parse pVList ownership moves to Vdbe. Array pointers may independently target opcode-tail or pFree storage.",
+    "state_and_results": "Cursor cells add to nMem; aMem[0] exists when memory exists without cursors. Explain enforces ten cells and result columns. Mem arrays initialize only flags/db/szMalloc. Rewind sets READY, pc=-1, OK/Abort defaults and counters.",
+    "locks_callbacks_io": "Caller holds connection mutex. No callback or I/O occurs.",
+    "failure_and_continuation": "Deficit allocation OOM preserves any tail pointers but publishes zero nVar/nCursor/nMem, retains sticky OOM, and still rewinds to READY for ordinary destruction."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::struct::ReusableSpace::line-2550",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::constant::ReusableSpace"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::allocSpace::line-2570",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::allocateReusable"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::initMemArray::line-2155",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::initializeMemArray"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeMakeReady::line-2647",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::makeReady"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeRewind::line-2593",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::rewind"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::member::pSpace::line-2551",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::field::ReusableSpace.space"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::member::nFree::line-2552",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::field::ReusableSpace.free"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::member::nNeeded::line-2553",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::field::ReusableSpace.needed"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::nVar::line-462",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.nVar"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::nMem::line-463",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.nMem"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::nCursor::line-464",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.nCursor"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::cacheCtr::line-465",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.cacheCtr"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::pc::line-466",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.pc"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::rc::line-467",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.rc"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::iStatement::line-469",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.iStatement"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::nFkConstraint::line-471",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.nFkConstraint"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::aMem::line-474",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.aMem"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::apArg::line-475",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.apArg"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::apCsr::line-476",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.apCsr"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::aVar::line-477",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.aVar"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::nResColumn::line-497",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.nResColumn"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::errorAction::line-499",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.errorAction"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::minWriteFileFormat::line-500",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.minWriteFileFormat"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::usesStmtJournal::line-506",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::VdbeFlags.usesStmtJournal"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::pFree::line-518",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.pFree"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::pVList::line-488",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.pVList"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::pVList::line-3987",
+      "relation": "source-ready-allocation-state-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_types.zig::field::Parse.pVList"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C ReusableSpace uses sqlite3_int64; Zig uses i64 and identical ROUND8/ROUNDDOWN8 arithmetic.",
+    "C void-pointer array carving is represented by aligned pointer casts into exact extern layouts.",
+    "Parse/Vdbe VList opaque declarations require an ABI-identical pointer cast at ownership transfer."
+  ],
+  "oracle": {
+    "protocol": "The shared builder worker creates VDBEs then packages normal cursor/variable/argument demand, explain demand, transferred VList ownership, and forced deficit-allocation OOM. C and Zig compare 351 exact observations including arrays, counts, Mem headers, cursor zeroing, pFree, flags, label retirement and rewind state.",
+    "internal_observations": [
+      "tail reuse versus pFree ownership",
+      "VList Parse-to-Vdbe transfer",
+      "array pointer presence and published counts",
+      "first Mem flags/db/szMalloc",
+      "cursor pointer zeroing",
+      "statement-journal/explain/result flags",
+      "READY pc/result/error/counter defaults",
+      "OOM count suppression and continuation"
+    ],
+    "normalization": "Pointer addresses are normalized to presence, owner transfer, and db identity. Counts, flags, Mem headers, state and OOM results are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Normal tail-only packaging and forced pFree allocation failure are reached; failed packaging publishes zero executable array counts and remains destructible.",
+    "io_crash_concurrency": "No I/O/callback. Production mutex and runtime cursor lifecycle remain integration obligations.",
+    "malformed_input": "Source assertions constrain matching Parse/Vdbe ownership, INIT state, positive opcode count, aligned/nonnegative tail and no entry OOM.",
+    "continuation": "READY state after success and allocation failure is observed; transferred and allocated owners are retired between cases.",
+    "performance": "Preserves reverse fixup, first-pass tail reuse, one aggregate deficit allocation, second-pass fill and nearby Mem-header initialization.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test",
+      "zig build internal-parse-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding packaging path",
+    "native_call_path": "Symbolic native worker executes Create -> MakeReady on exact Parse/Vdbe/Sqlite3 owners. Handwritten compiler/runtime remain production owners.",
+    "bounded_owner_retired": "No. P4/deletion and compiler/runtime migration remain open."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires teardown/runtime integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Port P4 ownership and VDBE operation/object destruction.",
+    "Switch compiler/runtime ownership from handwritten Program to source VDBE and retire duplicate representations.",
+    "Independent fidelity review remains open."
+  ]
+}

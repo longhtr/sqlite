@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-saved-sql-and-reprepare-bytecode-swap",
+  "title": "VDBE saved SQL ownership and reprepare bytecode swap",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3VdbeSetSql owns the saved SQL copy and preparation metadata; sqlite3VdbeSwap exchanges a recompiled VDBE body while deliberately restoring handle list links and saved SQL identity, then propagating preparation/counter state to the persistent statement. These are one reprepare ownership boundary.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      },
+      {
+        "path": "src/vdbeInt.h",
+        "sha256": "60f87bb47cae281d4a9d3aecbdecd39a77fe91f7c5266d5e9985cf8b75ea44b5"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeSetSql::line-70",
+      "src/vdbeaux.c::function::sqlite3VdbeSwap::line-127",
+      "src/vdbeInt.h::member::prepFlags::line-501",
+      "src/vdbeInt.h::member::aCounter::line-512",
+      "src/vdbeInt.h::member::zSql::line-513",
+      "src/vdbeInt.h::member::expmask::line-522"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeSetSql::behavior::if::line-71-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetSql::behavior::return::line-71-column-14::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetSql::behavior::if::line-73-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetSql::behavior::assert::line-76-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSwap::behavior::assert::line-130-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "SQL normalization/double-quoted-string list disabled in pinned profile",
+      "Schema-error detection and reprepare orchestration",
+      "VDBE object destruction",
+      "Execution semantics of swapped bytecode"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-creation-connection-linkage-and-parse-ownership",
+      "connection-allocation-for-vdbe-growth",
+      "vdbe-builder-state-representations"
+    ],
+    "external_source_responsibilities": [
+      "Caller provides two VDBEs on the same connection and owns reprepare ordering"
+    ],
+    "caller_closure": "Complete active SetSql and Swap behavior plus saved SQL/preparation/counter fields are assigned. Higher-level schema-reprepare orchestration and teardown remain follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "nullable Vdbe plus SQL bytes/length/preparation flags",
+      "two same-db Vdbe objects, where A is recompiled body and B persistent handle"
+    ],
+    "outputs": [
+      "connection-owned N-byte SQL duplicate and metadata; exchanged Vdbe bodies with list links/SQL restored and B reprepare state updated"
+    ],
+    "ownership": "SetSql allocates zSql through the connection; Vdbe owns it. Swap moves all body owners, then swaps links and zSql back so handle/list identity remains stable. Old B body moves to A for cleanup.",
+    "state_and_results": "Without SAVESQL, SetSql clears expmask before fallible duplication. Swap makes B expmask/prepFlags/aCounter equal post-swap A and increments B REPREPARE counter.",
+    "locks_callbacks_io": "Caller holds connection mutex. No callback or I/O.",
+    "failure_and_continuation": "Null SetSql is a no-op. SQL duplication OOM leaves zSql null but prepFlags/expmask updated and sticky connection OOM. Swap itself cannot fail."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeSetSql::line-70",
+      "relation": "source-saved-sql-or-reprepare-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::setSql"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeSwap::line-127",
+      "relation": "source-saved-sql-or-reprepare-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::swap"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::prepFlags::line-501",
+      "relation": "source-saved-sql-or-reprepare-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.prepFlags"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::aCounter::line-512",
+      "relation": "source-saved-sql-or-reprepare-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.aCounter"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::zSql::line-513",
+      "relation": "source-saved-sql-or-reprepare-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.zSql"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeInt.h::member::expmask::line-522",
+      "relation": "source-saved-sql-or-reprepare-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::Vdbe.expmask"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C whole-struct assignment and explicit temporary pointers map to Zig extern-struct assignment and typed swaps with identical field order.",
+    "Pinned profile omits zNormSql swap because SQLITE_ENABLE_NORMALIZE is disabled."
+  ],
+  "oracle": {
+    "protocol": "The shared worker exercises null SetSql, forced SQL-duplicate OOM, normal distinct SQL owners, operation bodies, expmask/prepFlags/counters, and a two-node connection list before Swap. C and Zig compare all post-swap body/handle/link/Parse relationships in a 363-observation trace.",
+    "internal_observations": [
+      "null SetSql no-op",
+      "OOM metadata and null zSql",
+      "swapped operation-body identity",
+      "preserved alpha/beta SQL per handle",
+      "expmask/prepFlags propagation",
+      "counter copy and REPREPARE increment",
+      "connection head/next preservation",
+      "swapped Parse body ownership"
+    ],
+    "normalization": "SQL contents, fields, counters and link/owner relationships are exact; allocation addresses are ignored."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Deterministic SQL duplicate allocation failure preserves metadata and null ownership; later cases clean all saved SQL exactly once.",
+    "io_crash_concurrency": "No I/O/callback; caller mutex remains orchestration obligation.",
+    "malformed_input": "Source asserts same connection and first zSql assignment; tests satisfy both and use exact linked VDBEs.",
+    "continuation": "Post-swap persistent B owns recompiled body and A owns old body for cleanup; both are deleted through their stable connection links.",
+    "performance": "One SQL duplicate; Swap uses fixed-size structure/pointer/counter copies without allocation.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding saved-SQL/reprepare lifecycle",
+    "native_call_path": "Symbolic worker reaches exact linked Vdbe/Parse/Sqlite3 owners. Production schema-reprepare path remains handwritten/unmigrated.",
+    "bounded_owner_retired": "No. Integrate production reprepare and P4-aware teardown."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires production reprepare integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Connect production schema-reprepare orchestration to source VDBE owners.",
+    "Port P4-aware destruction for both swapped bodies.",
+    "Independent fidelity review remains open."
+  ]
+}

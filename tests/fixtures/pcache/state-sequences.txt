@@ -1,0 +1,800 @@
+BEGIN 0
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+D 8
+C 8
+F 7
+F 12
+M 7 1004
+F 9
+F 10
+A
+M 1 1008
+A
+D 8
+D 10
+A
+T 6
+T 8
+A
+F 4
+F 5
+M 6 1018
+M 4 1019
+A
+T 9
+T 13
+T 6
+F 2
+D 8
+F 11
+C 8
+F 6
+A
+A
+M 3 1031
+T 10
+D 12
+A
+F 8
+F 3
+A
+A
+F 11
+A
+H
+END
+BEGIN 1
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+D 12
+T 4
+F 11
+F 1
+F 3
+F 9
+T 8
+T 8
+T 9
+F 9
+F 10
+F 10
+A
+F 6
+F 8
+A
+F 12
+M 12 1117
+F 12
+A
+A
+F 9
+F 4
+F 5
+A
+F 4
+M 8 1126
+T 6
+D 2
+A
+M 6 1130
+D 6
+A
+M 5 1133
+T 10
+T 10
+T 12
+A
+A
+A
+A
+H
+END
+BEGIN 2
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+A
+M 3 1201
+D 5
+T 4
+D 4
+M 2 1205
+D 1
+D 3
+F 10
+A
+A
+A
+F 8
+D 11
+M 8 1214
+C 11
+F 8
+D 2
+T 4
+D 5
+A
+D 2
+F 5
+M 2 1223
+C 1223
+A
+A
+D 10
+C 10
+M 4 1229
+F 12
+D 6
+A
+T 10
+D 2
+C 2
+A
+A
+F 10
+F 5
+A
+H
+END
+BEGIN 3
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+M 4 1300
+T 10
+F 1
+A
+F 12
+A
+T 12
+F 1
+A
+F 7
+F 8
+M 1 1311
+A
+D 5
+A
+A
+M 2 1316
+F 11
+T 10
+A
+A
+F 6
+F 11
+A
+A
+A
+A
+F 2
+F 6
+A
+A
+D 2
+C 2
+T 6
+F 7
+M 5 1335
+A
+M 2 1337
+D 9
+A
+A
+H
+END
+BEGIN 4
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+F 7
+T 5
+A
+T 7
+D 4
+A
+F 5
+A
+F 5
+F 4
+T 9
+A
+D 4
+D 10
+M 4 1414
+C 1414
+A
+M 1 1417
+A
+T 12
+F 1
+F 3
+A
+D 7
+A
+A
+T 13
+A
+M 7 1428
+T 9
+F 7
+F 6
+A
+M 1 1433
+F 11
+F 5
+M 7 1436
+T 8
+M 6 1438
+F 4
+A
+H
+END
+BEGIN 5
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+A
+M 4 1501
+F 8
+A
+A
+F 10
+A
+A
+D 9
+A
+D 12
+C 12
+T 9
+A
+M 6 1514
+T 7
+D 10
+C 10
+F 2
+A
+F 1
+F 8
+D 3
+A
+T 7
+T 11
+D 10
+D 7
+M 5 1528
+D 11
+T 8
+D 6
+D 11
+D 7
+F 11
+D 1
+C 7
+D 1
+A
+F 1
+A
+H
+END
+BEGIN 6
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+D 6
+T 9
+F 6
+A
+A
+A
+M 6 1606
+D 7
+D 6
+D 1
+C 6
+A
+A
+A
+A
+A
+A
+A
+T 6
+A
+T 8
+D 1
+D 2
+A
+T 8
+A
+F 3
+T 10
+T 9
+A
+F 10
+M 4 1631
+M 10 1632
+F 1
+M 1 1634
+A
+D 2
+T 10
+M 5 1638
+A
+A
+H
+END
+BEGIN 7
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+D 8
+A
+T 8
+A
+A
+F 12
+A
+A
+A
+M 1 1709
+A
+M 5 1711
+T 9
+A
+F 3
+F 1
+F 4
+D 5
+A
+A
+D 4
+A
+A
+M 1 1723
+D 6
+M 6 1725
+T 9
+T 7
+M 2 1728
+A
+A
+M 5 1731
+A
+M 1728 1733
+F 5
+T 11
+A
+F 5
+T 10
+T 12
+A
+H
+END
+BEGIN 8
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+F 6
+F 4
+T 11
+F 7
+F 4
+A
+M 6 1806
+F 1
+T 4
+F 8
+D 3
+D 7
+C 7
+A
+A
+D 8
+D 12
+M 7 1817
+A
+T 12
+F 5
+M 8 1821
+D 12
+A
+D 3
+A
+A
+M 1 1827
+T 10
+F 7
+M 7 1830
+F 7
+T 6
+F 1
+M 4 1834
+D 6
+A
+A
+T 11
+A
+A
+H
+END
+BEGIN 9
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+T 9
+M 3 1901
+A
+A
+F 10
+T 12
+F 8
+D 10
+T 9
+A
+T 7
+F 11
+A
+F 6
+F 2
+D 8
+T 11
+A
+A
+F 7
+D 7
+A
+T 13
+M 5 1923
+A
+A
+M 4 1926
+T 13
+T 11
+A
+D 7
+A
+F 1
+F 11
+M 8 1934
+F 12
+T 7
+A
+F 7
+M 7 1939
+A
+H
+END
+BEGIN 10
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+M 1 2000
+T 7
+T 12
+M 4 2003
+F 9
+F 7
+A
+D 10
+A
+T 5
+T 5
+M 5 2011
+D 5
+F 3
+T 4
+A
+D 2
+F 3
+D 5
+C 2
+M 3 2020
+D 2
+F 11
+C 2
+A
+T 9
+F 9
+F 7
+F 8
+F 9
+A
+D 12
+C 12
+T 13
+D 9
+A
+D 2
+A
+F 10
+T 13
+A
+H
+END
+BEGIN 11
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+M 5 2100
+F 10
+F 10
+F 4
+D 6
+F 4
+T 11
+D 2
+T 7
+A
+D 11
+T 6
+A
+A
+A
+F 2
+A
+F 6
+A
+F 12
+A
+D 6
+T 8
+F 9
+D 12
+D 5
+A
+T 6
+F 5
+A
+D 4
+A
+A
+A
+D 10
+A
+A
+M 5 2137
+F 11
+F 5
+A
+H
+END
+BEGIN 12
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+A
+M 5 2201
+M 2201 2202
+T 10
+A
+F 11
+A
+A
+D 9
+A
+D 3
+T 7
+F 10
+F 9
+F 2
+M 6 2215
+T 11
+F 7
+F 2
+M 3 2219
+T 7
+M 1 2221
+F 9
+M 4 2223
+D 4
+A
+F 9
+A
+F 12
+A
+M 2223 2230
+D 9
+M 9 2232
+F 4
+C 2232
+D 8
+C 8
+A
+D 11
+T 9
+A
+H
+END
+BEGIN 13
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+A
+F 6
+D 6
+C 6
+A
+A
+F 10
+A
+F 10
+A
+D 12
+D 7
+A
+F 9
+A
+T 8
+A
+A
+A
+F 2
+M 3 2320
+F 7
+F 4
+D 9
+F 1
+D 7
+D 12
+T 11
+D 2
+T 13
+A
+F 9
+M 4 2332
+F 7
+D 7
+D 4
+A
+D 7
+A
+M 4 2339
+A
+H
+END
+BEGIN 14
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+F 8
+F 9
+T 12
+M 1 2403
+F 9
+T 11
+F 6
+D 10
+A
+M 9 2409
+A
+M 8 2411
+M 4 2412
+T 12
+A
+M 10 2415
+D 9
+F 1
+A
+A
+F 6
+A
+F 9
+A
+A
+A
+F 1
+M 3 2427
+A
+D 4
+A
+F 2
+A
+A
+A
+A
+D 7
+A
+F 6
+F 12
+A
+H
+END
+BEGIN 15
+F 1
+F 2
+F 3
+F 4
+F 5
+F 6
+D 9
+C 9
+D 9
+A
+F 3
+A
+F 5
+F 8
+F 12
+T 7
+A
+F 9
+F 4
+F 11
+F 8
+F 5
+A
+A
+M 9 2518
+T 7
+F 1
+D 2
+T 8
+F 10
+D 10
+F 8
+T 10
+F 7
+M 10 2528
+F 5
+A
+F 10
+F 6
+T 4
+F 5
+M 4 2535
+A
+D 7
+A
+M 3 2539
+A
+H
+END

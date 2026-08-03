@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "id": "key-info-reference-ownership",
+  "title": "KeyInfo reference ownership and final release",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3KeyInfoRef/Unref and the KeyInfo nRef/db owner fields are the complete intrusive reference contract used by P4_KEYINFO and unpacked records. Increment, decrement and final connection-aware free cannot be split.",
+    "source_files": [
+      {
+        "path": "src/select.c",
+        "sha256": "bdf052a30146b56afe82c5fc1affcf6a01b6417bc72ec8608139d75d910e3408"
+      },
+      {
+        "path": "src/sqliteInt.h",
+        "sha256": "3846e622b0a45aa4d13398556d549637a0c84d58599906a3a7c205b6d5e84cc3"
+      }
+    ],
+    "source_entity_ids": [
+      "src/select.c::function::sqlite3KeyInfoRef::line-1566",
+      "src/select.c::function::sqlite3KeyInfoUnref::line-1554",
+      "src/sqliteInt.h::member::nRef::line-2673",
+      "src/sqliteInt.h::member::db::line-2677"
+    ],
+    "behavioral_block_ids": [
+      "src/select.c::function::sqlite3KeyInfoUnref::behavior::if::line-1555-column-3::ordinal-0",
+      "src/select.c::function::sqlite3KeyInfoUnref::behavior::assert::line-1556-column-5::ordinal-0",
+      "src/select.c::function::sqlite3KeyInfoUnref::behavior::assert::line-1557-column-5::ordinal-0",
+      "src/select.c::function::sqlite3KeyInfoUnref::behavior::if::line-1559-column-5::ordinal-0",
+      "src/select.c::function::sqlite3KeyInfoRef::behavior::if::line-1567-column-3::ordinal-0",
+      "src/select.c::function::sqlite3KeyInfoRef::behavior::assert::line-1568-column-5::ordinal-0",
+      "src/select.c::function::sqlite3KeyInfoRef::behavior::return::line-1571-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "KeyInfo allocation/population and collation ownership",
+      "P4 dispatch beyond the KeyInfo branch",
+      "Unpacked-record execution"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "connection-allocation-for-vdbe-growth",
+      "vdbe-builder-state-representations"
+    ],
+    "external_source_responsibilities": [
+      "Caller holds the connection mutex while references are mutable"
+    ],
+    "caller_closure": "Both active reference functions and their exact count/database owner fields are assigned, including nullable no-op and final free. Allocation/population and P4 dispatch are follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "nullable KeyInfo pointer with positive nRef and nonnull db when present"
+    ],
+    "outputs": [
+      "same pointer with incremented count, decremented live count, or final connection-aware free"
+    ],
+    "ownership": "Every ref call creates one shared ownership claim; every unref consumes one. Transition 1->0 returns the entire KeyInfo allocation to its owning connection allocator.",
+    "state_and_results": "Null ref returns null; null unref is a no-op. Ref returns pointer identity unchanged.",
+    "locks_callbacks_io": "Caller holds connection mutex. No callback or I/O.",
+    "failure_and_continuation": "No allocation and no OOM path. Positive-count assertions reject underflow/use-after-final-release."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/select.c::function::sqlite3KeyInfoRef::line-1566",
+      "relation": "source-reference-count-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::keyInfoRef"
+      ]
+    },
+    {
+      "source_entity_id": "src/select.c::function::sqlite3KeyInfoUnref::line-1554",
+      "relation": "source-reference-count-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::keyInfoUnref"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::nRef::line-2673",
+      "relation": "source-reference-count-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::KeyInfo.nRef"
+      ]
+    },
+    {
+      "source_entity_id": "src/sqliteInt.h::member::db::line-2677",
+      "relation": "source-reference-count-or-owner-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::field::KeyInfo.db"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "No semantic representation difference; u32 nRef and Sqlite3 owner pointer use verified extern fields."
+  ],
+  "oracle": {
+    "protocol": "The shared worker allocates one exact-size KeyInfo, performs 1->2 ref, 2->1 unref, 1->0 final release, and nullable ref/unref. C and Zig compare pointer identity, counts, owner identity and live/freed tracking in a 363-observation trace.",
+    "internal_observations": [
+      "initial count/database identity",
+      "ref return pointer identity and count",
+      "nonfinal decrement",
+      "final owner retirement",
+      "nullable no-op/result"
+    ],
+    "normalization": "Pointer addresses normalize to same-pointer/live identity. Counts and null transitions are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "No allocation in assigned functions; final release uses previously validated connection allocator.",
+    "io_crash_concurrency": "No I/O/callback; mutex integration remains caller obligation.",
+    "malformed_input": "Assertions enforce nonnull db and positive count for live objects.",
+    "continuation": "Object remains usable after nonfinal unref and becomes inaccessible after final unref; worker tracks owner accordingly.",
+    "performance": "Constant-time increment/decrement and one final free.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig temporary source-corresponding KeyInfo lifecycle used by the VDBE closure",
+    "native_call_path": "Symbolic worker uses exact KeyInfo/Sqlite3 allocation and owner fields; P4_KEYINFO dispatch is not yet connected.",
+    "bounded_owner_retired": "No. Integrate into P4 and record owners, then relocate to the final select/key-info module if needed."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires P4/record integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Connect P4_KEYINFO and unpacked-record callers to this owner.",
+    "Port remaining P4 owner families and operation destruction.",
+    "Independent fidelity review remains open."
+  ]
+}

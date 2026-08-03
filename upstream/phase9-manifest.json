@@ -1,0 +1,44 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-9-btree-mutation",
+  "profile": "sqlite-3.53.4-rollback-table-index-freelist-pointermap-rebuild",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 37,
+  "corpus": {
+    "manifest": "tests/fixtures/btree-mutation/manifest.json",
+    "fixture_count": 4,
+    "page_sizes": [512, 4096],
+    "auto_vacuum_modes": ["none", "incremental", "full"],
+    "initial_rows_per_partition": 300,
+    "seed": 636910,
+    "operation_batches": 14,
+    "cross_engine_batch_observations": 22
+  },
+  "slices": {
+    "table_insert_delete": {"status": "pass", "scope": ["integer-key ordering", "raw record payload", "insert", "replace", "delete", "duplicate and missing-key results"]},
+    "index_and_without_rowid": {"status": "pass", "scope": ["record comparison", "index insert/delete", "WITHOUT ROWID insert/delete", "interior separator promotion"]},
+    "allocation_overflow_and_balancing": {"status": "pass", "scope": ["freelist allocation", "file extension", "overflow reconstruction", "leaf split", "multi-level interior reconstruction", "root deepening and collapse"]},
+    "freelist_and_pointer_map": {"status": "pass", "scope": ["trunk and leaf decode", "freed tree and overflow pages", "freelist rewrite", "FREEPAGE", "BTREE", "OVERFLOW1", "OVERFLOW2", "ROOTPAGE pointer-map entries"]},
+    "seeded_model_and_cross_continuation": {"status": "pass", "command": "btree-mutation-differential", "partitions": 4, "observations": 22, "scope": ["model count/sum/min/max after every batch", "oracle to Zig continuation", "Zig to oracle continuation", "all corpus partitions"]},
+    "integrity_and_graph": {"status": "pass", "scope": ["integrity_check after every batch", "page graph", "freelist", "pointer-map", "overflow", "auxiliary journal cleanup"]},
+    "fault_and_allocation": {"status": "pass", "scope": ["journal open", "lock", "read", "write", "sync", "truncate", "delete", "rollback and continuation"], "oom": "pass-bounded-one-shot"}
+  },
+  "phase_owned_deferrals": [
+    {"item": "WAL read/write, checkpoint and recovery", "owning_phase": "phase-10"},
+    {"item": "in-place page-local balancing optimization (bounded profile reconstructs equivalent trees)", "owning_phase": "optimization-after-fidelity"},
+    {"item": "schema root creation/drop and native SQL-driven coordinated secondary-index updates", "owning_phase": "phase-11-through-phase-14"},
+    {"item": "production filesystem VFS and broad device matrix", "owning_phase": "phase-15-and-phase-16"}
+  ],
+  "exit_gates": {
+    "seeded_model_sequences_match": "pass",
+    "oracle_to_zig_continuation_all_partitions": "pass",
+    "zig_to_oracle_continuation_all_partitions": "pass",
+    "integrity_page_graph_freelist_pointermap": "pass",
+    "logical_content_after_every_batch": "pass",
+    "fault_and_allocation_ownership": "pass",
+    "source_mapping": "pass"
+  }
+}

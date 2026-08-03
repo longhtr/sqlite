@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "profile_id": "sqlite-3.53.4-core-default-threadsafe1",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "configure": {
+    "arguments": [],
+    "library_defines": {
+      "SQLITE_ENABLE_MATH_FUNCTIONS": "1",
+      "SQLITE_ENABLE_PERCENTILE": "1",
+      "SQLITE_HAVE_ZLIB": "1",
+      "SQLITE_THREADSAFE": "1"
+    },
+    "loadable_extensions": true,
+    "json": true,
+    "optional_builtin_extensions": {
+      "fts3": false,
+      "fts4": false,
+      "fts5": false,
+      "rtree": false,
+      "geopoly": false,
+      "session": false,
+      "carray": false,
+      "dbpage": false,
+      "dbstat": false
+    }
+  },
+  "oracle": {
+    "production_compiler": {
+      "name": "gcc",
+      "path": "/usr/bin/gcc",
+      "version": "15.3.1 20260722 (Red Hat 15.3.1-1)",
+      "driver_sha256": "7e223b99732cf04cb2158da3d1d59a995442df8ce73381bd3c404466ec7c3eeb"
+    },
+    "diagnostic_compiler": {
+      "name": "clang",
+      "path": "/usr/bin/clang-21",
+      "version": "21.1.8 (Fedora 21.1.8-6.fc43)",
+      "driver_sha256": "78bae7760cc247a33adf2b922194b07d75519d2681ad653676e16a9c128dbd51",
+      "sanitizers": [
+        "address",
+        "undefined"
+      ]
+    },
+    "generated_amalgamation_sha256": "b1dd5d74ec7f29055a6684fa06fb3c2f6821c87dd38f9a458dfd2e8a1db28189",
+    "generated_linemacro_amalgamation_sha256": "4e288e75c0dbd0858b88122f6199811e6a545d148b02385b2e91f22c5c1b75ff",
+    "generated_sqlite3_h_sha256": "919e7f2e8ed1d8f56ac17b412b8971c76aa5d1a879752cc6058f75e7d5910e1d",
+    "generated_sqlite3ext_h_sha256": "ac9645e5c9ff0cf176efdd6e75cb5e98f46295d38e02db5c4d208826a39ab4be"
+  },
+  "inventory_tools": {
+    "libclang": {
+      "path": "/usr/lib64/libclang.so.21.1.8",
+      "sha256": "629ba33a58c697d3b92d2176ec3685c372215256f262dd5668a883e34006d94f"
+    },
+    "ctags": {
+      "path": "/usr/bin/ctags",
+      "version": "Universal Ctags 6.2.1",
+      "sha256": "1a8fb243378646d75edb13883b0d41fdc0fd624b068a4bb39dfd54607e2de3ae"
+    },
+    "nm": {
+      "path": "/usr/bin/nm",
+      "sha256": "32a001d527a703e1798deeb30a21a05ca36a53d191b6129b8fd61ca0f2b45ac1"
+    }
+  },
+  "runtime_durability_order": [
+    "delete-full",
+    "wal-full",
+    "wal-normal"
+  ],
+  "targets": {
+    "development": [
+      "aarch64-linux-gnu+btrfs+host-page-16384"
+    ],
+    "first_release": [
+      "aarch64-linux-gnu+btrfs+host-page-16384",
+      "x86_64-linux-gnu+ext4"
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+{
+    "sqlite3_vfs": {
+        "size": 168,
+        "align": 8,
+        "iVersion": 0,
+        "szOsFile": 4,
+        "xOpen": 40,
+        "xCurrentTimeInt64": 136,
+        "xNextSystemCall": 160
+    },
+    "sqlite3_io_methods": {
+        "size": 152,
+        "align": 8,
+        "iVersion": 0,
+        "xRead": 16,
+        "xWrite": 24,
+        "xShmMap": 104,
+        "xFetch": 136,
+        "xUnfetch": 144
+    },
+    "sqlite3_mem_methods": {
+        "size": 64,
+        "align": 8,
+        "xMalloc": 0,
+        "xRoundup": 32,
+        "xShutdown": 48,
+        "pAppData": 56
+    },
+    "sqlite3_module": {
+        "size": 200,
+        "align": 8,
+        "iVersion": 0,
+        "xCreate": 8,
+        "xBestIndex": 24,
+        "xShadowName": 184,
+        "xIntegrity": 192
+    },
+    "sqlite3_index_info": {
+        "size": 96,
+        "align": 8,
+        "nConstraint": 0,
+        "idxStr": 48,
+        "estimatedRows": 72,
+        "colUsed": 88
+    },
+    "sqlite3_pcache_methods2": {
+        "size": 104,
+        "align": 8,
+        "iVersion": 0,
+        "xInit": 16,
+        "xFetch": 56,
+        "xShrink": 96
+    },
+    "sqlite3_mutex_methods": {
+        "size": 72,
+        "align": 8,
+        "xMutexInit": 0,
+        "xMutexAlloc": 16,
+        "xMutexHeld": 56,
+        "xMutexNotheld": 64
+    }
+}

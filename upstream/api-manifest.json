@@ -1,0 +1,4319 @@
+{
+  "schema_version": 1,
+  "sqlite_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "header": "include/sqlite3.h",
+  "header_sha256": "919e7f2e8ed1d8f56ac17b412b8971c76aa5d1a879752cc6058f75e7d5910e1d",
+  "counts": {
+    "total": 368,
+    "functions": 357,
+    "variadic_functions": 8,
+    "data": 3,
+    "exported_phase_0": 5,
+    "exported_phase_12": 33,
+    "exported_phase_13_expression": 6,
+    "exported_phase_17_connection_utility": 94,
+    "exported_phase_17_value_blob": 42,
+    "exported_phase_17_utility_expansion": 28,
+    "exported_phase_17_callback_context": 42,
+    "exported_phase_17_maintenance": 10,
+    "exported_phase_17_extension": 26,
+    "exported_total": 286,
+    "fidelity_evidenced": 5,
+    "provisional_bounded": 281,
+    "deferred_profile": 82,
+    "planned": 0
+  },
+  "declarations": [
+    {
+      "symbol": "sqlite3_version",
+      "kind": "data",
+      "header_line": 188,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API SQLITE_EXTERN const char sqlite3_version[];",
+      "phase": "phase-0",
+      "status": "fidelity-evidenced",
+      "evidence": [
+        "tests/api/version_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_libversion",
+      "kind": "function",
+      "header_line": 189,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_libversion(void);",
+      "phase": "phase-0",
+      "status": "fidelity-evidenced",
+      "evidence": [
+        "tests/api/version_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_sourceid",
+      "kind": "function",
+      "header_line": 190,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_sourceid(void);",
+      "phase": "phase-0",
+      "status": "fidelity-evidenced",
+      "evidence": [
+        "tests/api/version_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_libversion_number",
+      "kind": "function",
+      "header_line": 191,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_libversion_number(void);",
+      "phase": "phase-0",
+      "status": "fidelity-evidenced",
+      "evidence": [
+        "tests/api/version_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_compileoption_used",
+      "kind": "function",
+      "header_line": 216,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(SQLITE_OMIT_COMPILEOPTION_DIAGS))",
+      "declaration": "SQLITE_API int sqlite3_compileoption_used(const char *zOptName);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_compileoption_get",
+      "kind": "function",
+      "header_line": 217,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(SQLITE_OMIT_COMPILEOPTION_DIAGS))",
+      "declaration": "SQLITE_API const char *sqlite3_compileoption_get(int N);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_threadsafe",
+      "kind": "function",
+      "header_line": 259,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_threadsafe(void);",
+      "phase": "phase-0",
+      "status": "fidelity-evidenced",
+      "evidence": [
+        "tests/api/version_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_close",
+      "kind": "function",
+      "header_line": 356,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_close(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_close_v2",
+      "kind": "function",
+      "header_line": 357,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_close_v2(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_exec",
+      "kind": "function",
+      "header_line": 430,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_exec( sqlite3*, /* An open database */ const char *sql, /* SQL to be evaluated */ int (*callback)(void*,int,char**,char**), /* Callback function */ void *, /* 1st argument to callback */ char **errmsg /* Error msg written here */ );",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_initialize",
+      "kind": "function",
+      "header_line": 1689,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_initialize(void);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_shutdown",
+      "kind": "function",
+      "header_line": 1690,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_shutdown(void);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_os_init",
+      "kind": "function",
+      "header_line": 1691,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_os_init(void);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_os_end",
+      "kind": "function",
+      "header_line": 1692,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_os_end(void);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_config",
+      "kind": "variadic-function",
+      "header_line": 1729,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_config(int, ...);",
+      "phase": "phase-17-maintenance",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_db_config",
+      "kind": "variadic-function",
+      "header_line": 1748,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_db_config(sqlite3*, int op, ...);",
+      "phase": "phase-17-maintenance",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_extended_result_codes",
+      "kind": "function",
+      "header_line": 2733,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_extended_result_codes(sqlite3*, int onoff);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_last_insert_rowid",
+      "kind": "function",
+      "header_line": 2795,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_int64 sqlite3_last_insert_rowid(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_set_last_insert_rowid",
+      "kind": "function",
+      "header_line": 2805,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_set_last_insert_rowid(sqlite3*,sqlite3_int64);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_changes",
+      "kind": "function",
+      "header_line": 2870,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_changes(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_changes64",
+      "kind": "function",
+      "header_line": 2871,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_int64 sqlite3_changes64(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_total_changes",
+      "kind": "function",
+      "header_line": 2912,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_total_changes(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_total_changes64",
+      "kind": "function",
+      "header_line": 2913,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_int64 sqlite3_total_changes64(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_interrupt",
+      "kind": "function",
+      "header_line": 2954,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_interrupt(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_is_interrupted",
+      "kind": "function",
+      "header_line": 2955,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_is_interrupted(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_complete",
+      "kind": "function",
+      "header_line": 2990,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_complete(const char *sql);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_complete16",
+      "kind": "function",
+      "header_line": 2991,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_complete16(const void *sql);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_busy_handler",
+      "kind": "function",
+      "header_line": 3052,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_busy_handler(sqlite3*,int(*)(void*,int),void*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_busy_timeout",
+      "kind": "function",
+      "header_line": 3075,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_busy_timeout(sqlite3*, int ms);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_setlk_timeout",
+      "kind": "function",
+      "header_line": 3108,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_setlk_timeout(sqlite3*, int ms, int flags);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_get_table",
+      "kind": "function",
+      "header_line": 3188,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_get_table( sqlite3 *db, /* An open database */ const char *zSql, /* SQL to be evaluated */ char ***pazResult, /* Results of the query */ int *pnRow, /* Number of result rows written here */ int *pnColumn, /* Number of result columns written here */ char **pzErrmsg /* Error msg written here */ );",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_free_table",
+      "kind": "function",
+      "header_line": 3196,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_free_table(char **result);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_mprintf",
+      "kind": "variadic-function",
+      "header_line": 3238,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API char *sqlite3_mprintf(const char*,...);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vmprintf",
+      "kind": "function",
+      "header_line": 3239,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API char *sqlite3_vmprintf(const char*, va_list);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_snprintf",
+      "kind": "variadic-function",
+      "header_line": 3240,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API char *sqlite3_snprintf(int,char*,const char*, ...);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vsnprintf",
+      "kind": "function",
+      "header_line": 3241,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API char *sqlite3_vsnprintf(int,char*,const char*, va_list);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_malloc",
+      "kind": "function",
+      "header_line": 3318,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_malloc(int);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_malloc64",
+      "kind": "function",
+      "header_line": 3319,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_malloc64(sqlite3_uint64);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_realloc",
+      "kind": "function",
+      "header_line": 3320,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_realloc(void*, int);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_realloc64",
+      "kind": "function",
+      "header_line": 3321,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_realloc64(void*, sqlite3_uint64);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_free",
+      "kind": "function",
+      "header_line": 3322,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_free(void*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_msize",
+      "kind": "function",
+      "header_line": 3323,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_uint64 sqlite3_msize(void*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_memory_used",
+      "kind": "function",
+      "header_line": 3348,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_int64 sqlite3_memory_used(void);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_memory_highwater",
+      "kind": "function",
+      "header_line": 3349,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_int64 sqlite3_memory_highwater(int resetFlag);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_randomness",
+      "kind": "function",
+      "header_line": 3372,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_randomness(int N, void *P);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_set_authorizer",
+      "kind": "function",
+      "header_line": 3463,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_set_authorizer( sqlite3*, int (*xAuth)(void*,int,const char*,const char*,const char*,const char*), void *pUserData );",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_trace",
+      "kind": "function",
+      "header_line": 3571,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API SQLITE_DEPRECATED void *sqlite3_trace(sqlite3*, void(*xTrace)(void*,const char*), void*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_profile",
+      "kind": "function",
+      "header_line": 3573,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API SQLITE_DEPRECATED void *sqlite3_profile(sqlite3*, void(*xProfile)(void*,const char*,sqlite3_uint64), void*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_trace_v2",
+      "kind": "function",
+      "header_line": 3664,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_trace_v2( sqlite3*, unsigned uMask, int(*xCallback)(unsigned,void*,void*,void*), void *pCtx );",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_progress_handler",
+      "kind": "function",
+      "header_line": 3710,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_progress_handler(sqlite3*, int, int(*)(void*), void*);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_open",
+      "kind": "function",
+      "header_line": 3990,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_open( const char *filename, /* Database filename (UTF-8) */ sqlite3 **ppDb /* OUT: SQLite db handle */ );",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_open16",
+      "kind": "function",
+      "header_line": 3994,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_open16( const void *filename, /* Database filename (UTF-16) */ sqlite3 **ppDb /* OUT: SQLite db handle */ );",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_open_v2",
+      "kind": "function",
+      "header_line": 3998,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_open_v2( const char *filename, /* Database filename (UTF-8) */ sqlite3 **ppDb, /* OUT: SQLite db handle */ int flags, /* Flags */ const char *zVfs /* Name of VFS module to use */ );",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_uri_parameter",
+      "kind": "function",
+      "header_line": 4071,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_uri_parameter(sqlite3_filename z, const char *zParam);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_uri_boolean",
+      "kind": "function",
+      "header_line": 4072,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_uri_boolean(sqlite3_filename z, const char *zParam, int bDefault);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_uri_int64",
+      "kind": "function",
+      "header_line": 4073,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_int64 sqlite3_uri_int64(sqlite3_filename, const char*, sqlite3_int64);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_uri_key",
+      "kind": "function",
+      "header_line": 4074,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_uri_key(sqlite3_filename z, int N);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_filename_database",
+      "kind": "function",
+      "header_line": 4103,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_filename_database(sqlite3_filename);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_filename_journal",
+      "kind": "function",
+      "header_line": 4104,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_filename_journal(sqlite3_filename);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_filename_wal",
+      "kind": "function",
+      "header_line": 4105,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_filename_wal(sqlite3_filename);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_database_file_object",
+      "kind": "function",
+      "header_line": 4124,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_file *sqlite3_database_file_object(const char*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_create_filename",
+      "kind": "function",
+      "header_line": 4171,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_filename sqlite3_create_filename( const char *zDatabase, const char *zJournal, const char *zWal, int nParam, const char **azParam );",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_free_filename",
+      "kind": "function",
+      "header_line": 4178,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_free_filename(sqlite3_filename);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_errcode",
+      "kind": "function",
+      "header_line": 4244,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_errcode(sqlite3 *db);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_extended_errcode",
+      "kind": "function",
+      "header_line": 4245,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_extended_errcode(sqlite3 *db);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_errmsg",
+      "kind": "function",
+      "header_line": 4246,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_errmsg(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_errmsg16",
+      "kind": "function",
+      "header_line": 4247,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const void *sqlite3_errmsg16(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_errstr",
+      "kind": "function",
+      "header_line": 4248,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_errstr(int);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_error_offset",
+      "kind": "function",
+      "header_line": 4249,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_error_offset(sqlite3 *db);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_set_errmsg",
+      "kind": "function",
+      "header_line": 4277,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_set_errmsg(sqlite3 *db, int errcode, const char *zErrMsg);",
+      "phase": "phase-17-maintenance",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_limit",
+      "kind": "function",
+      "header_line": 4345,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_limit(sqlite3*, int id, int newVal);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_prepare",
+      "kind": "function",
+      "header_line": 4595,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_prepare( sqlite3 *db, /* Database handle */ const char *zSql, /* SQL statement, UTF-8 encoded */ int nByte, /* Maximum length of zSql in bytes. */ sqlite3_stmt **ppStmt, /* OUT: Statement handle */ const char **pzTail /* OUT: Pointer to unused portion of zSql */ );",
+      "phase": "phase-13-expression",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/differential/sql_expression_client.c",
+        "src/core/sql_frontend.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_prepare_v2",
+      "kind": "function",
+      "header_line": 4602,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_prepare_v2( sqlite3 *db, /* Database handle */ const char *zSql, /* SQL statement, UTF-8 encoded */ int nByte, /* Maximum length of zSql in bytes. */ sqlite3_stmt **ppStmt, /* OUT: Statement handle */ const char **pzTail /* OUT: Pointer to unused portion of zSql */ );",
+      "phase": "phase-13-expression",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/differential/sql_expression_client.c",
+        "src/core/sql_frontend.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_prepare_v3",
+      "kind": "function",
+      "header_line": 4609,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_prepare_v3( sqlite3 *db, /* Database handle */ const char *zSql, /* SQL statement, UTF-8 encoded */ int nByte, /* Maximum length of zSql in bytes. */ unsigned int prepFlags, /* Zero or more SQLITE_PREPARE_ flags */ sqlite3_stmt **ppStmt, /* OUT: Statement handle */ const char **pzTail /* OUT: Pointer to unused portion of zSql */ );",
+      "phase": "phase-13-expression",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/differential/sql_expression_client.c",
+        "src/core/sql_frontend.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_prepare16",
+      "kind": "function",
+      "header_line": 4617,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_prepare16( sqlite3 *db, /* Database handle */ const void *zSql, /* SQL statement, UTF-16 encoded */ int nByte, /* Maximum length of zSql in bytes. */ sqlite3_stmt **ppStmt, /* OUT: Statement handle */ const void **pzTail /* OUT: Pointer to unused portion of zSql */ );",
+      "phase": "phase-13-expression",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/differential/sql_expression_client.c",
+        "src/core/sql_frontend.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_prepare16_v2",
+      "kind": "function",
+      "header_line": 4624,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_prepare16_v2( sqlite3 *db, /* Database handle */ const void *zSql, /* SQL statement, UTF-16 encoded */ int nByte, /* Maximum length of zSql in bytes. */ sqlite3_stmt **ppStmt, /* OUT: Statement handle */ const void **pzTail /* OUT: Pointer to unused portion of zSql */ );",
+      "phase": "phase-13-expression",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/differential/sql_expression_client.c",
+        "src/core/sql_frontend.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_prepare16_v3",
+      "kind": "function",
+      "header_line": 4631,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_prepare16_v3( sqlite3 *db, /* Database handle */ const void *zSql, /* SQL statement, UTF-16 encoded */ int nByte, /* Maximum length of zSql in bytes. */ unsigned int prepFlags, /* Zero or more SQLITE_PREPARE_ flags */ sqlite3_stmt **ppStmt, /* OUT: Statement handle */ const void **pzTail /* OUT: Pointer to unused portion of zSql */ );",
+      "phase": "phase-13-expression",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/differential/sql_expression_client.c",
+        "src/core/sql_frontend.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_sql",
+      "kind": "function",
+      "header_line": 4681,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_sql(sqlite3_stmt *pStmt);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_expanded_sql",
+      "kind": "function",
+      "header_line": 4682,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API char *sqlite3_expanded_sql(sqlite3_stmt *pStmt);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_normalized_sql",
+      "kind": "function",
+      "header_line": 4684,
+      "condition": "(!defined(SQLITE3_H)) && (defined(SQLITE_ENABLE_NORMALIZE))",
+      "declaration": "SQLITE_API const char *sqlite3_normalized_sql(sqlite3_stmt *pStmt);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_stmt_readonly",
+      "kind": "function",
+      "header_line": 4734,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_stmt_readonly(sqlite3_stmt *pStmt);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_stmt_isexplain",
+      "kind": "function",
+      "header_line": 4746,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_stmt_isexplain(sqlite3_stmt *pStmt);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_stmt_explain",
+      "kind": "function",
+      "header_line": 4781,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_stmt_explain(sqlite3_stmt *pStmt, int eMode);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_stmt_busy",
+      "kind": "function",
+      "header_line": 4802,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_stmt_busy(sqlite3_stmt*);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_blob",
+      "kind": "function",
+      "header_line": 5009,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_blob(sqlite3_stmt*, int, const void*, int n, void(*)(void*));",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_blob64",
+      "kind": "function",
+      "header_line": 5010,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_blob64(sqlite3_stmt*, int, const void*, sqlite3_uint64, void(*)(void*));",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_double",
+      "kind": "function",
+      "header_line": 5012,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_double(sqlite3_stmt*, int, double);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_int",
+      "kind": "function",
+      "header_line": 5013,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_int(sqlite3_stmt*, int, int);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_int64",
+      "kind": "function",
+      "header_line": 5014,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_int64(sqlite3_stmt*, int, sqlite3_int64);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_null",
+      "kind": "function",
+      "header_line": 5015,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_null(sqlite3_stmt*, int);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_text",
+      "kind": "function",
+      "header_line": 5016,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_text(sqlite3_stmt*,int,const char*,int,void(*)(void*));",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_text16",
+      "kind": "function",
+      "header_line": 5017,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_text16(sqlite3_stmt*, int, const void*, int, void(*)(void*));",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_text64",
+      "kind": "function",
+      "header_line": 5018,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_text64(sqlite3_stmt*, int, const char*, sqlite3_uint64, void(*)(void*), unsigned char encoding);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_value",
+      "kind": "function",
+      "header_line": 5020,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_value(sqlite3_stmt*, int, const sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_pointer",
+      "kind": "function",
+      "header_line": 5021,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_pointer(sqlite3_stmt*, int, void*, const char*,void(*)(void*));",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_zeroblob",
+      "kind": "function",
+      "header_line": 5022,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_zeroblob(sqlite3_stmt*, int, int n);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_zeroblob64",
+      "kind": "function",
+      "header_line": 5023,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_zeroblob64(sqlite3_stmt*, int, sqlite3_uint64);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_parameter_count",
+      "kind": "function",
+      "header_line": 5044,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_parameter_count(sqlite3_stmt*);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_parameter_name",
+      "kind": "function",
+      "header_line": 5072,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_bind_parameter_name(sqlite3_stmt*, int);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_bind_parameter_index",
+      "kind": "function",
+      "header_line": 5090,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_bind_parameter_index(sqlite3_stmt*, const char *zName);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_clear_bindings",
+      "kind": "function",
+      "header_line": 5100,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_clear_bindings(sqlite3_stmt*);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_count",
+      "kind": "function",
+      "header_line": 5116,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_column_count(sqlite3_stmt *pStmt);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_name",
+      "kind": "function",
+      "header_line": 5145,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_column_name(sqlite3_stmt*, int N);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_name16",
+      "kind": "function",
+      "header_line": 5146,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const void *sqlite3_column_name16(sqlite3_stmt*, int N);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_database_name",
+      "kind": "function",
+      "header_line": 5190,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_column_database_name(sqlite3_stmt*,int);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_database_name16",
+      "kind": "function",
+      "header_line": 5191,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const void *sqlite3_column_database_name16(sqlite3_stmt*,int);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_table_name",
+      "kind": "function",
+      "header_line": 5192,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_column_table_name(sqlite3_stmt*,int);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_table_name16",
+      "kind": "function",
+      "header_line": 5193,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const void *sqlite3_column_table_name16(sqlite3_stmt*,int);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_origin_name",
+      "kind": "function",
+      "header_line": 5194,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_column_origin_name(sqlite3_stmt*,int);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_origin_name16",
+      "kind": "function",
+      "header_line": 5195,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const void *sqlite3_column_origin_name16(sqlite3_stmt*,int);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_decltype",
+      "kind": "function",
+      "header_line": 5227,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_column_decltype(sqlite3_stmt*,int);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_decltype16",
+      "kind": "function",
+      "header_line": 5228,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const void *sqlite3_column_decltype16(sqlite3_stmt*,int);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_step",
+      "kind": "function",
+      "header_line": 5312,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_step(sqlite3_stmt*);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_data_count",
+      "kind": "function",
+      "header_line": 5333,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_data_count(sqlite3_stmt *pStmt);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_blob",
+      "kind": "function",
+      "header_line": 5580,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const void *sqlite3_column_blob(sqlite3_stmt*, int iCol);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_double",
+      "kind": "function",
+      "header_line": 5581,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API double sqlite3_column_double(sqlite3_stmt*, int iCol);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_int",
+      "kind": "function",
+      "header_line": 5582,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_column_int(sqlite3_stmt*, int iCol);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_int64",
+      "kind": "function",
+      "header_line": 5583,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_int64 sqlite3_column_int64(sqlite3_stmt*, int iCol);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_text",
+      "kind": "function",
+      "header_line": 5584,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const unsigned char *sqlite3_column_text(sqlite3_stmt*, int iCol);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_text16",
+      "kind": "function",
+      "header_line": 5585,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const void *sqlite3_column_text16(sqlite3_stmt*, int iCol);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_value",
+      "kind": "function",
+      "header_line": 5586,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_value *sqlite3_column_value(sqlite3_stmt*, int iCol);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_bytes",
+      "kind": "function",
+      "header_line": 5587,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_column_bytes(sqlite3_stmt*, int iCol);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_bytes16",
+      "kind": "function",
+      "header_line": 5588,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_column_bytes16(sqlite3_stmt*, int iCol);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_column_type",
+      "kind": "function",
+      "header_line": 5589,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_column_type(sqlite3_stmt*, int iCol);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_finalize",
+      "kind": "function",
+      "header_line": 5617,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_finalize(sqlite3_stmt *pStmt);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_reset",
+      "kind": "function",
+      "header_line": 5656,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_reset(sqlite3_stmt *pStmt);",
+      "phase": "phase-12",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/statement_client.c",
+        "src/core/statement.zig"
+      ]
+    },
+    {
+      "symbol": "sqlite3_create_function",
+      "kind": "function",
+      "header_line": 5782,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_create_function( sqlite3 *db, const char *zFunctionName, int nArg, int eTextRep, void *pApp, void (*xFunc)(sqlite3_context*,int,sqlite3_value**), void (*xStep)(sqlite3_context*,int,sqlite3_value**), void (*xFinal)(sqlite3_context*) );",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_create_function16",
+      "kind": "function",
+      "header_line": 5792,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_create_function16( sqlite3 *db, const void *zFunctionName, int nArg, int eTextRep, void *pApp, void (*xFunc)(sqlite3_context*,int,sqlite3_value**), void (*xStep)(sqlite3_context*,int,sqlite3_value**), void (*xFinal)(sqlite3_context*) );",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_create_function_v2",
+      "kind": "function",
+      "header_line": 5802,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_create_function_v2( sqlite3 *db, const char *zFunctionName, int nArg, int eTextRep, void *pApp, void (*xFunc)(sqlite3_context*,int,sqlite3_value**), void (*xStep)(sqlite3_context*,int,sqlite3_value**), void (*xFinal)(sqlite3_context*), void(*xDestroy)(void*) );",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_create_window_function",
+      "kind": "function",
+      "header_line": 5813,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_create_window_function( sqlite3 *db, const char *zFunctionName, int nArg, int eTextRep, void *pApp, void (*xStep)(sqlite3_context*,int,sqlite3_value**), void (*xFinal)(sqlite3_context*), void (*xValue)(sqlite3_context*), void (*xInverse)(sqlite3_context*,int,sqlite3_value**), void(*xDestroy)(void*) );",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_aggregate_count",
+      "kind": "function",
+      "header_line": 6003,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(SQLITE_OMIT_DEPRECATED))",
+      "declaration": "SQLITE_API SQLITE_DEPRECATED int sqlite3_aggregate_count(sqlite3_context*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_expired",
+      "kind": "function",
+      "header_line": 6004,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(SQLITE_OMIT_DEPRECATED))",
+      "declaration": "SQLITE_API SQLITE_DEPRECATED int sqlite3_expired(sqlite3_stmt*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_transfer_bindings",
+      "kind": "function",
+      "header_line": 6005,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(SQLITE_OMIT_DEPRECATED))",
+      "declaration": "SQLITE_API SQLITE_DEPRECATED int sqlite3_transfer_bindings(sqlite3_stmt*, sqlite3_stmt*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_global_recover",
+      "kind": "function",
+      "header_line": 6006,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(SQLITE_OMIT_DEPRECATED))",
+      "declaration": "SQLITE_API SQLITE_DEPRECATED int sqlite3_global_recover(void);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_thread_cleanup",
+      "kind": "function",
+      "header_line": 6007,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(SQLITE_OMIT_DEPRECATED))",
+      "declaration": "SQLITE_API SQLITE_DEPRECATED void sqlite3_thread_cleanup(void);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_memory_alarm",
+      "kind": "function",
+      "header_line": 6008,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(SQLITE_OMIT_DEPRECATED))",
+      "declaration": "SQLITE_API SQLITE_DEPRECATED int sqlite3_memory_alarm(void(*)(void*,sqlite3_int64,int), void*,sqlite3_int64);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_blob",
+      "kind": "function",
+      "header_line": 6136,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const void *sqlite3_value_blob(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_double",
+      "kind": "function",
+      "header_line": 6137,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API double sqlite3_value_double(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_int",
+      "kind": "function",
+      "header_line": 6138,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_value_int(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_int64",
+      "kind": "function",
+      "header_line": 6139,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_int64 sqlite3_value_int64(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_pointer",
+      "kind": "function",
+      "header_line": 6140,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_value_pointer(sqlite3_value*, const char*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_text",
+      "kind": "function",
+      "header_line": 6141,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const unsigned char *sqlite3_value_text(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_text16",
+      "kind": "function",
+      "header_line": 6142,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const void *sqlite3_value_text16(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_text16le",
+      "kind": "function",
+      "header_line": 6143,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const void *sqlite3_value_text16le(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_text16be",
+      "kind": "function",
+      "header_line": 6144,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const void *sqlite3_value_text16be(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_bytes",
+      "kind": "function",
+      "header_line": 6145,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_value_bytes(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_bytes16",
+      "kind": "function",
+      "header_line": 6146,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_value_bytes16(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_type",
+      "kind": "function",
+      "header_line": 6147,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_value_type(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_numeric_type",
+      "kind": "function",
+      "header_line": 6148,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_value_numeric_type(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_nochange",
+      "kind": "function",
+      "header_line": 6149,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_value_nochange(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_frombind",
+      "kind": "function",
+      "header_line": 6150,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_value_frombind(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_encoding",
+      "kind": "function",
+      "header_line": 6173,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_value_encoding(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_subtype",
+      "kind": "function",
+      "header_line": 6191,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API unsigned int sqlite3_value_subtype(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_dup",
+      "kind": "function",
+      "header_line": 6208,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_value *sqlite3_value_dup(const sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_value_free",
+      "kind": "function",
+      "header_line": 6209,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_value_free(sqlite3_value*);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_aggregate_context",
+      "kind": "function",
+      "header_line": 6254,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_aggregate_context(sqlite3_context*, int nBytes);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_user_data",
+      "kind": "function",
+      "header_line": 6269,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_user_data(sqlite3_context*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_context_db_handle",
+      "kind": "function",
+      "header_line": 6281,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3 *sqlite3_context_db_handle(sqlite3_context*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_get_auxdata",
+      "kind": "function",
+      "header_line": 6350,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_get_auxdata(sqlite3_context*, int N);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_set_auxdata",
+      "kind": "function",
+      "header_line": 6351,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_set_auxdata(sqlite3_context*, int N, void*, void (*)(void*));",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_get_clientdata",
+      "kind": "function",
+      "header_line": 6411,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_get_clientdata(sqlite3*,const char*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_set_clientdata",
+      "kind": "function",
+      "header_line": 6412,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_set_clientdata(sqlite3*, const char*, void*, void(*)(void*));",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_blob",
+      "kind": "function",
+      "header_line": 6583,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_blob(sqlite3_context*, const void*, int, void(*)(void*));",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_blob64",
+      "kind": "function",
+      "header_line": 6584,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_blob64(sqlite3_context*,const void*, sqlite3_uint64,void(*)(void*));",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_double",
+      "kind": "function",
+      "header_line": 6586,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_double(sqlite3_context*, double);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_error",
+      "kind": "function",
+      "header_line": 6587,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_error(sqlite3_context*, const char*, int);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_error16",
+      "kind": "function",
+      "header_line": 6588,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_error16(sqlite3_context*, const void*, int);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_error_toobig",
+      "kind": "function",
+      "header_line": 6589,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_error_toobig(sqlite3_context*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_error_nomem",
+      "kind": "function",
+      "header_line": 6590,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_error_nomem(sqlite3_context*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_error_code",
+      "kind": "function",
+      "header_line": 6591,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_error_code(sqlite3_context*, int);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_int",
+      "kind": "function",
+      "header_line": 6592,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_int(sqlite3_context*, int);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_int64",
+      "kind": "function",
+      "header_line": 6593,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_int64(sqlite3_context*, sqlite3_int64);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_null",
+      "kind": "function",
+      "header_line": 6594,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_null(sqlite3_context*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_text",
+      "kind": "function",
+      "header_line": 6595,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_text(sqlite3_context*, const char*, int, void(*)(void*));",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_text64",
+      "kind": "function",
+      "header_line": 6596,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_text64(sqlite3_context*, const char *z, sqlite3_uint64 n, void(*)(void*), unsigned char encoding);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_text16",
+      "kind": "function",
+      "header_line": 6598,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_text16(sqlite3_context*, const void*, int, void(*)(void*));",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_text16le",
+      "kind": "function",
+      "header_line": 6599,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_text16le(sqlite3_context*, const void*, int,void(*)(void*));",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_text16be",
+      "kind": "function",
+      "header_line": 6600,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_text16be(sqlite3_context*, const void*, int,void(*)(void*));",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_value",
+      "kind": "function",
+      "header_line": 6601,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_value(sqlite3_context*, sqlite3_value*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_pointer",
+      "kind": "function",
+      "header_line": 6602,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_pointer(sqlite3_context*, void*,const char*,void(*)(void*));",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_zeroblob",
+      "kind": "function",
+      "header_line": 6603,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_zeroblob(sqlite3_context*, int n);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_zeroblob64",
+      "kind": "function",
+      "header_line": 6604,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_result_zeroblob64(sqlite3_context*, sqlite3_uint64 n);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_result_subtype",
+      "kind": "function",
+      "header_line": 6633,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_result_subtype(sqlite3_context*,unsigned int);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_create_collation",
+      "kind": "function",
+      "header_line": 6716,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_create_collation( sqlite3*, const char *zName, int eTextRep, void *pArg, int(*xCompare)(void*,int,const void*,int,const void*) );",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_create_collation_v2",
+      "kind": "function",
+      "header_line": 6723,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_create_collation_v2( sqlite3*, const char *zName, int eTextRep, void *pArg, int(*xCompare)(void*,int,const void*,int,const void*), void(*xDestroy)(void*) );",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_create_collation16",
+      "kind": "function",
+      "header_line": 6731,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_create_collation16( sqlite3*, const void *zName, int eTextRep, void *pArg, int(*xCompare)(void*,int,const void*,int,const void*) );",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_collation_needed",
+      "kind": "function",
+      "header_line": 6766,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_collation_needed( sqlite3*, void*, void(*)(void*,sqlite3*,int eTextRep,const char*) );",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_collation_needed16",
+      "kind": "function",
+      "header_line": 6771,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_collation_needed16( sqlite3*, void*, void(*)(void*,sqlite3*,int eTextRep,const void*) );",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_activate_cerod",
+      "kind": "function",
+      "header_line": 6782,
+      "condition": "(!defined(SQLITE3_H)) && (defined(SQLITE_ENABLE_CEROD))",
+      "declaration": "SQLITE_API void sqlite3_activate_cerod( const char *zPassPhrase /* Activation phrase */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_sleep",
+      "kind": "function",
+      "header_line": 6811,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_sleep(int);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_temp_directory",
+      "kind": "data",
+      "header_line": 6869,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API SQLITE_EXTERN char *sqlite3_temp_directory;",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_data_directory",
+      "kind": "data",
+      "header_line": 6906,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API SQLITE_EXTERN char *sqlite3_data_directory;",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_win32_set_directory",
+      "kind": "function",
+      "header_line": 6927,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_win32_set_directory( unsigned long type, /* Identifier for directory being set or reset */ void *zValue /* New value for directory being set or reset */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_win32_set_directory8",
+      "kind": "function",
+      "header_line": 6931,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_win32_set_directory8(unsigned long type, const char *zValue);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_win32_set_directory16",
+      "kind": "function",
+      "header_line": 6932,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_win32_set_directory16(unsigned long type, const void *zValue);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_get_autocommit",
+      "kind": "function",
+      "header_line": 6965,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_get_autocommit(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_db_handle",
+      "kind": "function",
+      "header_line": 6978,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3 *sqlite3_db_handle(sqlite3_stmt*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_db_name",
+      "kind": "function",
+      "header_line": 7000,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_db_name(sqlite3 *db, int N);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_db_filename",
+      "kind": "function",
+      "header_line": 7032,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_filename sqlite3_db_filename(sqlite3 *db, const char *zDbName);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_db_readonly",
+      "kind": "function",
+      "header_line": 7042,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_db_readonly(sqlite3 *db, const char *zDbName);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_txn_state",
+      "kind": "function",
+      "header_line": 7060,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_txn_state(sqlite3*,const char *zSchema);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_next_stmt",
+      "kind": "function",
+      "header_line": 7109,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_stmt *sqlite3_next_stmt(sqlite3 *pDb, sqlite3_stmt *pStmt);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_commit_hook",
+      "kind": "function",
+      "header_line": 7158,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_commit_hook(sqlite3*, int(*)(void*), void*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_rollback_hook",
+      "kind": "function",
+      "header_line": 7159,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_rollback_hook(sqlite3*, void(*)(void *), void*);",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_autovacuum_pages",
+      "kind": "function",
+      "header_line": 7219,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_autovacuum_pages( sqlite3 *db, unsigned int(*)(void*,const char*,unsigned int,unsigned int,unsigned int), void*, void(*)(void*) );",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_update_hook",
+      "kind": "function",
+      "header_line": 7284,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_update_hook( sqlite3*, void(*)(void *,int ,char const *,char const *,sqlite3_int64), void* );",
+      "phase": "phase-17-callback-context",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_enable_shared_cache",
+      "kind": "function",
+      "header_line": 7334,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_enable_shared_cache(int);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_release_memory",
+      "kind": "function",
+      "header_line": 7350,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_release_memory(int);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_db_release_memory",
+      "kind": "function",
+      "header_line": 7364,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_db_release_memory(sqlite3*);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_soft_heap_limit64",
+      "kind": "function",
+      "header_line": 7430,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_int64 sqlite3_soft_heap_limit64(sqlite3_int64 N);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_hard_heap_limit64",
+      "kind": "function",
+      "header_line": 7431,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_int64 sqlite3_hard_heap_limit64(sqlite3_int64 N);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_soft_heap_limit",
+      "kind": "function",
+      "header_line": 7442,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API SQLITE_DEPRECATED void sqlite3_soft_heap_limit(int N);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_table_column_metadata",
+      "kind": "function",
+      "header_line": 7514,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_table_column_metadata( sqlite3 *db, /* Connection handle */ const char *zDbName, /* Database name or NULL */ const char *zTableName, /* Table name */ const char *zColumnName, /* Column name */ char const **pzDataType, /* OUTPUT: Declared data type */ char const **pzCollSeq, /* OUTPUT: Collation sequence name */ int *pNotNull, /* OUTPUT: True if NOT NULL constraint exists */ int *pPrimaryKey, /* OUTPUT: True if column part of PK */ int *pAutoinc /* OUTPUT: True if column is auto-increment */ );",
+      "phase": "phase-17-maintenance",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_load_extension",
+      "kind": "function",
+      "header_line": 7570,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_load_extension( sqlite3 *db, /* Load the extension into this database connection */ const char *zFile, /* Name of the shared library containing extension */ const char *zProc, /* Entry point. Derived from zFile if 0 */ char **pzErrMsg /* Put error message here if not 0 */ );",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_enable_load_extension",
+      "kind": "function",
+      "header_line": 7602,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_enable_load_extension(sqlite3 *db, int onoff);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_auto_extension",
+      "kind": "function",
+      "header_line": 7640,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_auto_extension(void(*xEntryPoint)(void));",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_cancel_auto_extension",
+      "kind": "function",
+      "header_line": 7652,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_cancel_auto_extension(void(*xEntryPoint)(void));",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_reset_auto_extension",
+      "kind": "function",
+      "header_line": 7660,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_reset_auto_extension(void);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_create_module",
+      "kind": "function",
+      "header_line": 7963,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_create_module( sqlite3 *db, /* SQLite connection to register module with */ const char *zName, /* Name of the module */ const sqlite3_module *p, /* Methods for the module */ void *pClientData /* Client data for xCreate/xConnect */ );",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_create_module_v2",
+      "kind": "function",
+      "header_line": 7969,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_create_module_v2( sqlite3 *db, /* SQLite connection to register module with */ const char *zName, /* Name of the module */ const sqlite3_module *p, /* Methods for the module */ void *pClientData, /* Client data for xCreate/xConnect */ void(*xDestroy)(void*) /* Module destructor function */ );",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_drop_modules",
+      "kind": "function",
+      "header_line": 7989,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_drop_modules( sqlite3 *db, /* Remove modules from this connection */ const char **azKeep /* Except, do not remove the ones named here */ );",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_declare_vtab",
+      "kind": "function",
+      "header_line": 8049,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_declare_vtab(sqlite3*, const char *zSQL);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_overload_function",
+      "kind": "function",
+      "header_line": 8068,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_overload_function(sqlite3*, const char *zFuncName, int nArg);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_blob_open",
+      "kind": "function",
+      "header_line": 8167,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_blob_open( sqlite3*, const char *zDb, const char *zTable, const char *zColumn, sqlite3_int64 iRow, int flags, sqlite3_blob **ppBlob );",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_blob_reopen",
+      "kind": "function",
+      "header_line": 8200,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_blob_reopen(sqlite3_blob *, sqlite3_int64);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_blob_close",
+      "kind": "function",
+      "header_line": 8223,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_blob_close(sqlite3_blob *);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_blob_bytes",
+      "kind": "function",
+      "header_line": 8239,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_blob_bytes(sqlite3_blob *);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_blob_read",
+      "kind": "function",
+      "header_line": 8268,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_blob_read(sqlite3_blob *, void *Z, int N, int iOffset);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_blob_write",
+      "kind": "function",
+      "header_line": 8310,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_blob_write(sqlite3_blob *, const void *z, int n, int iOffset);",
+      "phase": "phase-17-value-blob",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vfs_find",
+      "kind": "function",
+      "header_line": 8341,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vfs_register",
+      "kind": "function",
+      "header_line": 8342,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_vfs_register(sqlite3_vfs*, int makeDflt);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vfs_unregister",
+      "kind": "function",
+      "header_line": 8343,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_vfs_unregister(sqlite3_vfs*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_mutex_alloc",
+      "kind": "function",
+      "header_line": 8454,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_mutex *sqlite3_mutex_alloc(int);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_mutex_free",
+      "kind": "function",
+      "header_line": 8455,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_mutex_free(sqlite3_mutex*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_mutex_enter",
+      "kind": "function",
+      "header_line": 8456,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_mutex_enter(sqlite3_mutex*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_mutex_try",
+      "kind": "function",
+      "header_line": 8457,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_mutex_try(sqlite3_mutex*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_mutex_leave",
+      "kind": "function",
+      "header_line": 8458,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_mutex_leave(sqlite3_mutex*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_mutex_held",
+      "kind": "function",
+      "header_line": 8568,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(NDEBUG))",
+      "declaration": "SQLITE_API int sqlite3_mutex_held(sqlite3_mutex*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_mutex_notheld",
+      "kind": "function",
+      "header_line": 8569,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(NDEBUG))",
+      "declaration": "SQLITE_API int sqlite3_mutex_notheld(sqlite3_mutex*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_db_mutex",
+      "kind": "function",
+      "header_line": 8613,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_mutex *sqlite3_db_mutex(sqlite3*);",
+      "phase": "phase-17-maintenance",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_file_control",
+      "kind": "function",
+      "header_line": 8656,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_file_control(sqlite3*, const char *zDbName, int op, void*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_test_control",
+      "kind": "variadic-function",
+      "header_line": 8675,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_test_control(int op, ...);",
+      "phase": "phase-17-maintenance",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_keyword_count",
+      "kind": "function",
+      "header_line": 8774,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_keyword_count(void);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_keyword_name",
+      "kind": "function",
+      "header_line": 8775,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_keyword_name(int,const char**,int*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_keyword_check",
+      "kind": "function",
+      "header_line": 8776,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_keyword_check(const char*,int);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_new",
+      "kind": "function",
+      "header_line": 8821,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_str *sqlite3_str_new(sqlite3*);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_finish",
+      "kind": "function",
+      "header_line": 8840,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API char *sqlite3_str_finish(sqlite3_str*);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_free",
+      "kind": "function",
+      "header_line": 8841,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_str_free(sqlite3_str*);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_appendf",
+      "kind": "variadic-function",
+      "header_line": 8879,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_str_appendf(sqlite3_str*, const char *zFormat, ...);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_vappendf",
+      "kind": "function",
+      "header_line": 8880,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_str_vappendf(sqlite3_str*, const char *zFormat, va_list);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_append",
+      "kind": "function",
+      "header_line": 8881,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_str_append(sqlite3_str*, const char *zIn, int N);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_appendall",
+      "kind": "function",
+      "header_line": 8882,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_str_appendall(sqlite3_str*, const char *zIn);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_appendchar",
+      "kind": "function",
+      "header_line": 8883,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_str_appendchar(sqlite3_str*, int N, char C);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_reset",
+      "kind": "function",
+      "header_line": 8884,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_str_reset(sqlite3_str*);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_truncate",
+      "kind": "function",
+      "header_line": 8885,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_str_truncate(sqlite3_str*,int N);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_errcode",
+      "kind": "function",
+      "header_line": 8916,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_str_errcode(sqlite3_str*);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_length",
+      "kind": "function",
+      "header_line": 8917,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_str_length(sqlite3_str*);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_str_value",
+      "kind": "function",
+      "header_line": 8918,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API char *sqlite3_str_value(sqlite3_str*);",
+      "phase": "phase-17-utility-expansion",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_status",
+      "kind": "function",
+      "header_line": 8946,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_status(int op, int *pCurrent, int *pHighwater, int resetFlag);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_status64",
+      "kind": "function",
+      "header_line": 8947,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_status64( int op, sqlite3_int64 *pCurrent, sqlite3_int64 *pHighwater, int resetFlag );",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_db_status",
+      "kind": "function",
+      "header_line": 9064,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_db_status(sqlite3*, int op, int *pCur, int *pHiwtr, int resetFlg);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_db_status64",
+      "kind": "function",
+      "header_line": 9065,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_db_status64(sqlite3*,int,sqlite3_int64*,sqlite3_int64*,int);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_stmt_status",
+      "kind": "function",
+      "header_line": 9237,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_stmt_status(sqlite3_stmt*, int op,int resetFlg);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_backup_init",
+      "kind": "function",
+      "header_line": 9749,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API sqlite3_backup *sqlite3_backup_init( sqlite3 *pDest, /* Destination database handle */ const char *zDestName, /* Destination database name */ sqlite3 *pSource, /* Source database handle */ const char *zSourceName /* Source database name */ );",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_backup_step",
+      "kind": "function",
+      "header_line": 9755,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_backup_step(sqlite3_backup *p, int nPage);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_backup_finish",
+      "kind": "function",
+      "header_line": 9756,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_backup_finish(sqlite3_backup *p);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_backup_remaining",
+      "kind": "function",
+      "header_line": 9757,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_backup_remaining(sqlite3_backup *p);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_backup_pagecount",
+      "kind": "function",
+      "header_line": 9758,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_backup_pagecount(sqlite3_backup *p);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_unlock_notify",
+      "kind": "function",
+      "header_line": 9875,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_unlock_notify( sqlite3 *pBlocked, /* Waiting connection */ void (*xNotify)(void **apArg, int nArg), /* Callback function to invoke */ void *pNotifyArg /* Argument to pass to xNotify */ );",
+      "phase": "phase-17-maintenance",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_stricmp",
+      "kind": "function",
+      "header_line": 9890,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_stricmp(const char *, const char *);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_strnicmp",
+      "kind": "function",
+      "header_line": 9891,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_strnicmp(const char *, const char *, int);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_strglob",
+      "kind": "function",
+      "header_line": 9908,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_strglob(const char *zGlob, const char *zStr);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_strlike",
+      "kind": "function",
+      "header_line": 9931,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_strlike(const char *zGlob, const char *zStr, unsigned int cEsc);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_log",
+      "kind": "variadic-function",
+      "header_line": 9954,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_log(int iErrCode, const char *zFormat, ...);",
+      "phase": "phase-17-maintenance",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_wal_hook",
+      "kind": "function",
+      "header_line": 10004,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void *sqlite3_wal_hook( sqlite3*, int(*)(void *,sqlite3*,const char*,int), void* );",
+      "phase": "phase-17-maintenance",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_wal_autocheckpoint",
+      "kind": "function",
+      "header_line": 10040,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_wal_autocheckpoint(sqlite3 *db, int N);",
+      "phase": "phase-17-maintenance",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_wal_checkpoint",
+      "kind": "function",
+      "header_line": 10062,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_wal_checkpoint(sqlite3 *db, const char *zDb);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_wal_checkpoint_v2",
+      "kind": "function",
+      "header_line": 10161,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_wal_checkpoint_v2( sqlite3 *db, /* Database handle */ const char *zDb, /* Name of attached database (or NULL) */ int eMode, /* SQLITE_CHECKPOINT_* value */ int *pnLog, /* OUT: Size of WAL log in frames */ int *pnCkpt /* OUT: Total number of frames checkpointed */ );",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vtab_config",
+      "kind": "variadic-function",
+      "header_line": 10202,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_vtab_config(sqlite3*, int op, ...);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vtab_on_conflict",
+      "kind": "function",
+      "header_line": 10290,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_vtab_on_conflict(sqlite3 *);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vtab_nochange",
+      "kind": "function",
+      "header_line": 10316,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_vtab_nochange(sqlite3_context*);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vtab_collation",
+      "kind": "function",
+      "header_line": 10351,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API const char *sqlite3_vtab_collation(sqlite3_index_info*,int);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vtab_distinct",
+      "kind": "function",
+      "header_line": 10446,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_vtab_distinct(sqlite3_index_info*);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vtab_in",
+      "kind": "function",
+      "header_line": 10519,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_vtab_in(sqlite3_index_info*, int iCons, int bHandle);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vtab_in_first",
+      "kind": "function",
+      "header_line": 10566,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_vtab_in_first(sqlite3_value *pVal, sqlite3_value **ppOut);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vtab_in_next",
+      "kind": "function",
+      "header_line": 10567,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_vtab_in_next(sqlite3_value *pVal, sqlite3_value **ppOut);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_vtab_rhs_value",
+      "kind": "function",
+      "header_line": 10609,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_vtab_rhs_value(sqlite3_index_info*, int, sqlite3_value **ppVal);",
+      "phase": "phase-17-extension",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_stmt_scanstatus",
+      "kind": "function",
+      "header_line": 10739,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_stmt_scanstatus( sqlite3_stmt *pStmt, /* Prepared statement for which info desired */ int idx, /* Index of loop to report on */ int iScanStatusOp, /* Information desired. SQLITE_SCANSTAT_* */ void *pOut /* Result written here */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_stmt_scanstatus_v2",
+      "kind": "function",
+      "header_line": 10745,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_stmt_scanstatus_v2( sqlite3_stmt *pStmt, /* Prepared statement for which info desired */ int idx, /* Index of loop to report on */ int iScanStatusOp, /* Information desired. SQLITE_SCANSTAT_* */ int flags, /* Mask of flags defined below */ void *pOut /* Result written here */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_stmt_scanstatus_reset",
+      "kind": "function",
+      "header_line": 10768,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_stmt_scanstatus_reset(sqlite3_stmt*);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_db_cacheflush",
+      "kind": "function",
+      "header_line": 10801,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_db_cacheflush(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_preupdate_hook",
+      "kind": "function",
+      "header_line": 10900,
+      "condition": "(!defined(SQLITE3_H)) && (defined(SQLITE_ENABLE_PREUPDATE_HOOK))",
+      "declaration": "SQLITE_API void *sqlite3_preupdate_hook( sqlite3 *db, void(*xPreUpdate)( void *pCtx, /* Copy of third arg to preupdate_hook() */ sqlite3 *db, /* Database handle */ int op, /* SQLITE_UPDATE, DELETE or INSERT */ char const *zDb, /* Database name */ char const *zName, /* Table name */ sqlite3_int64 iKey1, /* Rowid of row about to be deleted/updated */ sqlite3_int64 iKey2 /* New rowid value (for a rowid UPDATE) */ ), void* );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_preupdate_old",
+      "kind": "function",
+      "header_line": 10913,
+      "condition": "(!defined(SQLITE3_H)) && (defined(SQLITE_ENABLE_PREUPDATE_HOOK))",
+      "declaration": "SQLITE_API int sqlite3_preupdate_old(sqlite3 *, int, sqlite3_value **);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_preupdate_count",
+      "kind": "function",
+      "header_line": 10914,
+      "condition": "(!defined(SQLITE3_H)) && (defined(SQLITE_ENABLE_PREUPDATE_HOOK))",
+      "declaration": "SQLITE_API int sqlite3_preupdate_count(sqlite3 *);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_preupdate_depth",
+      "kind": "function",
+      "header_line": 10915,
+      "condition": "(!defined(SQLITE3_H)) && (defined(SQLITE_ENABLE_PREUPDATE_HOOK))",
+      "declaration": "SQLITE_API int sqlite3_preupdate_depth(sqlite3 *);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_preupdate_new",
+      "kind": "function",
+      "header_line": 10916,
+      "condition": "(!defined(SQLITE3_H)) && (defined(SQLITE_ENABLE_PREUPDATE_HOOK))",
+      "declaration": "SQLITE_API int sqlite3_preupdate_new(sqlite3 *, int, sqlite3_value **);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_preupdate_blobwrite",
+      "kind": "function",
+      "header_line": 10917,
+      "condition": "(!defined(SQLITE3_H)) && (defined(SQLITE_ENABLE_PREUPDATE_HOOK))",
+      "declaration": "SQLITE_API int sqlite3_preupdate_blobwrite(sqlite3 *);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_system_errno",
+      "kind": "function",
+      "header_line": 10931,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_system_errno(sqlite3*);",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_snapshot_get",
+      "kind": "function",
+      "header_line": 11008,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_snapshot_get( sqlite3 *db, const char *zSchema, sqlite3_snapshot **ppSnapshot );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_snapshot_open",
+      "kind": "function",
+      "header_line": 11057,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_snapshot_open( sqlite3 *db, const char *zSchema, sqlite3_snapshot *pSnapshot );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_snapshot_free",
+      "kind": "function",
+      "header_line": 11074,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API void sqlite3_snapshot_free(sqlite3_snapshot*);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_snapshot_cmp",
+      "kind": "function",
+      "header_line": 11101,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_snapshot_cmp( sqlite3_snapshot *p1, sqlite3_snapshot *p2 );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_snapshot_recover",
+      "kind": "function",
+      "header_line": 11129,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_snapshot_recover(sqlite3 *db, const char *zDb);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_serialize",
+      "kind": "function",
+      "header_line": 11175,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API unsigned char *sqlite3_serialize( sqlite3 *db, /* The database connection */ const char *zSchema, /* Which DB to serialize. ex: \"main\", \"temp\", ... */ sqlite3_int64 *piSize, /* Write size of the DB here, if not NULL */ unsigned int mFlags /* Zero or more SQLITE_SERIALIZE_* flags */ );",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_deserialize",
+      "kind": "function",
+      "header_line": 11242,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_deserialize( sqlite3 *db, /* The database connection */ const char *zSchema, /* Which DB to reopen with the deserialization */ unsigned char *pData, /* The serialized database content */ sqlite3_int64 szDb, /* Number of bytes in the deserialization */ sqlite3_int64 szBuf, /* Total size of buffer pData[] */ unsigned mFlags /* Zero or more SQLITE_DESERIALIZE_* flags */ );",
+      "phase": "phase-17-connection-utility",
+      "status": "provisional-bounded",
+      "evidence": [
+        "tests/api/phase17_connection_client.c"
+      ]
+    },
+    {
+      "symbol": "sqlite3_carray_bind_v2",
+      "kind": "function",
+      "header_line": 11306,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_carray_bind_v2( sqlite3_stmt *pStmt, /* Statement to be bound */ int i, /* Parameter index */ void *aData, /* Pointer to array data */ int nData, /* Number of data elements */ int mFlags, /* CARRAY flags */ void (*xDel)(void*), /* Destructor for aData */ void *pDel /* Optional argument to xDel() */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_carray_bind",
+      "kind": "function",
+      "header_line": 11315,
+      "condition": "(!defined(SQLITE3_H))",
+      "declaration": "SQLITE_API int sqlite3_carray_bind( sqlite3_stmt *pStmt, /* Statement to be bound */ int i, /* Parameter index */ void *aData, /* Pointer to array data */ int nData, /* Number of data elements */ int mFlags, /* CARRAY flags */ void (*xDel)(void*) /* Destructor for aData */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_rtree_geometry_callback",
+      "kind": "function",
+      "header_line": 11411,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(_SQLITE3RTREE_H_))",
+      "declaration": "SQLITE_API int sqlite3_rtree_geometry_callback( sqlite3 *db, const char *zGeom, int (*xGeom)(sqlite3_rtree_geometry*, int, sqlite3_rtree_dbl*,int*), void *pContext );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3_rtree_query_callback",
+      "kind": "function",
+      "header_line": 11437,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(_SQLITE3RTREE_H_))",
+      "declaration": "SQLITE_API int sqlite3_rtree_query_callback( sqlite3 *db, const char *zQueryFunc, int (*xQueryFunc)(sqlite3_rtree_query_info*), void *pContext, void (*xDestructor)(void*) );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_create",
+      "kind": "function",
+      "header_line": 11550,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3session_create( sqlite3 *db, /* Database handle */ const char *zDb, /* Name of db (e.g. \"main\") */ sqlite3_session **ppSession /* OUT: New session object */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_delete",
+      "kind": "function",
+      "header_line": 11569,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API void sqlite3session_delete(sqlite3_session *pSession);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_object_config",
+      "kind": "function",
+      "header_line": 11580,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3session_object_config(sqlite3_session*, int op, void *pArg);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_enable",
+      "kind": "function",
+      "header_line": 11635,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3session_enable(sqlite3_session *pSession, int bEnable);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_indirect",
+      "kind": "function",
+      "header_line": 11665,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3session_indirect(sqlite3_session *pSession, int bIndirect);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_attach",
+      "kind": "function",
+      "header_line": 11725,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3session_attach( sqlite3_session *pSession, /* Session object */ const char *zTab /* Table name */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_table_filter",
+      "kind": "function",
+      "header_line": 11740,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API void sqlite3session_table_filter( sqlite3_session *pSession, /* Session object */ int(*xFilter)( void *pCtx, /* Copy of third arg to _filter_table() */ const char *zTab /* Table name */ ), void *pCtx /* First argument passed to xFilter */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_changeset",
+      "kind": "function",
+      "header_line": 11855,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3session_changeset( sqlite3_session *pSession, /* Session object */ int *pnChangeset, /* OUT: Size of buffer at *ppChangeset */ void **ppChangeset /* OUT: Buffer containing changeset */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_changeset_size",
+      "kind": "function",
+      "header_line": 11875,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API sqlite3_int64 sqlite3session_changeset_size(sqlite3_session *pSession);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_diff",
+      "kind": "function",
+      "header_line": 11935,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3session_diff( sqlite3_session *pSession, const char *zFromDb, const char *zTbl, char **pzErrMsg );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_patchset",
+      "kind": "function",
+      "header_line": 11972,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3session_patchset( sqlite3_session *pSession, /* Session object */ int *pnPatchset, /* OUT: Size of buffer at *ppPatchset */ void **ppPatchset /* OUT: Buffer containing patchset */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_isempty",
+      "kind": "function",
+      "header_line": 11993,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3session_isempty(sqlite3_session *pSession);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_memory_used",
+      "kind": "function",
+      "header_line": 12001,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API sqlite3_int64 sqlite3session_memory_used(sqlite3_session *pSession);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_start",
+      "kind": "function",
+      "header_line": 12044,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_start( sqlite3_changeset_iter **pp, /* OUT: New changeset iterator handle */ int nChangeset, /* Size of changeset blob in bytes */ void *pChangeset /* Pointer to blob containing changeset */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_start_v2",
+      "kind": "function",
+      "header_line": 12049,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_start_v2( sqlite3_changeset_iter **pp, /* OUT: New changeset iterator handle */ int nChangeset, /* Size of changeset blob in bytes */ void *pChangeset, /* Pointer to blob containing changeset */ int flags /* SESSION_CHANGESETSTART_* flags */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_next",
+      "kind": "function",
+      "header_line": 12093,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_next(sqlite3_changeset_iter *pIter);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_op",
+      "kind": "function",
+      "header_line": 12127,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_op( sqlite3_changeset_iter *pIter, /* Iterator object */ const char **pzTab, /* OUT: Pointer to table name */ int *pnCol, /* OUT: Number of columns in table */ int *pOp, /* OUT: SQLITE_INSERT, DELETE or UPDATE */ int *pbIndirect /* OUT: True for an 'indirect' change */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_pk",
+      "kind": "function",
+      "header_line": 12161,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_pk( sqlite3_changeset_iter *pIter, /* Iterator object */ unsigned char **pabPK, /* OUT: Array of boolean - true for PK cols */ int *pnCol /* OUT: Number of entries in output array */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_old",
+      "kind": "function",
+      "header_line": 12192,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_old( sqlite3_changeset_iter *pIter, /* Changeset iterator */ int iVal, /* Column number */ sqlite3_value **ppValue /* OUT: Old value (or NULL pointer) */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_new",
+      "kind": "function",
+      "header_line": 12226,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_new( sqlite3_changeset_iter *pIter, /* Changeset iterator */ int iVal, /* Column number */ sqlite3_value **ppValue /* OUT: New value (or NULL pointer) */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_conflict",
+      "kind": "function",
+      "header_line": 12254,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_conflict( sqlite3_changeset_iter *pIter, /* Changeset iterator */ int iVal, /* Column number */ sqlite3_value **ppValue /* OUT: Value from conflicting row */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_fk_conflicts",
+      "kind": "function",
+      "header_line": 12271,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_fk_conflicts( sqlite3_changeset_iter *pIter, /* Changeset iterator */ int *pnOut /* OUT: Number of FK violations */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_finalize",
+      "kind": "function",
+      "header_line": 12307,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_finalize(sqlite3_changeset_iter *pIter);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_invert",
+      "kind": "function",
+      "header_line": 12337,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_invert( int nIn, const void *pIn, /* Input changeset */ int *pnOut, void **ppOut /* OUT: Inverse of input */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_concat",
+      "kind": "function",
+      "header_line": 12368,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_concat( int nA, /* Number of bytes in buffer pA */ void *pA, /* Pointer to buffer containing changeset A */ int nB, /* Number of bytes in buffer pB */ void *pB, /* Pointer to buffer containing changeset B */ int *pnOut, /* OUT: Number of bytes in output changeset */ void **ppOut /* OUT: Buffer containing output changeset */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_new",
+      "kind": "function",
+      "header_line": 12421,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_new(sqlite3_changegroup **pp);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_schema",
+      "kind": "function",
+      "header_line": 12453,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_schema(sqlite3_changegroup*, sqlite3*, const char *zDb);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_add",
+      "kind": "function",
+      "header_line": 12536,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_add(sqlite3_changegroup*, int nData, void *pData);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_add_change",
+      "kind": "function",
+      "header_line": 12555,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_add_change( sqlite3_changegroup*, sqlite3_changeset_iter* );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_output",
+      "kind": "function",
+      "header_line": 12587,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_output( sqlite3_changegroup*, int *pnData, /* OUT: Size of output buffer in bytes */ void **ppData /* OUT: Pointer to output buffer */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_delete",
+      "kind": "function",
+      "header_line": 12597,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API void sqlite3changegroup_delete(sqlite3_changegroup*);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_apply",
+      "kind": "function",
+      "header_line": 12769,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_apply( sqlite3 *db, /* Apply change to \"main\" db of this handle */ int nChangeset, /* Size of changeset in bytes */ void *pChangeset, /* Changeset blob */ int(*xFilter)( void *pCtx, /* Copy of sixth arg to _apply() */ const char *zTab /* Table name */ ), int(*xConflict)( void *pCtx, /* Copy of sixth arg to _apply() */ int eConflict, /* DATA, MISSING, CONFLICT, CONSTRAINT */ sqlite3_changeset_iter *p /* Handle describing change and conflict */ ), void *pCtx /* First argument passed to xConflict */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_apply_v2",
+      "kind": "function",
+      "header_line": 12784,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_apply_v2( sqlite3 *db, /* Apply change to \"main\" db of this handle */ int nChangeset, /* Size of changeset in bytes */ void *pChangeset, /* Changeset blob */ int(*xFilter)( void *pCtx, /* Copy of sixth arg to _apply() */ const char *zTab /* Table name */ ), int(*xConflict)( void *pCtx, /* Copy of sixth arg to _apply() */ int eConflict, /* DATA, MISSING, CONFLICT, CONSTRAINT */ sqlite3_changeset_iter *p /* Handle describing change and conflict */ ), void *pCtx, /* First argument passed to xConflict */ void **ppRebase, int *pnRebase, /* OUT: Rebase data */ int flags /* SESSION_CHANGESETAPPLY_* flags */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_apply_v3",
+      "kind": "function",
+      "header_line": 12801,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_apply_v3( sqlite3 *db, /* Apply change to \"main\" db of this handle */ int nChangeset, /* Size of changeset in bytes */ void *pChangeset, /* Changeset blob */ int(*xFilter)( void *pCtx, /* Copy of sixth arg to _apply() */ sqlite3_changeset_iter *p /* Handle describing change */ ), int(*xConflict)( void *pCtx, /* Copy of sixth arg to _apply() */ int eConflict, /* DATA, MISSING, CONFLICT, CONSTRAINT */ sqlite3_changeset_iter *p /* Handle describing change and conflict */ ), void *pCtx, /* First argument passed to xConflict */ void **ppRebase, int *pnRebase, /* OUT: Rebase data */ int flags /* SESSION_CHANGESETAPPLY_* flags */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3rebaser_create",
+      "kind": "function",
+      "header_line": 13081,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3rebaser_create(sqlite3_rebaser **ppNew);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3rebaser_configure",
+      "kind": "function",
+      "header_line": 13092,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3rebaser_configure( sqlite3_rebaser*, int nRebase, const void *pRebase );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3rebaser_rebase",
+      "kind": "function",
+      "header_line": 13111,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3rebaser_rebase( sqlite3_rebaser*, int nIn, const void *pIn, int *pnOut, void **ppOut );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3rebaser_delete",
+      "kind": "function",
+      "header_line": 13125,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API void sqlite3rebaser_delete(sqlite3_rebaser *p);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_apply_strm",
+      "kind": "function",
+      "header_line": 13217,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_apply_strm( sqlite3 *db, /* Apply change to \"main\" db of this handle */ int (*xInput)(void *pIn, void *pData, int *pnData), /* Input function */ void *pIn, /* First arg for xInput */ int(*xFilter)( void *pCtx, /* Copy of sixth arg to _apply() */ const char *zTab /* Table name */ ), int(*xConflict)( void *pCtx, /* Copy of sixth arg to _apply() */ int eConflict, /* DATA, MISSING, CONFLICT, CONSTRAINT */ sqlite3_changeset_iter *p /* Handle describing change and conflict */ ), void *pCtx /* First argument passed to xConflict */ );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_apply_v2_strm",
+      "kind": "function",
+      "header_line": 13232,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_apply_v2_strm( sqlite3 *db, /* Apply change to \"main\" db of this handle */ int (*xInput)(void *pIn, void *pData, int *pnData), /* Input function */ void *pIn, /* First arg for xInput */ int(*xFilter)( void *pCtx, /* Copy of sixth arg to _apply() */ const char *zTab /* Table name */ ), int(*xConflict)( void *pCtx, /* Copy of sixth arg to _apply() */ int eConflict, /* DATA, MISSING, CONFLICT, CONSTRAINT */ sqlite3_changeset_iter *p /* Handle describing change and conflict */ ), void *pCtx, /* First argument passed to xConflict */ void **ppRebase, int *pnRebase, int flags );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_apply_v3_strm",
+      "kind": "function",
+      "header_line": 13249,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_apply_v3_strm( sqlite3 *db, /* Apply change to \"main\" db of this handle */ int (*xInput)(void *pIn, void *pData, int *pnData), /* Input function */ void *pIn, /* First arg for xInput */ int(*xFilter)( void *pCtx, /* Copy of sixth arg to _apply() */ sqlite3_changeset_iter *p ), int(*xConflict)( void *pCtx, /* Copy of sixth arg to _apply() */ int eConflict, /* DATA, MISSING, CONFLICT, CONSTRAINT */ sqlite3_changeset_iter *p /* Handle describing change and conflict */ ), void *pCtx, /* First argument passed to xConflict */ void **ppRebase, int *pnRebase, int flags );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_concat_strm",
+      "kind": "function",
+      "header_line": 13266,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_concat_strm( int (*xInputA)(void *pIn, void *pData, int *pnData), void *pInA, int (*xInputB)(void *pIn, void *pData, int *pnData), void *pInB, int (*xOutput)(void *pOut, const void *pData, int nData), void *pOut );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_invert_strm",
+      "kind": "function",
+      "header_line": 13274,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_invert_strm( int (*xInput)(void *pIn, void *pData, int *pnData), void *pIn, int (*xOutput)(void *pOut, const void *pData, int nData), void *pOut );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_start_strm",
+      "kind": "function",
+      "header_line": 13280,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_start_strm( sqlite3_changeset_iter **pp, int (*xInput)(void *pIn, void *pData, int *pnData), void *pIn );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changeset_start_v2_strm",
+      "kind": "function",
+      "header_line": 13285,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changeset_start_v2_strm( sqlite3_changeset_iter **pp, int (*xInput)(void *pIn, void *pData, int *pnData), void *pIn, int flags );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_changeset_strm",
+      "kind": "function",
+      "header_line": 13291,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3session_changeset_strm( sqlite3_session *pSession, int (*xOutput)(void *pOut, const void *pData, int nData), void *pOut );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_patchset_strm",
+      "kind": "function",
+      "header_line": 13296,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3session_patchset_strm( sqlite3_session *pSession, int (*xOutput)(void *pOut, const void *pData, int nData), void *pOut );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_add_strm",
+      "kind": "function",
+      "header_line": 13301,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_add_strm(sqlite3_changegroup*, int (*xInput)(void *pIn, void *pData, int *pnData), void *pIn );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_output_strm",
+      "kind": "function",
+      "header_line": 13305,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_output_strm(sqlite3_changegroup*, int (*xOutput)(void *pOut, const void *pData, int nData), void *pOut );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3rebaser_rebase_strm",
+      "kind": "function",
+      "header_line": 13309,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3rebaser_rebase_strm( sqlite3_rebaser *pRebaser, int (*xInput)(void *pIn, void *pData, int *pnData), void *pIn, int (*xOutput)(void *pOut, const void *pData, int nData), void *pOut );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3session_config",
+      "kind": "function",
+      "header_line": 13350,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3session_config(int op, void *pArg);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_config",
+      "kind": "function",
+      "header_line": 13364,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_config(sqlite3_changegroup*, int, void *pArg);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_change_begin",
+      "kind": "function",
+      "header_line": 13438,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_change_begin( sqlite3_changegroup*, int eOp, const char *zTab, int bIndirect, char **pzErr );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_change_int64",
+      "kind": "function",
+      "header_line": 13477,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_change_int64( sqlite3_changegroup*, int bNew, int iCol, sqlite3_int64 iVal );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_change_null",
+      "kind": "function",
+      "header_line": 13491,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_change_null(sqlite3_changegroup*, int, int);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_change_double",
+      "kind": "function",
+      "header_line": 13500,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_change_double(sqlite3_changegroup*, int, int, double);",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_change_text",
+      "kind": "function",
+      "header_line": 13512,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_change_text( sqlite3_changegroup*, int, int, const char *pVal, int nVal );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_change_blob",
+      "kind": "function",
+      "header_line": 13524,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_change_blob( sqlite3_changegroup*, int, int, const void *pVal, int nVal );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    },
+    {
+      "symbol": "sqlite3changegroup_change_finish",
+      "kind": "function",
+      "header_line": 13577,
+      "condition": "(!defined(SQLITE3_H)) && (!defined(__SQLITESESSION_H_) && defined(SQLITE_ENABLE_SESSION))",
+      "declaration": "SQLITE_API int sqlite3changegroup_change_finish( sqlite3_changegroup*, int bDiscard, char **pzErr );",
+      "phase": "deferred-profile",
+      "status": "deferred-profile",
+      "evidence": []
+    }
+  ]
+}

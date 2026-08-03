@@ -1,0 +1,74 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-8-rollback-journal-writes",
+  "profile": "sqlite-3.53.4-delete-full-4096-sector4096",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 40,
+  "corpus": {
+    "manifest": "tests/fixtures/rollback/manifest.json",
+    "fixture_count": 1,
+    "page_size": 4096,
+    "sector_size": 4096,
+    "journal_mode": "delete",
+    "synchronous": "full",
+    "mutation": "fixed-size page-1 user_version and change-counter update"
+  },
+  "slices": {
+    "writer_state_and_locking": {
+      "status": "pass",
+      "scope": ["READER to WRITER_LOCKED", "reserved lock", "exclusive lock with busy callback", "writer state table", "READER restoration"]
+    },
+    "journal_creation_and_page_capture": {
+      "status": "pass",
+      "scope": ["canonical 28-byte header", "4096-byte sector padding", "checksum nonce", "original page count", "page number/data/checksum records", "journal membership"]
+    },
+    "delete_full_commit": {
+      "status": "pass",
+      "scope": ["initial journal sync", "magic and nRec publication", "final journal sync", "ordered database page writes", "database truncate and sync", "journal deletion commit point", "change counter"]
+    },
+    "explicit_and_hot_rollback": {
+      "status": "pass",
+      "scope": ["cache-only rollback", "database playback", "checksum validation", "original-size restoration", "hot-journal exclusive recovery", "recovery continuation"]
+    },
+    "crash_model": {
+      "status": "pass",
+      "events": 7,
+      "events_named_in": "tests/fixtures/rollback/manifest.json",
+      "expected": "old before journal deletion; new at and after journal deletion",
+      "continuation_after_every_event": "pass",
+      "subwrite_sync_truncate_delete_crash_boundaries": 12
+    },
+    "fault_and_allocation": {
+      "status": "pass",
+      "scope": ["six write boundaries", "short journal and database write", "three sync boundaries", "two truncate boundaries", "journal open", "reserved/exclusive lock", "journal delete", "hot-recovery read/write/truncate/sync/delete"],
+      "oom": "pass-bounded-sticky-and-one-shot",
+      "post_fault_rollback_and_continuation": "pass"
+    },
+    "cross_engine_interoperability": {
+      "status": "pass",
+      "command": "rollback-differential",
+      "observations": 14,
+      "scope": ["oracle commit to native continuation", "native commit to oracle integrity check", "oracle hot journal to native recovery", "native hot journal to oracle recovery", "acknowledged commit", "auxiliary journal cleanup"]
+    }
+  },
+  "phase_owned_deferrals": [
+    {"item": "B-tree page allocation, insertion, deletion, balancing, freelist and pointer-map mutation", "owning_phase": "phase-9"},
+    {"item": "WAL read/write, shared memory, checkpoint and WAL recovery", "owning_phase": "phase-10"},
+    {"item": "savepoints, super-journals, persistent/truncate/memory journal modes, synchronous modes other than FULL", "owning_phase": "later-feature-expansion"},
+    {"item": "sector sizes unequal to page size and atomic-write/device optimizations", "owning_phase": "phase-15-device-matrix"},
+    {"item": "production Unix and Windows VFS implementations", "owning_phase": "phase-15-and-phase-16"}
+  ],
+  "exit_gates": {
+    "write_read_interoperability": "pass",
+    "all_named_crash_points": "pass",
+    "integrity_and_logical_content": "pass",
+    "acknowledged_commit_survival": "pass",
+    "recovery_continuation": "pass",
+    "auxiliary_file_cleanup": "pass",
+    "bounded_fault_and_allocation_ownership": "pass",
+    "source_mapping": "pass"
+  }
+}

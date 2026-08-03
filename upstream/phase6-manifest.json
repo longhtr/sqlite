@@ -1,0 +1,57 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-6-read-only-pager",
+  "profile": "sqlite-3.53.4-core-default-threadsafe1-rollback-readonly",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 50,
+  "corpus": {
+    "manifest": "tests/fixtures/pager/manifest.json",
+    "fixture_count": 11,
+    "page_sizes": [512, 4096, 65536],
+    "classes": ["empty", "valid", "short-final-page", "malformed-header", "wal-header-without-wal"]
+  },
+  "slices": {
+    "open_and_header": {
+      "status": "pass",
+      "implementation": "src/core/pager.zig",
+      "scope": ["public VFS open", "full pathname", "raw header read", "page-size selection", "reserved bytes", "malformed-header classification"]
+    },
+    "shared_lock_and_read_transaction": {
+      "status": "pass",
+      "scope": ["OPEN to READER", "shared lock", "busy callback", "physical page count", "change-counter cache invalidation", "READER to OPEN"]
+    },
+    "page_acquisition_and_cache_fill": {
+      "status": "pass",
+      "scope": ["page zero rejection", "locking-page rejection", "cache hit/miss", "short-read zero fill", "past-end zero fill", "reference/release"],
+      "differential": "pager-differential",
+      "observations": 49
+    },
+    "read_only_boundary": {
+      "status": "pass",
+      "scope": ["writer begin", "make writable", "move", "truncate", "hot-journal recovery requirement", "WAL-file rejection"]
+    },
+    "fault_and_ownership": {
+      "status": "pass",
+      "scope": ["open", "full pathname", "file size", "lock", "access", "read", "close ownership"],
+      "oom": "pass-bounded-one-shot-and-sticky"
+    }
+  },
+  "phase_owned_deferrals": [
+    {"item": "hot-journal playback and all database mutation", "owning_phase": "phase-8"},
+    {"item": "WAL read transactions and WAL-index", "owning_phase": "phase-10"},
+    {"item": "read-only B-tree traversal, records, and overflow", "owning_phase": "phase-7"},
+    {"item": "production Unix and Windows VFS implementations", "owning_phase": "phase-15-and-phase-16"},
+    {"item": "memory-mapped xFetch page acquisition", "owning_phase": "phase-15"},
+    {"item": "native public database open and statement APIs", "owning_phase": "phase-12-and-phase-17"}
+  ],
+  "exit_gates": {
+    "golden_and_malformed_exact_results": "pass",
+    "page_bytes_cache_locks_and_transitions": "pass",
+    "mutation_unreachable_or_exact_failure": "pass",
+    "bounded_fault_and_allocation_ownership": "pass",
+    "source_mapping": "pass"
+  }
+}

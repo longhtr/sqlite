@@ -1,0 +1,60 @@
+{
+  "evidence_classification": "bounded-regression-only",
+  "project_completion_claim": false,
+  "schema_version": 1,
+  "phase": "phase-5-page-cache",
+  "profile": "sqlite-3.53.4-core-default-threadsafe1",
+  "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "status": "bounded-regression-evidence",
+  "mapped_entity_count": 171,
+  "state_sequence_corpus": {
+    "path": "tests/fixtures/pcache/state-sequences.txt",
+    "generator": "tools/generate_pcache_sequences.py",
+    "sha256": "74109ebe10eaadf338490533e1fb24e1576ed47cf84a344ea6a1f710cad435a9",
+    "sequences": 16
+  },
+  "slices": {
+    "cache_interface": {
+      "status": "pass",
+      "implementation": "src/core/page_cache.zig",
+      "scope": ["open/close", "fetch modes", "reference/release", "page-size and cache/spill sizing", "move", "truncate", "clear"]
+    },
+    "default_cache": {
+      "status": "pass",
+      "implementation": "src/core/page_cache.zig",
+      "scope": ["key lookup", "page/extra ownership", "advisory capacity", "deterministic clean-page LRU", "purge and shrink"]
+    },
+    "dirty_and_stress": {
+      "status": "pass",
+      "scope": ["dirty add/remove/front", "synced candidate", "sorted dirty list", "clean-all", "writable/sync flags", "stress cleanup"]
+    },
+    "reference_and_ownership": {
+      "status": "pass",
+      "scope": ["pin/unpin", "reference sum", "drop", "rekey ownership", "bounded sticky OOM", "bounded one-shot OOM"]
+    },
+    "oracle_trace": {
+      "status": "pass",
+      "command": "zig build pcache-differential",
+      "observations": 776,
+      "state_sequences": 16,
+      "scope": ["cache state", "sorted dirty keys", "reference counts", "stress victim", "move", "clean", "truncate", "purge"]
+    },
+    "deterministic_eviction": {
+      "status": "pass",
+      "workload": "versioned-lru-1",
+      "expected_evictions": [1, 3, 4],
+      "invariants_checked_after_each_transition": true
+    }
+  },
+  "phase_owned_deferrals": [
+    {"item": "SQLITE_CONFIG_PAGECACHE static-buffer public configuration entry point", "owning_phase": "phase-17"},
+    {"item": "pager integration with cache fill and read transactions", "owning_phase": "phase-6"},
+    {"item": "pager dirty-page writeback semantics", "owning_phase": "phase-8"}
+  ],
+  "exit_gates": {
+    "state_dirty_stress_purge_reference_trace_parity": "pass",
+    "bounded_allocation_failure_and_ownership": "pass",
+    "deterministic_eviction_and_invariants": "pass",
+    "source_mapping": "pass"
+  }
+}
