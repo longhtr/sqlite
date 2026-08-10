@@ -5932,9 +5932,8 @@ fn expressionNullRegisterRange(code: *std.ArrayList(vdbe.Instruction), allocator
     try code.append(allocator, .{ .opcode = .null_, .p2 = first, .p3 = last });
 }
 
-fn buildAggregateTableScan(connection: *Connection, source: [:0]u8, root_page: u32, index_scan: bool, selected: []const ResolvedColumn, all_columns: []const ResolvedColumn, schema_tokens: []const Token, expression_tokens: []const Token, qualifier: []const u8, analysis: *const AggregateAnalysis) !*statement.Statement {
+fn buildAggregateTableScan(connection: *Connection, database: *btree.Database, source: [:0]u8, root_page: u32, index_scan: bool, selected: []const ResolvedColumn, all_columns: []const ResolvedColumn, schema_tokens: []const Token, expression_tokens: []const Token, qualifier: []const u8, analysis: *const AggregateAnalysis) !*statement.Statement {
     const allocator = connection.allocator;
-    const database = connection.database orelse return error.Misuse;
     if (selected.len == 0 or selected.len > std.math.maxInt(u16) - 8) return error.TooBig;
     const owner = allocator.create(Owner) catch |err| {
         allocator.free(source);
@@ -6016,9 +6015,8 @@ fn buildAggregateTableScan(connection: *Connection, source: [:0]u8, root_page: u
     return prepared;
 }
 
-fn buildPlannedTableScan(connection: *Connection, source: [:0]u8, root_page: u32, index_scan: bool, selected: []const ResolvedColumn, all_columns: []const ResolvedColumn, schema_tokens: []const Token, expression_tokens: []const Token, qualifier: []const u8, plan: ScanPlan) !*statement.Statement {
+fn buildPlannedTableScan(connection: *Connection, database: *btree.Database, source: [:0]u8, root_page: u32, index_scan: bool, selected: []const ResolvedColumn, all_columns: []const ResolvedColumn, schema_tokens: []const Token, expression_tokens: []const Token, qualifier: []const u8, plan: ScanPlan) !*statement.Statement {
     const allocator = connection.allocator;
-    const database = connection.database orelse return error.Misuse;
     if (selected.len > std.math.maxInt(u16) - 8) return error.TooBig;
     const owner = allocator.create(Owner) catch |err| {
         allocator.free(source);
@@ -6114,12 +6112,11 @@ fn buildPlannedTableScan(connection: *Connection, source: [:0]u8, root_page: u32
     return prepared;
 }
 
-fn compilePlannedTableScan(connection: *Connection, source: [:0]u8, consumed: usize, root_page: u32, index_scan: bool, selected: []const ResolvedColumn, all_columns: []const ResolvedColumn, schema_tokens: []const Token, expression_tokens: []const Token, qualifier: []const u8, plan: ScanPlan) CompileOutcome {
-    const prepared = buildPlannedTableScan(connection, source, root_page, index_scan, selected, all_columns, schema_tokens, expression_tokens, qualifier, plan) catch |err| {
+fn compilePlannedTableScan(connection: *Connection, database: *btree.Database, source: [:0]u8, consumed: usize, root_page: u32, index_scan: bool, selected: []const ResolvedColumn, all_columns: []const ResolvedColumn, schema_tokens: []const Token, expression_tokens: []const Token, qualifier: []const u8, plan: ScanPlan) CompileOutcome {
+    const prepared = buildPlannedTableScan(connection, database, source, root_page, index_scan, selected, all_columns, schema_tokens, expression_tokens, qualifier, plan) catch |err| {
         return .{ .result = switch (err) {
             error.OutOfMemory => .no_memory,
             error.TooBig => .too_big,
-            error.Misuse => .misuse,
             else => .error_,
         }, .consumed = consumed };
     };
@@ -6445,6 +6442,7 @@ fn compileJsonVirtualScan(connection: *Connection, configuration: json_vtable.Co
 }
 
 const LocatedTableItem = struct {
+    database: *btree.Database,
     table: btree.SchemaTable,
     table_name: []const u8,
     qualifier: []const u8,
@@ -6457,14 +6455,36 @@ const LocateTableItemOutcome = struct {
     error_offset: c_int = -1,
 };
 
-/// Source `sqlite3LocateTable()`: resolve a main-schema table and preserve
-/// the precise storage-layer result for callers that suppress diagnostics.
-fn locateTable(connection: *Connection, name: []const u8, database_name: ?[]const u8) btree.SchemaTableOutcome {
-    if (database_name) |schema_name| {
-        if (!std.ascii.eqlIgnoreCase(schema_name, "main")) return .{ .result = .not_found };
+const LocatedDatabaseOutcome = struct {
+    result: ResultCode,
+    database: ?*btree.Database = null,
+};
+
+fn locateDatabase(connection: *Connection, database_name: ?[]const u8) LocatedDatabaseOutcome {
+    if (database_name == null or std.ascii.eqlIgnoreCase(database_name.?, "main")) {
+        if (connection.pending_deserialize_readonly != null) {
+            const opened = openPendingDeserializedDatabase(connection);
+            if (opened != .ok) return .{ .result = opened };
+        }
+        return .{ .result = .ok, .database = connection.database orelse return .{ .result = .misuse } };
     }
-    const database = connection.database orelse return .{ .result = .misuse };
-    return database.schemaTable(name);
+    const attachments = if (connection.attachments) |*catalog| catalog else return .{ .result = .not_found };
+    const entry = attachment_runtime.findDatabase(attachments, database_name.?) orelse return .{ .result = .not_found };
+    const native = entry.native_context orelse return .{ .result = .not_found };
+    const attached: *AttachedDatabase = @ptrCast(@alignCast(native));
+    if (attached.pending_deserialize_readonly != null) {
+        const opened = openPendingAttachedDatabase(attached);
+        if (opened != .ok) return .{ .result = opened };
+    }
+    return .{ .result = .ok, .database = if (attached.database) |*database| database else return .{ .result = .misuse } };
+}
+
+/// Source `sqlite3LocateTable()`: resolve a table within the selected schema
+/// and preserve the precise storage-layer result for diagnostic suppression.
+fn locateTable(connection: *Connection, name: []const u8, database_name: ?[]const u8) btree.SchemaTableOutcome {
+    const located_database = locateDatabase(connection, database_name);
+    if (located_database.result != .ok) return .{ .result = located_database.result };
+    return located_database.database.?.schemaTable(name);
 }
 
 /// Source `sqlite3LocateTableItem()`: parse an optionally schema-qualified
@@ -6491,9 +6511,11 @@ fn locateTableItem(connection: *Connection, token_list: []const Token, from_posi
         qualifier = token_list[position].text;
         position += 1;
     }
-    const located = locateTable(connection, table_name, database_name);
+    const located_database = locateDatabase(connection, database_name);
+    if (located_database.result != .ok) return .{ .result = located_database.result, .error_offset = @intCast(token_list[from_position + 1].start) };
+    const located = located_database.database.?.schemaTable(table_name);
     if (located.result != .ok) return .{ .result = located.result, .error_offset = @intCast(token_list[from_position + 1].start) };
-    return .{ .result = .ok, .item = .{ .table = located.table.?, .table_name = table_name, .qualifier = qualifier, .after = position } };
+    return .{ .result = .ok, .item = .{ .database = located_database.database.?, .table = located.table.?, .table_name = table_name, .qualifier = qualifier, .after = position } };
 }
 
 fn selectedColumnToken(token_list: []const Token, position: usize, limit: usize, qualifier: []const u8) ?struct { token: Token, next: usize } {
@@ -6641,16 +6663,13 @@ fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const
     if (connection.json_vtables_registered) {
         if (json_vtable.connect(token_list[from_position + 1].text)) |configuration| return compileJsonVirtualScan(connection, configuration, source, token_list, consumed, from_position);
     }
-    const database = connection.database orelse {
-        allocator.free(source);
-        return .{ .result = .misuse, .consumed = consumed };
-    };
     const located_outcome = locateTableItem(connection, token_list, from_position);
     if (located_outcome.result != .ok) {
         allocator.free(source);
         return .{ .result = if (located_outcome.result == .not_found) .error_ else located_outcome.result, .error_offset = located_outcome.error_offset, .consumed = consumed };
     }
     const located = located_outcome.item.?;
+    const database = located.database;
     const after_table = located.after;
     const indexed = after_table + 3 == token_list.len and token_list[after_table].typ == tokens.tk_indexed and token_list[after_table + 1].typ == tokens.tk_by and token_list[after_table + 2].typ == tokens.tk_id;
     const joined = after_table + 6 == token_list.len and token_list[after_table].typ == tokens.tk_join and token_list[after_table + 1].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(located.table_name, token_list[after_table + 1].text) and token_list[after_table + 2].typ == tokens.tk_using and token_list[after_table + 3].typ == tokens.tk_lp and token_list[after_table + 4].typ == tokens.tk_id and token_list[after_table + 5].typ == tokens.tk_rp;
@@ -6758,11 +6777,10 @@ fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const
         };
         defer if (aggregate_analysis) |*analysis| analysis.deinit(allocator);
         if (aggregate_analysis) |*analysis| {
-            const prepared = buildAggregateTableScan(connection, source, schema.root_page, table_without_rowid, selected.items, resolved.columns, resolved.tokens, token_list, located.qualifier, analysis) catch |err| {
+            const prepared = buildAggregateTableScan(connection, database, source, schema.root_page, table_without_rowid, selected.items, resolved.columns, resolved.tokens, token_list, located.qualifier, analysis) catch |err| {
                 return .{ .result = switch (err) {
                     error.OutOfMemory => .no_memory,
                     error.TooBig => .too_big,
-                    error.Misuse => .misuse,
                     else => .error_,
                 }, .consumed = consumed };
             };
@@ -6851,7 +6869,7 @@ fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const
                         return .{ .result = .no_memory, .consumed = consumed };
                     };
                 }
-                return compilePlannedTableScan(connection, source, consumed, index_schema.root_page, true, index_selected.items, index_resolved.columns, index_resolved.tokens, token_list, located.qualifier, plan);
+                return compilePlannedTableScan(connection, database, source, consumed, index_schema.root_page, true, index_selected.items, index_resolved.columns, index_resolved.tokens, token_list, located.qualifier, plan);
             }
         }
         position = after_table;
@@ -6918,14 +6936,14 @@ fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const
             allocator.free(source);
             return .{ .result = .error_, .consumed = consumed };
         }
-        return compilePlannedTableScan(connection, source, consumed, schema.root_page, table_without_rowid, selected.items, resolved.columns, resolved.tokens, token_list, located.qualifier, plan);
+        return compilePlannedTableScan(connection, database, source, consumed, schema.root_page, table_without_rowid, selected.items, resolved.columns, resolved.tokens, token_list, located.qualifier, plan);
     }
     if (!indexed and !joined and after_table != token_list.len) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
     const cursor_is_index = indexed or table_without_rowid;
-    return compilePlannedTableScan(connection, source, consumed, schema.root_page, cursor_is_index, selected.items, resolved.columns, resolved.tokens, token_list, located.qualifier, .{});
+    return compilePlannedTableScan(connection, database, source, consumed, schema.root_page, cursor_is_index, selected.items, resolved.columns, resolved.tokens, token_list, located.qualifier, .{});
 }
 
 fn memToBtreeValue(value: *vdbe.Mem) ?btree.Value {
@@ -9591,6 +9609,12 @@ test "attached schema serialize and deserialize preserve image ownership" {
     try std.testing.expectEqual(size, attached_size);
     try std.testing.expectEqual(@as(c_int, 0), sqlite3_db_readonly(target, "aux"));
     try std.testing.expectEqualStrings("aux", std.mem.span(sqlite3_db_name(target, 2).?));
+    var statement_pointer: ?*statement.sqlite3_stmt = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(target, "SELECT x FROM aux.t", -1, &statement_pointer, null));
+    defer _ = statement.sqlite3_finalize(statement_pointer);
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(statement_pointer));
+    try std.testing.expectEqual(@as(i64, 42), statement.sqlite3_column_int64(statement_pointer, 0));
+    try std.testing.expectEqual(ResultCode.done.toC(), statement.sqlite3_step(statement_pointer));
 
     var malformed: ?*sqlite3 = null;
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &malformed));

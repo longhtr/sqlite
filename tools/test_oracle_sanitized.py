@@ -14,6 +14,10 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 def main() -> None:
     output = ROOT / ".reference-build/oracle-sanitized"
     output.mkdir(parents=True, exist_ok=True)
+    temporary = output / "tmp"
+    temporary.mkdir(parents=True, exist_ok=True)
+    environment = dict(os.environ)
+    environment["TMPDIR"] = str(temporary)
     clang = pathlib.Path(os.environ.get("CLANG", "/usr/bin/clang-21"))
     if not clang.is_file() or not os.access(clang, os.X_OK):
         raise SystemExit(f"oracle-sanitized: pinned clang not found: {clang}")
@@ -39,9 +43,9 @@ def main() -> None:
             executable,
         ],
         check=True,
+        env=environment,
         limits=subprocess.TOOL_LIMITS,
     )
-    environment = dict(os.environ)
     environment.update(
         ASAN_OPTIONS="detect_leaks=1:halt_on_error=1:strict_string_checks=1",
         UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1",

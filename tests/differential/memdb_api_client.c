@@ -104,7 +104,6 @@ int main(void){
   int attached_deserialize_rc=sqlite3_deserialize(attached,"aux",attached_image,size,size,SQLITE_DESERIALIZE_FREEONCLOSE|SQLITE_DESERIALIZE_RESIZEABLE);
   borrowed_size=-1;
   unsigned char *attached_borrowed=sqlite3_serialize(attached,"aux",&borrowed_size,SQLITE_SERIALIZE_NOCOPY);
-  printf("attached\t%d\t%d\t%d\t%lld\t%d\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"));
   borrowed_size=-1;
   fail_next_allocation=1;
   unsigned char *attached_failed=sqlite3_serialize(attached,"aux",&borrowed_size,0);
@@ -115,6 +114,9 @@ int main(void){
   borrowed_size=-1;
   attached_borrowed=sqlite3_serialize(attached,"aux",&borrowed_size,SQLITE_SERIALIZE_NOCOPY);
   printf("attached-deserialize-oom\t%d\t%d\t%lld\n",attached_oom_rc,attached_borrowed==attached_image,(long long)borrowed_size);
+  sqlite3_int64 attached_value=-1;
+  int attached_query_rc=query_value(attached,"SELECT x FROM aux.t",&attached_value);
+  printf("attached\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"),attached_query_rc,(long long)attached_value);
   sqlite3_free(attached_replacement);
 
   int close_clone = sqlite3_close(clone);
