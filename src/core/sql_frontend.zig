@@ -3129,6 +3129,7 @@ const Backup = struct {
     destination_name: [:0]u8,
     source_name: [:0]u8,
     source_attached: ?*AttachedDatabase,
+    source_page_size: u32,
     image: ?[*]u8 = null,
     image_size: i64 = 0,
     image_capacity: i64 = 0,
@@ -3173,7 +3174,7 @@ pub export fn sqlite3_backup_init(destination_pointer: ?*sqlite3, destination_na
         destination.last_result = .error_;
         return null;
     };
-    backup.* = .{ .destination = destination, .source = source, .destination_name = destination_copy, .source_name = source_copy, .source_attached = source_attached };
+    backup.* = .{ .destination = destination, .source = source, .destination_name = destination_copy, .source_name = source_copy, .source_attached = source_attached, .source_page_size = located_source.database.?.pager.page_size };
     destination.active_backups += 1;
     source.active_backups += 1;
     if (source_attached) |owner| owner.active_backups += 1;
@@ -3191,11 +3192,12 @@ pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callc
         backup.image = bytes;
         backup.image_size = size;
         backup.image_capacity = @intCast(public_api.sqlite3_msize(bytes));
-        const rounded_size = std.math.add(i64, size, 4095) catch {
+        const page_size: i64 = @intCast(backup.source_page_size);
+        const rounded_size = std.math.add(i64, size, page_size - 1) catch {
             backup.result = .too_big;
             return backup.result.toC();
         };
-        backup.pages = std.math.cast(c_int, @max(@divTrunc(rounded_size, 4096), 1)) orelse {
+        backup.pages = std.math.cast(c_int, @max(@divTrunc(rounded_size, page_size), 1)) orelse {
             backup.result = .too_big;
             return backup.result.toC();
         };
