@@ -199,6 +199,7 @@ const AttachedDatabase = struct {
     memory_backend: btree.vfs.MemoryVfs,
     memory_adapter: btree.vfs.AbiAdapter = undefined,
     database: ?btree.Database = null,
+    pending_deserialize_readonly: ?bool = null,
 
     fn createMemory(allocator: std.mem.Allocator) ?*AttachedDatabase {
         const attached = allocator.create(AttachedDatabase) catch return null;
@@ -1427,15 +1428,29 @@ fn ensureAttachmentCatalog(connection: *Connection) attachment_runtime.Error!*at
 fn schemaNameMatches(connection: *const Connection, database_name: ?[*:0]const u8) bool {
     const requested = if (database_name) |name| std.mem.span(name) else return true;
     const expected = if (connection.main_schema_name) |name| name else "main";
-    return std.ascii.eqlIgnoreCase(requested, expected);
+    return std.ascii.eqlIgnoreCase(requested, expected) or std.ascii.eqlIgnoreCase(requested, "main");
+}
+
+fn attachedDatabaseByName(connection: *Connection, database_name: ?[*:0]const u8) ?*AttachedDatabase {
+    const requested = if (database_name) |name| std.mem.span(name) else return null;
+    const attachments = if (connection.attachments) |*catalog| catalog else return null;
+    const entry = attachment_runtime.findDatabase(attachments, requested) orelse return null;
+    const native = entry.native_context orelse return null;
+    return @ptrCast(@alignCast(native));
 }
 
 /// Source `sqlite3_db_filename()`: resolve the selected schema and return the
 /// canonical filename owned by its native pager.
 fn databaseFilename(connection: *Connection, database_name: ?[*:0]const u8) ?[*:0]const u8 {
-    if (!schemaNameMatches(connection, database_name)) return null;
-    if (connection.database == null) return null;
-    return if (connection.filename) |filename| filename.ptr else null;
+    if (schemaNameMatches(connection, database_name)) {
+        if (connection.database == null and connection.pending_deserialize_readonly == null) return null;
+        return if (connection.filename) |filename| filename.ptr else null;
+    }
+    const requested = if (database_name) |name| std.mem.span(name) else return null;
+    const attachments = if (connection.attachments) |*catalog| catalog else return null;
+    const entry = attachment_runtime.findDatabase(attachments, requested) orelse return null;
+    if (entry.native_context == null) return null;
+    return entry.filename.ptr;
 }
 
 pub export fn sqlite3_db_filename(pointer: ?*sqlite3, database_name: ?[*:0]const u8) callconv(.c) ?[*:0]const u8 {
@@ -1461,9 +1476,14 @@ pub export fn sqlite3_db_name(pointer: ?*sqlite3, index: c_int) callconv(.c) ?[*
 /// Source `sqlite3_db_readonly()`: distinguish a missing schema from a valid
 /// read-only or writable native B-tree.
 fn databaseReadonly(connection: *Connection, database_name: ?[*:0]const u8) c_int {
-    if (!schemaNameMatches(connection, database_name)) return -1;
-    if (connection.database) |database| return @intFromBool(!database.writable);
-    if (connection.pending_deserialize_readonly != null) return 0;
+    if (schemaNameMatches(connection, database_name)) {
+        if (connection.database) |database| return @intFromBool(!database.writable);
+        if (connection.pending_deserialize_readonly != null) return 0;
+        return -1;
+    }
+    const attached = attachedDatabaseByName(connection, database_name) orelse return -1;
+    if (attached.database) |database| return @intFromBool(!database.writable);
+    if (attached.pending_deserialize_readonly != null) return 0;
     return -1;
 }
 
@@ -2662,32 +2682,39 @@ pub export fn sqlite3_system_errno(pointer: ?*sqlite3) callconv(.c) c_int {
     return if (asConnection(pointer)) |connection| connection.system_errno else 0;
 }
 
+fn serializeMemoryStore(connection: *Connection, store: memdb.SchemaStore, size_output: ?*i64, flags: c_uint) ?[*]u8 {
+    const store_name = if (store.allow_no_copy) "main" else "/main";
+    const image = store.backend.borrowVolatile(store_name) orelse return null;
+    if (size_output) |output| output.* = @intCast(image.len);
+    const serialization_optional = memdb.serialize(connection.allocator, store, store_name, flags & 1 != 0) catch return null;
+    const serialization = serialization_optional orelse return null;
+    switch (serialization) {
+        .borrowed => |bytes| {
+            if (size_output) |output| output.* = @intCast(bytes.len);
+            return bytes.ptr;
+        },
+        .owned => |bytes| {
+            defer connection.allocator.free(bytes);
+            const output = public_api.sqlite3_malloc64(bytes.len) orelse return null;
+            @memcpy(@as([*]u8, @ptrCast(output))[0..bytes.len], bytes);
+            if (size_output) |output_size| output_size.* = @intCast(bytes.len);
+            return @ptrCast(output);
+        },
+    }
+}
+
 pub export fn sqlite3_serialize(pointer: ?*sqlite3, schema: ?[*:0]const u8, size_output: ?*i64, flags: c_uint) callconv(.c) ?[*]u8 {
     const connection = safetyCheckOk(pointer) orelse return null;
     connection.connection_mutex.enter();
     defer connection.connection_mutex.leave();
     if (size_output) |output| output.* = -1;
-    const schema_name = if (schema) |name| std.mem.span(name) else null;
-    if (schema_name) |name| if (!std.ascii.eqlIgnoreCase(name, "main")) return null;
-    if (memdb.fromSchema(if (connection.memory_backend) |*memory| memory else null, connection.shared_memdb, schema_name)) |store| {
-        const store_name = if (store.allow_no_copy) "main" else "/main";
-        const image = store.backend.borrowVolatile(store_name) orelse return null;
-        if (size_output) |output| output.* = @intCast(image.len);
-        const serialization_optional = memdb.serialize(connection.allocator, store, store_name, flags & 1 != 0) catch return null;
-        const serialization = serialization_optional orelse return null;
-        switch (serialization) {
-            .borrowed => |bytes| {
-                if (size_output) |output| output.* = @intCast(bytes.len);
-                return bytes.ptr;
-            },
-            .owned => |bytes| {
-                defer connection.allocator.free(bytes);
-                const output = public_api.sqlite3_malloc64(bytes.len) orelse return null;
-                @memcpy(@as([*]u8, @ptrCast(output))[0..bytes.len], bytes);
-                if (size_output) |output_size| output_size.* = @intCast(bytes.len);
-                return @ptrCast(output);
-            },
-        }
+    if (!schemaNameMatches(connection, schema)) {
+        const attached = attachedDatabaseByName(connection, schema) orelse return null;
+        const store = memdb.fromSchema(&attached.memory_backend, null, "main") orelse return null;
+        return serializeMemoryStore(connection, store, size_output, flags);
+    }
+    if (memdb.fromSchema(if (connection.memory_backend) |*memory| memory else null, connection.shared_memdb, "main")) |store| {
+        return serializeMemoryStore(connection, store, size_output, flags);
     }
     if (connection.unix_backend != null) {
         const database = connection.database orelse return null;
@@ -2733,6 +2760,16 @@ fn openPendingDeserializedDatabase(connection: *Connection) ResultCode {
     return .ok;
 }
 
+fn openPendingAttachedDatabase(attached: *AttachedDatabase) ResultCode {
+    if (attached.database != null) return .ok;
+    _ = attached.pending_deserialize_readonly orelse return .misuse;
+    const opened = btree.Database.openWritable(attached.allocator, &attached.memory_adapter.abi, "main");
+    if (opened.result != .ok) return opened.result;
+    attached.database = opened.database.?;
+    attached.pending_deserialize_readonly = null;
+    return .ok;
+}
+
 pub export fn sqlite3_deserialize(pointer: ?*sqlite3, schema: ?[*:0]const u8, data: ?[*]u8, size: i64, buffer_size: i64, flags: c_uint) callconv(.c) c_int {
     const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
     if (size < 0 or buffer_size < 0 or size > buffer_size or data == null) return ResultCode.misuse.toC();
@@ -2741,14 +2778,19 @@ pub export fn sqlite3_deserialize(pointer: ?*sqlite3, schema: ?[*:0]const u8, da
     var transferred = false;
     defer if (!transferred and flags & btree.vfs.DESERIALIZE_FREEONCLOSE != 0) public_api.sqlite3_free(data);
     if (connection.active_statements != 0) return ResultCode.misuse.toC();
-    if (schema) |name| if (!std.ascii.eqlIgnoreCase(std.mem.span(name), "main")) return ResultCode.error_.toC();
-    if (connection.pending_deserialize_readonly != null) {
+    const attached: ?*AttachedDatabase = if (schemaNameMatches(connection, schema)) null else attachedDatabaseByName(connection, schema) orelse return ResultCode.error_.toC();
+    if (attached) |target| {
+        if (target.pending_deserialize_readonly != null) {
+            const pending_result = openPendingAttachedDatabase(target);
+            if (pending_result != .ok) return pending_result.toC();
+        }
+    } else if (connection.pending_deserialize_readonly != null) {
         const pending_result = openPendingDeserializedDatabase(connection);
         if (pending_result != .ok) return pending_result.toC();
     }
 
     var replacement_name: ?[:0]u8 = null;
-    if (connection.filename == null or !std.mem.eql(u8, connection.filename.?, ":memory:")) {
+    if (attached == null and (connection.filename == null or !std.mem.eql(u8, connection.filename.?, ":memory:"))) {
         replacement_name = connection.allocator.dupeZ(u8, ":memory:") catch return ResultCode.no_memory.toC();
     }
     defer if (replacement_name) |name| connection.allocator.free(name);
@@ -2771,6 +2813,21 @@ pub export fn sqlite3_deserialize(pointer: ?*sqlite3, schema: ?[*:0]const u8, da
             replacement.deinit();
             return truncate_result;
         }
+    }
+    if (attached) |target| {
+        if (target.database) |*database| {
+            const rc = database.close();
+            if (rc != .ok) {
+                replacement.deinit();
+                return rc.toC();
+            }
+            target.database = null;
+        }
+        target.memory_backend.deinit();
+        target.memory_backend = replacement;
+        target.memory_adapter = btree.vfs.AbiAdapter.init("zig-attached-deserialize", &target.memory_backend);
+        target.pending_deserialize_readonly = flags & btree.vfs.DESERIALIZE_READONLY != 0;
+        return ResultCode.ok.toC();
     }
     if (connection.database) |database| {
         const rc = database.close();
@@ -9513,6 +9570,42 @@ test "ordinary database serialization copies the live pager image page by page" 
     try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
     try std.testing.expectEqual(@as(i64, 42), statement.sqlite3_column_int64(prepared, 0));
     try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+}
+
+test "attached schema serialize and deserialize preserve image ownership" {
+    var source: ?*sqlite3 = null;
+    var target: ?*sqlite3 = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &source));
+    defer _ = sqlite3_close(source);
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &target));
+    defer _ = sqlite3_close(target);
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(source, "CREATE TABLE t(x); INSERT INTO t VALUES(42)", null, null, null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(target, "ATTACH ':memory:' AS aux", null, null, null));
+    var size: i64 = -1;
+    const image = sqlite3_serialize(source, "main", &size, 0) orelse return error.TestUnexpectedResult;
+    const capacity: i64 = @intCast(public_api.sqlite3_msize(image));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_deserialize(target, "aux", image, size, capacity, btree.vfs.DESERIALIZE_FREEONCLOSE | btree.vfs.DESERIALIZE_RESIZEABLE));
+    var attached_size: i64 = -1;
+    const borrowed = sqlite3_serialize(target, "aux", &attached_size, 1) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@intFromPtr(image), @intFromPtr(borrowed));
+    try std.testing.expectEqual(size, attached_size);
+    try std.testing.expectEqual(@as(c_int, 0), sqlite3_db_readonly(target, "aux"));
+    try std.testing.expectEqualStrings("aux", std.mem.span(sqlite3_db_name(target, 2).?));
+
+    var malformed: ?*sqlite3 = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &malformed));
+    defer _ = sqlite3_close(malformed);
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(malformed, "ATTACH ':memory:' AS aux", null, null, null));
+    const bad = public_api.sqlite3_malloc64(512) orelse return error.TestUnexpectedResult;
+    @memset(@as([*]u8, @ptrCast(bad))[0..512], 0xa5);
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_deserialize(malformed, "aux", @ptrCast(bad), 512, 512, btree.vfs.DESERIALIZE_FREEONCLOSE | btree.vfs.DESERIALIZE_RESIZEABLE));
+    var bad_size: i64 = -1;
+    const bad_borrow = sqlite3_serialize(malformed, "aux", &bad_size, 1) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@intFromPtr(bad), @intFromPtr(bad_borrow));
+    try std.testing.expectEqual(@as(i64, 512), bad_size);
+    const replacement = sqlite3_serialize(source, "main", &size, 0) orelse return error.TestUnexpectedResult;
+    const replacement_size: i64 = @intCast(public_api.sqlite3_msize(replacement));
+    try std.testing.expectEqual(ResultCode.not_a_database.toC(), sqlite3_deserialize(malformed, "aux", replacement, size, replacement_size, btree.vfs.DESERIALIZE_FREEONCLOSE | btree.vfs.DESERIALIZE_RESIZEABLE));
 }
 
 test "serialize NOCOPY nullable size and deserialize armor preserve source contracts" {

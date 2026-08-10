@@ -50,7 +50,7 @@ int main(void){
   int config_rc=sqlite3_config(SQLITE_CONFIG_MALLOC,&fault_methods);
 #endif
   if(config_rc!=SQLITE_OK) return config_rc;
-  sqlite3 *source=0, *clone=0, *readonly=0, *malformed=0;
+  sqlite3 *source=0, *clone=0, *readonly=0, *malformed=0, *attached=0;
   sqlite3_int64 size=-1, borrowed_size=-1, value=-1;
   int rc = sqlite3_open(":memory:", &source);
   if(rc!=SQLITE_OK) return rc;
@@ -98,10 +98,19 @@ int main(void){
   int replacement_rc = sqlite3_deserialize(malformed, "main", replacement, size, size, SQLITE_DESERIALIZE_FREEONCLOSE|SQLITE_DESERIALIZE_RESIZEABLE);
   printf("malformed\t%d\t%d\t%lld\t%d\t%d\n", rc, borrowed==bad, (long long)borrowed_size, prepare_rc, replacement_rc);
 
+  sqlite3_open(":memory:", &attached);
+  int attach_rc=sqlite3_exec(attached,"ATTACH ':memory:' AS aux",0,0,0);
+  unsigned char *attached_image=sqlite3_serialize(source,"main",&size,0);
+  int attached_deserialize_rc=sqlite3_deserialize(attached,"aux",attached_image,size,size,SQLITE_DESERIALIZE_FREEONCLOSE|SQLITE_DESERIALIZE_RESIZEABLE);
+  borrowed_size=-1;
+  unsigned char *attached_borrowed=sqlite3_serialize(attached,"aux",&borrowed_size,SQLITE_SERIALIZE_NOCOPY);
+  printf("attached\t%d\t%d\t%d\t%lld\t%d\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"));
+
   int close_clone = sqlite3_close(clone);
   int close_readonly = sqlite3_close(readonly);
   int close_malformed = sqlite3_close(malformed);
   int close_source = sqlite3_close(source);
-  printf("close\t%d\t%d\t%d\t%d\n", close_clone, close_readonly, close_malformed, close_source);
+  int close_attached = sqlite3_close(attached);
+  printf("close\t%d\t%d\t%d\t%d\t%d\n", close_clone, close_readonly, close_malformed, close_source, close_attached);
   return 0;
 }
