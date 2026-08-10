@@ -20,9 +20,9 @@ def main() -> None:
             f"C={oracle.decode(errors='replace')}\nZ={native.decode(errors='replace')}"
         )
     count = len(native.splitlines())
-    if count != 167:
-        raise SystemExit(f"built-in registry emitted {count} definitions, expected 167")
-    print("builtin-registry-differential: 167 definitions match exact hash and overload topology")
+    if count != 178:
+        raise SystemExit(f"built-in registry emitted {count} definitions, expected 178")
+    print("builtin-registry-differential: 178 definitions match exact hash and overload topology")
 
 
 if __name__ == "__main__":
