@@ -3129,8 +3129,11 @@ const Backup = struct {
     destination_name: [:0]u8,
     source_name: [:0]u8,
     source_attached: ?*AttachedDatabase,
-    remaining: c_int = 1,
-    pages: c_int = 1,
+    image: ?[*]u8 = null,
+    image_size: i64 = 0,
+    image_capacity: i64 = 0,
+    remaining: c_int = 0,
+    pages: c_int = 0,
     result: ResultCode = .ok,
 };
 pub export fn sqlite3_backup_init(destination_pointer: ?*sqlite3, destination_name: ?[*:0]const u8, source_pointer: ?*sqlite3, source_name: ?[*:0]const u8) callconv(.c) ?*sqlite3_backup {
@@ -3177,19 +3180,37 @@ pub export fn sqlite3_backup_init(destination_pointer: ?*sqlite3, destination_na
     return @ptrCast(backup);
 }
 pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callconv(.c) c_int {
-    _ = pages;
     const backup: *Backup = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
-    if (backup.remaining == 0) return ResultCode.done.toC();
-    var size: i64 = 0;
-    const bytes = sqlite3_serialize(toOpaque(backup.source), backup.source_name.ptr, &size, 0) orelse {
-        backup.result = .error_;
-        return backup.result.toC();
-    };
-    backup.pages = @intCast(@max(@divTrunc(size + 4095, 4096), 1));
-    const capacity: i64 = @intCast(public_api.sqlite3_msize(bytes));
-    const rc = ResultCode.fromC(sqlite3_deserialize(toOpaque(backup.destination), backup.destination_name.ptr, bytes, size, capacity, btree.vfs.DESERIALIZE_FREEONCLOSE));
+    if (backup.result != .ok) return backup.result.toC();
+    if (backup.image == null) {
+        var size: i64 = 0;
+        const bytes = sqlite3_serialize(toOpaque(backup.source), backup.source_name.ptr, &size, 0) orelse {
+            backup.result = .error_;
+            return backup.result.toC();
+        };
+        backup.image = bytes;
+        backup.image_size = size;
+        backup.image_capacity = @intCast(public_api.sqlite3_msize(bytes));
+        const rounded_size = std.math.add(i64, size, 4095) catch {
+            backup.result = .too_big;
+            return backup.result.toC();
+        };
+        backup.pages = std.math.cast(c_int, @max(@divTrunc(rounded_size, 4096), 1)) orelse {
+            backup.result = .too_big;
+            return backup.result.toC();
+        };
+        backup.remaining = backup.pages;
+    }
+    if (pages >= 0 and pages < backup.remaining) {
+        backup.remaining -= pages;
+        return ResultCode.ok.toC();
+    }
+    const bytes = backup.image.?;
+    backup.image = null;
+    const rc = ResultCode.fromC(sqlite3_deserialize(toOpaque(backup.destination), backup.destination_name.ptr, bytes, backup.image_size, backup.image_capacity, btree.vfs.DESERIALIZE_FREEONCLOSE));
     backup.result = rc;
     if (rc == .ok) {
+        backup.result = .done;
         backup.remaining = 0;
         return ResultCode.done.toC();
     }
@@ -3197,9 +3218,12 @@ pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callc
 }
 pub export fn sqlite3_backup_finish(pointer: ?*sqlite3_backup) callconv(.c) c_int {
     const backup: *Backup = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.ok.toC();
-    const rc = backup.result;
+    const rc = if (backup.result == .done) ResultCode.ok else backup.result;
     const destination = backup.destination;
     const source = backup.source;
+    if (backup.image) |image| {
+        public_api.sqlite3_free(image);
+    }
     if (backup.source_attached) |owner| {
         std.debug.assert(owner.active_backups > 0);
         owner.active_backups -= 1;
