@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "global-library-initialize-shutdown",
   "title": "Top-level recursive and concurrent library initialization/shutdown coordinator",
-  "status": "scaffolded",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These two top-level source functions serialize initialization, support same-thread recursion, initialize mutex/malloc/pcache/OS layers in order, preserve completed layers across late failures, and shut layers down in reverse order. The production public exports now route through one Coordinator owner.",
     "source_files": [
@@ -143,5 +143,35 @@
     "Port and integrate source builtin-function registry reset/registration performed inside sqlite3_initialize before this unit can be source-translated.",
     "Complete nRefInitMutex waiter-lifetime and configured lock-callback event equivalence; retry/recursive xMutexInit and init-mutex OOM are now covered.",
     "Configured mutex methods and typed process configuration are wired into lifecycle; consolidation into the final public configuration domain and independent review remain open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/main.c:180-361 was reviewed completely for pointer-size/WSD profile, fast idempotence, repeated mutex init, STATIC_MAIN, allocator/init mutex, recursion, layer order, publication, waiter cleanup, and final result",
+      "upstream/sqlite/src/main.c:362-415 was reviewed completely for full and partial shutdown ordering and directory invalidation",
+      "All seven dependency dossiers were reviewed for exact layer state and behavior; src/core/global.zig Coordinator.initialize/shutdown plus public exports are canonical AST-hashed targets",
+      "Builtin function-table reset/registration at main.c:284-286 is recorded as an external blocker and is not credited by this unit"
+    ],
+    "callers": [
+      "Public sqlite3_initialize/shutdown exports and auto-initializing APIs converge on these two process lifecycle functions",
+      "Recursive calls may arrive from sqlite3_os_init via VFS registration or other initialization callbacks",
+      "Shutdown precondition excludes outstanding connections/allocations or concurrent use; it is intentionally not threadsafe"
+    ],
+    "callees": [
+      "Initialization orders mutex, STATIC_MAIN-protected malloc and recursive init mutex, builtin registry, PCache, OS, memdb, static page-cache setup, then publication",
+      "Same-thread recursion bypasses the in-progress body while concurrent callers serialize via the init mutex/refcount mechanism",
+      "Shutdown orders OS, automatic-extension reset, PCache, malloc plus directory clearing, then mutex; partial layer flags are independently honored",
+      "Zig condition/owner representation must preserve source-visible callback counts, results, partial layers, waiter wakeups, and retry"
+    ],
+    "assertions_branches_cleanup": [
+      "All 26 behavior IDs cover fast initialized return, subsystem failures, init-mutex OOM, recursion/progress gate, each layer, publication, waiter destruction, partial shutdown, and final OK",
+      "isInit is published only after all required layers succeed; late failure retains prior successful layer flags and clears inProgress",
+      "nRefInitMutex controls safe recursive mutex destruction after all callers leave; failed init returns first error and allows retry",
+      "Extra init/shutdown, SQLLOG, WSD, debug float checks, and other inactive profile branches are not credited"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/mutex2.test, init-related tests, and malloc fault suites exercise failed init, retry, callback ordering, and shutdown",
+      "upstream/sqlite/test/thread001.test family exercises concurrent auto-initialization and connection creation",
+      "Project global tests and infrastructure differential compare 100 cycles, eight-thread race, recursion, configured failures, partial state, retry, reverse shutdown, and owner identity; builtin registry integration remains blocking"
+    ]
+  }
 }

@@ -24,6 +24,7 @@ pub const Frame = struct { number: u32, page_number: u32, database_pages: u32, o
 pub const OpenOutcome = struct { result: ResultCode, wal: ?Wal = null };
 pub const ReadOutcome = struct { result: ResultCode, found: bool = false };
 pub const CheckpointOutcome = struct { result: ResultCode, frames: u32 = 0, checkpointed: u32 = 0 };
+pub const CheckpointMode = enum(i8) { noop = -1, passive = 0, full = 1, restart = 2, truncate = 3 };
 pub const Event = enum { header_write, header_sync, frame_header_write, frame_page_write, wal_sync, index_publish, checkpoint_database_write, checkpoint_database_sync, wal_reset };
 pub const EventHook = *const fn (?*anyopaque, Event) bool;
 
@@ -75,16 +76,8 @@ pub const Wal = struct {
                 wal.frames.deinit();
                 return .{ .result = rc };
             }
-            const database_methods = methods(database_file) orelse {
-                wal.deinit();
-                return .{ .result = .io_error };
-            };
-            const map_function = database_methods.xShmMap orelse {
-                wal.deinit();
-                return .{ .result = .io_error };
-            };
             var mapped: ?*volatile anyopaque = null;
-            var recover_rc = ResultCode.fromC(map_function(database_file, 0, vfs.SHM_REGION_SIZE, 1, &mapped));
+            var recover_rc = ResultCode.fromC(vfs.osShmMap(database_file, 0, vfs.SHM_REGION_SIZE, 1, &mapped));
             if (recover_rc == .ok) recover_rc = wal.lock(recover_lock, vfs.SHM_LOCK | vfs.SHM_EXCLUSIVE);
             if (recover_rc == .ok) recover_rc = wal.recover();
             const unlock_rc = wal.lock(recover_lock, vfs.SHM_UNLOCK | vfs.SHM_EXCLUSIVE);
@@ -101,7 +94,7 @@ pub const Wal = struct {
                 return .{ .result = publish_rc };
             }
         }
-        const lock_rc = wal.lock(read_lock, vfs.SHM_LOCK | vfs.SHM_SHARED);
+        const lock_rc = wal.lockShared(read_lock);
         if (lock_rc != .ok) {
             wal.deinit();
             return .{ .result = lock_rc };
@@ -148,30 +141,47 @@ pub const Wal = struct {
 
     fn openFile(self: *Wal, create: bool) ResultCode {
         if (self.file != null) return .ok;
-        const bytes = self.allocator.alignedAlloc(u8, .of(vfs.sqlite3_file), @intCast(self.abi_vfs.szOsFile)) catch
-            return .no_memory;
-        @memset(bytes, 0);
-        const file: *vfs.sqlite3_file = @ptrCast(bytes.ptr);
-        const open_fn = self.abi_vfs.xOpen orelse {
-            self.allocator.free(bytes);
-            return .cannot_open;
-        };
         var output_flags: c_int = 0;
         var flags = (if (self.writable) vfs.OPEN_READWRITE else vfs.OPEN_READONLY) | vfs.OPEN_WAL;
         if (create) flags |= vfs.OPEN_CREATE;
-        const rc = ResultCode.fromC(open_fn(self.abi_vfs, self.name.ptr, file, flags, &output_flags));
-        if (rc != .ok) {
-            self.allocator.free(bytes);
-            return rc;
-        }
-        self.file_bytes = bytes;
-        self.file = file;
+        const opened = vfs.osOpenAllocated(self.allocator, self.abi_vfs, self.name.ptr, flags, &output_flags);
+        const rc = ResultCode.fromC(opened.result);
+        if (rc != .ok) return rc;
+        self.file_bytes = opened.storage.?;
+        self.file = opened.file.?;
         return .ok;
     }
 
     fn lock(self: *Wal, offset: c_int, flags: c_int) ResultCode {
         const function = (methods(self.database_file) orelse return .io_error).xShmLock orelse return .io_error;
         return ResultCode.fromC(function(self.database_file, offset, 1, flags));
+    }
+
+    /// Source `walLockShared()`: acquire one shared WAL-index lock slot.
+    fn lockShared(self: *Wal, offset: c_int) ResultCode {
+        const io = methods(self.database_file) orelse return .io_error;
+        const function = io.xShmLock orelse return .io_error;
+        const flags = vfs.SHM_LOCK | vfs.SHM_SHARED;
+        return ResultCode.fromC(function(self.database_file, offset, 1, flags));
+    }
+
+    /// Source `walLockExclusive()`: atomically acquire a contiguous range of
+    /// exclusive WAL-index lock slots.
+    fn lockExclusive(self: *Wal, offset: c_int, count: c_int) ResultCode {
+        if (count <= 0) return .misuse;
+        const io = methods(self.database_file) orelse return .io_error;
+        const function = io.xShmLock orelse return .io_error;
+        const flags = vfs.SHM_LOCK | vfs.SHM_EXCLUSIVE;
+        return ResultCode.fromC(function(self.database_file, offset, count, flags));
+    }
+
+    /// Source `walUnlockExclusive()`: release a contiguous exclusive lock
+    /// range without replacing a prior checkpoint result.
+    fn unlockExclusive(self: *Wal, offset: c_int, count: c_int) void {
+        if (count <= 0) return;
+        const io = methods(self.database_file) orelse return;
+        const function = io.xShmLock orelse return;
+        _ = function(self.database_file, offset, count, vfs.SHM_UNLOCK | vfs.SHM_EXCLUSIVE);
     }
 
     fn barrier(self: *Wal) void {
@@ -287,18 +297,14 @@ pub const Wal = struct {
 
     fn publishIndex(self: *Wal) ResultCode {
         if (!self.publish_native_index) {
-            const external_io = methods(self.database_file) orelse return .io_error;
-            const external_map = external_io.xShmMap orelse return .io_error;
             var external_pointer: ?*volatile anyopaque = null;
-            const external_rc = ResultCode.fromC(external_map(self.database_file, 0, vfs.SHM_REGION_SIZE, 1, &external_pointer));
+            const external_rc = ResultCode.fromC(vfs.osShmMap(self.database_file, 0, vfs.SHM_REGION_SIZE, 1, &external_pointer));
             if (external_rc != .ok) return external_rc;
             self.barrier();
             return self.emit(.index_publish);
         }
-        const io = methods(self.database_file) orelse return .io_error;
-        const map_fn = io.xShmMap orelse return .io_error;
         var pointer: ?*volatile anyopaque = null;
-        const rc = ResultCode.fromC(map_fn(self.database_file, 0, vfs.SHM_REGION_SIZE, 1, &pointer));
+        const rc = ResultCode.fromC(vfs.osShmMap(self.database_file, 0, vfs.SHM_REGION_SIZE, 1, &pointer));
         if (rc != .ok) return rc;
         const raw = pointer orelse return .io_error;
         const bytes: [*]volatile u8 = @ptrCast(raw);
@@ -357,8 +363,8 @@ pub const Wal = struct {
         return rc;
     }
 
-    pub fn append(self: *Wal, pages: []*page_cache.Page, database_pages: u32) ResultCode {
-        if (!self.write_locked or pages.len == 0 or database_pages == 0) return .misuse;
+    pub fn append(self: *Wal, first_page: ?*page_cache.Page, database_pages: u32) ResultCode {
+        if (!self.write_locked or first_page == null or database_pages == 0) return .misuse;
         var rc = self.openFile(true);
         if (rc != .ok) return rc;
         const committed_size = if (self.frame_count == 0) 0 else self.frameOffset(self.frame_count + 1);
@@ -370,11 +376,13 @@ pub const Wal = struct {
         }
         var running = self.frame_checksum;
         var number = self.frame_count;
-        for (pages, 0..) |page, index| {
+        var page_optional = first_page;
+        while (page_optional) |page| : (page_optional = page.sort_next) {
+            const final_page = page.sort_next == null;
             number += 1;
             var frame_header: [24]u8 = .{0} ** 24;
             putU32(&frame_header, 0, page.key);
-            putU32(&frame_header, 4, if (index + 1 == pages.len) database_pages else 0);
+            putU32(&frame_header, 4, if (final_page) database_pages else 0);
             putU32(&frame_header, 8, self.salt[0]);
             putU32(&frame_header, 12, self.salt[1]);
             running = checksum(frame_header[0..8], true, running);
@@ -387,7 +395,7 @@ pub const Wal = struct {
             if (rc == .ok) rc = writeFile(self.file.?, page.data, offset + frame_header_size);
             if (rc == .ok) rc = self.emit(.frame_page_write);
             if (rc != .ok) return rc;
-            self.frames.put(page.key, .{ .number = number, .page_number = page.key, .database_pages = if (index + 1 == pages.len) database_pages else 0, .offset = offset }) catch return .no_memory;
+            self.frames.put(page.key, .{ .number = number, .page_number = page.key, .database_pages = if (final_page) database_pages else 0, .offset = offset }) catch return .no_memory;
         }
         rc = syncFile(self.file.?);
         if (rc == .ok) rc = self.emit(.wal_sync);
@@ -398,16 +406,19 @@ pub const Wal = struct {
         return self.publishIndex();
     }
 
-    pub fn checkpoint(self: *Wal) CheckpointOutcome {
-        if (self.frame_count == 0) return .{ .result = .ok };
-        var rc = self.lock(checkpoint_lock, vfs.SHM_LOCK | vfs.SHM_EXCLUSIVE);
+    /// Source `sqlite3WalCheckpoint()`: distinguish passive, full, restart,
+    /// truncate, and query-only checkpoint modes while preserving frame counts.
+    pub fn checkpointMode(self: *Wal, mode: CheckpointMode) CheckpointOutcome {
+        const log_frames = self.frame_count;
+        if (mode == .noop or log_frames == 0) return .{ .result = .ok, .frames = log_frames };
+        var rc = self.lockExclusive(checkpoint_lock, 1);
         if (rc != .ok) return .{ .result = rc, .frames = self.frame_count };
         self.checkpoint_locked = true;
-        const exclusive_read = self.lock(read_lock, vfs.SHM_LOCK | vfs.SHM_EXCLUSIVE);
+        const exclusive_read = self.lockExclusive(read_lock, 1);
         if (exclusive_read != .ok) {
             _ = self.lock(checkpoint_lock, vfs.SHM_UNLOCK | vfs.SHM_EXCLUSIVE);
             self.checkpoint_locked = false;
-            return .{ .result = exclusive_read, .frames = self.frame_count };
+            return .{ .result = if (mode == .passive) .ok else exclusive_read, .frames = log_frames };
         }
         const pages = self.allocator.alloc(u32, self.frames.count()) catch {
             _ = self.lock(read_lock, vfs.SHM_UNLOCK | vfs.SHM_EXCLUSIVE);
@@ -439,17 +450,31 @@ pub const Wal = struct {
                 break;
             }
             rc = writeFile(self.database_file, buffer, @as(u64, page_number - 1) * self.page_size);
-            if (rc == .ok) rc = self.emit(.checkpoint_database_write);
+            if (rc == .ok) {
+                rc = self.emit(.checkpoint_database_write);
+            }
             if (rc != .ok) break;
             checkpointed += 1;
         }
-        if (rc == .ok) rc = truncateFile(self.database_file, @as(u64, self.database_pages) * self.page_size);
-        if (rc == .ok) rc = syncFile(self.database_file);
-        if (rc == .ok) rc = self.emit(.checkpoint_database_sync);
         if (rc == .ok) {
-            rc = truncateFile(self.file.?, 0);
-            if (rc == .ok) rc = syncFile(self.file.?);
-            if (rc == .ok) rc = self.emit(.wal_reset);
+            rc = truncateFile(self.database_file, @as(u64, self.database_pages) * self.page_size);
+        }
+        if (rc == .ok) {
+            rc = syncFile(self.database_file);
+        }
+        if (rc == .ok) {
+            rc = self.emit(.checkpoint_database_sync);
+        }
+        if (rc == .ok and (mode == .restart or mode == .truncate)) {
+            if (mode == .truncate) {
+                rc = truncateFile(self.file.?, 0);
+            }
+            if (rc == .ok) {
+                rc = syncFile(self.file.?);
+            }
+            if (rc == .ok) {
+                rc = self.emit(.wal_reset);
+            }
             if (rc == .ok) {
                 self.frames.clearRetainingCapacity();
                 self.frame_count = 0;
@@ -458,10 +483,14 @@ pub const Wal = struct {
                 _ = self.publishIndex();
             }
         }
-        _ = self.lock(read_lock, vfs.SHM_UNLOCK | vfs.SHM_EXCLUSIVE);
-        _ = self.lock(checkpoint_lock, vfs.SHM_UNLOCK | vfs.SHM_EXCLUSIVE);
+        self.unlockExclusive(read_lock, 1);
+        self.unlockExclusive(checkpoint_lock, 1);
         self.checkpoint_locked = false;
-        return .{ .result = rc, .frames = self.frame_count, .checkpointed = checkpointed };
+        return .{ .result = rc, .frames = log_frames, .checkpointed = checkpointed };
+    }
+
+    pub fn checkpoint(self: *Wal) CheckpointOutcome {
+        return self.checkpointMode(.truncate);
     }
 
     pub fn deinit(self: *Wal) void {

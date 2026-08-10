@@ -83,6 +83,40 @@ fn boundedRunArtifact(
     return run;
 }
 
+const ActivePortBatchStatus = enum { idle, active };
+
+const ActivePortBatch = struct {
+    schema_version: usize,
+    status: ActivePortBatchStatus,
+    completion_claim: bool,
+    entries: []const std.json.Value,
+};
+
+fn enforcePortBatchManifest(b: *std.Build) void {
+    const manifest_bytes = b.build_root.handle.readFileAlloc(b.graph.io, "upstream/active-port-batch.json", b.allocator, .limited(1024 * 1024)) catch |err| {
+        std.debug.panic("cannot read active port batch: {s}", .{@errorName(err)});
+    };
+    defer b.allocator.free(manifest_bytes);
+    const parsed = std.json.parseFromSlice(ActivePortBatch, b.allocator, manifest_bytes, .{ .ignore_unknown_fields = true }) catch |err| {
+        std.debug.panic("cannot parse active port batch: {s}", .{@errorName(err)});
+    };
+    defer parsed.deinit();
+    if (parsed.value.schema_version != 2) {
+        std.debug.panic("unsupported active port batch schema: {d}", .{parsed.value.schema_version});
+    }
+    if (parsed.value.completion_claim) {
+        std.debug.panic("active port batch must not claim project completion", .{});
+    }
+    switch (parsed.value.status) {
+        .idle => if (parsed.value.entries.len != 0) {
+            std.debug.panic("idle active port batch contains entries", .{});
+        },
+        .active => if (parsed.value.entries.len == 0) {
+            std.debug.panic("active port batch contains no entries", .{});
+        },
+    }
+}
+
 fn addRunStep(
     b: *std.Build,
     name: []const u8,
@@ -95,6 +129,7 @@ fn addRunStep(
 }
 
 pub fn build(b: *std.Build) void {
+    enforcePortBatchManifest(b);
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const direct_build_profile = b.createModule(.{
@@ -2219,13 +2254,28 @@ pub fn build(b: *std.Build) void {
     });
     b.step("behavioral-inventory-test", "Verify active control-flow and assertion block inventory")
         .dependOn(&verify_behavioral_inventory.step);
+    const verify_port_batch = boundedSystemCommand(b, &.{ "python3", "tools/verify_port_batch.py" });
+    const port_batch_audit_step = b.step("port-batch-audit", "Validate active, historical, and checkpoint translation tracking");
+    port_batch_audit_step.dependOn(&verify_port_batch.step);
+    const promote_port_batch = boundedSystemCommand(b, &.{
+        "python3", "tools/verify_port_batch.py", "--require-threshold",
+    });
+    const port_batch_checkpoint_step = b.step("port-batch-checkpoint", "Require a fully reconciled translation batch at its promotion threshold");
+    port_batch_checkpoint_step.dependOn(&promote_port_batch.step);
+    const test_port_batch = boundedSystemCommand(b, &.{ "python3", "tools/test_port_batch_gate.py" });
+    const port_batch_gate_test_step = b.step("port-batch-gate-test", "Mutation-test translation tracking and promotion controls");
+    port_batch_gate_test_step.dependOn(&test_port_batch.step);
+    b.getInstallStep().dependOn(&verify_port_batch.step);
+
     const verify_source_ledger = boundedSystemCommand(b, &.{ "python3", "tools/verify_source_ledger.py" });
+    verify_source_ledger.step.dependOn(&verify_port_batch.step);
     verify_source_ledger.step.dependOn(&verify_zig_inventory.step);
     verify_source_ledger.step.dependOn(&verify_source_dependencies.step);
     verify_source_ledger.step.dependOn(&verify_behavioral_inventory.step);
     const verify_atomic_units = boundedSystemCommand(b, &.{ "python3", "tools/verify_atomic_units.py" });
     verify_atomic_units.step.dependOn(&verify_source_ledger.step);
-    const atomic_unit_step = b.step("atomic-unit-audit", "Validate atomic-unit dossiers and independent-review boundaries");
+    promote_port_batch.step.dependOn(&verify_atomic_units.step);
+    const atomic_unit_step = b.step("atomic-unit-audit", "Validate atomic-unit dossiers and evidence-state boundaries");
     atomic_unit_step.dependOn(&verify_atomic_units.step);
     const source_ledger_step = b.step("source-ledger", "Validate source classifications and Zig declaration targets");
     source_ledger_step.dependOn(&verify_source_ledger.step);
@@ -2258,6 +2308,8 @@ pub fn build(b: *std.Build) void {
     port_audit_step.dependOn(&port_audit.step);
 
     const verify_config = boundedSystemCommand(b, &.{ "python3", "tools/verify_config.py" });
+    verify_config.step.dependOn(&verify_port_batch.step);
+    verify_config.step.dependOn(&port_audit.step);
     b.step("verify-config", "Verify pinned source, generated artifacts, profile, and port status")
         .dependOn(&verify_config.step);
 
@@ -2457,7 +2509,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_parser.step);
     test_step.dependOn(&run_durability.step);
     test_step.dependOn(&verify_config.step);
-    test_step.dependOn(&port_audit.step);
+    test_step.dependOn(&test_port_batch.step);
     test_step.dependOn(&native_c_audit.step);
     test_step.dependOn(&verify_parser_tables.step);
     test_step.dependOn(&verify_parser_action_coverage.step);
@@ -2471,6 +2523,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&verify_docs.step);
     test_step.dependOn(&verify_tooling.step);
     test_step.dependOn(&sanitized_oracle.step);
+    promote_port_batch.step.dependOn(test_step);
 
     const report = boundedSystemCommand(b, &.{ "python3", "tools/compatibility_report.py" });
     report.step.dependOn(test_step);

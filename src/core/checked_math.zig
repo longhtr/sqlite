@@ -11,6 +11,7 @@ pub fn isOverflow(value: f64) bool {
     return bits & 0x7ff0_0000_0000_0000 == 0x7ff0_0000_0000_0000;
 }
 
+/// Source `sqlite3AddInt64()`; leave the accumulator unchanged on overflow.
 pub fn add(value: *i64, operand: i64) c_int {
     const result = @addWithOverflow(value.*, operand);
     if (result[1] != 0) return 1;
@@ -18,6 +19,7 @@ pub fn add(value: *i64, operand: i64) c_int {
     return 0;
 }
 
+/// Source `sqlite3SubInt64()`.
 pub fn subtract(value: *i64, operand: i64) c_int {
     const result = @subWithOverflow(value.*, operand);
     if (result[1] != 0) return 1;
@@ -25,6 +27,7 @@ pub fn subtract(value: *i64, operand: i64) c_int {
     return 0;
 }
 
+/// Source `sqlite3MulInt64()`.
 pub fn multiply(value: *i64, operand: i64) c_int {
     const result = @mulWithOverflow(value.*, operand);
     if (result[1] != 0) return 1;

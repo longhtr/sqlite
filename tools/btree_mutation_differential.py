@@ -55,4 +55,8 @@ def main():
    if Path(str(db)+'-journal').exists():raise SystemExit('index roundtrip left journal')
    observations+=1
  print(f'btree-mutation-differential: {len(MANIFEST["fixtures"])+1} partitions and {observations} batch observations match')
-if __name__=='__main__':main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

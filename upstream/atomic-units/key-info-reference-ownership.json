@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "key-info-reference-ownership",
   "title": "KeyInfo reference ownership and final release",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "sqlite3KeyInfoRef/Unref and the KeyInfo nRef/db owner fields are the complete intrusive reference contract used by P4_KEYINFO and unpacked records. Increment, decrement and final connection-aware free cannot be split.",
     "source_files": [
@@ -93,7 +93,7 @@
     "No semantic representation difference; u32 nRef and Sqlite3 owner pointer use verified extern fields."
   ],
   "oracle": {
-    "protocol": "The shared worker allocates one exact-size KeyInfo, performs 1->2 ref, 2->1 unref, 1->0 final release, and nullable ref/unref. C and Zig compare pointer identity, counts, owner identity and live/freed tracking in a 363-observation trace.",
+    "protocol": "The shared worker allocates one exact-size KeyInfo, performs 1->2 ref, 2->1 unref, 1->0 final release, and nullable ref/unref. C and Zig compare pointer identity, counts, owner identity and live/freed tracking in a 366-observation trace.",
     "internal_observations": [
       "initial count/database identity",
       "ref return pointer identity and count",
@@ -104,9 +104,9 @@
     "normalization": "Pointer addresses normalize to same-pointer/live identity. Counts and null transitions are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation in assigned functions; final release uses previously validated connection allocator.",
     "io_crash_concurrency": "No I/O/callback; mutex integration remains caller obligation.",
@@ -130,6 +130,7 @@
     "notes": "Requires P4/record integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Connect P4_KEYINFO and unpacked-record callers to this owner.",
     "Port remaining P4 owner families and operation destruction.",
     "Independent fidelity review remains open."

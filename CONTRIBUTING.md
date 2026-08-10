@@ -1,23 +1,15 @@
 # Contributing
 
-## Before coding
+Before coding, read `docs/PORTING_CHARTER.md`, `docs/SCOPE.md`, and `docs/ENGINEERING_PROCESS.md`. Select one dependency-closed atomic unit from `docs/EXECUTION_PLAN.md` and complete its source/context, ownership, failure, integration, and evidence dossier.
 
-1. Read `docs/PORTING_CHARTER.md`, `docs/SCOPE.md`, `docs/ENGINEERING_PROCESS.md`, and `docs/PORTING_RULES.md`.
-2. Select one dependency-closed atomic unit from the critical queue.
-3. Complete its dossier: source, callers, callees, ownership, state, allocation, results, locks, callbacks, I/O, tests, oracle, final owner, and owner to retire.
-4. Declare the targeted test commands.
+A patch must:
 
-## Patch discipline
+- translate pinned canonical source before refactoring;
+- preserve control flow, state, allocation/failure, cleanup, callback/lock/I/O order, results, and continuation;
+- keep C in isolated oracle/test infrastructure;
+- use bounded workers and neutral C/Zig protocols where applicable;
+- retire or quarantine duplicate production owners when integrating;
+- run focused checks during implementation and broad gates only at promotion or requested handoff;
+- claim only the evidence state actually reached.
 
-- Keep one unit active.
-- Translate pinned canonical source before refactoring.
-- Preserve control flow, state, allocation/failure points, cleanup, callback/lock/I/O order, results, and continuation.
-- Keep C in isolated oracle/test infrastructure.
-- Use one symbolic protocol for C/Zig state-machine tests.
-- Do not expand frozen substitutes, weaken tests, or promote scaffolding.
-- Run targeted checks during implementation; run broad gates once at promotion or handoff.
-- Put ergonomic cleanup in a later patch.
-
-## Review
-
-A patch may advance only to the evidence state it proves. Independent fidelity review is required for final credit. High-risk parser, compiler, VDBE, B-tree, pager, WAL, VFS, allocator, threading, file-format, and public-API work also requires Zig-safety and behavioral review.
+Detailed gates and reporting rules live only in `docs/ENGINEERING_PROCESS.md`; this file intentionally does not duplicate them.

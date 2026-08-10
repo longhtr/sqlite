@@ -19,4 +19,8 @@ def main():
   a,b=run(sys.argv[1],items),run(sys.argv[2],items)
   if a!=b:raise SystemExit(f'tokenizer mismatch {i}\nC={a.decode(errors="replace")}\nZ={b.decode(errors="replace")}')
  print('tokenizer-differential: 24 isolated cases match')
-if __name__=='__main__':main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

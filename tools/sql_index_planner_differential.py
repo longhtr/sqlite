@@ -13,4 +13,8 @@ def main():
  if a!=b:raise SystemExit(f'index planner mismatch\noracle={a!r}\nnative={b!r}')
  if t>2:raise SystemExit(f'index planner budget exceeded: {t:.3f}s')
  print(f'sql-index-planner-differential: {len(b)} covering-order observations match; native {t:.3f}s')
-if __name__=='__main__':main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

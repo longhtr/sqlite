@@ -140,7 +140,9 @@ test "RFC 8439 ChaCha block core" {
 
 test "buffer consumption reset and state restoration" {
     var entropy: [44]u8 = undefined;
-    for (&entropy, 0..) |*byte, index| byte.* = @intCast(index);
+    for (&entropy, 0..) |*byte, index| {
+        byte.* = @intCast(index);
+    }
     var state = State{};
     var first: [17]u8 = undefined;
     state.fill(&first, &entropy);

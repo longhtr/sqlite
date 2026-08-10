@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "connection-allocation-for-vdbe-growth",
   "title": "Connection lookaside, reallocation, and OOM state for VDBE growth",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These connection-aware malloc.c routines form the direct allocation and failure closure reached by growOpArray: size measurement, two-size lookaside allocation/free, lookaside-to-heap and heap reallocation, sticky OOM, Parse propagation, and OOM clear.",
@@ -284,16 +284,16 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
-    "oom": "363-observation C/Zig trace reaches limit, one-shot, and sticky allocation failures and continuation; promotion waits for dependency admission.",
+    "oom": "366-observation C/Zig trace reaches limit, one-shot, and sticky allocation failures and continuation; promotion waits for dependency admission.",
     "io_crash_concurrency": "No I/O; mutex-held behavior needs its dependency dossier.",
     "malformed_input": "Internal trusted sizes; global maximum-allocation enforcement belongs to the process allocator dependency.",
     "continuation": "Existing operation ownership and post-clear append are differentially observed.",
     "performance": "Two-size lookaside fast paths and geometric growth allocation counts are preserved; no standalone benchmark credit.",
     "commands": [
-      "zig test src/core/internal_vdbe_mem_test.zig -lc",
+      "zig build vdbe-mem-differential -j1",
       "zig build vdbe-builder-differential",
       "zig build internal-vdbe-layout-test"
     ]
@@ -312,5 +312,35 @@
   "known_blockers": [
     "The global allocation core is source-translated; its alarm-event trace remains open but the connection allocation paths have their own exact builder differential.",
     "Connection-owner integration, debug held assertions, complete caller closure, assurance, and independent review remain open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/malloc.c:325-500 was reviewed through lookaside range/size, heap versus two-size lookaside size, bytes-freed measurement, correct free-list return, and nullable free",
+      "upstream/sqlite/src/malloc.c:575-744 was reviewed through heap fallback, sticky allocation, small/large init/free selection, reallocation in place or migration, copy, free, and failure ownership",
+      "upstream/sqlite/src/malloc.c:810-864 was reviewed completely for first non-benign OOM fault, running-VDBE interruption, lookaside disable, Parse-chain propagation, and guarded clear",
+      "upstream/sqlite/src/sqliteInt.h:220-245 and 1590-1628 were reviewed for relaxed AtomicStore and active two-size lookaside macros/constants; db_allocator/vdbe_types targets are AST-hashed"
+    ],
+    "callers": [
+      "VDBE growOpArray reaches sqlite3DbRealloc and therefore this complete connection allocation/OOM closure",
+      "Parser/compiler and connection-owned allocations use sqlite3DbMallocRawNN/free while holding db->mutex; db-null/public and convenience wrappers are excluded",
+      "Global heap fallback delegates to the reviewed process allocator; connection state representations cover every touched field"
+    ],
+    "callees": [
+      "Lookaside allocation prefers small free then small init, large free then large init, updating hit/size/full counters before heap fallback",
+      "Heap fallback calls sqlite3Malloc and sets OOM on null; free returns slots to the matching list, measures instead of freeing when pnBytesFreed is set, or delegates heap free",
+      "Realloc retains an adequate lookaside slot, migrates by allocating/copying full old slot/freeing old, or delegates heap realloc while preserving old owner on failure",
+      "OOM fault is sticky, ignored for benign allocation, interrupts active VDBEs with relaxed store, disables lookaside, and updates current/outer Parse; clear requires no executing VDBE"
+    ],
+    "assertions_branches_cleanup": [
+      "All 80 behavior IDs cover ranges/sizes, list ownership, measurement mode, sticky allocation, realloc classes/failure, and OOM/clear state",
+      "Connection mutex and pnBytesFreed invariants are explicit; no application callback or I/O occurs",
+      "Failed reallocation never frees the old owner; successful lookaside migration copies exactly the source slot capacity before returning it",
+      "LOOKASIDE_SMALL is 128 and two-size lookaside is active; omitted-lookaside branches are inactive"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/lookaside.test/lookaside2.test exercise small/large pools, counters, disable/enable, realloc, and returns",
+      "upstream/sqlite/test/malloc.test family and oomfault.test exercise one-shot/sticky failures, Parse propagation, interrupt, and continuation",
+      "Project VDBE builder/memory differentials reach limit, one-shot, sticky and clear paths while native allocator tests cover free lists and measurement; receipts remain later"
+    ]
+  }
 }

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-virtual-table-error-message-import",
   "title": "Virtual-table global-to-connection error-message import",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "sqlite3VtabImportErrmsg crosses allocator domains: it conditionally consumes sqlite3_vtab.zErrMsg from the global allocator, replaces the Vdbe connection-owned error, and clears the virtual-table owner even when duplication fails.",
     "source_files": [
@@ -61,7 +61,7 @@
     "sqlite3_free maps to the source-shaped process memory manager while sqlite3DbStrDup/free map to the connection allocator; both preserve their distinct allocator domains."
   ],
   "oracle": {
-    "protocol": "The shared worker imports a live global message over a live connection message, verifies the null-incoming no-op, then disables lookaside and forces the connection duplicate allocation to fail. C and Zig compare all owner states in a 363-observation trace.",
+    "protocol": "The shared worker imports a live global message over a live connection message, verifies the null-incoming no-op, then disables lookaside and forces the connection duplicate allocation to fail. C and Zig compare all owner states in a 366-observation trace.",
     "internal_observations": [
       "incoming owner cleared",
       "successful text duplicate",
@@ -72,9 +72,9 @@
     "normalization": "Pointers normalize to null/non-null and free-list membership; message bytes and sticky OOM state are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Deterministic no-lookaside duplication OOM verifies null destination, sticky OOM, and unconditional source-owner consumption.",
     "io_crash_concurrency": "No I/O or callback; connection mutex remains integration obligation.",
@@ -99,6 +99,7 @@
     "notes": "Requires callback integration, destruction closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate virtual-table callback error paths.",
     "Complete Vdbe error-message destruction.",
     "Independent fidelity review remains open."

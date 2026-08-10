@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "pcache-pgroup-cross-cache-lru-and-limits",
   "title": "PCache PGroup cross-cache LRU, limits, and recycling",
-  "status": "scaffolded",
+  "status": "inventoried",
   "admission_ready": false,
   "scope": {
     "rationale": "These source responsibilities jointly own PGroup-wide maximum/minimum/pinned/purgeable accounting, cache registration, recyclable-page LRU membership, cross-cache buffer recycling, soft-create admission, limit enforcement, shrink, and page counts. Native unified mode now shares one intrusive LRU and exact page buffer across caches. The dossier also owns the PCache1/PgHdr1/PGroup fields that directly carry these semantics; static/bulk allocation-only fields remain with their allocation unit.",
@@ -617,10 +617,10 @@
     "normalization": "C/Zig page addresses differ, but within-worker pointer identity is exact. Keys, counts, limits, LRU victim order, slot ownership, results, and continuation are not normalized."
   },
   "assurance": {
-    "source_context_reviewed": true,
+    "source_context_reviewed": false,
     "source_translated": false,
     "internal_trace_equivalent": false,
-    "subsystem_integrated": true,
+    "subsystem_integrated": false,
     "oom": "Initial 256-bucket failure leaves Cache unavailable and Pager returns NOMEM; later doubling failure is benign and preserves old buckets. Full PCache1/PGroup object allocation-sequence equivalence remains open.",
     "io_crash_concurrency": "No I/O. Unified mode is selected only when core mutexes are disabled; broader configured/memory-management mutex profiles are out of selected scope.",
     "malformed_input": "Key zero, conflicting keys and invalid ownership have native guards; exact source assertions remain to be closed with the hash unit.",
@@ -645,6 +645,7 @@
     "notes": "PGroup/LRU and source-shaped hash behavior are integrated. Requires exact PCache1/PGroup object allocation publication, complete upper-cache coupling traces, assurance, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "PCache1/private-PGroup one-allocation create/failure topology differs from embedded Cache plus PageTable allocation.",
     "Complete upper pcache.c dirty/stress/reference coupling traces remain open.",
     "Independent fidelity review remains open."

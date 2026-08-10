@@ -78,14 +78,18 @@ pub fn get(input: [*:0]const u8) Result {
     switch (class[z[0]]) {
         7 => {
             i = 1;
-            while (isSpace(z[i])) i += 1;
+            while (isSpace(z[i])) {
+                i += 1;
+            }
             typ = tokens.tk_space;
             return .{ .length = i, .token_type = typ };
         },
         11 => {
             if (z[1] == '-') {
                 i = 2;
-                while (z[i] != 0 and z[i] != '\n') i += 1;
+                while (z[i] != 0 and z[i] != '\n') {
+                    i += 1;
+                }
                 typ = tokens.tk_comment;
                 return .{ .length = i, .token_type = typ };
             }

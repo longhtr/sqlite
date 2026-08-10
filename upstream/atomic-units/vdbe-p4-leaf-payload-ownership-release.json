@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-p4-leaf-payload-ownership-release",
   "title": "VDBE P4 ephemeral-function, Mem, and function-context leaf release",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "These three source helpers are the leaf destructors used by freeP4 for P4_FUNCDEF, P4_MEM, and P4_FUNCCTX. Their owned fields and SQLITE_FUNC_EPHEM flag completely determine whether nested allocations and functions are consumed.",
     "source_files": [
@@ -129,7 +129,7 @@
     "C char*/void* free casts become exact aligned opaque-pointer casts into the same connection allocator."
   ],
   "oracle": {
-    "protocol": "The shared worker allocates required live static and ephemeral FuncDef owners, Context values with both static and ephemeral pFunc, and P4 Mem values both with and without owned zMalloc. C and Zig invoke each leaf helper and compare lookaside free-list membership for every consumed and retained owner in a 363-observation trace.",
+    "protocol": "The shared worker allocates required live static and ephemeral FuncDef owners, Context values with both static and ephemeral pFunc, and P4 Mem values both with and without owned zMalloc. C and Zig invoke each leaf helper and compare lookaside free-list membership for every consumed and retained owner in a 366-observation trace.",
     "internal_observations": [
       "static FuncDef remains allocated",
       "ephemeral FuncDef is returned",
@@ -139,9 +139,9 @@
     "normalization": "Addresses normalize to membership in the owning connection free lists. Type flags and consumed-owner booleans are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation. Every assigned nested and outer owner is observed returned exactly once.",
     "io_crash_concurrency": "No I/O/callback; caller mutex remains integration obligation.",
@@ -155,8 +155,8 @@
   },
   "integration": {
     "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding P4 lifecycle closure",
-    "native_call_path": "Symbolic worker reaches exact FuncDef/Context/Mem/Sqlite3 owners. Top-level freeP4 is not yet connected.",
-    "bounded_owner_retired": "No. Complete remaining P4 families and dispatch first."
+    "native_call_path": "Symbolic worker reaches exact FuncDef/Context/Mem/Sqlite3 owners, and the dependent P4 attachment/destruction unit now reaches these helpers through top-level dispatch.",
+    "bounded_owner_retired": "No. Production compiler/reset/finalize ownership must switch to the source-layout VDBE lifecycle."
   },
   "independent_review": {
     "status": "pending",
@@ -165,8 +165,8 @@
     "notes": "Requires top-level P4/destruction integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Port remaining P4 owner families and top-level freeP4 dispatch.",
-    "Integrate P4 replacement, operation-array destruction, and VDBE deletion.",
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
+    "Integrate the completed P4/VDBE destruction path with production compiler reset/finalize ownership.",
     "Independent fidelity review remains open."
   ]
 }

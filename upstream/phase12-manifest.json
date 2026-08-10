@@ -6,7 +6,7 @@
   "profile": "sqlite-3.53.4-native-program-statement-lifecycle-v1",
   "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
   "status": "bounded-regression-evidence",
-  "mapped_entity_count": 43,
+  "mapped_entity_count": 20,
   "public_api": {
     "phase12_symbol_count": 33,
     "total_exported_sqlite_symbol_count": 38,

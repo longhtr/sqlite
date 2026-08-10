@@ -10,6 +10,5 @@
 - C compiler: GCC 15.2.1
 - Test interpreter: Tcl 8.6.16, bootstrapped into ignored `.reference-build/deps`
 - Leak result: test jobs completed without reported SQLite allocator leaks
-- Revalidation: rerun after the local Phase 6 pager and expanded Phase 5 cache evidence; result remained 329,824 tests, 0 errors
 
 This is oracle validation only. It is not evidence that the native Zig database engine exists or passes SQLite tests.

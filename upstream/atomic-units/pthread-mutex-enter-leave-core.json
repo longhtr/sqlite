@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "pthread-mutex-enter-leave-core",
   "title": "Pinned pthread mutex representation and nullable enter/leave dispatch",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the active pthread mutex storage/initializer identities and complete concrete plus public-wrapper enter/leave functions used by STATIC_MEM allocator locking.",
@@ -140,8 +140,8 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation in this unit.",
     "io_crash_concurrency": "No I/O. Contention and alarm release/reacquire are tested; exhaustive scheduler/interleaving evidence remains open.",
@@ -168,5 +168,35 @@
   "known_blockers": [
     "Allocation/default-method/no-op lifecycle remains separate.",
     "Independent concurrency/performance review is pending."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/mutex_unix.c:16-395 was reviewed through the complete pthread profile, including representation selection, allocation context, enter/try/leave bodies, and sqlite3DefaultMutex wiring",
+      "upstream/sqlite/src/mutex.c:314-354 was reviewed through the complete nullable public enter/leave wrappers and adjacent try behavior",
+      "The eight exact source identities and hashes in scope select SQLITE_MUTEX_NREF=0, pthread_mutex_t-only storage, PTHREAD_MUTEX_INITIALIZER, concrete enter/leave, and nullable callback dispatch",
+      "src/core/mutex.zig Mutex.enter/leave, nullable enter/leave, and MethodsAdapter.enter/leave are the exact canonical declarations recorded by the AST ledger"
+    ],
+    "callers": [
+      "pthreadMutexEnter and pthreadMutexLeave have exactly one non-definition source reference each: sqlite3DefaultMutex installs them as xMutexEnter/xMutexLeave at mutex_unix.c:379/381",
+      "A complete textual core search finds 199 sqlite3_mutex_enter references and 221 sqlite3_mutex_leave references across 40 source/test/platform files; active responsibilities span allocator/status, connection/VDBE, B-tree, VFS, PCache, virtual-table, backup, prepare, tokenizer, and random owners",
+      "Platform-specific mutex_w32, allocator mem2/mem3/mem5, os_win, test*.c, and extension-table references are not active pthread-core callers under the selected profile and receive no integration credit here",
+      "Zig Handle and Manager callers route native mutexes to Mutex.enter/leave and configured pointers to MethodsAdapter; lifecycle/allocation owners remain separate dossiers"
+    ],
+    "callees": [
+      "Selected pthreadMutexEnter performs one pthread_mutex_lock; SQLITE_HOMEGROWN_RECURSIVE_MUTEX, SQLITE_MUTEX_NREF bookkeeping, and SQLITE_DEBUG trace branches are inactive in the pinned production profile",
+      "Selected pthreadMutexLeave checks source preconditions and performs one pthread_mutex_unlock; NREF/homegrown/debug branches are inactive",
+      "sqlite3_mutex_enter/leave test p for null, assert the configured method exists, and invoke exactly xMutexEnter/xMutexLeave for non-null p"
+    ],
+    "assertions_branches_cleanup": [
+      "The seven assigned behavior IDs cover wrapper null branches/callback assertions and concrete enter/leave ownership assertions; invalid non-recursive reentry or non-owner leave remains undefined source behavior",
+      "SQLITE_MUTEX_NREF=0 removes id/nRef/owner/trace C fields and selects {PTHREAD_MUTEX_INITIALIZER}; Zig owner/depth fields are an explicit representation difference requiring later trace/performance evidence",
+      "No allocation, destruction, result code, callback beyond configured dispatch, or I/O occurs in this unit; blocking and unlock continuation are the only runtime transitions"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/mutex1.test counts static/dynamic mutex entry across single-thread, multithread, serialized, application/VFS, and database mutex paths",
+      "upstream/sqlite/test/mutex2.test exercises mutex initialization failure and allocation/deallocation boundaries adjacent to this unit",
+      "upstream/sqlite/test/thread001.test through thread005.test and thread1.test/thread2.test exercise shared-handle, independent-handle, contention, and cross-thread continuation",
+      "Project mutex.zig recursive/null/configured/contention tests and the infrastructure differential isolate callback dispatch and pthread synchronization; they are not yet durable promotion receipts"
+    ]
+  }
 }

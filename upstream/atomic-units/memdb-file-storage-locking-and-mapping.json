@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "memdb-file-storage-locking-and-mapping",
   "title": "Memdb shared/private storage, file methods, locking, and mapping",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "These active memdb.c methods own shared-versus-private store creation and last-close destruction, contiguous doubled-capacity byte I/O, rollback-only truncation/sync, reader/writer locks, fetch behavior, file controls, ABI method tails, access, and pathname handling. The dedicated native memdb owner now follows these target-profile traces. The source MemStore/MemFile/MemFS representations, method tables, selected mutex helpers, delegated VFS services, and memdb identity predicate are also assigned here.",
     "source_files": [
@@ -596,10 +596,10 @@
     "normalization": "C and Zig store/pointer addresses are allocation identities. VFSNAME pointer spelling is normalized to its memdb prefix and size suffix; all names, bytes, capacities, limits, result codes, lock states, ABI tails, close continuation and allocator ownership are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
-    "subsystem_integrated": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
     "oom": "Exact growth allocation failure returns IOERR_NOMEM without mutation; open/store/handle rollback coverage passes. Configured dynamic-mutex allocation-site identity remains open.",
     "io_crash_concurrency": "No disk/crash semantics. Registry plus per-store serialization passes eight-thread shared open, concurrent precise growth, byte integrity, lock, close and last-reference coverage.",
     "malformed_input": "Negative fetch ranges, growth overflow, unknown/null controls, pathname categories, and size-limit boundaries are handled; deserialize-only flag combinations remain separate.",
@@ -623,6 +623,7 @@
     "notes": "Internal trace equivalence is established for scoped file methods. Requires configured-mutex allocation-site review, deserialize boundary completion, assurance expansion, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Configured dynamic-mutex allocation identity and exact mutex-allocation OOM site remain open.",
     "Mapped-store creation is tracked by the scaffolded serialize/deserialize unit, which now adopts main-schema external buffers; attached schemas and complete differential assurance remain open there.",
     "Independent review remains open."

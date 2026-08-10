@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-immediate-and-deferred-foreign-key-commit-guards",
   "title": "VDBE immediate and deferred foreign-key commit guards",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "These guards convert outstanding immediate or connection-deferred foreign-key counts into the exact VDBE constraint state, abort policy, fixed error message, and prepare-mode-dependent return code used by halt/commit.",
     "source_files": [
@@ -84,7 +84,7 @@
     "The fixed no-format-argument sqlite3VdbeError call is specialized to exact connection string duplication; resulting bytes, ownership, replacement, and OOM behavior are unchanged."
   ],
   "oracle": {
-    "protocol": "The shared worker seeds prior rc/action/message state, exercises zero/nonzero immediate and deferred counts with and without SQLITE_PREPARE_SAVESQL, then disables lookaside and forces fixed-message allocation OOM. C and Zig compare 363 observations.",
+    "protocol": "The shared worker seeds prior rc/action/message state, exercises zero/nonzero immediate and deferred counts with and without SQLITE_PREPARE_SAVESQL, then disables lookaside and forces fixed-message allocation OOM. C and Zig compare 366 observations.",
     "internal_observations": [
       "zero-count no-mutation",
       "immediate count selection",
@@ -98,9 +98,9 @@
     "normalization": "Return codes, rc, action, prepare flags, message bytes/nullness, and OOM state are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Deterministic no-lookaside message-allocation failure preserves rc/action/return while publishing null and sticky OOM.",
     "io_crash_concurrency": "No I/O/callback; caller mutex remains integration obligation.",
@@ -124,6 +124,7 @@
     "notes": "Requires halt-path integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate source FK counter producers.",
     "Connect sqlite3VdbeHalt transaction path.",
     "Independent fidelity review remains open."

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-final-label-fixup-and-program-flags",
   "title": "VDBE final label fixup, reader/write flags, and virtual-table argument sizing",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "resolveP2Values is the source builder finalization scan that consumes resolved labels, patches negative jump P2 operands, computes maximum VUpdate/VFilter argument demand, derives read-only/reader flags, and releases Parse label storage. Its reverse scan and generated opcode-property coupling form one atomic unit.",
     "source_files": [
@@ -142,7 +142,7 @@
     "Vdbe bitfields are exact packed Zig VdbeFlags fields."
   ],
   "oracle": {
-    "protocol": "The shared symbolic builder program emits Init/jump/label/Transaction and VFilter/VUpdate programs, then C and Zig run finalization and compare inspected P2, maximum virtual-table arguments, reader/write flags, nLabel, and aLabel ownership as part of a 363-observation trace.",
+    "protocol": "The shared symbolic builder program emits Init/jump/label/Transaction and VFilter/VUpdate programs, then C and Zig run finalization and compare inspected P2, maximum virtual-table arguments, reader/write flags, nLabel, and aLabel ownership as part of a 366-observation trace.",
     "internal_observations": [
       "reverse scan output jump target",
       "maximum VUpdate/VFilter argument count",
@@ -153,11 +153,11 @@
     "normalization": "Opcode, P2, maximum arguments, flags, counts and null ownership are exact; allocation addresses are ignored."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
-    "oom": "Entry requires no sticky OOM; preceding label growth OOM/continuation is covered by the same 363-observation worker.",
+    "oom": "Entry requires no sticky OOM; preceding label growth OOM/continuation is covered by the same 366-observation worker.",
     "io_crash_concurrency": "No I/O or callback; caller mutex remains integration obligation.",
     "malformed_input": "Source assertions constrain OP_Init placement, VFilter/Integer adjacency, jump labels and targets; symbolic programs exercise each active special case family.",
     "continuation": "Final bytes and metadata are observed after label owner retirement; MakeReady integration remains open.",
@@ -180,6 +180,7 @@
     "notes": "Requires MakeReady/compiler integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port and integrate VDBE creation, P4 ownership, MakeReady/operation transfer, and deletion.",
     "Switch compiler ownership from handwritten Program to source builder and retire the duplicate.",
     "Independent fidelity review remains open."

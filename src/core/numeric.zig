@@ -74,7 +74,9 @@ pub const ParseI64Result = struct { value: i64, code: c_int };
 pub fn parseI64(input: []const u8, encoding: TextEncoding) ParseI64Result {
     const view = TextView.init(input, encoding);
     var position: usize = 0;
-    while (position < view.length and isSpace(view.at(position))) position += 1;
+    while (position < view.length and isSpace(view.at(position))) {
+        position += 1;
+    }
     var negative = false;
     if (position < view.length and view.at(position) == '-') {
         negative = true;
@@ -83,7 +85,9 @@ pub fn parseI64(input: []const u8, encoding: TextEncoding) ParseI64Result {
         position += 1;
     }
     const before_digits = position;
-    while (position < view.length and view.at(position) == '0') position += 1;
+    while (position < view.length and view.at(position) == '0') {
+        position += 1;
+    }
     const significant_start = position;
     var value: u64 = 0;
     while (position < view.length and isDigit(view.at(position))) : (position += 1) {
@@ -127,7 +131,9 @@ pub fn parseI64(input: []const u8, encoding: TextEncoding) ParseI64Result {
 pub fn parseDecimalOrHex(input: [*:0]const u8) ParseI64Result {
     if (input[0] == '0' and (input[1] == 'x' or input[1] == 'X')) {
         var position: usize = 2;
-        while (input[position] == '0') position += 1;
+        while (input[position] == '0') {
+            position += 1;
+        }
         const significant_start = position;
         var value: u64 = 0;
         while (isHex(input[position])) : (position += 1) {
@@ -161,7 +167,9 @@ pub fn getInt32(input: [*:0]const u8) ParseI32Result {
         position = 1;
     } else if (input[0] == '0' and (input[1] == 'x' or input[1] == 'X') and isHex(input[2])) {
         position = 2;
-        while (input[position] == '0') position += 1;
+        while (input[position] == '0') {
+            position += 1;
+        }
         var value: u32 = 0;
         var count: usize = 0;
         while (count < 8 and isHex(input[position + count])) : (count += 1) {
@@ -173,7 +181,9 @@ pub fn getInt32(input: [*:0]const u8) ParseI32Result {
         return .{ .value = 0, .valid = false };
     }
     if (!isDigit(input[position])) return .{ .value = 0, .valid = false };
-    while (input[position] == '0') position += 1;
+    while (input[position] == '0') {
+        position += 1;
+    }
     var value: i64 = 0;
     var count: usize = 0;
     while (count < 11 and isDigit(input[position + count])) : (count += 1) {

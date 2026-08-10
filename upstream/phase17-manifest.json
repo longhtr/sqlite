@@ -24,6 +24,5 @@
     "Debug, ReleaseSafe, and ReleaseFast regression runs"
   ],
   "warning": "This manifest does not establish complete API semantics, complete active-source coverage, or completion of the SQLite C-to-Zig port.",
-  "project_completion_claim": false,
   "evidence_interpretation": "Bounded regression evidence only; not proof that the complete upstream subsystem or SQLite port is finished."
 }

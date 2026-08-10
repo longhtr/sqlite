@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "connection-allocation-state-representations",
   "title": "Connection allocation, lookaside, interrupt, and Parse state representations",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the additional exact sqlite3, Lookaside, LookasideSlot, interrupt-union, and Parse identities read or written by the connection-aware allocation/OOM closure.",
@@ -317,8 +317,8 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Representation-only; allocator fault traces consume these fields.",
     "io_crash_concurrency": "Storage is exact; mutex/atomic behavior is separately admitted.",
@@ -344,5 +344,34 @@
   },
   "known_blockers": [
     "Final subsystem integration follows allocator and source-builder integration."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/sqliteInt.h:1335-1360 was reviewed for Lookaside and LookasideSlot declarations in their type graph",
+      "upstream/sqlite/src/sqliteInt.h:1540-1615 was reviewed completely for two-size lookaside semantics, lists, counters, bounds, and slot link",
+      "upstream/sqlite/src/sqliteInt.h:1665-1805 was reviewed through the complete sqlite3 field neighborhoods containing connection mutex, OOM/error state, VDBE activity, Parse pointer, interrupt union, lookaside, and bytes-freed pointer",
+      "upstream/sqlite/src/sqliteInt.h:3850-4010 was reviewed through the complete Parse ownership regions containing error state, recursion boundary, outer parse, and WITH owner; exact Zig layout owners are AST-hashed"
+    ],
+    "callers": [
+      "db allocation helpers consume lookaside lists/bounds/stats, pnBytesFreed, mallocFailed/benign/suppress state, mutex, interrupt, and active-VDBE state",
+      "VDBE builder allocation consumes Parse error/message/count, pOuterParse/pWith cleanup context, pParse, and connection error offset",
+      "connection-allocation-for-vdbe-growth is the behavior owner; parser, interrupt, and connection mutex execution beyond allocation are excluded"
+    ],
+    "callees": [
+      "Representation declarations have no callees; linked lists and optional pointers preserve C ownership/nullability",
+      "Generated C layout probes and Zig compile-time assertions own exact size, alignment, offset, width, and union-overlay comparison",
+      "The anonymous interrupt union receives the stable Zig name Sqlite3Interrupt; volatile constrains access behavior rather than storage"
+    ],
+    "assertions_branches_cleanup": [
+      "No behavioral blocks belong to representation declarations; all 32 IDs are active-profile fields/types required by the allocation closure",
+      "Two-size lookaside is active: small and large init/free lists and pMiddle partition are retained",
+      "Parse zeroed-header, recursion-persistent, and reset-tail boundaries were reviewed so selected field ownership is not inferred from isolated members",
+      "Layout mismatch is compile-time failure; no allocation, callback, lock action, I/O, or cleanup is credited here"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/lookaside.test and lookaside2.test exercise two-size lists, statistics, disabling, and OOM behavior",
+      "upstream/sqlite/test/malloc.test family and oomfault.test consume connection sticky-OOM/error state",
+      "Generated internal VDBE/Parse layout tests compare exact ABI facts; vdbe builder differential consumes fields but is not durable promotion evidence"
+    ]
+  }
 }

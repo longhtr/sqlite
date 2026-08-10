@@ -15,4 +15,8 @@ def main():
         raise SystemExit("page-cache differential mismatch\nC="+repr(oracle)+"\nZ="+repr(native))
     print(f"pcache-differential: {len(native)} state/dirty/stress/purge observations match")
 
-if __name__=="__main__":main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

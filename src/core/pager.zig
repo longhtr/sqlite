@@ -77,6 +77,8 @@ pub const Stats = struct {
     cache_hits: u64 = 0,
     cache_misses: u64 = 0,
     database_reads: u64 = 0,
+    database_writes: u64 = 0,
+    cache_spills: u64 = 0,
 };
 
 pub const OpenOptions = struct {
@@ -109,6 +111,17 @@ pub const PageOutcome = struct {
 
 const AlignedFileBytes = []align(@alignOf(vfs.sqlite3_file)) u8;
 
+const SavepointPage = struct { number: u32, data: []u8 };
+const Savepoint = struct {
+    database_pages: u32,
+    pages: std.ArrayList(SavepointPage) = .empty,
+
+    fn deinit(self: *Savepoint, allocator: std.mem.Allocator) void {
+        for (self.pages.items) |page| allocator.free(page.data);
+        self.pages.deinit(allocator);
+    }
+};
+
 pub const Pager = struct {
     allocator: std.mem.Allocator,
     abi_vfs: *vfs.sqlite3_vfs,
@@ -137,6 +150,7 @@ pub const Pager = struct {
     journal_records: u32 = 0,
     journal_checksum_seed: u32 = 0,
     journal_sector_size: u32 = 4096,
+    sector_size_known: bool = false,
     original_database_pages: u32 = 0,
     commit_hook: ?CommitHook = null,
     commit_context: ?*anyopaque = null,
@@ -144,6 +158,7 @@ pub const Pager = struct {
     wal_mode: bool = false,
     wal_state: ?wal.Wal = null,
     wal_external_index: bool = false,
+    savepoints: std.ArrayList(Savepoint) = .empty,
 
     /// Upstream: sqlite3PagerOpen + sqlite3PagerReadFileheader and the
     /// immediate B-tree header checks that select Pager.pageSize.
@@ -175,12 +190,7 @@ pub const Pager = struct {
             return .{ .result = .no_memory };
         defer allocator.free(path_buffer);
         @memset(path_buffer, 0);
-        const full_rc = abi_vfs.xFullPathname.?(
-            abi_vfs,
-            input_name.ptr,
-            @intCast(path_capacity),
-            path_buffer.ptr,
-        );
+        const full_rc = vfs.osFullPathname(abi_vfs, input_name.ptr, path_buffer[0..path_capacity]);
         if (full_rc != vfs.OK) return .{ .result = ResultCode.fromC(full_rc) };
         const path_length = std.mem.indexOfScalar(u8, path_buffer[0..path_capacity], 0) orelse
             return .{ .result = .cannot_open };
@@ -217,13 +227,7 @@ pub const Pager = struct {
             vfs.OPEN_READWRITE | vfs.OPEN_CREATE | vfs.OPEN_MAIN_DB
         else
             vfs.OPEN_READONLY | vfs.OPEN_MAIN_DB;
-        const open_rc = abi_vfs.xOpen.?(
-            abi_vfs,
-            filename.ptr,
-            file,
-            database_open_flags,
-            &output_flags,
-        );
+        const open_rc = vfs.osOpen(abi_vfs, filename.ptr, file, database_open_flags, &output_flags);
         if (open_rc != vfs.OK) {
             allocator.free(file_bytes);
             allocator.free(wal_name);
@@ -421,11 +425,7 @@ pub const Pager = struct {
         @memset(bytes, 0);
         const file: *vfs.sqlite3_file = @ptrCast(bytes.ptr);
         var output_flags: c_int = 0;
-        const open_fn = self.abi_vfs.xOpen orelse {
-            self.allocator.free(bytes);
-            return .cannot_open;
-        };
-        const rc = ResultCode.fromC(open_fn(
+        const rc = ResultCode.fromC(vfs.osOpen(
             self.abi_vfs,
             self.journal_name.ptr,
             file,
@@ -470,7 +470,15 @@ pub const Pager = struct {
         return rc;
     }
 
+    fn clearSavepoints(self: *Pager) void {
+        for (self.savepoints.items) |*savepoint| {
+            savepoint.deinit(self.allocator);
+        }
+        self.savepoints.clearRetainingCapacity();
+    }
+
     fn clearTransaction(self: *Pager) void {
+        self.clearSavepoints();
         if (self.journaled_pages) |pages| self.allocator.free(pages);
         self.journaled_pages = null;
         self.journal_offset = 0;
@@ -489,21 +497,29 @@ pub const Pager = struct {
         self.commit_context = context;
     }
 
-    fn writeInitialJournalHeader(self: *Pager) ResultCode {
-        const file = self.journal_file orelse return .misuse;
+    /// Source `setSectorSize()`: normalize the VFS device sector size once per
+    /// pager before either large-sector journaling or a journal header write.
+    fn refreshSectorSize(self: *Pager) ResultCode {
+        if (self.sector_size_known) return .ok;
         const methods = self.ioMethods() orelse return .io_error;
-        const sector_fn = methods.xSectorSize orelse return .io_error;
-        const raw_sector = sector_fn(self.file);
+        const raw_sector = if (methods.xSectorSize) |sector_size| sector_size(self.file) else 512;
         var sector: u32 = if (raw_sector >= 32) @intCast(raw_sector) else 512;
         if (sector > 65_536 or !std.math.isPowerOfTwo(sector)) sector = 4096;
         self.journal_sector_size = sector;
+        self.sector_size_known = true;
+        return .ok;
+    }
+
+    fn writeInitialJournalHeader(self: *Pager) ResultCode {
+        const file = self.journal_file orelse return .misuse;
+        const sector_rc = self.refreshSectorSize();
+        if (sector_rc != .ok) return sector_rc;
+        const sector = self.journal_sector_size;
         const header = self.allocator.alloc(u8, sector) catch return .no_memory;
         defer self.allocator.free(header);
         @memset(header, 0);
         var random: [4]u8 = .{ 0xa5, 0x5a, 0xc3, 0x3c };
-        if (self.abi_vfs.xRandomness) |random_fn| {
-            if (random_fn(self.abi_vfs, 4, &random) < 4) return .io_error;
-        }
+        if (vfs.osRandomness(self.abi_vfs, &random) < random.len) return .io_error;
         self.journal_checksum_seed = @as(u32, random[0]) |
             (@as(u32, random[1]) << 8) | (@as(u32, random[2]) << 16) |
             (@as(u32, random[3]) << 24);
@@ -560,6 +576,7 @@ pub const Pager = struct {
                     const database_offset = std.math.mul(u64, page_number - 1, self.page_size) catch return .full;
                     rc = writeToFile(self.file, data, database_offset);
                     if (rc != .ok) return rc;
+                    self.stats.database_writes += 1;
                 }
                 if (self.cache.pages.get(page_number)) |cached| {
                     @memcpy(cached.data, data);
@@ -628,9 +645,7 @@ pub const Pager = struct {
         @memset(journal_bytes, 0);
         const journal_file: *vfs.sqlite3_file = @ptrCast(journal_bytes.ptr);
         var output_flags: c_int = 0;
-        const open_fn = self.abi_vfs.xOpen orelse
-            return .{ .result = .cannot_open, .hot = false };
-        rc = ResultCode.fromC(open_fn(
+        rc = ResultCode.fromC(vfs.osOpen(
             self.abi_vfs,
             self.journal_name.ptr,
             journal_file,
@@ -774,6 +789,23 @@ pub const Pager = struct {
         };
     }
 
+    /// Source `pagerStress()`: spill unreferenced rollback-journal pages when
+    /// a soft cache fetch cannot allocate without exceeding its limit.
+    fn pagerStress(context: ?*anyopaque, page: *page_cache.Page) page_cache.Result {
+        const self: *Pager = @ptrCast(@alignCast(context orelse return .corrupt));
+        const rc = self.flushUnreferencedDirty();
+        if (rc == .ok and !page.flags.dirty) {
+            self.stats.cache_spills += 1;
+            return .ok;
+        }
+        return switch (rc) {
+            .ok, .busy => .busy,
+            .no_memory => .out_of_memory,
+            .corrupt => .corrupt,
+            else => .busy,
+        };
+    }
+
     fn hasReadTransaction(self: *const Pager) bool {
         return self.state == .reader or self.state == .writer_locked or
             self.state == .writer_cache_modified or self.state == .writer_database_modified;
@@ -786,7 +818,11 @@ pub const Pager = struct {
         if (page_number == locking_page) return .{ .result = .corrupt };
 
         const was_cached = self.cache.pages.get(page_number) != null;
-        const fetched = self.cache.fetch(page_number, .hard_create, null);
+        const create_mode: page_cache.FetchMode = if (self.cache.isDirty()) .soft_create else .hard_create;
+        var fetched = self.cache.fetch(page_number, create_mode, null);
+        if (fetched.result == .busy) {
+            fetched = self.cache.fetch(page_number, .hard_create, .{ .callback = pagerStress, .context = self });
+        }
         if (fetched.result != .ok) return .{ .result = cacheResult(fetched.result) };
         const page = fetched.page.?;
         if (was_cached and page.extra[0] != 0 and !no_content) {
@@ -922,11 +958,35 @@ pub const Pager = struct {
         return .ok;
     }
 
-    pub fn makeWritable(self: *Pager, page: *page_cache.Page) ResultCode {
+    fn captureSavepointPage(self: *Pager, savepoint: *Savepoint, page: *page_cache.Page) ResultCode {
+        for (savepoint.pages.items) |snapshot| {
+            if (snapshot.number == page.key) return .ok;
+        }
+        const data = self.allocator.dupe(u8, page.data) catch return .no_memory;
+        savepoint.pages.append(self.allocator, .{ .number = page.key, .data = data }) catch {
+            self.allocator.free(data);
+            return .no_memory;
+        };
+        return .ok;
+    }
+
+    fn capturePageForSavepoints(self: *Pager, page: *page_cache.Page) ResultCode {
+        for (self.savepoints.items) |*savepoint| {
+            const rc = self.captureSavepointPage(savepoint, page);
+            if (rc != .ok) return rc;
+        }
+        return .ok;
+    }
+
+    /// Source `pager_write()`: make one page writable and journal its prior
+    /// image. Large-sector cohort handling belongs to `makeWritable()`.
+    fn makeWritableSingle(self: *Pager, page: *page_cache.Page) ResultCode {
         if (self.read_only) return .read_only;
         if (self.state != .writer_locked and self.state != .writer_cache_modified and
             self.state != .writer_database_modified) return .misuse;
         if (self.cache.pages.get(page.key) != page or page.ref_count == 0) return .misuse;
+        const savepoint_rc = self.capturePageForSavepoints(page);
+        if (savepoint_rc != .ok) return savepoint_rc;
         if (page.flags.writeable) return .ok;
         if (self.wal_mode) {
             if (self.state == .writer_locked) self.state = .writer_cache_modified;
@@ -950,6 +1010,63 @@ pub const Pager = struct {
         page.flags.writeable = true;
         self.database_pages = @max(self.database_pages, page.key);
         return .ok;
+    }
+
+    /// Integrated source `pagerWriteLargeSector()`: journal every database
+    /// page sharing the physical sector before exposing any as writable.
+    fn makeWritableLargeSector(self: *Pager, target: *page_cache.Page) ResultCode {
+        const pages_per_sector = self.journal_sector_size / self.page_size;
+        std.debug.assert(pages_per_sector > 1 and std.math.isPowerOfTwo(pages_per_sector));
+        const first = ((target.key - 1) & ~(pages_per_sector - 1)) + 1;
+        const count = if (target.key > self.database_pages)
+            target.key - first + 1
+        else
+            @min(pages_per_sector, self.database_pages + 1 - first);
+        const locking_page: u32 = @intCast(pending_byte / self.page_size + 1);
+        var need_sync = false;
+        for (first..first + count) |number_value| {
+            const number: u32 = @intCast(number_value);
+            if (number == locking_page) continue;
+            const already_journaled = self.journaled_pages != null and
+                number < self.journaled_pages.?.len and self.journaled_pages.?[number];
+            if (number == target.key or !already_journaled) {
+                const fetched = self.getPage(number, false);
+                if (fetched.result != .ok) return fetched.result;
+                const cohort_page = fetched.page.?;
+                const rc = self.makeWritableSingle(cohort_page);
+                if (cohort_page.flags.need_sync) {
+                    need_sync = true;
+                }
+                _ = self.release(cohort_page);
+                if (rc != .ok) return rc;
+            } else if (self.lookup(number)) |cohort_page| {
+                if (cohort_page.flags.need_sync) {
+                    need_sync = true;
+                }
+                _ = self.release(cohort_page);
+            }
+        }
+        if (need_sync) {
+            for (first..first + count) |number_value| {
+                if (self.lookup(@intCast(number_value))) |cohort_page| {
+                    cohort_page.flags.need_sync = true;
+                    _ = self.release(cohort_page);
+                }
+            }
+        }
+        return .ok;
+    }
+
+    /// Source `sqlite3PagerWrite()` dispatches the ordinary and large-sector
+    /// paths after honoring already-writable pages.
+    pub fn makeWritable(self: *Pager, page: *page_cache.Page) ResultCode {
+        if (page.flags.writeable and self.database_pages >= page.key) return .ok;
+        if (!self.wal_mode) {
+            const sector_rc = self.refreshSectorSize();
+            if (sector_rc != .ok) return sector_rc;
+            if (self.journal_sector_size > self.page_size) return self.makeWritableLargeSector(page);
+        }
+        return self.makeWritableSingle(page);
     }
 
     fn updateChangeCounter(self: *Pager) ResultCode {
@@ -989,6 +1106,48 @@ pub const Pager = struct {
         return .ok;
     }
 
+    /// Source `pagerWalFrames()`: trim pages beyond the committed image and
+    /// forward an ascending no-allocation dirty chain to the WAL owner.
+    fn writeWalFrames(self: *Pager, dirty_head: ?*page_cache.Page) ResultCode {
+        var source = dirty_head;
+        var first: ?*page_cache.Page = null;
+        var tail: ?*page_cache.Page = null;
+        var count: usize = 0;
+        while (source) |page| {
+            source = page.sort_next;
+            if (page.key > self.database_pages) continue;
+            page.sort_next = null;
+            if (tail) |previous| {
+                previous.sort_next = page;
+            } else {
+                first = page;
+            }
+            tail = page;
+            count += 1;
+        }
+        if (first == null) return .corrupt;
+        const rc = if (self.wal_state) |*state| state.append(first, self.database_pages) else .cannot_open;
+        if (rc == .ok) {
+            self.stats.database_writes += count;
+        }
+        return rc;
+    }
+
+    /// Source `pager_write_pagelist()`: write the sorted rollback-mode dirty
+    /// chain directly, without allocating a temporary pointer array.
+    fn writeDirtyPageList(self: *Pager, dirty_head: ?*page_cache.Page) ResultCode {
+        var dirty = dirty_head;
+        while (dirty) |page| : (dirty = page.sort_next) {
+            if (page.key > self.database_pages or page.flags.dont_write) continue;
+            const offset = std.math.mul(u64, page.key - 1, self.page_size) catch return .full;
+            const rc = writeToFile(self.file, page.data, offset);
+            if (rc != .ok) return rc;
+            self.stats.database_writes += 1;
+            if (!self.emitCommitEvent(.database_write)) return .interrupt;
+        }
+        return .ok;
+    }
+
     pub fn commitPhaseOne(self: *Pager) ResultCode {
         if (self.state == .writer_locked) {
             self.state = .writer_finished;
@@ -998,9 +1157,7 @@ pub const Pager = struct {
         var rc = self.updateChangeCounter();
         if (rc != .ok) return rc;
         if (self.wal_mode) {
-            const dirty = self.cache.dirtyList(self.allocator) catch return .no_memory;
-            defer self.allocator.free(dirty);
-            rc = if (self.wal_state) |*state| state.append(dirty, self.database_pages) else .cannot_open;
+            rc = self.writeWalFrames(self.cache.dirtyListHead());
             if (rc != .ok) return rc;
             self.cache.cleanAll();
             std.debug.assert(transitionAllowed(self.state, .writer_finished));
@@ -1009,15 +1166,8 @@ pub const Pager = struct {
         }
         rc = self.syncJournalForCommit();
         if (rc != .ok) return rc;
-        const dirty = self.cache.dirtyList(self.allocator) catch return .no_memory;
-        defer self.allocator.free(dirty);
-        for (dirty) |page| {
-            if (page.key > self.database_pages or page.flags.dont_write) continue;
-            const offset = std.math.mul(u64, page.key - 1, self.page_size) catch return .full;
-            rc = writeToFile(self.file, page.data, offset);
-            if (rc != .ok) return rc;
-            if (!self.emitCommitEvent(.database_write)) return .interrupt;
-        }
+        rc = self.writeDirtyPageList(self.cache.dirtyListHead());
+        if (rc != .ok) return rc;
         const image_size = std.math.mul(u64, self.database_pages, self.page_size) catch return .full;
         rc = truncateFile(self.file, image_size);
         if (rc != .ok) return rc;
@@ -1061,12 +1211,38 @@ pub const Pager = struct {
         return .misuse;
     }
 
-    pub fn checkpointWal(self: *Pager) wal.CheckpointOutcome {
+    pub fn flushUnreferencedDirty(self: *Pager) ResultCode {
+        if (self.state != .writer_locked and self.state != .writer_cache_modified and self.state != .writer_database_modified) return .ok;
+        if (self.wal_mode) return .busy;
+        var rc = self.syncJournalForCommit();
+        if (rc != .ok) return rc;
+        var dirty = self.cache.dirtyListHead();
+        while (dirty) |page| {
+            dirty = page.sort_next;
+            if (page.ref_count != 0 or page.flags.dont_write) continue;
+            const offset = std.math.mul(u64, page.key - 1, self.page_size) catch return .full;
+            rc = writeToFile(self.file, page.data, offset);
+            if (rc != .ok) return rc;
+            self.stats.database_writes += 1;
+            self.cache.makeClean(page);
+        }
+        return .ok;
+    }
+
+    /// Source `sqlite3PagerCheckpoint()`: validate pager state, dispatch the
+    /// requested WAL checkpoint mode, and invalidate pages after backfill.
+    pub fn checkpointWalMode(self: *Pager, mode: wal.CheckpointMode) wal.CheckpointOutcome {
         if (!self.wal_mode or self.state != .reader) return .{ .result = .misuse };
         if (self.cache.refCount() != 0) return .{ .result = .busy };
-        const outcome = if (self.wal_state) |*state| state.checkpoint() else wal.CheckpointOutcome{ .result = .cannot_open };
-        if (outcome.result == .ok) self.cache.clear();
+        const outcome = if (self.wal_state) |*state| state.checkpointMode(mode) else wal.CheckpointOutcome{ .result = .cannot_open };
+        if (outcome.result == .ok and outcome.checkpointed != 0) {
+            self.cache.clear();
+        }
         return outcome;
+    }
+
+    pub fn checkpointWal(self: *Pager) wal.CheckpointOutcome {
+        return self.checkpointWalMode(.truncate);
     }
 
     pub fn rollback(self: *Pager) ResultCode {
@@ -1100,6 +1276,66 @@ pub const Pager = struct {
         return .ok;
     }
 
+    /// Source `pagerOpenSavepoint()`: extend the savepoint array and snapshot
+    /// every page already dirty at each newly opened boundary.
+    pub fn openSavepoints(self: *Pager, requested_count: usize) ResultCode {
+        if (self.state != .writer_locked and self.state != .writer_cache_modified and self.state != .writer_database_modified) return .misuse;
+        if (requested_count <= self.savepoints.items.len) return .ok;
+        while (self.savepoints.items.len < requested_count) {
+            var savepoint = Savepoint{ .database_pages = self.database_pages };
+            var page = self.cache.dirtyListHead();
+            while (page) |dirty| : (page = dirty.sort_next) {
+                const rc = self.captureSavepointPage(&savepoint, dirty);
+                if (rc != .ok) {
+                    savepoint.deinit(self.allocator);
+                    return rc;
+                }
+            }
+            self.savepoints.append(self.allocator, savepoint) catch {
+                savepoint.deinit(self.allocator);
+                return .no_memory;
+            };
+        }
+        return .ok;
+    }
+
+    pub fn rollbackSavepoint(self: *Pager, index: usize) ResultCode {
+        if (index >= self.savepoints.items.len or self.cache.refCount() != 0) return .misuse;
+        const savepoint = &self.savepoints.items[index];
+        self.cache.truncate(savepoint.database_pages);
+        for (savepoint.pages.items) |snapshot| {
+            const fetched = self.cache.fetch(snapshot.number, .hard_create, null);
+            if (fetched.result != .ok) return switch (fetched.result) {
+                .out_of_memory => .no_memory,
+                else => .corrupt,
+            };
+            const page = fetched.page.?;
+            @memcpy(page.data, snapshot.data);
+            self.cache.makeDirty(page);
+            page.flags.writeable = true;
+            _ = self.cache.release(page);
+        }
+        self.database_pages = savepoint.database_pages;
+        var remove = self.savepoints.items.len;
+        while (remove > index + 1) {
+            remove -= 1;
+            self.savepoints.items[remove].deinit(self.allocator);
+        }
+        self.savepoints.shrinkRetainingCapacity(index + 1);
+        return .ok;
+    }
+
+    pub fn releaseSavepoint(self: *Pager, index: usize) ResultCode {
+        if (index >= self.savepoints.items.len) return .misuse;
+        var remove = self.savepoints.items.len;
+        while (remove > index) {
+            remove -= 1;
+            self.savepoints.items[remove].deinit(self.allocator);
+        }
+        self.savepoints.shrinkRetainingCapacity(index);
+        return .ok;
+    }
+
     pub fn movePage(self: *Pager, page: *page_cache.Page, new_number: u32) ResultCode {
         _ = self;
         _ = page;
@@ -1130,6 +1366,7 @@ pub const Pager = struct {
             if (methods.xClose) |close_fn| _ = close_fn(self.file);
         }
         self.clearTransaction();
+        self.savepoints.deinit(self.allocator);
         self.cache.deinit();
         if (self.temp_page.len != 0) self.allocator.free(self.temp_page);
         self.allocator.free(self.file_bytes);
@@ -1157,6 +1394,7 @@ pub const Pager = struct {
         const close_fn = methods.xClose orelse return .io_error;
         const rc = ResultCode.fromC(close_fn(self.file));
         self.clearTransaction();
+        self.savepoints.deinit(self.allocator);
         self.cache.deinit();
         if (self.temp_page.len != 0) self.allocator.free(self.temp_page);
         self.allocator.free(self.file_bytes);

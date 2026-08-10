@@ -3,27 +3,134 @@
 //! Rowid predicates, ordering, and limits lower to native cursor programs.
 
 const std = @import("std");
+const builtin = @import("builtin");
+const profile_limits = @import("build_profile").limits;
 pub const global = @import("global.zig");
 const OneShotFailAllocator = @import("testing_one_shot_allocator.zig").OneShotFailAllocator;
 const tokenizer = @import("tokenizer.zig");
 const complete = @import("complete.zig");
 const tokens = tokenizer.token;
 const vdbe = @import("vdbe.zig");
+const wal = @import("wal.zig");
 pub const btree = @import("btree.zig");
 const unix_vfs = @import("unix_vfs.zig");
+const memdb = @import("memdb.zig");
+const page_cache = @import("page_cache.zig");
 const public_api = @import("public_api.zig");
 const mutex = @import("mutex.zig");
+const lookaside = @import("lookaside.zig");
 pub const statement = @import("statement.zig");
+const json_functions = @import("internal/json_functions.zig");
+const builtin_functions = @import("internal/builtin_functions.zig");
+const date_functions = @import("internal/date_functions.zig");
+const json_vtable = @import("internal/json_vtable.zig");
+const analysis_stats = @import("internal/analysis_stats.zig");
+const pragma_runtime = @import("internal/pragma_runtime.zig");
+const schema_initialization = @import("internal/schema_initialization.zig");
+const virtual_table_lifecycle = @import("internal/virtual_table_lifecycle.zig");
+const schema_program_runtime = @import("internal/schema_program_runtime.zig");
+const query_execution = @import("internal/query_execution.zig");
+const query_compiler = @import("internal/query_compiler.zig");
+const vdbe_explain = @import("internal/vdbe_explain.zig");
 const ResultCode = @import("result_code.zig").ResultCode;
 
 extern "c" fn dlopen(file: [*:0]const u8, flags: c_int) ?*anyopaque;
 extern "c" fn dlsym(handle: *anyopaque, name: [*:0]const u8) ?*anyopaque;
 extern "c" fn dlclose(handle: *anyopaque) c_int;
 extern "c" fn dlerror() ?[*:0]const u8;
+extern "c" fn gettimeofday(*ProfileTimeval, ?*anyopaque) c_int;
+
+const ProfileTimeval = extern struct {
+    seconds: i64,
+    microseconds: i64,
+};
+
+fn profileTimeMilliseconds() i64 {
+    var value: ProfileTimeval = undefined;
+    if (gettimeofday(&value, null) != 0) return 0;
+    return value.seconds * 1000 + @divTrunc(value.microseconds, 1000);
+}
 
 pub const sqlite3 = opaque {};
 pub const sqlite3_backup = opaque {};
 pub const sqlite3_blob = opaque {};
+
+const PublicScalarCallback = *const fn (?*statement.sqlite3_context, c_int, [*]?*statement.sqlite3_value) callconv(.c) void;
+const PublicFinalCallback = *const fn (?*statement.sqlite3_context) callconv(.c) void;
+fn jsonScalar(comptime callback: anytype) PublicScalarCallback {
+    return @ptrCast(&callback);
+}
+fn jsonFinal(comptime callback: anytype) PublicFinalCallback {
+    return @ptrCast(&callback);
+}
+var core_scalar_functions = [_]statement.FunctionDefinition{
+    .{ .name = @constCast("typeof"), .argument_count = 1, .callback = jsonScalar(builtin_functions.typeOf), .user_data = null, .database = null },
+    .{ .name = @constCast("subtype"), .argument_count = 1, .callback = jsonScalar(builtin_functions.subtype), .user_data = null, .database = null },
+    .{ .name = @constCast("length"), .argument_count = 1, .callback = jsonScalar(builtin_functions.length), .user_data = null, .database = null },
+    .{ .name = @constCast("unicode"), .argument_count = 1, .callback = jsonScalar(builtin_functions.unicode), .user_data = null, .database = null },
+    .{ .name = @constCast("instr"), .argument_count = 2, .callback = jsonScalar(builtin_functions.instruction), .user_data = null, .database = null },
+    .{ .name = @constCast("abs"), .argument_count = 1, .callback = jsonScalar(builtin_functions.absolute), .user_data = null, .database = null },
+    .{ .name = @constCast("round"), .argument_count = 1, .callback = jsonScalar(builtin_functions.round), .user_data = null, .database = null },
+    .{ .name = @constCast("round"), .argument_count = 2, .callback = jsonScalar(builtin_functions.round), .user_data = null, .database = null },
+    .{ .name = @constCast("random"), .argument_count = 0, .callback = jsonScalar(builtin_functions.randomInteger), .user_data = null, .database = null },
+    .{ .name = @constCast("sqlite_version"), .argument_count = 0, .callback = jsonScalar(builtin_functions.version), .user_data = null, .database = null },
+    .{ .name = @constCast("sqlite_source_id"), .argument_count = 0, .callback = jsonScalar(builtin_functions.sourceId), .user_data = null, .database = null },
+    .{ .name = @constCast("sign"), .argument_count = 1, .callback = jsonScalar(builtin_functions.sign), .user_data = null, .database = null },
+    .{ .name = @constCast("zeroblob"), .argument_count = 1, .callback = jsonScalar(builtin_functions.zeroBlob), .user_data = null, .database = null },
+    .{ .name = @constCast("count"), .argument_count = 0, .step_callback = jsonScalar(builtin_functions.countStep), .final_callback = jsonFinal(builtin_functions.countFinalize), .user_data = null, .database = null },
+    .{ .name = @constCast("count"), .argument_count = 1, .step_callback = jsonScalar(builtin_functions.countStep), .final_callback = jsonFinal(builtin_functions.countFinalize), .user_data = null, .database = null },
+    .{ .name = @constCast("sum"), .argument_count = 1, .step_callback = jsonScalar(builtin_functions.sumStep), .final_callback = jsonFinal(builtin_functions.sumFinalize), .user_data = null, .database = null },
+    .{ .name = @constCast("total"), .argument_count = 1, .step_callback = jsonScalar(builtin_functions.sumStep), .final_callback = jsonFinal(builtin_functions.totalFinalize), .user_data = null, .database = null },
+    .{ .name = @constCast("avg"), .argument_count = 1, .step_callback = jsonScalar(builtin_functions.sumStep), .final_callback = jsonFinal(builtin_functions.averageFinalize), .user_data = null, .database = null },
+    .{ .name = @constCast("min"), .argument_count = 1, .step_callback = jsonScalar(builtin_functions.minMaxStep), .final_callback = jsonFinal(builtin_functions.minMaxFinalize), .user_data = null, .database = null },
+    .{ .name = @constCast("max"), .argument_count = 1, .step_callback = jsonScalar(builtin_functions.minMaxStep), .final_callback = jsonFinal(builtin_functions.minMaxFinalize), .user_data = @ptrFromInt(1), .database = null },
+    .{ .name = @constCast("group_concat"), .argument_count = 1, .step_callback = jsonScalar(builtin_functions.groupConcatStep), .final_callback = jsonFinal(builtin_functions.groupConcatFinalize), .user_data = null, .database = null },
+    .{ .name = @constCast("group_concat"), .argument_count = 2, .step_callback = jsonScalar(builtin_functions.groupConcatStep), .final_callback = jsonFinal(builtin_functions.groupConcatFinalize), .user_data = null, .database = null },
+};
+
+var date_scalar_functions = [_]statement.FunctionDefinition{
+    .{ .name = @constCast("julianday"), .argument_count = -1, .callback = jsonScalar(date_functions.julianDay), .user_data = null, .database = null },
+    .{ .name = @constCast("unixepoch"), .argument_count = -1, .callback = jsonScalar(date_functions.unixEpoch), .user_data = null, .database = null },
+    .{ .name = @constCast("date"), .argument_count = -1, .callback = jsonScalar(date_functions.calendarDate), .user_data = null, .database = null },
+    .{ .name = @constCast("time"), .argument_count = -1, .callback = jsonScalar(date_functions.time), .user_data = null, .database = null },
+    .{ .name = @constCast("datetime"), .argument_count = -1, .callback = jsonScalar(date_functions.dateTime), .user_data = null, .database = null },
+    .{ .name = @constCast("strftime"), .argument_count = -1, .callback = jsonScalar(date_functions.strftime), .user_data = null, .database = null },
+    .{ .name = @constCast("timediff"), .argument_count = 2, .callback = jsonScalar(date_functions.timeDifference), .user_data = null, .database = null },
+};
+
+var jsonb_scalar_functions = [_]statement.FunctionDefinition{
+    .{ .name = @constCast("jsonb"), .argument_count = 1, .callback = jsonScalar(json_functions.removeFunction), .user_data = @ptrFromInt(0x10), .database = null },
+    .{ .name = @constCast("jsonb_array"), .argument_count = -1, .callback = jsonScalar(json_functions.arrayFunction), .user_data = @ptrFromInt(0x10), .database = null },
+    .{ .name = @constCast("jsonb_object"), .argument_count = -1, .callback = jsonScalar(json_functions.objectFunction), .user_data = @ptrFromInt(0x10), .database = null },
+    .{ .name = @constCast("jsonb_extract"), .argument_count = -1, .callback = jsonScalar(json_functions.extractFunction), .user_data = @ptrFromInt(0x10), .database = null },
+    .{ .name = @constCast("jsonb_set"), .argument_count = -1, .callback = jsonScalar(json_functions.setFunction), .user_data = @ptrFromInt(0x10), .database = null },
+    .{ .name = @constCast("jsonb_replace"), .argument_count = -1, .callback = jsonScalar(json_functions.replaceFunction), .user_data = @ptrFromInt(0x10), .database = null },
+    .{ .name = @constCast("jsonb_remove"), .argument_count = -1, .callback = jsonScalar(json_functions.removeFunction), .user_data = @ptrFromInt(0x10), .database = null },
+    .{ .name = @constCast("jsonb_patch"), .argument_count = 2, .callback = jsonScalar(json_functions.patchFunction), .user_data = @ptrFromInt(0x10), .database = null },
+};
+
+var json_scalar_functions = [_]statement.FunctionDefinition{
+    .{ .name = @constCast("json"), .argument_count = 1, .callback = jsonScalar(json_functions.removeFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_array"), .argument_count = -1, .callback = jsonScalar(json_functions.arrayFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_array_length"), .argument_count = 1, .callback = jsonScalar(json_functions.arrayLengthFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_array_length"), .argument_count = 2, .callback = jsonScalar(json_functions.arrayLengthFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_error_position"), .argument_count = 1, .callback = jsonScalar(json_functions.errorPositionFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_extract"), .argument_count = -1, .callback = jsonScalar(json_functions.extractFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_object"), .argument_count = -1, .callback = jsonScalar(json_functions.objectFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_patch"), .argument_count = 2, .callback = jsonScalar(json_functions.patchFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_pretty"), .argument_count = 1, .callback = jsonScalar(json_functions.prettyFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_pretty"), .argument_count = 2, .callback = jsonScalar(json_functions.prettyFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_quote"), .argument_count = 1, .callback = jsonScalar(json_functions.quoteFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_remove"), .argument_count = -1, .callback = jsonScalar(json_functions.removeFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_replace"), .argument_count = -1, .callback = jsonScalar(json_functions.replaceFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_set"), .argument_count = -1, .callback = jsonScalar(json_functions.setFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_type"), .argument_count = 1, .callback = jsonScalar(json_functions.typeFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_type"), .argument_count = 2, .callback = jsonScalar(json_functions.typeFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_valid"), .argument_count = 1, .callback = jsonScalar(json_functions.validFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_valid"), .argument_count = 2, .callback = jsonScalar(json_functions.validFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_group_array"), .argument_count = 1, .step_callback = jsonScalar(json_functions.arrayAggregateStep), .final_callback = jsonFinal(json_functions.arrayAggregateFinal), .value_callback = jsonFinal(json_functions.arrayAggregateValue), .inverse_callback = jsonScalar(json_functions.groupInverse), .user_data = null, .database = null },
+    .{ .name = @constCast("json_group_object"), .argument_count = 2, .step_callback = jsonScalar(json_functions.objectAggregateStep), .final_callback = jsonFinal(json_functions.objectAggregateFinal), .value_callback = jsonFinal(json_functions.objectAggregateValue), .inverse_callback = jsonScalar(json_functions.groupInverse), .user_data = null, .database = null },
+};
 const sqlite3_vtab = opaque {};
 const sqlite3_vtab_cursor = opaque {};
 const VtabHeader = extern struct { pModule: ?*const Module, nRef: c_int, zErrMsg: ?[*:0]u8 };
@@ -57,6 +164,14 @@ const Module = extern struct {
 const VirtualTable = struct { connection: *Connection, name: [:0]u8, module: *const Module, instance: *sqlite3_vtab, columns: std.ArrayList([:0]u8) = .empty };
 const VirtualPlan = struct { table: *VirtualTable, index_number: c_int = 0, index_string: ?[:0]u8 = null };
 const VirtualHandle = struct { plan: *VirtualPlan, cursor: *sqlite3_vtab_cursor };
+const JsonVirtualPlan = struct {
+    allocator: std.mem.Allocator,
+    connection: json_vtable.Connection,
+    input: []u8,
+    input_is_blob: bool,
+    root: ?[]u8,
+};
+const JsonVirtualHandle = struct { plan: *JsonVirtualPlan, cursor: *json_vtable.Cursor };
 const IndexConstraint = extern struct { iColumn: c_int, op: u8, usable: u8, iTermOffset: c_int };
 const IndexOrderBy = extern struct { iColumn: c_int, desc: u8 };
 const IndexUsage = extern struct { argvIndex: c_int, omit: u8 };
@@ -64,6 +179,13 @@ const IndexInfo = extern struct { nConstraint: c_int, aConstraint: ?[*]IndexCons
 const planning_magic: u64 = 0x5a56544142504c4e;
 const PlanningContext = extern struct { public: IndexInfo, magic: u64 = planning_magic, distinct: c_int = 0 };
 const connection_magic: u64 = 0x5a_53_51_4c_43_4f_4e_4e;
+
+const PendingForeignKeyParent = struct {
+    table_name: []const u8,
+    old_rowid: i64,
+    new_rowid: i64,
+    new_values: ?[]const btree.Value,
+};
 
 fn defaultDatabaseConfiguration() [24]u8 {
     var result = [_]u8{0} ** 24;
@@ -76,6 +198,7 @@ pub const Connection = struct {
     allocator: std.mem.Allocator,
     last_result: ResultCode = .ok,
     error_offset: c_int = -1,
+    system_errno: c_int = 0,
     custom_error_message: ?[:0]u8 = null,
     database: ?*btree.Database = null,
     owned_database: bool = false,
@@ -83,12 +206,15 @@ pub const Connection = struct {
     unix_adapter: ?unix_vfs.Adapter = null,
     memory_backend: ?btree.vfs.MemoryVfs = null,
     memory_adapter: ?btree.vfs.AbiAdapter = null,
+    shared_memdb: ?*memdb.Shared = null,
     filename: ?[:0]u8 = null,
+    main_schema_name: ?[:0]u8 = null,
     active_statements: usize = 0,
     statement_head: ?*statement.Statement = null,
     active_blobs: usize = 0,
+    active_backups: usize = 0,
     deferred_close: bool = false,
-    extended_codes: bool = false,
+    error_mask: c_int = 0xff,
     last_insert_rowid: i64 = 0,
     changes: i64 = 0,
     total_changes: i64 = 0,
@@ -97,6 +223,8 @@ pub const Connection = struct {
     busy_context: ?*anyopaque = null,
     busy_calls: c_int = 0,
     busy_timeout_ms: c_int = 0,
+    setlk_timeout_ms: c_int = 0,
+    setlk_flags: c_int = 0,
     authorizer_callback: ?*const fn (?*anyopaque, c_int, ?[*:0]const u8, ?[*:0]const u8, ?[*:0]const u8, ?[*:0]const u8) callconv(.c) c_int = null,
     authorizer_context: ?*anyopaque = null,
     progress_callback: ?*const fn (?*anyopaque) callconv(.c) c_int = null,
@@ -122,6 +250,11 @@ pub const Connection = struct {
     wal_context: ?*anyopaque = null,
     wal_autocheckpoint_pages: c_int = 0,
     scalar_functions: std.ArrayList(*statement.FunctionDefinition) = .empty,
+    builtin_functions_registered: bool = false,
+    date_time_functions_registered: bool = false,
+    json_functions_registered: bool = false,
+    json_vtables_registered: bool = false,
+    load_extension_function: statement.FunctionDefinition = .{ .name = @constCast("load_extension"), .argument_count = -1, .callback = loadExtensionSqlFunction, .user_data = null, .database = null },
     collations: std.ArrayList(struct { name: [:0]u8, encoding: c_int, auxiliary: ?*anyopaque, compare: *const fn (?*anyopaque, c_int, ?*const anyopaque, c_int, ?*const anyopaque) callconv(.c) c_int, destroy: ?*const fn (?*anyopaque) callconv(.c) void }) = .empty,
     collation_needed_callback: ?*const fn (?*anyopaque, ?*sqlite3, c_int, [*:0]const u8) callconv(.c) void = null,
     collation_needed16_callback: ?*const fn (?*anyopaque, ?*sqlite3, c_int, *const anyopaque) callconv(.c) void = null,
@@ -129,25 +262,41 @@ pub const Connection = struct {
     vtab_declaration: ?[:0]u8 = null,
     database_configuration: [24]u8 = defaultDatabaseConfiguration(),
     load_extension_enabled: bool = false,
+    extension_handles: std.ArrayList(*anyopaque) = .empty,
     modules: std.ArrayList(struct { name: [:0]u8, module: *const anyopaque, auxiliary: ?*anyopaque, destroy: ?*const fn (?*anyopaque) callconv(.c) void }) = .empty,
     virtual_tables: std.ArrayList(*VirtualTable) = .empty,
+    virtual_tables_disconnected: bool = false,
+    statistics: ?*analysis_stats.StatTable = null,
+    loaded_analysis: ?*analysis_stats.LoadedAnalysis = null,
+    pragma_state: pragma_runtime.State = .{},
+    schema_model: schema_initialization.Schema,
+    virtual_table_state: ?*virtual_table_lifecycle.State = null,
     connection_mutex: mutex.Mutex = .{ .kind = .recursive },
+    lookaside_allocator: ?lookaside.Lookaside = null,
+    prepare_state: query_compiler.PrepareState = .{},
     client_data: std.ArrayList(struct { name: [:0]u8, value: ?*anyopaque, destroy: ?*const fn (?*anyopaque) callconv(.c) void }) = .empty,
-    limits: [12]c_int = .{ 1_000_000_000, 1_000_000_000, 2000, 1000, 500, 250_000_000, 127, 10, 50_000, 999, 1000, 8 },
+    pending_foreign_key_parents: std.ArrayList(PendingForeignKeyParent) = .empty,
+    foreign_key_action_allocations: std.ArrayList([]u8) = .empty,
+    foreign_key_action_depth: usize = 0,
+    limits: [13]c_int = .{ 1_000_000_000, 1_000_000_000, 2000, 1000, 500, 250_000_000, 1000, 10, 50_000, 32_766, 1000, 0, 2500 },
 
     pub fn create(allocator: std.mem.Allocator) !*Connection {
         const connection = try allocator.create(Connection);
-        connection.* = .{ .allocator = allocator };
+        connection.* = .{ .allocator = allocator, .schema_model = schema_initialization.Schema.init(allocator, "main") };
+        connection.registerBuiltinFunctions();
         return connection;
     }
 
     pub fn init(allocator: std.mem.Allocator, database: ?*btree.Database) Connection {
-        return .{ .allocator = allocator, .database = database };
+        var connection = Connection{ .allocator = allocator, .database = database, .schema_model = schema_initialization.Schema.init(allocator, "main") };
+        connection.registerBuiltinFunctions();
+        return connection;
     }
 
     pub fn destroy(self: *Connection) void {
         if (self.autovacuum_destroy) |destroy_callback| destroy_callback(self.autovacuum_context);
         if (self.custom_error_message) |message| self.allocator.free(message);
+        if (self.main_schema_name) |name| self.allocator.free(name);
         for (self.scalar_functions.items) |definition| {
             if (definition.destroy) |destroy_callback| destroy_callback(definition.user_data);
             self.allocator.free(definition.name);
@@ -160,17 +309,27 @@ pub const Connection = struct {
         }
         self.collations.deinit(self.allocator);
         if (self.vtab_declaration) |declaration| self.allocator.free(declaration);
+        disconnectAllVirtualTables(self);
         for (self.virtual_tables.items) |table| {
-            if (table.module.xDisconnect) |raw| {
-                const callback: *const fn (*sqlite3_vtab) callconv(.c) c_int = @ptrCast(@alignCast(raw));
-                _ = callback(table.instance);
-            }
             for (table.columns.items) |column| self.allocator.free(column);
             table.columns.deinit(self.allocator);
             self.allocator.free(table.name);
             self.allocator.destroy(table);
         }
         self.virtual_tables.deinit(self.allocator);
+        if (self.statistics) |statistics| {
+            statistics.deinit();
+            self.allocator.destroy(statistics);
+        }
+        if (self.loaded_analysis) |analysis| {
+            analysis.deinit();
+            self.allocator.destroy(analysis);
+        }
+        self.schema_model.deinit();
+        if (self.virtual_table_state) |state| {
+            state.deinit();
+            self.allocator.destroy(state);
+        }
         for (self.modules.items) |module| {
             if (module.destroy) |destroy_callback| destroy_callback(module.auxiliary);
             self.allocator.free(module.name);
@@ -181,17 +340,77 @@ pub const Connection = struct {
             self.allocator.free(entry.name);
         }
         self.client_data.deinit(self.allocator);
+        self.pending_foreign_key_parents.deinit(self.allocator);
+        for (self.foreign_key_action_allocations.items) |allocation| {
+            self.allocator.free(allocation);
+        }
+        self.foreign_key_action_allocations.deinit(self.allocator);
+        if (self.lookaside_allocator) |*allocator| allocator.deinit();
+        for (self.extension_handles.items) |handle| {
+            _ = dlclose(handle);
+        }
+        self.extension_handles.deinit(self.allocator);
         self.magic = 0;
         self.allocator.destroy(self);
     }
 
+    /// Source `sqlite3RegisterDateTimeFunctions()`: activate the statically
+    /// defined date/time function table for this native connection.
+    fn registerDateTimeFunctions(self: *Connection) void {
+        self.date_time_functions_registered = true;
+    }
+
+    /// Source `sqlite3JsonVtabRegister()`: activate the built-in json_each and
+    /// json_tree eponymous table configurations for this connection.
+    fn registerJsonVirtualTables(self: *Connection) void {
+        self.json_vtables_registered = true;
+    }
+
+    /// Source `sqlite3RegisterJsonFunctions()`: activate JSON text and JSONB
+    /// scalar definitions together with their eponymous table functions.
+    fn registerJsonFunctions(self: *Connection) void {
+        self.json_functions_registered = true;
+        self.registerJsonVirtualTables();
+    }
+
+    /// Source `sqlite3RegisterBuiltinFunctions()`: publish the core scalar
+    /// table and its date/time companions to prepared SQL lookup.
+    fn registerBuiltinFunctions(self: *Connection) void {
+        self.builtin_functions_registered = true;
+        self.registerDateTimeFunctions();
+        self.registerJsonFunctions();
+    }
+
     fn findScalar(self: *Connection, name: []const u8, argument_count: usize) ?*statement.FunctionDefinition {
         for (self.scalar_functions.items) |definition| if (std.ascii.eqlIgnoreCase(definition.name, name) and (definition.argument_count < 0 or definition.argument_count == argument_count)) return definition;
+        if (self.json_functions_registered) {
+            for (&json_scalar_functions) |*definition| {
+                if (std.ascii.eqlIgnoreCase(definition.name, name) and (definition.argument_count < 0 or definition.argument_count == argument_count)) return definition;
+            }
+            for (&jsonb_scalar_functions) |*definition| {
+                if (std.ascii.eqlIgnoreCase(definition.name, name) and (definition.argument_count < 0 or definition.argument_count == argument_count)) return definition;
+            }
+        }
+        if (self.builtin_functions_registered) {
+            for (&core_scalar_functions) |*definition| {
+                if (std.ascii.eqlIgnoreCase(definition.name, name) and (definition.argument_count < 0 or definition.argument_count == argument_count)) return definition;
+            }
+        }
+        if (self.date_time_functions_registered) {
+            for (&date_scalar_functions) |*definition| {
+                if (std.ascii.eqlIgnoreCase(definition.name, name) and (definition.argument_count < 0 or definition.argument_count == argument_count)) return definition;
+            }
+        }
+        if (std.ascii.eqlIgnoreCase(name, "load_extension") and (argument_count == 1 or argument_count == 2)) {
+            self.load_extension_function.user_data = self;
+            return &self.load_extension_function;
+        }
         return null;
     }
 
     fn finishClose(self: *Connection) ResultCode {
         if (self.owned_database) {
+            rollbackAll(self, .abort);
             if (self.database) |database| {
                 const rc = database.close();
                 if (rc != .ok) return rc;
@@ -199,6 +418,10 @@ pub const Connection = struct {
                 self.database = null;
             }
             if (self.memory_backend) |*memory| memory.deinit();
+            if (self.shared_memdb) |shared| {
+                memdb.close(shared);
+                self.shared_memdb = null;
+            }
             if (self.filename) |name| self.allocator.free(name);
         }
         self.destroy();
@@ -208,13 +431,20 @@ pub const Connection = struct {
     fn statementEvent(context: ?*anyopaque, prepared: *statement.Statement, event: c_uint) void {
         const self: *Connection = @ptrCast(@alignCast(context orelse return));
         const sql = if (prepared.sql_copy) |text| text.ptr else "";
-        if (event == 1) if (self.legacy_trace_callback) |callback| callback(self.legacy_trace_context, sql);
-        if (event == 2) if (self.legacy_profile_callback) |callback| callback(self.legacy_profile_context, sql, 0);
-        if (self.trace_v2_callback) |callback| if (self.trace_v2_mask & event != 0) {
-            var elapsed: u64 = 0;
-            const detail: ?*anyopaque = if (event == 1) @ptrCast(@constCast(sql)) else if (event == 2) @ptrCast(&elapsed) else null;
-            _ = callback(event, self.trace_v2_context, statement.toOpaque(prepared), detail);
-        };
+        if (event == 1) {
+            prepared.profile_start_ms = profileTimeMilliseconds();
+            if (self.legacy_trace_callback) |callback| callback(self.legacy_trace_context, sql);
+        }
+        if (event == 2) {
+            invokeProfileCallback(self, prepared);
+            return;
+        }
+        if (self.trace_v2_callback) |callback| {
+            if (self.trace_v2_mask & event != 0) {
+                const detail: ?*anyopaque = if (event == 1) @ptrCast(@constCast(sql)) else null;
+                _ = callback(event, self.trace_v2_context, statement.toOpaque(prepared), detail);
+            }
+        }
     }
 
     fn beforeWrite(self: *Connection) ResultCode {
@@ -231,10 +461,8 @@ pub const Connection = struct {
                 defer self.allocator.free(name);
                 callback(self.update_context, code, "main", name.ptr, rowid);
             };
-            if (self.database) |database| if (database.pager.isWalMode()) {
-                if (self.wal_callback) |callback| _ = callback(self.wal_context, toOpaque(self), "main", 0);
-                if (self.wal_autocheckpoint_pages > 0) _ = database.pager.checkpointWal();
-            };
+            const wal_result = doWalCallbacks(self);
+            if (wal_result != .ok) return wal_result;
         } else if (self.rollback_callback) |callback| callback(self.rollback_context);
         return rc;
     }
@@ -266,17 +494,62 @@ pub const Connection = struct {
         std.debug.assert(self.active_statements > 0);
         self.active_statements -= 1;
         if (self.active_statements == 0) self.interrupted = false;
-        if (self.active_statements == 0 and self.active_blobs == 0 and self.deferred_close) _ = self.finishClose();
+        if (!connectionIsBusy(self) and self.deferred_close) {
+            _ = self.finishClose();
+        }
     }
 };
+
+/// Source `disconnectAllVtab()`: disconnect every connection-owned virtual
+/// table exactly once before module destructors or connection storage release.
+fn disconnectAllVirtualTables(connection: *Connection) void {
+    if (connection.virtual_tables_disconnected) return;
+    for (connection.virtual_tables.items) |table| {
+        if (table.module.xDisconnect) |raw| {
+            const callback: *const fn (*sqlite3_vtab) callconv(.c) c_int = @ptrCast(@alignCast(raw));
+            _ = callback(table.instance);
+        }
+    }
+    connection.virtual_tables_disconnected = true;
+}
+
+/// Source `invokeProfileCallback()`: compute elapsed wall-clock microseconds
+/// once and deliver the same value to legacy and TRACE_PROFILE callbacks.
+fn invokeProfileCallback(connection: *Connection, prepared: *statement.Statement) void {
+    if (prepared.profile_start_ms == 0) return;
+    const now = profileTimeMilliseconds();
+    const elapsed_ms = @max(now - prepared.profile_start_ms, 0);
+    var elapsed_ns: u64 = @intCast(elapsed_ms * 1_000_000);
+    const sql = if (prepared.sql_copy) |text| text.ptr else "";
+    if (connection.legacy_profile_callback) |callback| callback(connection.legacy_profile_context, sql, elapsed_ns);
+    if (connection.trace_v2_callback) |callback| {
+        if (connection.trace_v2_mask & 2 != 0) {
+            _ = callback(2, connection.trace_v2_context, statement.toOpaque(prepared), @ptrCast(&elapsed_ns));
+        }
+    }
+    prepared.profile_start_ms = 0;
+}
 
 pub fn toOpaque(connection: *Connection) *sqlite3 {
     return @ptrCast(connection);
 }
 
-fn asConnection(pointer: ?*sqlite3) ?*Connection {
+/// Source `sqlite3SafetyCheckSickOrOk()`: accept live and deferred-close
+/// connection objects while rejecting null, closed, and foreign pointers.
+fn safetyCheckSickOrOk(pointer: ?*sqlite3) ?*Connection {
     const connection: *Connection = if (pointer) |value| @ptrCast(@alignCast(value)) else return null;
     return if (connection.magic == connection_magic) connection else null;
+}
+
+/// Source `sqlite3SafetyCheckOk()`: deferred-close zombies remain valid for
+/// cleanup APIs but are not valid for new database operations.
+fn safetyCheckOk(pointer: ?*sqlite3) ?*Connection {
+    const connection = safetyCheckSickOrOk(pointer) orelse return null;
+    return if (!connection.deferred_close) connection else null;
+}
+
+fn asConnection(pointer: ?*sqlite3) ?*Connection {
+    return safetyCheckSickOrOk(pointer);
 }
 
 fn emptyDatabaseHeader() [512]u8 {
@@ -324,8 +597,7 @@ fn initializeEmptyUnix(connection: *Connection, path: []const u8) ResultCode {
     return ResultCode.fromC(if (rc == btree.vfs.OK) close_rc else rc);
 }
 
-fn initializeEmptyMemory(connection: *Connection, path: []const u8) ResultCode {
-    const backend = &(connection.memory_backend orelse return .misuse);
+fn initializeEmptyMemory(backend: *btree.vfs.MemoryVfs, path: []const u8) ResultCode {
     const opened = backend.open(path, btree.vfs.OPEN_READWRITE | btree.vfs.OPEN_CREATE | btree.vfs.OPEN_MAIN_DB);
     if (opened.rc != btree.vfs.OK) return ResultCode.fromC(opened.rc);
     const file = opened.file.?;
@@ -333,37 +605,215 @@ fn initializeEmptyMemory(connection: *Connection, path: []const u8) ResultCode {
     var rc = file.fileSize(&size);
     if (rc == btree.vfs.OK and size == 0) {
         const header = emptyDatabaseHeader();
-        rc = file.write(&header, 0);
+        rc = if (backend.memdb_mode) memdb.write(backend, path, &header, 0) else file.write(&header, 0);
         if (rc == btree.vfs.OK) rc = file.sync();
     }
     const close_rc = backend.closeAndDestroy(file);
     return ResultCode.fromC(if (rc == btree.vfs.OK) close_rc else rc);
 }
 
-fn openConnection(filename: []const u8, flags: c_int, vfs_name: ?[]const u8, output: ?*?*sqlite3) c_int {
+const UriOption = struct {
+    name: [:0]u8,
+    value: [:0]u8,
+};
+
+const ParsedUri = struct {
+    allocator: std.mem.Allocator,
+    path: [:0]u8,
+    flags: c_int,
+    vfs_name: ?[:0]u8,
+
+    fn deinit(self: *ParsedUri) void {
+        self.allocator.free(self.path);
+        if (self.vfs_name) |name| self.allocator.free(name);
+    }
+};
+
+const UriParseResult = struct {
+    result: ResultCode,
+    parsed: ?ParsedUri = null,
+};
+
+fn decodeUriPart(allocator: std.mem.Allocator, source: []const u8) ![:0]u8 {
+    var decoded = std.ArrayList(u8).empty;
+    defer decoded.deinit(allocator);
+    var index: usize = 0;
+    while (index < source.len) {
+        if (source[index] == '%' and index + 2 < source.len and std.ascii.isHex(source[index + 1]) and std.ascii.isHex(source[index + 2])) {
+            const byte = try std.fmt.parseInt(u8, source[index + 1 .. index + 3], 16);
+            index += 3;
+            if (byte == 0) break;
+            try decoded.append(allocator, byte);
+        } else {
+            try decoded.append(allocator, source[index]);
+            index += 1;
+        }
+    }
+    return allocator.dupeZ(u8, decoded.items);
+}
+
+/// Source `uriParameter()`: locate the first case-sensitive option name and
+/// return its decoded value.
+fn uriParameter(options: []const UriOption, key: []const u8) ?[]const u8 {
+    for (options) |option| {
+        if (std.mem.eql(u8, option.name, key)) return option.value;
+    }
+    return null;
+}
+
+/// Source `sqlite3ParseUri()`: decode file URIs, validate authorities, apply
+/// access/cache modes, honor an explicit VFS, and return an owned VFS filename.
+fn parseUri(allocator: std.mem.Allocator, filename: []const u8, initial_flags: c_int, default_vfs: ?[]const u8) UriParseResult {
+    var flags = initial_flags;
+    var selected_vfs = default_vfs;
+    if (initial_flags & 0x40 == 0 or !std.mem.startsWith(u8, filename, "file:")) {
+        const path = allocator.dupeZ(u8, filename) catch return .{ .result = .no_memory };
+        const vfs_copy = if (selected_vfs) |name| allocator.dupeZ(u8, name) catch {
+            allocator.free(path);
+            return .{ .result = .no_memory };
+        } else null;
+        return .{ .result = .ok, .parsed = .{ .allocator = allocator, .path = path, .flags = flags & ~@as(c_int, 0x40), .vfs_name = vfs_copy } };
+    }
+
+    flags |= 0x40;
+    var path_start: usize = 5;
+    if (filename.len >= 7 and std.mem.eql(u8, filename[5..7], "//")) {
+        const authority_end = std.mem.indexOfScalarPos(u8, filename, 7, '/') orelse filename.len;
+        const authority = filename[7..authority_end];
+        if (authority.len != 0 and !std.ascii.eqlIgnoreCase(authority, "localhost")) return .{ .result = .error_ };
+        path_start = authority_end;
+    }
+    const fragment = std.mem.indexOfScalarPos(u8, filename, path_start, '#') orelse filename.len;
+    const question = std.mem.indexOfScalarPos(u8, filename, path_start, '?');
+    const path_end = if (question) |position| @min(position, fragment) else fragment;
+    const path = decodeUriPart(allocator, filename[path_start..path_end]) catch return .{ .result = .no_memory };
+    var path_owned = true;
+    defer if (path_owned) allocator.free(path);
+
+    var options = std.ArrayList(UriOption).empty;
+    defer {
+        for (options.items) |option| {
+            allocator.free(option.name);
+            allocator.free(option.value);
+        }
+        options.deinit(allocator);
+    }
+    if (question) |query_start| {
+        if (query_start < fragment) {
+            var iterator = std.mem.splitScalar(u8, filename[query_start + 1 .. fragment], '&');
+            while (iterator.next()) |raw_option| {
+                const separator = std.mem.indexOfScalar(u8, raw_option, '=') orelse raw_option.len;
+                if (separator == 0) continue;
+                const name = decodeUriPart(allocator, raw_option[0..separator]) catch return .{ .result = .no_memory };
+                const value = decodeUriPart(allocator, if (separator < raw_option.len) raw_option[separator + 1 ..] else "") catch {
+                    allocator.free(name);
+                    return .{ .result = .no_memory };
+                };
+                options.append(allocator, .{ .name = name, .value = value }) catch {
+                    allocator.free(name);
+                    allocator.free(value);
+                    return .{ .result = .no_memory };
+                };
+            }
+        }
+    }
+
+    if (uriParameter(options.items, "vfs")) |name| {
+        selected_vfs = name;
+    }
+    if (uriParameter(options.items, "cache")) |mode| {
+        const shared: c_int = 0x00020000;
+        const private: c_int = 0x00040000;
+        flags &= ~(shared | private);
+        if (std.mem.eql(u8, mode, "shared")) {
+            flags |= shared;
+        } else if (std.mem.eql(u8, mode, "private")) {
+            flags |= private;
+        } else {
+            return .{ .result = .error_ };
+        }
+    }
+    if (uriParameter(options.items, "mode")) |mode| {
+        const access_mask: c_int = 0x01 | 0x02 | 0x04 | 0x80;
+        const requested: c_int = if (std.mem.eql(u8, mode, "ro"))
+            0x01
+        else if (std.mem.eql(u8, mode, "rw"))
+            0x02
+        else if (std.mem.eql(u8, mode, "rwc"))
+            0x02 | 0x04
+        else if (std.mem.eql(u8, mode, "memory"))
+            0x02 | 0x04 | 0x80
+        else {
+            return .{ .result = .error_ };
+        };
+        if (requested & 0x02 != 0 and initial_flags & 0x02 == 0) {
+            return .{ .result = .read_only };
+        }
+        if (requested & 0x04 != 0 and requested & 0x80 == 0 and initial_flags & 0x04 == 0) {
+            return .{ .result = .read_only };
+        }
+        flags = (flags & ~access_mask) | requested;
+    }
+
+    const vfs_copy = if (selected_vfs) |name| allocator.dupeZ(u8, name) catch {
+        return .{ .result = .no_memory };
+    } else null;
+    path_owned = false;
+    return .{ .result = .ok, .parsed = .{ .allocator = allocator, .path = path, .flags = flags, .vfs_name = vfs_copy } };
+}
+
+fn openConnection(filename: []const u8, flags_initial: c_int, vfs_name_initial: ?[]const u8, output: ?*?*sqlite3) c_int {
     const init_result = global.initializeProcess();
     if (init_result != 0) return init_result;
     const out = output orelse return ResultCode.misuse.toC();
     out.* = null;
     if (filename.len == 0) return ResultCode.cannot_open.toC();
     const allocator = std.heap.c_allocator;
+    const parsed_result = parseUri(allocator, filename, flags_initial, vfs_name_initial);
+    if (parsed_result.result != .ok) return parsed_result.result.toC();
+    var parsed = parsed_result.parsed.?;
+    defer parsed.deinit();
+    const flags = parsed.flags;
+    const vfs_name: ?[]const u8 = parsed.vfs_name;
+    const open_filename: []const u8 = parsed.path;
     const connection = allocator.create(Connection) catch return ResultCode.no_memory.toC();
-    connection.* = .{ .allocator = allocator, .owned_database = true };
-    connection.filename = allocator.dupeZ(u8, filename) catch {
+    connection.* = .{ .allocator = allocator, .owned_database = true, .schema_model = schema_initialization.Schema.init(allocator, "main") };
+    connection.filename = allocator.dupeZ(u8, open_filename) catch {
         allocator.destroy(connection);
         return ResultCode.no_memory.toC();
     };
     out.* = toOpaque(connection);
     const writable = flags & 0x02 != 0;
-    const use_memory = std.mem.eql(u8, filename, ":memory:") or (vfs_name != null and std.ascii.eqlIgnoreCase(vfs_name.?, "mem"));
+    const use_memory = flags & 0x80 != 0 or std.mem.eql(u8, open_filename, ":memory:") or (vfs_name != null and std.ascii.eqlIgnoreCase(vfs_name.?, "mem"));
+    const shared_memory = use_memory and flags & 0x0002_0000 != 0 and !std.mem.eql(u8, open_filename, ":memory:");
     var abi_vfs: *btree.vfs.sqlite3_vfs = undefined;
-    const storage_name = if (use_memory) "main" else filename;
-    if (use_memory) {
+    const storage_name = if (shared_memory) "/main" else if (use_memory) "main" else open_filename;
+    if (shared_memory) {
+        const shared_name = memdb.fullPathname(allocator, open_filename) catch {
+            connection.last_result = .no_memory;
+            return ResultCode.no_memory.toC();
+        };
+        defer allocator.free(shared_name);
+        const shared_outcome = memdb.open(shared_name) catch |err| {
+            connection.last_result = if (err == error.OutOfMemory) .no_memory else .cannot_open;
+            return connection.last_result.toC();
+        };
+        connection.shared_memdb = shared_outcome.shared;
+        connection.memory_adapter = btree.vfs.AbiAdapter.init("memdb", &shared_outcome.shared.backend);
+        abi_vfs = &connection.memory_adapter.?.abi;
+        if (writable and shared_outcome.created) {
+            const rc = initializeEmptyMemory(&shared_outcome.shared.backend, storage_name);
+            if (rc != .ok) {
+                connection.last_result = rc;
+                return rc.toC();
+            }
+        }
+    } else if (use_memory) {
         connection.memory_backend = btree.vfs.MemoryVfs.init(allocator);
         connection.memory_adapter = btree.vfs.AbiAdapter.init("zig-memory", &connection.memory_backend.?);
         abi_vfs = &connection.memory_adapter.?.abi;
         if (writable) {
-            const rc = initializeEmptyMemory(connection, storage_name);
+            const rc = initializeEmptyMemory(&connection.memory_backend.?, storage_name);
             if (rc != .ok) {
                 connection.last_result = rc;
                 return rc.toC();
@@ -401,7 +851,10 @@ fn openConnection(filename: []const u8, flags: c_int, vfs_name: ?[]const u8, out
     }
     const opened = if (writable) btree.Database.openWritable(allocator, abi_vfs, storage_name) else btree.Database.open(allocator, abi_vfs, storage_name);
     connection.last_result = opened.result;
-    if (opened.result != .ok) return opened.result.toC();
+    if (opened.result != .ok) {
+        systemError(connection, opened.result.toC());
+        return opened.result.toC();
+    }
     const database = allocator.create(btree.Database) catch {
         var value = opened.database.?;
         _ = value.close();
@@ -427,24 +880,77 @@ pub export fn sqlite3_open_v2(filename: ?[*:0]const u8, output: ?*?*sqlite3, fla
     return openConnection(if (filename) |name| std.mem.span(name) else return ResultCode.misuse.toC(), flags, if (vfs_pointer) |name| std.mem.span(name) else null, output);
 }
 
-pub export fn sqlite3_open16(filename: ?*const anyopaque, output: ?*?*sqlite3) callconv(.c) c_int {
-    const raw: [*]const u16 = if (filename) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
+fn utf16NativeToUtf8(allocator: std.mem.Allocator, bytes: []const u8) ![]u8 {
+    var endian = builtin.target.cpu.arch.endian();
+    var start: usize = 0;
+    if (bytes.len >= 2 and bytes[0] == 0xff and bytes[1] == 0xfe) {
+        endian = .little;
+        start = 2;
+    } else if (bytes.len >= 2 and bytes[0] == 0xfe and bytes[1] == 0xff) {
+        endian = .big;
+        start = 2;
+    }
+    const units = try allocator.alloc(u16, (bytes.len - start) / 2);
+    defer allocator.free(units);
+    for (units, 0..) |*unit, index| {
+        const first = bytes[start + index * 2];
+        const second = bytes[start + index * 2 + 1];
+        unit.* = if (endian == .little) @as(u16, first) | (@as(u16, second) << 8) else (@as(u16, first) << 8) | @as(u16, second);
+    }
+    return std.unicode.utf16LeToUtf8Alloc(allocator, units);
+}
+
+/// Source `sqlite3_open16()`: convert native-endian UTF-16, honor BOM byte
+/// order, initialize output deterministically, and open the UTF-8 filename.
+fn openConnection16(filename: ?*const anyopaque, output: ?*?*sqlite3) c_int {
+    const destination = output orelse return ResultCode.misuse.toC();
+    destination.* = null;
+    const bytes: [*]const u8 = if (filename) |value| @ptrCast(@alignCast(value)) else @ptrCast(&[_]u16{0});
     var length: usize = 0;
-    while (raw[length] != 0) : (length += 1) {}
-    const utf8 = std.unicode.utf16LeToUtf8Alloc(std.heap.c_allocator, raw[0..length]) catch return ResultCode.no_memory.toC();
+    while (bytes[length] != 0 or bytes[length + 1] != 0) : (length += 2) {}
+    const utf8 = utf16NativeToUtf8(std.heap.c_allocator, bytes[0..length]) catch return ResultCode.no_memory.toC();
     defer std.heap.c_allocator.free(utf8);
     return openConnection(utf8, 0x02 | 0x04, null, output);
 }
 
+pub export fn sqlite3_open16(filename: ?*const anyopaque, output: ?*?*sqlite3) callconv(.c) c_int {
+    return openConnection16(filename, output);
+}
+
+/// Source `connectionIsBusy()`: a connection remains live while any prepared
+/// statement, incremental blob cursor, or backup endpoint owns native state.
+fn connectionIsBusy(connection: *const Connection) bool {
+    return connection.active_statements != 0 or connection.active_blobs != 0 or connection.active_backups != 0;
+}
+
+/// Source `sqlite3RollbackAll()`: roll back the connection pager, preserve the
+/// first rollback failure, trip subsequent work with the requested result,
+/// and invoke the rollback hook only for an active write transaction.
+fn rollbackAll(connection: *Connection, trip_code: ResultCode) void {
+    const database = connection.database orelse return;
+    const state = database.pager.state;
+    const was_writing = state == .writer_locked or state == .writer_cache_modified or
+        state == .writer_database_modified or state == .writer_finished;
+    const result = database.pager.rollback();
+    if (result != .ok) {
+        connection.last_result = result;
+    } else if (trip_code != .ok and was_writing) {
+        connection.last_result = trip_code;
+    }
+    if (was_writing) {
+        if (connection.rollback_callback) |callback| callback(connection.rollback_context);
+    }
+}
+
 pub export fn sqlite3_close(pointer: ?*sqlite3) callconv(.c) c_int {
     const connection = asConnection(pointer) orelse return ResultCode.ok.toC();
-    if (connection.active_statements != 0 or connection.active_blobs != 0) return ResultCode.busy.toC();
+    if (connectionIsBusy(connection)) return ResultCode.busy.toC();
     return connection.finishClose().toC();
 }
 
 pub export fn sqlite3_close_v2(pointer: ?*sqlite3) callconv(.c) c_int {
     const connection = asConnection(pointer) orelse return ResultCode.ok.toC();
-    if (connection.active_statements != 0 or connection.active_blobs != 0) {
+    if (connectionIsBusy(connection)) {
         connection.deferred_close = true;
         return ResultCode.ok.toC();
     }
@@ -463,25 +969,61 @@ fn setExtensionError(output: ?*?[*:0]u8, message: []const u8) void {
     destination.* = @ptrCast(bytes);
 }
 
-pub export fn zig_sqlite3_db_config_main_name(pointer: ?*sqlite3, _: ?[*:0]const u8) callconv(.c) c_int {
-    _ = asConnection(pointer) orelse return ResultCode.misuse.toC();
-    return ResultCode.error_.toC();
+/// Source `sqlite3_db_config()`: serialize per-connection main-schema,
+/// lookaside, and boolean option changes through one operation dispatcher.
+fn configureDatabase(connection: *Connection, operation: c_int, pointer: ?*anyopaque, first: c_int, second: c_int, output: ?*c_int) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    switch (operation) {
+        1000 => {
+            const raw_name: [*:0]const u8 = if (pointer) |value| @ptrCast(value) else return ResultCode.misuse.toC();
+            const replacement = connection.allocator.dupeZ(u8, std.mem.span(raw_name)) catch return ResultCode.no_memory.toC();
+            if (connection.main_schema_name) |old| connection.allocator.free(old);
+            connection.main_schema_name = replacement;
+        },
+        1001 => {
+            if (first < 0 or second < 0) return ResultCode.misuse.toC();
+            if (connection.lookaside_allocator == null) {
+                connection.lookaside_allocator = lookaside.Lookaside.init(&global.memory.process_manager);
+            }
+            const byte_count = std.math.mul(usize, @intCast(first), @intCast(second)) catch return ResultCode.misuse.toC();
+            const external: ?[]align(8) u8 = if (pointer) |raw| @as([*]align(8) u8, @ptrCast(@alignCast(raw)))[0..byte_count] else null;
+            connection.lookaside_allocator.?.configure(external, first, second) catch |failure| return switch (failure) {
+                error.Busy => ResultCode.busy.toC(),
+                error.OutOfMemory => ResultCode.no_memory.toC(),
+            };
+        },
+        else => {
+            const index = operation - 1000;
+            if (index < 2 or index >= @as(c_int, @intCast(connection.database_configuration.len))) return ResultCode.error_.toC();
+            const slot: usize = @intCast(index);
+            if (first >= 0) {
+                connection.database_configuration[slot] = @intFromBool(first != 0);
+            }
+            if (operation == 1005) {
+                connection.load_extension_enabled = connection.database_configuration[slot] != 0;
+            }
+            if (output) |result| {
+                result.* = connection.database_configuration[slot];
+            }
+        },
+    }
+    return ResultCode.ok.toC();
 }
 
-pub export fn zig_sqlite3_db_config_lookaside(pointer: ?*sqlite3, _: ?*anyopaque, _: c_int, _: c_int) callconv(.c) c_int {
-    _ = asConnection(pointer) orelse return ResultCode.misuse.toC();
-    return ResultCode.ok.toC();
+pub export fn zig_sqlite3_db_config_main_name(pointer: ?*sqlite3, name: ?[*:0]const u8) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return configureDatabase(connection, 1000, if (name) |value| @ptrCast(@constCast(value)) else null, 0, 0, null);
+}
+
+pub export fn zig_sqlite3_db_config_lookaside(pointer: ?*sqlite3, storage: ?*anyopaque, slot_size: c_int, slot_count: c_int) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return configureDatabase(connection, 1001, storage, slot_size, slot_count, null);
 }
 
 pub export fn zig_sqlite3_db_config_flag(pointer: ?*sqlite3, operation: c_int, enabled: c_int, output: ?*c_int) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
-    const index = operation - 1000;
-    if (index < 2 or index >= @as(c_int, @intCast(connection.database_configuration.len))) return ResultCode.error_.toC();
-    const slot: usize = @intCast(index);
-    if (enabled >= 0) connection.database_configuration[slot] = @intFromBool(enabled != 0);
-    if (operation == 1005) connection.load_extension_enabled = connection.database_configuration[slot] != 0;
-    if (output) |result| result.* = connection.database_configuration[slot];
-    return ResultCode.ok.toC();
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return configureDatabase(connection, operation, null, enabled, 0, output);
 }
 
 pub export fn zig_sqlite3_vtab_config(pointer: ?*sqlite3, operation: c_int, _: c_int) callconv(.c) c_int {
@@ -492,10 +1034,116 @@ pub export fn zig_sqlite3_vtab_config(pointer: ?*sqlite3, operation: c_int, _: c
     };
 }
 
+/// Source `sqlite3_enable_load_extension()`: atomically toggle both the C API
+/// loader and SQL load_extension permission represented by configuration 1005.
+fn enableLoadExtension(connection: *Connection, enabled: bool) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    connection.load_extension_enabled = enabled;
+    connection.database_configuration[5] = @intFromBool(enabled);
+    return ResultCode.ok.toC();
+}
+
 pub export fn sqlite3_enable_load_extension(pointer: ?*sqlite3, enabled: c_int) callconv(.c) c_int {
     const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
-    connection.load_extension_enabled = enabled != 0;
-    connection.database_configuration[5] = @intFromBool(enabled != 0);
+    return enableLoadExtension(connection, enabled != 0);
+}
+
+fn derivedExtensionEntry(path: []const u8, include_digits: bool, buffer: []u8) [:0]const u8 {
+    const prefix = "sqlite3_";
+    @memcpy(buffer[0..prefix.len], prefix);
+    var output_index = prefix.len;
+    var input_index = if (std.mem.lastIndexOfScalar(u8, path, '/')) |slash| slash + 1 else 0;
+    if (path.len - input_index >= 3 and std.ascii.eqlIgnoreCase(path[input_index .. input_index + 3], "lib")) {
+        input_index += 3;
+    }
+    while (input_index < path.len and path[input_index] != '.') : (input_index += 1) {
+        const byte = path[input_index];
+        if (std.ascii.isAlphabetic(byte) or (include_digits and std.ascii.isDigit(byte))) {
+            buffer[output_index] = std.ascii.toLower(byte);
+            output_index += 1;
+        }
+    }
+    const suffix = "_init";
+    @memcpy(buffer[output_index .. output_index + suffix.len], suffix);
+    output_index += suffix.len;
+    buffer[output_index] = 0;
+    return buffer[0..output_index :0];
+}
+
+/// Source `sqlite3LoadExtension()`: enforce opt-in and pathname limits, try
+/// the platform suffix and derived entry names, preserve initializer errors,
+/// and retain successful handles until the connection is destroyed.
+fn loadExtension(connection: *Connection, path_pointer: [*:0]const u8, entry_name: ?[*:0]const u8, error_message: ?*?[*:0]u8) c_int {
+    if (error_message) |output| output.* = null;
+    if (!connection.load_extension_enabled) {
+        setExtensionError(error_message, "not authorized");
+        return ResultCode.error_.toC();
+    }
+    const path = std.mem.span(path_pointer);
+    if (path.len == 0 or path.len > 4096) {
+        setExtensionError(error_message, "unable to open shared library");
+        return ResultCode.error_.toC();
+    }
+
+    var handle = dlopen(path_pointer, 0x02);
+    if (handle == null and path.len + 3 <= 4096) {
+        const alternate = std.fmt.allocPrintSentinel(connection.allocator, "{s}.so", .{path}, 0) catch return ResultCode.no_memory.toC();
+        defer connection.allocator.free(alternate);
+        handle = dlopen(alternate, 0x02);
+    }
+    const loaded = handle orelse {
+        const message = if (dlerror()) |value| std.mem.span(value) else "unable to open shared library";
+        setExtensionError(error_message, message);
+        return ResultCode.error_.toC();
+    };
+
+    var entry_pointer = if (entry_name) |name| dlsym(loaded, name) else dlsym(loaded, "sqlite3_extension_init");
+    var derived_buffer: [4128]u8 = undefined;
+    var selected_name: []const u8 = if (entry_name) |name| std.mem.span(name) else "sqlite3_extension_init";
+    if (entry_pointer == null and entry_name == null) {
+        const letters = derivedExtensionEntry(path, false, &derived_buffer);
+        selected_name = letters;
+        entry_pointer = dlsym(loaded, letters);
+        if (entry_pointer == null) {
+            const alphanumeric = derivedExtensionEntry(path, true, &derived_buffer);
+            selected_name = alphanumeric;
+            entry_pointer = dlsym(loaded, alphanumeric);
+        }
+    }
+    const raw_entry = entry_pointer orelse {
+        var message_buffer: [512]u8 = undefined;
+        const message = std.fmt.bufPrint(&message_buffer, "no entry point [{s}] in shared library [{s}]", .{ selected_name, path }) catch "extension entry point not found";
+        setExtensionError(error_message, message);
+        _ = dlclose(loaded);
+        return ResultCode.error_.toC();
+    };
+    const entry: ExtensionEntry = @ptrCast(@alignCast(raw_entry));
+    var extension_error: ?[*:0]u8 = null;
+    const result = entry(toOpaque(connection), &extension_error, public_api.extensionApi());
+    if (result != ResultCode.ok.toC()) {
+        if (result == 256) {
+            if (extension_error) |message| public_api.sqlite3_free(message);
+            return ResultCode.ok.toC();
+        }
+        if (error_message) |output| {
+            if (extension_error) |message| {
+                const detail = std.mem.span(message);
+                var message_buffer: [512]u8 = undefined;
+                const formatted = std.fmt.bufPrint(&message_buffer, "error during initialization: {s}", .{detail}) catch detail;
+                setExtensionError(output, formatted);
+                public_api.sqlite3_free(message);
+            } else {
+                setExtensionError(output, "extension initialization failed");
+            }
+        } else if (extension_error) |message| {
+            public_api.sqlite3_free(message);
+        }
+        _ = dlclose(loaded);
+        return ResultCode.error_.toC();
+    }
+    if (extension_error) |message| public_api.sqlite3_free(message);
+    connection.extension_handles.append(connection.allocator, loaded) catch return ResultCode.no_memory.toC();
     return ResultCode.ok.toC();
 }
 
@@ -505,99 +1153,204 @@ pub export fn sqlite3_load_extension(
     entry_name: ?[*:0]const u8,
     error_message: ?*?[*:0]u8,
 ) callconv(.c) c_int {
-    if (error_message) |output| output.* = null;
     const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
     const path = file orelse return ResultCode.misuse.toC();
-    if (!connection.load_extension_enabled) return ResultCode.error_.toC();
-
-    const handle = dlopen(path, 0x02) orelse {
-        const message = if (dlerror()) |value| std.mem.span(value) else "unable to load extension";
-        setExtensionError(error_message, message);
-        return ResultCode.error_.toC();
-    };
-    const name = entry_name orelse "sqlite3_extension_init";
-    const raw_entry = dlsym(handle, name) orelse {
-        setExtensionError(error_message, "extension entry point not found");
-        _ = dlclose(handle);
-        return ResultCode.error_.toC();
-    };
-    const entry: ExtensionEntry = @ptrCast(@alignCast(raw_entry));
-    var extension_error: ?[*:0]u8 = null;
-    const result = entry(pointer, &extension_error, public_api.extensionApi());
-    if (result != ResultCode.ok.toC()) {
-        if (error_message) |output| {
-            output.* = extension_error;
-        } else if (extension_error) |message| {
-            public_api.sqlite3_free(message);
-        }
-        if (extension_error == null) setExtensionError(error_message, "extension initialization failed");
-        _ = dlclose(handle);
-        return result;
-    }
-    if (extension_error) |message| public_api.sqlite3_free(message);
-    // Registered callbacks may point into the extension, so successful handles stay resident.
-    return ResultCode.ok.toC();
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return loadExtension(connection, path, entry_name, error_message);
 }
 
-fn resultMessage(result: ResultCode) [*:0]const u8 {
-    return switch (result) {
-        .ok => "not an error",
-        .error_ => "SQL logic error",
-        .busy => "database is locked",
-        .no_memory => "out of memory",
-        .read_only => "attempt to write a readonly database",
-        .interrupt => "interrupted",
-        .io_error => "disk I/O error",
-        .corrupt => "database disk image is malformed",
-        .not_found => "unknown operation",
-        .cannot_open => "unable to open database file",
-        .constraint => "constraint failed",
-        .mismatch => "datatype mismatch",
-        .misuse => "bad parameter or other API misuse",
+/// Source `loadExt()`: SQL-facing extension loading with opt-in enforcement
+/// and extension-owned error propagation.
+fn loadExtensionSqlFunction(context: ?*statement.sqlite3_context, argument_count: c_int, arguments: [*]?*statement.sqlite3_value) callconv(.c) void {
+    if (argument_count != 1 and argument_count != 2) {
+        statement.sqlite3_result_error_code(context, ResultCode.misuse.toC());
+        return;
+    }
+    const connection: *Connection = @ptrCast(@alignCast(statement.sqlite3_user_data(context) orelse {
+        statement.sqlite3_result_error_code(context, ResultCode.misuse.toC());
+        return;
+    }));
+    const path = statement.sqlite3_value_text(arguments[0]) orelse return;
+    const entry = if (argument_count == 2) statement.sqlite3_value_text(arguments[1]) else null;
+    var message: ?[*:0]u8 = null;
+    const rc = loadExtension(connection, path, entry, &message);
+    if (rc != ResultCode.ok.toC()) {
+        if (message) |text| {
+            statement.sqlite3_result_error(context, text, -1);
+            public_api.sqlite3_free(text);
+        } else {
+            statement.sqlite3_result_error_code(context, rc);
+        }
+    }
+}
+
+/// Source `sqlite3ErrStr()`: retain the two execution-result messages and the
+/// rollback-specific extended abort before mapping primary result codes.
+fn errorString(code: c_int) [*:0]const u8 {
+    if (code == 516) return "abort due to ROLLBACK";
+    if (code == 100) return "another row available";
+    if (code == 101) return "no more rows available";
+    return switch (code & 0xff) {
+        0 => "not an error",
+        1 => "SQL logic error",
+        3 => "access permission denied",
+        4 => "query aborted",
+        5 => "database is locked",
+        6 => "database table is locked",
+        7 => "out of memory",
+        8 => "attempt to write a readonly database",
+        9 => "interrupted",
+        10 => "disk I/O error",
+        11 => "database disk image is malformed",
+        12 => "unknown operation",
+        13 => "database or disk is full",
+        14 => "unable to open database file",
+        15 => "locking protocol",
+        17 => "database schema has changed",
+        18 => "string or blob too big",
+        19 => "constraint failed",
+        20 => "datatype mismatch",
+        21 => "bad parameter or other API misuse",
+        23 => "authorization denied",
+        25 => "column index out of range",
+        26 => "file is not a database",
+        27 => "notification message",
+        28 => "warning message",
         else => "unknown error",
     };
 }
+
+fn resultMessage(result: ResultCode) [*:0]const u8 {
+    return errorString(result.toC());
+}
+
+/// Sources `sqlite3_errcode()` and `sqlite3_extended_errcode()`: validate and
+/// serialize access to the connection error, applying the configured primary
+/// result-code mask only for the non-extended query.
+fn connectionErrorCode(connection: *Connection, extended: bool) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    const code = connection.last_result.toC();
+    return if (extended) code else code & connection.error_mask;
+}
+
 pub export fn sqlite3_errcode(pointer: ?*sqlite3) callconv(.c) c_int {
-    return if (asConnection(pointer)) |connection| @intFromEnum(connection.last_result) & 0xff else ResultCode.no_memory.toC();
+    const connection = safetyCheckSickOrOk(pointer) orelse return ResultCode.no_memory.toC();
+    return connectionErrorCode(connection, false);
 }
 pub export fn sqlite3_extended_errcode(pointer: ?*sqlite3) callconv(.c) c_int {
-    return if (asConnection(pointer)) |connection| connection.last_result.toC() else ResultCode.no_memory.toC();
+    const connection = safetyCheckSickOrOk(pointer) orelse return ResultCode.no_memory.toC();
+    return connectionErrorCode(connection, true);
 }
+
+/// Source `sqlite3_errmsg()`: return the connection-owned diagnostic or the
+/// stable result-code text under the recursive connection mutex.
+fn connectionErrorMessage(connection: *Connection) [*:0]const u8 {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    if (connection.custom_error_message) |message| return message.ptr;
+    return resultMessage(connection.last_result);
+}
+
 pub export fn sqlite3_errmsg(pointer: ?*sqlite3) callconv(.c) [*:0]const u8 {
-    if (asConnection(pointer)) |connection| {
-        if (connection.custom_error_message) |message| return message.ptr;
-        return resultMessage(connection.last_result);
-    }
-    return resultMessage(.no_memory);
+    const connection = safetyCheckSickOrOk(pointer) orelse return resultMessage(.no_memory);
+    return connectionErrorMessage(connection);
 }
-pub export fn sqlite3_set_errmsg(pointer: ?*sqlite3, code: c_int, message: ?[*:0]const u8) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
+/// Source `sqlite3SystemError()`: retain the VFS errno only for CANTOPEN and
+/// IOERR primary results, excluding allocator-originated IOERR_NOMEM.
+fn systemError(connection: *Connection, code: c_int) void {
+    if (code == btree.vfs.IOERR_NOMEM) return;
+    const primary = code & 0xff;
+    if (primary != btree.vfs.CANTOPEN and primary != btree.vfs.IOERR) return;
+    const database = connection.database orelse return;
+    const get_last_error = database.pager.abi_vfs.xGetLastError orelse return;
+    var buffer: [1]u8 = .{0};
+    connection.system_errno = get_last_error(database.pager.abi_vfs, buffer.len, &buffer);
+}
+
+/// Source `sqlite3ErrorWithMsg()`: replace the connection error code and owned
+/// UTF-8 diagnostic together, preserving system errno for OS failures.
+fn errorWithMessage(connection: *Connection, code: c_int, message: ?[]const u8) c_int {
     if (connection.custom_error_message) |old| connection.allocator.free(old);
     connection.custom_error_message = null;
     connection.last_result = ResultCode.fromC(code);
-    if (message) |text| connection.custom_error_message = connection.allocator.dupeZ(u8, std.mem.span(text)) catch {
-        connection.last_result = .no_memory;
-        return ResultCode.no_memory.toC();
-    };
+    systemError(connection, code);
+    if (message) |text| {
+        connection.custom_error_message = connection.allocator.dupeZ(u8, text) catch {
+            connection.last_result = .no_memory;
+            return ResultCode.no_memory.toC();
+        };
+    }
     return ResultCode.ok.toC();
 }
+
+/// Source `sqlite3_set_errmsg()`: serialize extension-provided error state and
+/// preserve the source API's OK return unless allocation itself fails.
+fn setErrorMessage(connection: *Connection, code: c_int, message: ?[*:0]const u8) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return errorWithMessage(connection, code, if (message) |text| std.mem.span(text) else null);
+}
+
+pub export fn sqlite3_set_errmsg(pointer: ?*sqlite3, code: c_int, message: ?[*:0]const u8) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return setErrorMessage(connection, code, message);
+}
 threadlocal var error16_buffer: [128]u16 = undefined;
-pub export fn sqlite3_errmsg16(pointer: ?*sqlite3) callconv(.c) *const anyopaque {
+
+/// Source `sqlite3_errmsg16()`: validate the connection and transcode its
+/// current UTF-8 diagnostic into native-endian UTF-16, including surrogate
+/// pairs instead of widening individual UTF-8 bytes.
+fn errorMessage16(pointer: ?*sqlite3) *const anyopaque {
     const message = std.mem.span(sqlite3_errmsg(pointer));
-    const count = @min(message.len, error16_buffer.len - 1);
-    for (message[0..count], 0..) |byte, index| error16_buffer[index] = byte;
+    const view = std.unicode.Utf8View.init(message) catch {
+        error16_buffer[0] = 0xfffd;
+        error16_buffer[1] = 0;
+        return @ptrCast(&error16_buffer);
+    };
+    var iterator = view.iterator();
+    var count: usize = 0;
+    while (iterator.nextCodepoint()) |codepoint| {
+        if (codepoint <= 0xffff) {
+            if (count + 1 >= error16_buffer.len) break;
+            error16_buffer[count] = @intCast(codepoint);
+            count += 1;
+        } else {
+            if (count + 2 >= error16_buffer.len) break;
+            const adjusted = codepoint - 0x10000;
+            error16_buffer[count] = @intCast(0xd800 + (adjusted >> 10));
+            error16_buffer[count + 1] = @intCast(0xdc00 + (adjusted & 0x3ff));
+            count += 2;
+        }
+    }
     error16_buffer[count] = 0;
     return @ptrCast(&error16_buffer);
 }
-pub export fn sqlite3_errstr(code: c_int) callconv(.c) [*:0]const u8 {
-    return resultMessage(ResultCode.fromC(code));
+
+pub export fn sqlite3_errmsg16(pointer: ?*sqlite3) callconv(.c) *const anyopaque {
+    return errorMessage16(pointer);
 }
+pub export fn sqlite3_errstr(code: c_int) callconv(.c) [*:0]const u8 {
+    return errorString(code);
+}
+/// Source `sqlite3_error_offset()`: expose an offset only while a connection
+/// error is present, under the connection mutex.
+fn connectionErrorOffset(connection: *Connection) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return if (connection.last_result != .ok) connection.error_offset else -1;
+}
+
 pub export fn sqlite3_error_offset(pointer: ?*sqlite3) callconv(.c) c_int {
-    return if (asConnection(pointer)) |connection| connection.error_offset else -1;
+    const connection = safetyCheckSickOrOk(pointer) orelse return -1;
+    return connectionErrorOffset(connection);
 }
 pub export fn sqlite3_extended_result_codes(pointer: ?*sqlite3, enabled: c_int) callconv(.c) c_int {
     const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
-    connection.extended_codes = enabled != 0;
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    connection.error_mask = if (enabled != 0) -1 else 0xff;
     return ResultCode.ok.toC();
 }
 pub export fn sqlite3_db_mutex(pointer: ?*sqlite3) callconv(.c) ?*anyopaque {
@@ -605,29 +1358,77 @@ pub export fn sqlite3_db_mutex(pointer: ?*sqlite3) callconv(.c) ?*anyopaque {
     return &connection.connection_mutex;
 }
 
+fn schemaNameMatches(connection: *const Connection, database_name: ?[*:0]const u8) bool {
+    const requested = if (database_name) |name| std.mem.span(name) else return true;
+    const expected = if (connection.main_schema_name) |name| name else "main";
+    return std.ascii.eqlIgnoreCase(requested, expected);
+}
+
+/// Source `sqlite3_db_filename()`: resolve the selected schema and return the
+/// canonical filename owned by its native pager.
+fn databaseFilename(connection: *Connection, database_name: ?[*:0]const u8) ?[*:0]const u8 {
+    if (!schemaNameMatches(connection, database_name)) return null;
+    if (connection.database == null) return null;
+    return if (connection.filename) |filename| filename.ptr else null;
+}
+
 pub export fn sqlite3_db_filename(pointer: ?*sqlite3, database_name: ?[*:0]const u8) callconv(.c) ?[*:0]const u8 {
-    const connection = asConnection(pointer) orelse return null;
-    if (database_name) |name| if (!std.ascii.eqlIgnoreCase(std.mem.span(name), "main")) return null;
-    return if (connection.filename) |name| name.ptr else null;
+    const connection = safetyCheckOk(pointer) orelse return null;
+    return databaseFilename(connection, database_name);
 }
+/// Source `sqlite3_db_name()`: return the configured name of the selected
+/// attached schema and reject out-of-range indexes.
+fn databaseName(connection: *Connection, index: c_int) ?[*:0]const u8 {
+    if (index != 0) return null;
+    return if (connection.main_schema_name) |name| name.ptr else "main";
+}
+
 pub export fn sqlite3_db_name(pointer: ?*sqlite3, index: c_int) callconv(.c) ?[*:0]const u8 {
-    _ = pointer;
-    return if (index == 0) "main" else null;
+    const connection = safetyCheckSickOrOk(pointer) orelse return null;
+    return databaseName(connection, index);
 }
-pub export fn sqlite3_db_readonly(pointer: ?*sqlite3, database_name: ?[*:0]const u8) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse return -1;
-    _ = database_name;
+/// Source `sqlite3_db_readonly()`: distinguish a missing schema from a valid
+/// read-only or writable native B-tree.
+fn databaseReadonly(connection: *Connection, database_name: ?[*:0]const u8) c_int {
+    if (!schemaNameMatches(connection, database_name)) return -1;
     return if (connection.database) |database| @intFromBool(!database.writable) else -1;
 }
+
+pub export fn sqlite3_db_readonly(pointer: ?*sqlite3, database_name: ?[*:0]const u8) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return -1;
+    return databaseReadonly(connection, database_name);
+}
+
+/// Source `sqlite3_get_autocommit()`: autocommit is disabled precisely while
+/// the native pager owns a write transaction.
+fn getAutocommit(connection: *Connection) c_int {
+    const database = connection.database orelse return 1;
+    return switch (database.pager.state) {
+        .writer_locked, .writer_cache_modified, .writer_database_modified, .writer_finished => 0,
+        .open, .reader, .error_, .closed => 1,
+    };
+}
+
 pub export fn sqlite3_get_autocommit(pointer: ?*sqlite3) callconv(.c) c_int {
-    return @intFromBool(asConnection(pointer) != null);
+    const connection = safetyCheckOk(pointer) orelse return 0;
+    return getAutocommit(connection);
 }
 const ScalarCallback = *const fn (?*statement.sqlite3_context, c_int, [*]?*statement.sqlite3_value) callconv(.c) void;
 const FinalCallback = *const fn (?*statement.sqlite3_context) callconv(.c) void;
-fn registerFunction(connection: *Connection, name: []const u8, argument_count: c_int, encoding: c_int, user_data: ?*anyopaque, callback: ?ScalarCallback, step_callback: ?ScalarCallback, final_callback: ?FinalCallback, value_callback: ?FinalCallback, inverse_callback: ?ScalarCallback, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) ResultCode {
-    if (name.len == 0 or name.len > 255 or argument_count < -1 or argument_count > 127 or encoding & 7 < 1 or encoding & 7 > 3) {
+/// Source `sqlite3CreateFunc()`: validate callback families, normalize the
+/// requested encoding, block replacement while statements are active, and
+/// transfer function/destructor ownership into the connection registry.
+fn createFunction(connection: *Connection, name: []const u8, argument_count: c_int, encoding_argument: c_int, user_data: ?*anyopaque, callback: ?ScalarCallback, step_callback: ?ScalarCallback, final_callback: ?FinalCallback, value_callback: ?FinalCallback, inverse_callback: ?ScalarCallback, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) ResultCode {
+    if (name.len == 0 or name.len > 255 or argument_count < -1 or argument_count > 127) {
         if (destroy_callback) |destroy| destroy(user_data);
         return .misuse;
+    }
+    var encoding = encoding_argument & 7;
+    if (encoding == 4 or encoding == 5) {
+        encoding = 1;
+    }
+    if (encoding < 1 or encoding > 3) {
+        encoding = 1;
     }
     const deleting = callback == null and step_callback == null and final_callback == null and value_callback == null and inverse_callback == null;
     const scalar = callback != null and step_callback == null and final_callback == null and value_callback == null and inverse_callback == null;
@@ -640,7 +1441,12 @@ fn registerFunction(connection: *Connection, name: []const u8, argument_count: c
     var index: usize = 0;
     while (index < connection.scalar_functions.items.len) {
         const existing = connection.scalar_functions.items[index];
-        if (existing.argument_count == argument_count and std.ascii.eqlIgnoreCase(existing.name, name)) {
+        if (existing.argument_count == argument_count and existing.encoding == encoding and std.ascii.eqlIgnoreCase(existing.name, name)) {
+            if (connection.active_statements != 0) {
+                if (destroy_callback) |destroy| destroy(user_data);
+                connection.last_result = .busy;
+                return .busy;
+            }
             _ = connection.scalar_functions.orderedRemove(index);
             if (existing.destroy) |destroy| destroy(existing.user_data);
             connection.allocator.free(existing.name);
@@ -661,7 +1467,7 @@ fn registerFunction(connection: *Connection, name: []const u8, argument_count: c
         connection.allocator.destroy(definition);
         if (destroy_callback) |destroy| destroy(user_data);
         return .no_memory;
-    }, .argument_count = argument_count, .callback = callback, .step_callback = step_callback, .final_callback = final_callback, .value_callback = value_callback, .inverse_callback = inverse_callback, .user_data = user_data, .database = connection, .destroy = destroy_callback };
+    }, .argument_count = argument_count, .encoding = encoding, .callback = callback, .step_callback = step_callback, .final_callback = final_callback, .value_callback = value_callback, .inverse_callback = inverse_callback, .user_data = user_data, .database = connection, .destroy = destroy_callback };
     connection.scalar_functions.append(connection.allocator, definition) catch {
         connection.allocator.free(definition.name);
         connection.allocator.destroy(definition);
@@ -670,8 +1476,17 @@ fn registerFunction(connection: *Connection, name: []const u8, argument_count: c
     };
     return .ok;
 }
+
+/// Source `createFunctionApi()`: serialize registry mutation and funnel scalar,
+/// aggregate, and window callbacks through the common ownership path.
+fn createFunctionApi(connection: *Connection, name: []const u8, argument_count: c_int, encoding: c_int, user_data: ?*anyopaque, callback: ?ScalarCallback, step_callback: ?ScalarCallback, final_callback: ?FinalCallback, value_callback: ?FinalCallback, inverse_callback: ?ScalarCallback, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return createFunction(connection, name, argument_count, encoding, user_data, callback, step_callback, final_callback, value_callback, inverse_callback, destroy_callback).toC();
+}
+
 pub export fn sqlite3_create_function_v2(pointer: ?*sqlite3, name_pointer: ?[*:0]const u8, argument_count: c_int, encoding: c_int, user_data: ?*anyopaque, callback: ?ScalarCallback, step_callback: ?ScalarCallback, final_callback: ?FinalCallback, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse {
+    const connection = safetyCheckOk(pointer) orelse {
         if (destroy_callback) |destroy| destroy(user_data);
         return ResultCode.misuse.toC();
     };
@@ -679,7 +1494,7 @@ pub export fn sqlite3_create_function_v2(pointer: ?*sqlite3, name_pointer: ?[*:0
         if (destroy_callback) |destroy| destroy(user_data);
         return ResultCode.misuse.toC();
     };
-    return registerFunction(connection, name, argument_count, encoding, user_data, callback, step_callback, final_callback, null, null, destroy_callback).toC();
+    return createFunctionApi(connection, name, argument_count, encoding, user_data, callback, step_callback, final_callback, null, null, destroy_callback);
 }
 pub export fn sqlite3_create_function(pointer: ?*sqlite3, name: ?[*:0]const u8, argument_count: c_int, encoding: c_int, user_data: ?*anyopaque, callback: ?ScalarCallback, step_callback: ?ScalarCallback, final_callback: ?FinalCallback) callconv(.c) c_int {
     return sqlite3_create_function_v2(pointer, name, argument_count, encoding, user_data, callback, step_callback, final_callback, null);
@@ -704,44 +1519,55 @@ pub export fn sqlite3_create_window_function(pointer: ?*sqlite3, name_pointer: ?
         if (destroy_callback) |destroy| destroy(user_data);
         return ResultCode.misuse.toC();
     };
-    return registerFunction(connection, name, argument_count, encoding, user_data, null, step_callback, final_callback, value_callback, inverse_callback, destroy_callback).toC();
+    return createFunctionApi(connection, name, argument_count, encoding, user_data, null, step_callback, final_callback, value_callback, inverse_callback, destroy_callback);
 }
 
 const CollationCallback = *const fn (?*anyopaque, c_int, ?*const anyopaque, c_int, ?*const anyopaque) callconv(.c) c_int;
-pub export fn sqlite3_create_collation_v2(pointer: ?*sqlite3, name_pointer: ?[*:0]const u8, encoding: c_int, auxiliary: ?*anyopaque, compare: ?CollationCallback, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse {
-        if (destroy_callback) |destroy| destroy(auxiliary);
-        return ResultCode.misuse.toC();
-    };
-    const name = if (name_pointer) |value| std.mem.span(value) else {
-        if (destroy_callback) |destroy| destroy(auxiliary);
-        return ResultCode.misuse.toC();
-    };
-    if (name.len > 255 or encoding & 7 < 1 or encoding & 7 > 3) {
-        if (destroy_callback) |destroy| destroy(auxiliary);
-        return ResultCode.misuse.toC();
+
+/// Source `createCollation()`: normalize UTF-16-native encodings, refuse to
+/// replace a collation while statements are active, release the old owner,
+/// and install or delete the exact name/encoding entry.
+fn createCollation(connection: *Connection, name: []const u8, encoding_argument: c_int, auxiliary: ?*anyopaque, compare: ?CollationCallback, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) ResultCode {
+    if (name.len == 0 or name.len > 255) return .misuse;
+    var base_encoding = encoding_argument & 7;
+    if (base_encoding == 4 or encoding_argument == 8) {
+        base_encoding = if (builtin.target.cpu.arch.endian() == .little) 2 else 3;
     }
-    var index: usize = 0;
-    while (index < connection.collations.items.len) : (index += 1) if (connection.collations.items[index].encoding == encoding and std.ascii.eqlIgnoreCase(connection.collations.items[index].name, name)) {
+    if (base_encoding < 1 or base_encoding > 3) return .misuse;
+    const encoding = base_encoding | (encoding_argument & 8);
+
+    var existing_index: ?usize = null;
+    for (connection.collations.items, 0..) |collation, index| {
+        if (collation.encoding == encoding and std.ascii.eqlIgnoreCase(collation.name, name)) {
+            existing_index = index;
+            break;
+        }
+    }
+    if (existing_index != null and connection.active_statements != 0) {
+        connection.last_result = .busy;
+        return .busy;
+    }
+    if (existing_index) |index| {
         const old = connection.collations.orderedRemove(index);
         if (old.destroy) |destroy| destroy(old.auxiliary);
         connection.allocator.free(old.name);
-        break;
-    };
-    const callback = compare orelse {
-        if (destroy_callback) |destroy| destroy(auxiliary);
-        return ResultCode.ok.toC();
-    };
-    const owned = connection.allocator.dupeZ(u8, name) catch {
-        if (destroy_callback) |destroy| destroy(auxiliary);
-        return ResultCode.no_memory.toC();
-    };
+    }
+    const callback = compare orelse return .ok;
+    const owned = connection.allocator.dupeZ(u8, name) catch return .no_memory;
     connection.collations.append(connection.allocator, .{ .name = owned, .encoding = encoding, .auxiliary = auxiliary, .compare = callback, .destroy = destroy_callback }) catch {
         connection.allocator.free(owned);
-        if (destroy_callback) |destroy| destroy(auxiliary);
-        return ResultCode.no_memory.toC();
+        return .no_memory;
     };
-    return ResultCode.ok.toC();
+    connection.last_result = .ok;
+    return .ok;
+}
+
+pub export fn sqlite3_create_collation_v2(pointer: ?*sqlite3, name_pointer: ?[*:0]const u8, encoding: c_int, auxiliary: ?*anyopaque, compare: ?CollationCallback, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    const name = if (name_pointer) |value| std.mem.span(value) else return ResultCode.misuse.toC();
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return createCollation(connection, name, encoding, auxiliary, compare, destroy_callback).toC();
 }
 pub export fn sqlite3_create_collation(pointer: ?*sqlite3, name: ?[*:0]const u8, encoding: c_int, auxiliary: ?*anyopaque, compare: ?CollationCallback) callconv(.c) c_int {
     return sqlite3_create_collation_v2(pointer, name, encoding, auxiliary, compare, null);
@@ -756,23 +1582,49 @@ pub export fn sqlite3_create_collation16(pointer: ?*sqlite3, name_pointer: ?*con
     defer std.heap.c_allocator.free(name);
     return sqlite3_create_collation(pointer, name.ptr, encoding, auxiliary, compare);
 }
-pub export fn sqlite3_collation_needed(pointer: ?*sqlite3, context: ?*anyopaque, callback: ?*const fn (?*anyopaque, ?*sqlite3, c_int, [*:0]const u8) callconv(.c) void) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
+/// Source `sqlite3_collation_needed()`: atomically replace the UTF-8 factory
+/// and disable the mutually exclusive UTF-16 factory.
+fn configureCollationNeeded(connection: *Connection, context: ?*anyopaque, callback: ?*const fn (?*anyopaque, ?*sqlite3, c_int, [*:0]const u8) callconv(.c) void) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
     connection.collation_needed_context = context;
     connection.collation_needed_callback = callback;
     connection.collation_needed16_callback = null;
     return ResultCode.ok.toC();
 }
-pub export fn sqlite3_collation_needed16(pointer: ?*sqlite3, context: ?*anyopaque, callback: ?*const fn (?*anyopaque, ?*sqlite3, c_int, *const anyopaque) callconv(.c) void) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
+
+pub export fn sqlite3_collation_needed(pointer: ?*sqlite3, context: ?*anyopaque, callback: ?*const fn (?*anyopaque, ?*sqlite3, c_int, [*:0]const u8) callconv(.c) void) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return configureCollationNeeded(connection, context, callback);
+}
+
+/// Source `sqlite3_collation_needed16()`: atomically replace the UTF-16
+/// factory and disable the mutually exclusive UTF-8 factory.
+fn configureCollationNeeded16(connection: *Connection, context: ?*anyopaque, callback: ?*const fn (?*anyopaque, ?*sqlite3, c_int, *const anyopaque) callconv(.c) void) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
     connection.collation_needed_context = context;
     connection.collation_needed_callback = null;
     connection.collation_needed16_callback = callback;
     return ResultCode.ok.toC();
 }
 
-fn overloadedFunction(context: ?*statement.sqlite3_context, _: c_int, _: [*]?*statement.sqlite3_value) callconv(.c) void {
-    statement.sqlite3_result_error_code(context, ResultCode.error_.toC());
+pub export fn sqlite3_collation_needed16(pointer: ?*sqlite3, context: ?*anyopaque, callback: ?*const fn (?*anyopaque, ?*sqlite3, c_int, *const anyopaque) callconv(.c) void) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return configureCollationNeeded16(connection, context, callback);
+}
+
+/// Source `sqlite3InvalidFunction()`: retain an overload placeholder for name
+/// resolution but report the overloaded function's name if it executes.
+fn invalidFunction(context: ?*statement.sqlite3_context, _: c_int, _: [*]?*statement.sqlite3_value) callconv(.c) void {
+    const raw_name = statement.sqlite3_user_data(context) orelse {
+        statement.sqlite3_result_error_code(context, ResultCode.error_.toC());
+        return;
+    };
+    const name: [*:0]const u8 = @ptrCast(raw_name);
+    var buffer: [384]u8 = undefined;
+    const message = std.fmt.bufPrintZ(&buffer, "unable to use function {s} in the requested context", .{std.mem.span(name)}) catch "unable to use overloaded function in the requested context";
+    statement.sqlite3_result_error(context, message, -1);
 }
 pub export fn sqlite3_declare_vtab(pointer: ?*sqlite3, sql_pointer: ?[*:0]const u8) callconv(.c) c_int {
     const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
@@ -785,8 +1637,30 @@ pub export fn sqlite3_declare_vtab(pointer: ?*sqlite3, sql_pointer: ?[*:0]const 
     connection.vtab_declaration = copy;
     return ResultCode.ok.toC();
 }
+/// Source `sqlite3_overload_function()`: retain an existing global function or
+/// install an owned invalid-function placeholder for virtual-table overloads.
+fn overloadFunction(connection: *Connection, name_pointer: [*:0]const u8, argument_count: c_int) c_int {
+    if (argument_count < -2) return ResultCode.misuse.toC();
+    const name = std.mem.span(name_pointer);
+    connection.connection_mutex.enter();
+    const found = if (argument_count >= 0) connection.findScalar(name, @intCast(argument_count)) != null else blk: {
+        for (connection.scalar_functions.items) |definition| {
+            if (std.ascii.eqlIgnoreCase(definition.name, name)) break :blk true;
+        }
+        break :blk false;
+    };
+    connection.connection_mutex.leave();
+    if (found) return ResultCode.ok.toC();
+    const allocation = public_api.sqlite3_malloc64(name.len + 1) orelse return ResultCode.no_memory.toC();
+    const copy: [*]u8 = @ptrCast(allocation);
+    @memcpy(copy[0..name.len], name);
+    copy[name.len] = 0;
+    return sqlite3_create_function_v2(toOpaque(connection), name_pointer, argument_count, 1, allocation, invalidFunction, null, null, &public_api.sqlite3_free);
+}
+
 pub export fn sqlite3_overload_function(pointer: ?*sqlite3, name: ?[*:0]const u8, argument_count: c_int) callconv(.c) c_int {
-    return sqlite3_create_function(pointer, name, argument_count, 1, null, overloadedFunction, null, null);
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return overloadFunction(connection, name orelse return ResultCode.misuse.toC(), argument_count);
 }
 pub export fn sqlite3_vtab_on_conflict(pointer: ?*sqlite3) callconv(.c) c_int {
     return if (asConnection(pointer) != null) ResultCode.abort.toC() else ResultCode.abort.toC();
@@ -835,12 +1709,14 @@ pub export fn sqlite3_create_module_v2(pointer: ?*sqlite3, name_pointer: ?[*:0]c
         return ResultCode.misuse.toC();
     };
     var index: usize = 0;
-    while (index < connection.modules.items.len) : (index += 1) if (std.ascii.eqlIgnoreCase(connection.modules.items[index].name, name)) {
-        const old = connection.modules.orderedRemove(index);
-        if (old.destroy) |destroy| destroy(old.auxiliary);
-        connection.allocator.free(old.name);
-        break;
-    };
+    while (index < connection.modules.items.len) : (index += 1) {
+        if (std.ascii.eqlIgnoreCase(connection.modules.items[index].name, name)) {
+            const old = connection.modules.orderedRemove(index);
+            if (old.destroy) |destroy| destroy(old.auxiliary);
+            connection.allocator.free(old.name);
+            break;
+        }
+    }
     const implementation = module orelse {
         if (destroy_callback) |destroy| destroy(auxiliary);
         return ResultCode.ok.toC();
@@ -866,10 +1742,12 @@ pub export fn sqlite3_drop_modules(pointer: ?*sqlite3, keep_names: ?[*]?[*:0]con
         var keep = false;
         if (keep_names) |names| {
             var at: usize = 0;
-            while (names[at]) |name| : (at += 1) if (std.ascii.eqlIgnoreCase(connection.modules.items[index].name, std.mem.span(name))) {
-                keep = true;
-                break;
-            };
+            while (names[at]) |name| : (at += 1) {
+                if (std.ascii.eqlIgnoreCase(connection.modules.items[index].name, std.mem.span(name))) {
+                    keep = true;
+                    break;
+                }
+            }
         }
         if (keep) {
             index += 1;
@@ -882,32 +1760,39 @@ pub export fn sqlite3_drop_modules(pointer: ?*sqlite3, keep_names: ?[*]?[*:0]con
     return ResultCode.ok.toC();
 }
 
-pub export fn sqlite3_get_clientdata(pointer: ?*sqlite3, name_pointer: ?[*:0]const u8) callconv(.c) ?*anyopaque {
-    const connection = asConnection(pointer) orelse return null;
-    const name = if (name_pointer) |value| std.mem.span(value) else return null;
-    for (connection.client_data.items) |entry| if (std.mem.eql(u8, entry.name, name)) return entry.value;
+/// Source `sqlite3_get_clientdata()`.
+fn getClientData(connection: *Connection, name: []const u8) ?*anyopaque {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    for (connection.client_data.items) |entry| {
+        if (std.mem.eql(u8, entry.name, name)) return entry.value;
+    }
     return null;
 }
-pub export fn sqlite3_set_clientdata(pointer: ?*sqlite3, name_pointer: ?[*:0]const u8, value: ?*anyopaque, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse {
-        if (destroy_callback) |destroy| destroy(value);
-        return ResultCode.misuse.toC();
-    };
-    const name = if (name_pointer) |item| std.mem.span(item) else {
-        if (destroy_callback) |destroy| destroy(value);
-        return ResultCode.misuse.toC();
-    };
-    var index: usize = 0;
-    while (index < connection.client_data.items.len) : (index += 1) if (std.mem.eql(u8, connection.client_data.items[index].name, name)) {
-        const old = connection.client_data.orderedRemove(index);
-        if (old.destroy) |destroy| destroy(old.value);
-        connection.allocator.free(old.name);
-        break;
-    };
-    if (value == null) {
-        if (destroy_callback) |destroy| destroy(value);
+
+pub export fn sqlite3_get_clientdata(pointer: ?*sqlite3, name_pointer: ?[*:0]const u8) callconv(.c) ?*anyopaque {
+    const connection = safetyCheckOk(pointer) orelse return null;
+    return getClientData(connection, if (name_pointer) |value| std.mem.span(value) else return null);
+}
+
+/// Source `sqlite3_set_clientdata()`: replace or unlink named client state,
+/// invoking old and rejected-value destructors with source ownership semantics.
+fn setClientData(connection: *Connection, name: []const u8, value: ?*anyopaque, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    for (connection.client_data.items, 0..) |*entry, index| {
+        if (!std.mem.eql(u8, entry.name, name)) continue;
+        if (entry.destroy) |destroy| destroy(entry.value);
+        if (value == null) {
+            const removed = connection.client_data.orderedRemove(index);
+            connection.allocator.free(removed.name);
+            return ResultCode.ok.toC();
+        }
+        entry.value = value;
+        entry.destroy = destroy_callback;
         return ResultCode.ok.toC();
     }
+    if (value == null) return ResultCode.ok.toC();
     const owned = connection.allocator.dupeZ(u8, name) catch {
         if (destroy_callback) |destroy| destroy(value);
         return ResultCode.no_memory.toC();
@@ -920,9 +1805,24 @@ pub export fn sqlite3_set_clientdata(pointer: ?*sqlite3, name_pointer: ?[*:0]con
     return ResultCode.ok.toC();
 }
 
-pub export fn sqlite3_trace(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, [*:0]const u8) callconv(.c) void, context: ?*anyopaque) callconv(.c) ?*anyopaque {
-    const connection = asConnection(pointer) orelse return null;
-    const previous: ?*anyopaque = if (connection.legacy_trace_callback) |value| @ptrCast(@constCast(value)) else null;
+pub export fn sqlite3_set_clientdata(pointer: ?*sqlite3, name_pointer: ?[*:0]const u8, value: ?*anyopaque, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse {
+        if (destroy_callback) |destroy| destroy(value);
+        return ResultCode.misuse.toC();
+    };
+    const name = if (name_pointer) |item| std.mem.span(item) else {
+        if (destroy_callback) |destroy| destroy(value);
+        return ResultCode.misuse.toC();
+    };
+    return setClientData(connection, name, value, destroy_callback);
+}
+
+/// Source `sqlite3_trace()`: replace the legacy statement trace under the
+/// connection mutex and return the previous callback context.
+fn configureLegacyTrace(connection: *Connection, callback: ?*const fn (?*anyopaque, [*:0]const u8) callconv(.c) void, context: ?*anyopaque) ?*anyopaque {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    const previous = connection.legacy_trace_context;
     connection.legacy_trace_callback = callback;
     connection.legacy_trace_context = context;
     connection.trace_v2_callback = null;
@@ -930,28 +1830,52 @@ pub export fn sqlite3_trace(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaqu
     connection.legacy_profile_callback = null;
     return previous;
 }
-pub export fn sqlite3_profile(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, [*:0]const u8, u64) callconv(.c) void, context: ?*anyopaque) callconv(.c) ?*anyopaque {
-    const connection = asConnection(pointer) orelse return null;
-    const previous: ?*anyopaque = if (connection.legacy_profile_callback) |value| @ptrCast(@constCast(value)) else null;
+
+pub export fn sqlite3_trace(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, [*:0]const u8) callconv(.c) void, context: ?*anyopaque) callconv(.c) ?*anyopaque {
+    const connection = safetyCheckOk(pointer) orelse return null;
+    return configureLegacyTrace(connection, callback, context);
+}
+
+/// Source `sqlite3_profile()`: replace the legacy profile callback and return
+/// its previous context without conflating the callback pointer with pArg.
+fn configureProfile(connection: *Connection, callback: ?*const fn (?*anyopaque, [*:0]const u8, u64) callconv(.c) void, context: ?*anyopaque) ?*anyopaque {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    const previous = connection.legacy_profile_context;
     connection.legacy_profile_callback = callback;
     connection.legacy_profile_context = context;
     return previous;
 }
-pub export fn sqlite3_trace_v2(pointer: ?*sqlite3, mask: c_uint, callback: ?*const fn (c_uint, ?*anyopaque, ?*anyopaque, ?*anyopaque) callconv(.c) c_int, context: ?*anyopaque) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
-    connection.trace_v2_callback = callback;
+
+pub export fn sqlite3_profile(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, [*:0]const u8, u64) callconv(.c) void, context: ?*anyopaque) callconv(.c) ?*anyopaque {
+    const connection = safetyCheckOk(pointer) orelse return null;
+    return configureProfile(connection, callback, context);
+}
+
+/// Source `sqlite3_trace_v2()`: normalize callback/mask disabling and replace
+/// legacy trace modes atomically with the version-2 registration.
+fn configureTraceV2(connection: *Connection, requested_mask: c_uint, callback: ?*const fn (c_uint, ?*anyopaque, ?*anyopaque, ?*anyopaque) callconv(.c) c_int, context: ?*anyopaque) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    const mask = if (callback == null) 0 else requested_mask & 0x0f;
+    connection.trace_v2_callback = if (mask == 0) null else callback;
     connection.trace_v2_context = context;
-    connection.trace_v2_mask = mask & 0x0f;
+    connection.trace_v2_mask = mask;
     connection.legacy_trace_callback = null;
     connection.legacy_profile_callback = null;
     return ResultCode.ok.toC();
 }
 
-pub export fn sqlite3_autovacuum_pages(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, [*:0]const u8, c_uint, c_uint, c_uint) callconv(.c) c_uint, context: ?*anyopaque, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse {
-        if (destroy_callback) |destroy| destroy(context);
-        return ResultCode.misuse.toC();
-    };
+pub export fn sqlite3_trace_v2(pointer: ?*sqlite3, mask: c_uint, callback: ?*const fn (c_uint, ?*anyopaque, ?*anyopaque, ?*anyopaque) callconv(.c) c_int, context: ?*anyopaque) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return configureTraceV2(connection, mask, callback, context);
+}
+
+/// Source `sqlite3_autovacuum_pages()`: destroy the previous context before
+/// atomically installing its replacement hook and ownership callback.
+fn configureAutovacuumPages(connection: *Connection, callback: ?*const fn (?*anyopaque, [*:0]const u8, c_uint, c_uint, c_uint) callconv(.c) c_uint, context: ?*anyopaque, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
     if (connection.autovacuum_destroy) |destroy| destroy(connection.autovacuum_context);
     connection.autovacuum_callback = callback;
     connection.autovacuum_context = context;
@@ -959,26 +1883,57 @@ pub export fn sqlite3_autovacuum_pages(pointer: ?*sqlite3, callback: ?*const fn 
     return ResultCode.ok.toC();
 }
 
-pub export fn sqlite3_commit_hook(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque) callconv(.c) c_int, context: ?*anyopaque) callconv(.c) ?*anyopaque {
-    const connection = asConnection(pointer) orelse return null;
-    const previous: ?*anyopaque = if (connection.commit_callback) |value| @ptrCast(@constCast(value)) else null;
+pub export fn sqlite3_autovacuum_pages(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, [*:0]const u8, c_uint, c_uint, c_uint) callconv(.c) c_uint, context: ?*anyopaque, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse {
+        if (destroy_callback) |destroy| destroy(context);
+        return ResultCode.misuse.toC();
+    };
+    return configureAutovacuumPages(connection, callback, context, destroy_callback);
+}
+
+/// Source `sqlite3_commit_hook()`.
+fn configureCommitHook(connection: *Connection, callback: ?*const fn (?*anyopaque) callconv(.c) c_int, context: ?*anyopaque) ?*anyopaque {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    const previous = connection.commit_context;
     connection.commit_callback = callback;
     connection.commit_context = context;
     return previous;
 }
-pub export fn sqlite3_rollback_hook(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque) callconv(.c) void, context: ?*anyopaque) callconv(.c) ?*anyopaque {
-    const connection = asConnection(pointer) orelse return null;
-    const previous: ?*anyopaque = if (connection.rollback_callback) |value| @ptrCast(@constCast(value)) else null;
+
+pub export fn sqlite3_commit_hook(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque) callconv(.c) c_int, context: ?*anyopaque) callconv(.c) ?*anyopaque {
+    const connection = safetyCheckOk(pointer) orelse return null;
+    return configureCommitHook(connection, callback, context);
+}
+
+/// Source `sqlite3_rollback_hook()`.
+fn configureRollbackHook(connection: *Connection, callback: ?*const fn (?*anyopaque) callconv(.c) void, context: ?*anyopaque) ?*anyopaque {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    const previous = connection.rollback_context;
     connection.rollback_callback = callback;
     connection.rollback_context = context;
     return previous;
 }
-pub export fn sqlite3_update_hook(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, c_int, [*:0]const u8, [*:0]const u8, i64) callconv(.c) void, context: ?*anyopaque) callconv(.c) ?*anyopaque {
-    const connection = asConnection(pointer) orelse return null;
-    const previous: ?*anyopaque = if (connection.update_callback) |value| @ptrCast(@constCast(value)) else null;
+
+pub export fn sqlite3_rollback_hook(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque) callconv(.c) void, context: ?*anyopaque) callconv(.c) ?*anyopaque {
+    const connection = safetyCheckOk(pointer) orelse return null;
+    return configureRollbackHook(connection, callback, context);
+}
+
+/// Source `sqlite3_update_hook()`.
+fn configureUpdateHook(connection: *Connection, callback: ?*const fn (?*anyopaque, c_int, [*:0]const u8, [*:0]const u8, i64) callconv(.c) void, context: ?*anyopaque) ?*anyopaque {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    const previous = connection.update_context;
     connection.update_callback = callback;
     connection.update_context = context;
     return previous;
+}
+
+pub export fn sqlite3_update_hook(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, c_int, [*:0]const u8, [*:0]const u8, i64) callconv(.c) void, context: ?*anyopaque) callconv(.c) ?*anyopaque {
+    const connection = safetyCheckOk(pointer) orelse return null;
+    return configureUpdateHook(connection, callback, context);
 }
 
 pub export fn sqlite3_set_authorizer(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, c_int, ?[*:0]const u8, ?[*:0]const u8, ?[*:0]const u8, ?[*:0]const u8) callconv(.c) c_int, context: ?*anyopaque) callconv(.c) c_int {
@@ -987,61 +1942,159 @@ pub export fn sqlite3_set_authorizer(pointer: ?*sqlite3, callback: ?*const fn (?
     connection.authorizer_context = context;
     return ResultCode.ok.toC();
 }
-pub export fn sqlite3_progress_handler(pointer: ?*sqlite3, interval: c_int, callback: ?*const fn (?*anyopaque) callconv(.c) c_int, context: ?*anyopaque) callconv(.c) void {
-    const connection = asConnection(pointer) orelse return;
-    connection.progress_callback = if (interval > 0) callback else null;
-    connection.progress_context = context;
-    connection.progress_interval = if (interval > 0) @intCast(interval) else 0;
+/// Source `sqlite3_progress_handler()`.
+fn configureProgressHandler(connection: *Connection, interval: c_int, callback: ?*const fn (?*anyopaque) callconv(.c) c_int, context: ?*anyopaque) void {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    if (interval > 0) {
+        connection.progress_callback = callback;
+        connection.progress_context = context;
+        connection.progress_interval = @intCast(interval);
+    } else {
+        connection.progress_callback = null;
+        connection.progress_context = null;
+        connection.progress_interval = 0;
+    }
 }
 
-pub export fn sqlite3_busy_handler(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, c_int) callconv(.c) c_int, context: ?*anyopaque) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
+pub export fn sqlite3_progress_handler(pointer: ?*sqlite3, interval: c_int, callback: ?*const fn (?*anyopaque) callconv(.c) c_int, context: ?*anyopaque) callconv(.c) void {
+    const connection = safetyCheckOk(pointer) orelse return;
+    configureProgressHandler(connection, interval, callback, context);
+}
+
+/// Source `sqlite3_busy_handler()`: reset callback invocation state, timeout,
+/// and set-lock timeout whenever the application replaces the handler.
+fn configureBusyHandler(connection: *Connection, callback: ?*const fn (?*anyopaque, c_int) callconv(.c) c_int, context: ?*anyopaque) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
     connection.busy_callback = callback;
     connection.busy_context = context;
     connection.busy_calls = 0;
     connection.busy_timeout_ms = 0;
+    connection.setlk_timeout_ms = 0;
     if (connection.database) |database| database.pager.setBusyHandler(if (callback != null) Connection.pagerBusy else null, connection);
     return ResultCode.ok.toC();
 }
-pub export fn sqlite3_busy_timeout(pointer: ?*sqlite3, milliseconds: c_int) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
+
+pub export fn sqlite3_busy_handler(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, c_int) callconv(.c) c_int, context: ?*anyopaque) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return configureBusyHandler(connection, callback, context);
+}
+
+/// Source `sqlite3_busy_timeout()`: install or remove the default sleeping
+/// busy handler and synchronize the set-lock timeout with it.
+fn configureBusyTimeout(connection: *Connection, milliseconds: c_int) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
     connection.busy_callback = null;
+    connection.busy_context = null;
     connection.busy_timeout_ms = @max(milliseconds, 0);
+    connection.setlk_timeout_ms = if (milliseconds > 0) milliseconds else 0;
     connection.busy_calls = 0;
     if (connection.database) |database| database.pager.setBusyHandler(if (milliseconds > 0) Connection.pagerBusy else null, connection);
     return ResultCode.ok.toC();
 }
 
+pub export fn sqlite3_busy_timeout(pointer: ?*sqlite3, milliseconds: c_int) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return configureBusyTimeout(connection, milliseconds);
+}
+
+/// Source `sqlite3_setlk_timeout()`: retain the blocking-lock timeout/flags
+/// and signal BLOCK_ON_CONNECT through the database VFS file control.
+fn setLockTimeout(connection: *Connection, milliseconds: c_int, flags: c_int) c_int {
+    if (milliseconds < -1) return ResultCode.range.toC();
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    connection.setlk_timeout_ms = milliseconds;
+    connection.setlk_flags = flags;
+    if (connection.database) |database| {
+        if (database.pager.file.pMethods) |methods| {
+            if (methods.xFileControl) |control| {
+                var block_on_connect: c_int = @intFromBool(flags & 1 != 0);
+                _ = control(database.pager.file, 44, @ptrCast(&block_on_connect));
+            }
+        }
+    }
+    return ResultCode.ok.toC();
+}
+
 pub export fn sqlite3_setlk_timeout(pointer: ?*sqlite3, milliseconds: c_int, flags: c_int) callconv(.c) c_int {
-    _ = flags;
-    return sqlite3_busy_timeout(pointer, milliseconds);
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return setLockTimeout(connection, milliseconds, flags);
+}
+
+/// Source `sqlite3_interrupt()`: set the pending interrupt regardless of the
+/// current statement count so active or concurrently-starting work observes it.
+fn interruptConnection(connection: *Connection) void {
+    connection.interrupted = true;
 }
 
 pub export fn sqlite3_interrupt(pointer: ?*sqlite3) callconv(.c) void {
-    if (asConnection(pointer)) |connection| if (connection.active_statements != 0) {
-        connection.interrupted = true;
-    };
+    const connection = asConnection(pointer) orelse return;
+    interruptConnection(connection);
 }
+/// Source `sqlite3_is_interrupted()`.
+fn isConnectionInterrupted(connection: *Connection) c_int {
+    return @intFromBool(connection.interrupted);
+}
+
 pub export fn sqlite3_is_interrupted(pointer: ?*sqlite3) callconv(.c) c_int {
-    return @intFromBool(if (asConnection(pointer)) |connection| connection.interrupted else false);
+    const connection = asConnection(pointer) orelse return 0;
+    return isConnectionInterrupted(connection);
 }
+/// Source `sqlite3_last_insert_rowid()`.
+fn lastInsertRowid(connection: *Connection) i64 {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return connection.last_insert_rowid;
+}
+
 pub export fn sqlite3_last_insert_rowid(pointer: ?*sqlite3) callconv(.c) i64 {
-    return if (asConnection(pointer)) |connection| connection.last_insert_rowid else 0;
+    const connection = safetyCheckOk(pointer) orelse return 0;
+    return lastInsertRowid(connection);
 }
+
+/// Source `sqlite3_set_last_insert_rowid()`.
+fn setLastInsertRowid(connection: *Connection, value: i64) void {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    connection.last_insert_rowid = value;
+}
+
 pub export fn sqlite3_set_last_insert_rowid(pointer: ?*sqlite3, value: i64) callconv(.c) void {
-    if (asConnection(pointer)) |connection| connection.last_insert_rowid = value;
+    const connection = safetyCheckOk(pointer) orelse return;
+    setLastInsertRowid(connection, value);
 }
+
+/// Source `sqlite3_changes64()`.
+fn connectionChanges64(connection: *Connection) i64 {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return connection.changes;
+}
+
 pub export fn sqlite3_changes(pointer: ?*sqlite3) callconv(.c) c_int {
-    return @intCast(@min(if (asConnection(pointer)) |connection| connection.changes else 0, std.math.maxInt(c_int)));
+    return @intCast(@min(sqlite3_changes64(pointer), std.math.maxInt(c_int)));
 }
 pub export fn sqlite3_changes64(pointer: ?*sqlite3) callconv(.c) i64 {
-    return if (asConnection(pointer)) |connection| connection.changes else 0;
+    const connection = safetyCheckOk(pointer) orelse return 0;
+    return connectionChanges64(connection);
 }
+
+/// Source `sqlite3_total_changes64()`.
+fn connectionTotalChanges64(connection: *Connection) i64 {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return connection.total_changes;
+}
+
 pub export fn sqlite3_total_changes(pointer: ?*sqlite3) callconv(.c) c_int {
-    return @intCast(@min(if (asConnection(pointer)) |connection| connection.total_changes else 0, std.math.maxInt(c_int)));
+    return @intCast(@min(sqlite3_total_changes64(pointer), std.math.maxInt(c_int)));
 }
 pub export fn sqlite3_total_changes64(pointer: ?*sqlite3) callconv(.c) i64 {
-    return if (asConnection(pointer)) |connection| connection.total_changes else 0;
+    const connection = safetyCheckOk(pointer) orelse return 0;
+    return connectionTotalChanges64(connection);
 }
 pub export fn sqlite3_unlock_notify(pointer: ?*sqlite3, callback: ?*const fn ([*]?*anyopaque, c_int) callconv(.c) void, argument: ?*anyopaque) callconv(.c) c_int {
     if (asConnection(pointer) == null) return ResultCode.misuse.toC();
@@ -1061,13 +2114,43 @@ pub export fn sqlite3_next_stmt(pointer: ?*sqlite3, current: ?*statement.sqlite3
     return if (connection.statement_head) |head| statement.toOpaque(head) else null;
 }
 
-pub export fn sqlite3_limit(pointer: ?*sqlite3, category: c_int, value: c_int) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse return -1;
+const hard_limits = [13]c_int{
+    @intCast(profile_limits.max_length),
+    @intCast(profile_limits.max_sql_length),
+    @intCast(profile_limits.max_column),
+    @intCast(profile_limits.max_expr_depth),
+    @intCast(profile_limits.max_compound_select),
+    @intCast(profile_limits.max_vdbe_op),
+    @intCast(profile_limits.max_function_arg),
+    @intCast(profile_limits.max_attached),
+    @intCast(profile_limits.max_like_pattern_length),
+    @intCast(profile_limits.max_variable_number),
+    @intCast(profile_limits.max_trigger_depth),
+    @intCast(profile_limits.max_worker_threads),
+    @intCast(profile_limits.max_parser_depth),
+};
+
+/// Source `sqlite3_limit()`: serialize updates and clamp each run-time value
+/// to its compile-time hard bound, including the minimum length limit.
+fn connectionLimit(connection: *Connection, category: c_int, value: c_int) c_int {
     if (category < 0 or category >= connection.limits.len) return -1;
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
     const index: usize = @intCast(category);
     const previous = connection.limits[index];
-    if (value >= 0) connection.limits[index] = value;
+    if (value >= 0) {
+        var replacement = @min(value, hard_limits[index]);
+        if (index == 0) {
+            replacement = @max(replacement, @as(c_int, @intCast(profile_limits.min_length)));
+        }
+        connection.limits[index] = replacement;
+    }
     return previous;
+}
+
+pub export fn sqlite3_limit(pointer: ?*sqlite3, category: c_int, value: c_int) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return -1;
+    return connectionLimit(connection, category, value);
 }
 pub export fn sqlite3_db_handle(pointer: ?*statement.sqlite3_stmt) callconv(.c) ?*sqlite3 {
     const prepared = statement.fromOpaque(pointer) orelse return null;
@@ -1133,33 +2216,53 @@ const TableCollector = struct {
     values: std.ArrayList(?[:0]u8) = .empty,
     columns: c_int = 0,
     failed: bool = false,
+    incompatible: bool = false,
 
-    fn callback(context: ?*anyopaque, count: c_int, row: [*]?[*:0]const u8, names: [*]?[*:0]const u8) callconv(.c) c_int {
-        const self: *TableCollector = @ptrCast(@alignCast(context.?));
-        if (self.columns == 0) {
-            self.columns = count;
-            for (0..@intCast(count)) |index| self.values.append(self.allocator, if (names[index]) |name| self.allocator.dupeZ(u8, std.mem.span(name)) catch {
-                self.failed = true;
-                return 1;
-            } else null) catch {
-                self.failed = true;
-                return 1;
-            };
-        } else if (self.columns != count) return 1;
-        for (0..@intCast(count)) |index| self.values.append(self.allocator, if (row[index]) |value| self.allocator.dupeZ(u8, std.mem.span(value)) catch {
-            self.failed = true;
-            return 1;
-        } else null) catch {
-            self.failed = true;
-            return 1;
-        };
-        return 0;
-    }
     fn deinit(self: *TableCollector) void {
-        for (self.values.items) |value| if (value) |bytes| self.allocator.free(bytes);
+        for (self.values.items) |value| {
+            if (value) |bytes| {
+                self.allocator.free(bytes);
+            }
+        }
         self.values.deinit(self.allocator);
     }
 };
+
+/// Source `sqlite3_get_table_cb()`: reserve column names on the first row,
+/// reject incompatible statements in a multi-statement input, preserve SQL
+/// NULL pointers, and retain every copied value in row-major order.
+fn getTableCallback(context: ?*anyopaque, count: c_int, row: [*]?[*:0]const u8, names: [*]?[*:0]const u8) callconv(.c) c_int {
+    const collector: *TableCollector = @ptrCast(@alignCast(context orelse return 1));
+    if (collector.columns == 0) {
+        collector.columns = count;
+        for (0..@intCast(count)) |index| {
+            const name = if (names[index]) |value| collector.allocator.dupeZ(u8, std.mem.span(value)) catch {
+                collector.failed = true;
+                return 1;
+            } else null;
+            collector.values.append(collector.allocator, name) catch {
+                if (name) |bytes| collector.allocator.free(bytes);
+                collector.failed = true;
+                return 1;
+            };
+        }
+    } else if (collector.columns != count) {
+        collector.incompatible = true;
+        return 1;
+    }
+    for (0..@intCast(count)) |index| {
+        const value = if (row[index]) |bytes| collector.allocator.dupeZ(u8, std.mem.span(bytes)) catch {
+            collector.failed = true;
+            return 1;
+        } else null;
+        collector.values.append(collector.allocator, value) catch {
+            if (value) |bytes| collector.allocator.free(bytes);
+            collector.failed = true;
+            return 1;
+        };
+    }
+    return 0;
+}
 
 pub export fn sqlite3_get_table(database: ?*sqlite3, sql: ?[*:0]const u8, result_output: ?*?[*]?[*:0]u8, row_count: ?*c_int, column_count: ?*c_int, error_output: ?*?[*:0]u8) callconv(.c) c_int {
     if (result_output == null or row_count == null or column_count == null) return ResultCode.misuse.toC();
@@ -1169,8 +2272,18 @@ pub export fn sqlite3_get_table(database: ?*sqlite3, sql: ?[*:0]const u8, result
     if (error_output) |output| output.* = null;
     var collector = TableCollector{ .allocator = std.heap.c_allocator };
     defer collector.deinit();
-    const rc = sqlite3_exec(database, sql, TableCollector.callback, &collector, error_output);
-    if (rc != ResultCode.ok.toC()) return if (collector.failed) ResultCode.no_memory.toC() else rc;
+    const rc = sqlite3_exec(database, sql, getTableCallback, &collector, error_output);
+    if (rc != ResultCode.ok.toC()) {
+        if (collector.failed) return ResultCode.no_memory.toC();
+        if (collector.incompatible) {
+            if (error_output) |output| {
+                if (output.*) |old| public_api.sqlite3_free(old);
+                setExtensionError(output, "sqlite3_get_table() called with two or more incompatible queries");
+            }
+            return ResultCode.error_.toC();
+        }
+        return rc;
+    }
     if (collector.columns == 0) return ResultCode.ok.toC();
     const pointer_count = collector.values.items.len;
     const raw = public_api.sqlite3_malloc64(2 * @sizeOf(usize) + pointer_count * @sizeOf(?[*:0]u8)) orelse return ResultCode.no_memory.toC();
@@ -1216,17 +2329,20 @@ pub export fn sqlite3_complete(sql_pointer: ?[*:0]const u8) callconv(.c) c_int {
 }
 
 threadlocal var metadata_type_buffer: [128]u8 = undefined;
+threadlocal var metadata_collation_buffer: [128]u8 = undefined;
 fn hasAutoincrement(token_list: []const Token) bool {
     for (token_list) |token| if (token.typ == tokens.tk_autoincr) return true;
     return false;
 }
-pub export fn sqlite3_table_column_metadata(pointer: ?*sqlite3, database_name: ?[*:0]const u8, table_name: ?[*:0]const u8, column_name: ?[*:0]const u8, type_output: ?*?[*:0]const u8, collation_output: ?*?[*:0]const u8, not_null_output: ?*c_int, primary_key_output: ?*c_int, autoincrement_output: ?*c_int) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
-    if (database_name) |name| if (!std.ascii.eqlIgnoreCase(std.mem.span(name), "main")) return ResultCode.error_.toC();
-    const table = if (table_name) |name| std.mem.span(name) else return ResultCode.misuse.toC();
-    const column = if (column_name) |name| std.mem.span(name) else return ResultCode.misuse.toC();
+/// Source `sqlite3_table_column_metadata()`: resolve a table column under the
+/// connection mutex and return declared type, collation, constraints, and
+/// autoincrement metadata from its stored CREATE TABLE statement.
+fn tableColumnMetadata(connection: *Connection, database_name: ?[*:0]const u8, table_name: [*:0]const u8, column_name: [*:0]const u8, type_output: ?*?[*:0]const u8, collation_output: ?*?[*:0]const u8, not_null_output: ?*c_int, primary_key_output: ?*c_int, autoincrement_output: ?*c_int) c_int {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    if (!schemaNameMatches(connection, database_name)) return ResultCode.error_.toC();
     const database = connection.database orelse return ResultCode.misuse.toC();
-    const schema_outcome = database.schemaTable(table);
+    const schema_outcome = database.schemaTable(std.mem.span(table_name));
     if (schema_outcome.result != .ok) return schema_outcome.result.toC();
     var schema = schema_outcome.table.?;
     defer schema.deinit();
@@ -1236,28 +2352,135 @@ pub export fn sqlite3_table_column_metadata(pointer: ?*sqlite3, database_name: ?
         connection.allocator.free(resolved.tokens);
         connection.allocator.free(resolved.source);
     }
-    for (resolved.columns) |item| if (std.ascii.eqlIgnoreCase(item.name, column)) {
+    for (resolved.columns) |item| {
+        if (!std.ascii.eqlIgnoreCase(item.name, std.mem.span(column_name))) continue;
         if (type_output) |output| {
             const count = @min(item.declared_type.len, metadata_type_buffer.len - 1);
             @memcpy(metadata_type_buffer[0..count], item.declared_type[0..count]);
             metadata_type_buffer[count] = 0;
             output.* = @ptrCast(&metadata_type_buffer);
         }
-        if (collation_output) |output| output.* = "BINARY";
+        if (collation_output) |output| {
+            const count = @min(item.collation.len, metadata_collation_buffer.len - 1);
+            @memcpy(metadata_collation_buffer[0..count], item.collation[0..count]);
+            metadata_collation_buffer[count] = 0;
+            output.* = @ptrCast(&metadata_collation_buffer);
+        }
         if (not_null_output) |output| output.* = @intFromBool(item.not_null);
         if (primary_key_output) |output| output.* = @intFromBool(item.integer_primary_key);
         if (autoincrement_output) |output| output.* = @intFromBool(item.integer_primary_key and hasAutoincrement(resolved.tokens));
         return ResultCode.ok.toC();
-    };
+    }
     return ResultCode.error_.toC();
 }
 
-pub export fn sqlite3_db_status64(pointer: ?*sqlite3, operation: c_int, current: ?*i64, highwater: ?*i64, reset: c_int) callconv(.c) c_int {
-    _ = reset;
-    if (asConnection(pointer) == null or current == null or highwater == null or operation < 0 or operation > 13) return ResultCode.misuse.toC();
-    current.?.* = 0;
-    highwater.?.* = 0;
+pub export fn sqlite3_table_column_metadata(pointer: ?*sqlite3, database_name: ?[*:0]const u8, table_name: ?[*:0]const u8, column_name: ?[*:0]const u8, type_output: ?*?[*:0]const u8, collation_output: ?*?[*:0]const u8, not_null_output: ?*c_int, primary_key_output: ?*c_int, autoincrement_output: ?*c_int) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return tableColumnMetadata(connection, database_name, table_name orelse return ResultCode.misuse.toC(), column_name orelse return ResultCode.misuse.toC(), type_output, collation_output, not_null_output, primary_key_output, autoincrement_output);
+}
+
+/// Source `sqlite3LookasideUsed()`: return outstanding lookaside slots and
+/// optionally expose/reset the connection highwater mark.
+fn lookasideUsed(connection: *Connection, highwater: *i64, reset: bool) i64 {
+    if (connection.lookaside_allocator) |*allocator| {
+        const usage = allocator.used(reset);
+        highwater.* = @intCast(usage.highwater);
+        return @intCast(usage.current);
+    }
+    highwater.* = 0;
+    return 0;
+}
+
+fn schemaMemoryUsed(connection: *const Connection) i64 {
+    var total: usize = @sizeOf(schema_initialization.Schema) +
+        connection.schema_model.objects.capacity * @sizeOf(schema_initialization.CatalogObject);
+    for (connection.schema_model.objects.items) |object| {
+        total += object.object_type.len + object.name.len + object.table_name.len;
+        if (object.sql) |sql| {
+            total += sql.len;
+        }
+    }
+    return @intCast(@min(total, @as(usize, std.math.maxInt(i64))));
+}
+
+fn statementMemoryUsed(connection: *const Connection) i64 {
+    var total: usize = 0;
+    var prepared = connection.statement_head;
+    while (prepared) |item| : (prepared = item.connection_next) {
+        total += @sizeOf(statement.Statement) +
+            item.bindings.len * @sizeOf(vdbe.Mem) +
+            item.parameters.len * @sizeOf(statement.ParameterMetadata) +
+            item.columns.len * @sizeOf(statement.ColumnMetadata);
+        if (item.sql_copy) |sql| {
+            total += sql.len + 1;
+        }
+    }
+    return @intCast(@min(total, @as(usize, std.math.maxInt(i64))));
+}
+
+/// Source `sqlite3_db_status64()`: report connection-local lookaside, pager
+/// cache, schema, statement, cache-hit/miss, spill, and deferred-FK status,
+/// resetting cumulative pager values only when requested.
+fn databaseStatus64(connection: *Connection, operation: c_int, current: *i64, highwater: *i64, reset: bool) c_int {
+    current.* = 0;
+    highwater.* = 0;
+    switch (operation) {
+        0 => current.* = lookasideUsed(connection, highwater, reset),
+        1, 11 => {
+            if (connection.database) |database| {
+                const bytes = database.pager.cache.pageCount() * (@as(usize, database.pager.page_size) + @sizeOf(page_cache.Page));
+                current.* = @intCast(@min(bytes, @as(usize, std.math.maxInt(i64))));
+            }
+        },
+        2 => current.* = schemaMemoryUsed(connection),
+        3 => current.* = statementMemoryUsed(connection),
+        4, 5, 6 => {}, // Lookaside hit/miss counters remain zero without lookaside.
+        7 => {
+            if (connection.database) |database| {
+                current.* = @intCast(@min(database.pager.stats.cache_hits, @as(u64, std.math.maxInt(i64))));
+                if (reset) {
+                    database.pager.stats.cache_hits = 0;
+                }
+            }
+        },
+        8 => {
+            if (connection.database) |database| {
+                current.* = @intCast(@min(database.pager.stats.cache_misses, @as(u64, std.math.maxInt(i64))));
+                if (reset) {
+                    database.pager.stats.cache_misses = 0;
+                }
+            }
+        },
+        9 => {
+            if (connection.database) |database| {
+                current.* = @intCast(@min(database.pager.stats.database_writes, @as(u64, std.math.maxInt(i64))));
+                if (reset) {
+                    database.pager.stats.database_writes = 0;
+                }
+            }
+        },
+        12 => {
+            if (connection.database) |database| {
+                current.* = @intCast(@min(database.pager.stats.cache_spills, @as(u64, std.math.maxInt(i64))));
+                if (reset) {
+                    database.pager.stats.cache_spills = 0;
+                }
+            }
+        },
+        13 => {}, // Temporary buffers are not separately metered.
+        10 => {}, // Foreign-key enforcement has no unresolved deferred set.
+        else => return ResultCode.error_.toC(),
+    }
     return ResultCode.ok.toC();
+}
+
+pub export fn sqlite3_db_status64(pointer: ?*sqlite3, operation: c_int, current: ?*i64, highwater: ?*i64, reset: c_int) callconv(.c) c_int {
+    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
+    const now = current orelse return ResultCode.misuse.toC();
+    const maximum = highwater orelse return ResultCode.misuse.toC();
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return databaseStatus64(connection, operation, now, maximum, reset != 0);
 }
 pub export fn sqlite3_db_status(pointer: ?*sqlite3, operation: c_int, current: ?*c_int, highwater: ?*c_int, reset: c_int) callconv(.c) c_int {
     var now: i64 = 0;
@@ -1269,35 +2492,124 @@ pub export fn sqlite3_db_status(pointer: ?*sqlite3, operation: c_int, current: ?
     }
     return rc;
 }
-pub export fn sqlite3_file_control(pointer: ?*sqlite3, database_name: ?[*:0]const u8, operation: c_int, argument: ?*anyopaque) callconv(.c) c_int {
-    _ = database_name;
-    _ = operation;
-    _ = argument;
-    return if (asConnection(pointer) != null) ResultCode.not_found.toC() else ResultCode.misuse.toC();
+/// Source `sqlite3_file_control()`: expose core pager/VFS pointers and state,
+/// handle reserve/cache controls locally, and dispatch all other operations to
+/// the selected database file's xFileControl method.
+fn fileControl(connection: *Connection, database_name: ?[*:0]const u8, operation: c_int, argument: ?*anyopaque) c_int {
+    if (database_name) |name| {
+        const expected = if (connection.main_schema_name) |schema| schema else "main";
+        if (!std.ascii.eqlIgnoreCase(std.mem.span(name), expected)) return ResultCode.error_.toC();
+    }
+    const database = connection.database orelse return ResultCode.error_.toC();
+    const raw = argument orelse return ResultCode.misuse.toC();
+    switch (operation) {
+        7 => {
+            const output: *?*btree.vfs.sqlite3_file = @ptrCast(@alignCast(raw));
+            output.* = database.pager.file;
+            return ResultCode.ok.toC();
+        },
+        27 => {
+            const output: *?*btree.vfs.sqlite3_vfs = @ptrCast(@alignCast(raw));
+            output.* = database.pager.abi_vfs;
+            return ResultCode.ok.toC();
+        },
+        28 => {
+            const output: *?*btree.vfs.sqlite3_file = @ptrCast(@alignCast(raw));
+            output.* = database.pager.journal_file;
+            return ResultCode.ok.toC();
+        },
+        35 => {
+            const output: *c_uint = @ptrCast(@alignCast(raw));
+            output.* = @truncate(database.pager.stats.database_reads + database.pager.stats.database_writes);
+            return ResultCode.ok.toC();
+        },
+        36 => {
+            const limit: *i64 = @ptrCast(@alignCast(raw));
+            const store = memdb.fromSchema(if (connection.memory_backend) |*memory| memory else null, connection.shared_memdb, "main") orelse return ResultCode.not_found.toC();
+            limit.* = memdb.fileControl(store.backend, if (store.allow_no_copy) "main" else "/main", limit.*);
+            return ResultCode.ok.toC();
+        },
+        38 => {
+            const reserve: *c_int = @ptrCast(@alignCast(raw));
+            const requested = reserve.*;
+            reserve.* = @intCast(database.pager.reserved_bytes);
+            if (requested >= 0 and requested <= 255) {
+                database.pager.reserved_bytes = @intCast(requested);
+            }
+            return ResultCode.ok.toC();
+        },
+        42 => {
+            if (database.pager.cache.refCount() != 0) return ResultCode.busy.toC();
+            database.pager.cache.clear();
+            return ResultCode.ok.toC();
+        },
+        else => {
+            return btree.vfs.osFileControl(database.pager.file, operation, argument);
+        },
+    }
 }
+
+pub export fn sqlite3_file_control(pointer: ?*sqlite3, database_name: ?[*:0]const u8, operation: c_int, argument: ?*anyopaque) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return fileControl(connection, database_name, operation, argument);
+}
+/// Source `sqlite3_db_release_memory()`: discard every unreferenced clean page
+/// owned by the connection pager without changing transaction state.
+fn releaseDatabaseMemory(connection: *Connection) c_int {
+    if (connection.database) |database| {
+        _ = database.pager.cache.shrink();
+    }
+    return ResultCode.ok.toC();
+}
+
+pub export fn sqlite3_db_release_memory(pointer: ?*sqlite3) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return releaseDatabaseMemory(connection);
+}
+
+/// Source `sqlite3_db_cacheflush()`: flush every unreferenced dirty page in
+/// the connection pager while preserving BUSY if WAL or page references block
+/// a safe spill.
+fn flushDatabaseCache(connection: *Connection) c_int {
+    const database = connection.database orelse return ResultCode.ok.toC();
+    return database.pager.flushUnreferencedDirty().toC();
+}
+
 pub export fn sqlite3_db_cacheflush(pointer: ?*sqlite3) callconv(.c) c_int {
-    return if (asConnection(pointer) != null) ResultCode.ok.toC() else ResultCode.misuse.toC();
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return flushDatabaseCache(connection);
 }
 pub export fn sqlite3_system_errno(pointer: ?*sqlite3) callconv(.c) c_int {
-    return if (asConnection(pointer) != null) 0 else 0;
+    return if (asConnection(pointer)) |connection| connection.system_errno else 0;
 }
 
 pub export fn sqlite3_serialize(pointer: ?*sqlite3, schema: ?[*:0]const u8, size_output: ?*i64, flags: c_uint) callconv(.c) ?[*]u8 {
     const connection = asConnection(pointer) orelse return null;
     if (size_output) |output| output.* = -1;
-    if (schema) |name| if (!std.ascii.eqlIgnoreCase(std.mem.span(name), "main")) return null;
-    if (connection.memory_backend) |*memory| {
-        if (flags & 1 != 0) {
-            const borrowed = memory.borrowVolatile("main") orelse return null;
-            if (size_output) |output| output.* = @intCast(borrowed.len);
-            return borrowed.ptr;
+    const schema_name = if (schema) |name| std.mem.span(name) else null;
+    if (schema_name) |name| if (!std.ascii.eqlIgnoreCase(name, "main")) return null;
+    if (memdb.fromSchema(if (connection.memory_backend) |*memory| memory else null, connection.shared_memdb, schema_name)) |store| {
+        const serialization_optional = memdb.serialize(connection.allocator, store, if (store.allow_no_copy) "main" else "/main", flags & 1 != 0) catch return null;
+        const serialization = serialization_optional orelse return null;
+        switch (serialization) {
+            .borrowed => |bytes| {
+                if (size_output) |output| output.* = @intCast(bytes.len);
+                return bytes.ptr;
+            },
+            .owned => |bytes| {
+                defer connection.allocator.free(bytes);
+                const output = public_api.sqlite3_malloc64(bytes.len) orelse return null;
+                @memcpy(@as([*]u8, @ptrCast(output))[0..bytes.len], bytes);
+                if (size_output) |output_size| output_size.* = @intCast(bytes.len);
+                return @ptrCast(output);
+            },
         }
-        const bytes = memory.copyVolatile(connection.allocator, "main") catch return null;
-        defer connection.allocator.free(bytes);
-        const output = public_api.sqlite3_malloc64(bytes.len) orelse return null;
-        @memcpy(@as([*]u8, @ptrCast(output))[0..bytes.len], bytes);
-        if (size_output) |size| size.* = @intCast(bytes.len);
-        return @ptrCast(output);
     }
     if (connection.unix_backend) |*backend| {
         const filename = connection.filename orelse return null;
@@ -1340,15 +2652,20 @@ pub export fn sqlite3_deserialize(pointer: ?*sqlite3, schema: ?[*:0]const u8, da
         connection.database = null;
     }
     if (connection.memory_backend) |*memory| memory.deinit();
-    connection.memory_backend = btree.vfs.MemoryVfs.init(connection.allocator);
-    connection.memory_adapter = btree.vfs.AbiAdapter.init("zig-deserialize", &connection.memory_backend.?);
-    const opened_file = connection.memory_backend.?.open("main", btree.vfs.OPEN_READWRITE | btree.vfs.OPEN_CREATE | btree.vfs.OPEN_MAIN_DB);
-    if (opened_file.rc != btree.vfs.OK) return opened_file.rc;
-    const file = opened_file.file.?;
-    connection.memory_backend.?.adoptVolatileBuffer(file, data.?, @intCast(size), @intCast(buffer_size), flags);
+    if (connection.shared_memdb) |shared| {
+        memdb.close(shared);
+        connection.shared_memdb = null;
+    }
+    connection.memory_backend = memdb.deserialize(connection.allocator, data.?, @intCast(size), @intCast(buffer_size), flags) catch |err| return switch (err) {
+        error.InvalidSize => ResultCode.misuse.toC(),
+        else => ResultCode.cannot_open.toC(),
+    };
     transferred = true;
-    const close_rc = connection.memory_backend.?.closeAndDestroy(file);
-    if (close_rc != btree.vfs.OK) return close_rc;
+    if (flags & btree.vfs.DESERIALIZE_READONLY == 0) {
+        const truncate_result = memdb.truncate(&connection.memory_backend.?, "main", @intCast(size));
+        if (truncate_result != btree.vfs.OK) return truncate_result;
+    }
+    connection.memory_adapter = btree.vfs.AbiAdapter.init("zig-deserialize", &connection.memory_backend.?);
     const opened = if (flags & btree.vfs.DESERIALIZE_READONLY != 0) btree.Database.open(connection.allocator, &connection.memory_adapter.?.abi, "main") else btree.Database.openWritable(connection.allocator, &connection.memory_adapter.?.abi, "main");
     if (opened.result != .ok) return opened.result.toC();
     const database = connection.allocator.create(btree.Database) catch {
@@ -1372,28 +2689,67 @@ const Blob = struct {
     column: usize,
     rowid: i64,
     writable: bool,
+    cursor: ?btree.Cursor = null,
+    byte_count: usize = 0,
+    invalidated: bool = false,
+
+    fn invalidate(self: *Blob) void {
+        if (self.cursor) |*cursor| cursor.deinit();
+        self.cursor = null;
+        self.byte_count = 0;
+        self.invalidated = true;
+    }
 };
 
-fn validateBlob(blob: *Blob) ResultCode {
-    const database = blob.connection.database orelse return .misuse;
-    const opened = database.openCursor(blob.root_page, .table);
-    if (opened.result != .ok) return opened.result;
-    var cursor = opened.cursor.?;
-    defer cursor.deinit();
-    if (!cursor.seekTable(blob.rowid)) return .error_;
+/// Source `blobSeekToRow()`: keep the incremental-blob cursor positioned on
+/// its row, cache the fixed byte length, and permanently invalidate the handle
+/// after a missing row, non-blob value, or cursor error.
+fn blobSeekToRow(blob: *Blob, rowid: i64) ResultCode {
+    if (blob.invalidated) return .abort;
+    const database = blob.connection.database orelse {
+        blob.invalidate();
+        return .misuse;
+    };
+    if (blob.cursor == null) {
+        const opened = database.openCursor(blob.root_page, .table);
+        if (opened.result != .ok) {
+            blob.invalidate();
+            return opened.result;
+        }
+        blob.cursor = opened.cursor.?;
+    }
+    const cursor = &blob.cursor.?;
+    if (!cursor.seekTable(rowid)) {
+        blob.invalidate();
+        return .error_;
+    }
     const decoded = cursor.record();
-    if (decoded.result != .ok) return decoded.result;
+    if (decoded.result != .ok) {
+        blob.invalidate();
+        return decoded.result;
+    }
     var record = decoded.record.?;
     defer record.deinit();
-    if (blob.column >= record.values.len) return .error_;
-    return switch (record.values[blob.column]) {
-        .blob, .text => .ok,
-        else => .error_,
+    if (blob.column >= record.values.len) {
+        blob.invalidate();
+        return .error_;
+    }
+    blob.byte_count = switch (record.values[blob.column]) {
+        .blob => |value| value.len,
+        .text => |value| value.len,
+        else => {
+            blob.invalidate();
+            return .error_;
+        },
     };
+    blob.rowid = rowid;
+    return .ok;
 }
 
 pub export fn sqlite3_blob_open(database_pointer: ?*sqlite3, database_name: ?[*:0]const u8, table_name: ?[*:0]const u8, column_name: ?[*:0]const u8, rowid: i64, flags: c_int, output: ?*?*sqlite3_blob) callconv(.c) c_int {
     const connection = asConnection(database_pointer) orelse return ResultCode.misuse.toC();
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
     const out = output orelse return ResultCode.misuse.toC();
     out.* = null;
     if (database_name) |name| if (!std.ascii.eqlIgnoreCase(std.mem.span(name), "main")) return ResultCode.error_.toC();
@@ -1422,7 +2778,7 @@ pub export fn sqlite3_blob_open(database_pointer: ?*sqlite3, database_name: ?[*:
         connection.allocator.destroy(blob);
         return ResultCode.error_.toC();
     }, .rowid = rowid, .writable = flags != 0 };
-    const rc = validateBlob(blob);
+    const rc = blobSeekToRow(blob, rowid);
     if (rc != .ok) {
         connection.allocator.destroy(blob);
         return rc.toC();
@@ -1434,126 +2790,100 @@ pub export fn sqlite3_blob_open(database_pointer: ?*sqlite3, database_name: ?[*:
 
 pub export fn sqlite3_blob_reopen(pointer: ?*sqlite3_blob, rowid: i64) callconv(.c) c_int {
     const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
-    const previous = blob.rowid;
-    blob.rowid = rowid;
-    const rc = validateBlob(blob);
-    if (rc != .ok) blob.rowid = previous;
-    return rc.toC();
+    blob.connection.connection_mutex.enter();
+    defer blob.connection.connection_mutex.leave();
+    return blobSeekToRow(blob, rowid).toC();
 }
 
 pub export fn sqlite3_blob_close(pointer: ?*sqlite3_blob) callconv(.c) c_int {
     const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.ok.toC();
     const connection = blob.connection;
+    if (blob.cursor) |*cursor| cursor.deinit();
     connection.allocator.destroy(blob);
     std.debug.assert(connection.active_blobs > 0);
     connection.active_blobs -= 1;
-    if (connection.active_blobs == 0 and connection.active_statements == 0 and connection.deferred_close) _ = connection.finishClose();
+    if (!connectionIsBusy(connection) and connection.deferred_close) {
+        _ = connection.finishClose();
+    }
     return ResultCode.ok.toC();
 }
 
 pub export fn sqlite3_blob_bytes(pointer: ?*sqlite3_blob) callconv(.c) c_int {
     const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return 0;
-    const database = blob.connection.database orelse return 0;
-    const opened = database.openCursor(blob.root_page, .table);
-    if (opened.result != .ok) return 0;
-    var cursor = opened.cursor.?;
-    defer cursor.deinit();
-    if (!cursor.seekTable(blob.rowid)) return 0;
-    const decoded = cursor.record();
-    if (decoded.result != .ok) return 0;
-    var record = decoded.record.?;
-    defer record.deinit();
-    if (blob.column >= record.values.len) return 0;
-    return @intCast(switch (record.values[blob.column]) {
-        .blob => |value| value.len,
-        .text => |value| value.len,
-        else => 0,
-    });
+    if (blob.invalidated) return 0;
+    return @intCast(@min(blob.byte_count, @as(usize, std.math.maxInt(c_int))));
 }
 
-pub export fn sqlite3_blob_read(pointer: ?*sqlite3_blob, output: ?*anyopaque, amount: c_int, offset: c_int) callconv(.c) c_int {
-    const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
-    if (amount < 0 or offset < 0 or (amount != 0 and output == null)) return ResultCode.misuse.toC();
-    const database = blob.connection.database orelse return ResultCode.misuse.toC();
-    const opened = database.openCursor(blob.root_page, .table);
-    if (opened.result != .ok) return opened.result.toC();
-    var cursor = opened.cursor.?;
-    defer cursor.deinit();
-    if (!cursor.seekTable(blob.rowid)) return ResultCode.abort.toC();
-    const decoded = cursor.record();
-    if (decoded.result != .ok) return decoded.result.toC();
-    var record = decoded.record.?;
-    defer record.deinit();
-    const bytes = switch (record.values[blob.column]) {
-        .blob => |value| value,
-        .text => |value| value,
-        else => return ResultCode.error_.toC(),
-    };
+/// Source `blobReadWrite()`: validate the fixed blob range, reject invalidated
+/// handles, operate through the positioned cursor, and invalidate an aborted
+/// write while preserving the handle for transient range errors.
+fn blobReadWrite(blob: *Blob, buffer: ?*anyopaque, amount: c_int, offset: c_int, writing: bool) ResultCode {
+    if (amount < 0 or offset < 0 or (amount != 0 and buffer == null)) return .misuse;
+    if (writing and !blob.writable) return .read_only;
+    blob.connection.connection_mutex.enter();
+    defer blob.connection.connection_mutex.leave();
+    if (blob.invalidated or blob.cursor == null) return .abort;
     const start: usize = @intCast(offset);
     const count: usize = @intCast(amount);
-    if (start > bytes.len or count > bytes.len - start) return ResultCode.error_.toC();
-    if (count != 0) @memcpy(@as([*]u8, @ptrCast(output.?))[0..count], bytes[start..][0..count]);
-    return ResultCode.ok.toC();
-}
+    if (start > blob.byte_count or count > blob.byte_count - start) return .error_;
 
-pub export fn sqlite3_blob_write(pointer: ?*sqlite3_blob, input: ?*const anyopaque, amount: c_int, offset: c_int) callconv(.c) c_int {
-    const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
-    if (!blob.writable) return ResultCode.read_only.toC();
-    if (amount < 0 or offset < 0 or (amount != 0 and input == null)) return ResultCode.misuse.toC();
-    const database = blob.connection.database orelse return ResultCode.misuse.toC();
-    const opened = database.openCursor(blob.root_page, .table);
-    if (opened.result != .ok) return opened.result.toC();
-    var cursor = opened.cursor.?;
-    if (!cursor.seekTable(blob.rowid)) {
-        cursor.deinit();
-        return ResultCode.abort.toC();
-    }
+    const cursor = &blob.cursor.?;
     const decoded = cursor.record();
     if (decoded.result != .ok) {
-        cursor.deinit();
-        return decoded.result.toC();
+        if (decoded.result == .abort) blob.invalidate();
+        return decoded.result;
     }
     var record = decoded.record.?;
+    defer record.deinit();
+    if (blob.column >= record.values.len) {
+        blob.invalidate();
+        return .abort;
+    }
     const original_is_text = record.values[blob.column] == .text;
     const original = switch (record.values[blob.column]) {
         .blob => |value| value,
         .text => |value| value,
         else => {
-            record.deinit();
-            cursor.deinit();
-            return ResultCode.error_.toC();
+            blob.invalidate();
+            return .abort;
         },
     };
-    const start: usize = @intCast(offset);
-    const count: usize = @intCast(amount);
-    if (start > original.len or count > original.len - start) {
-        record.deinit();
-        cursor.deinit();
-        return ResultCode.error_.toC();
+    if (original.len != blob.byte_count) {
+        blob.invalidate();
+        return .abort;
     }
-    const replacement = blob.connection.allocator.dupe(u8, original) catch {
-        record.deinit();
-        cursor.deinit();
-        return ResultCode.no_memory.toC();
-    };
+    if (!writing) {
+        if (count != 0) @memcpy(@as([*]u8, @ptrCast(buffer.?))[0..count], original[start..][0..count]);
+        return .ok;
+    }
+
+    const database = blob.connection.database orelse return .misuse;
+    const replacement = blob.connection.allocator.dupe(u8, original) catch return .no_memory;
     defer blob.connection.allocator.free(replacement);
-    if (count != 0) @memcpy(replacement[start..][0..count], @as([*]const u8, @ptrCast(input.?))[0..count]);
-    const values = blob.connection.allocator.dupe(btree.Value, record.values) catch {
-        record.deinit();
-        cursor.deinit();
-        return ResultCode.no_memory.toC();
-    };
+    if (count != 0) @memcpy(replacement[start..][0..count], @as([*]const u8, @ptrCast(buffer.?))[0..count]);
+    const values = blob.connection.allocator.dupe(btree.Value, record.values) catch return .no_memory;
     defer blob.connection.allocator.free(values);
     values[blob.column] = if (original_is_text) .{ .text = replacement } else .{ .blob = replacement };
-    const payload = btree.encodeRecord(blob.connection.allocator, values) catch {
-        record.deinit();
-        cursor.deinit();
-        return ResultCode.no_memory.toC();
-    };
+    const payload = btree.encodeRecord(blob.connection.allocator, values) catch return .no_memory;
     defer blob.connection.allocator.free(payload);
-    record.deinit();
-    cursor.deinit();
-    return database.insertTable(blob.root_page, blob.rowid, payload, true).toC();
+    const result = database.insertTable(blob.root_page, blob.rowid, payload, true);
+    if (result != .ok) {
+        if (result == .abort) blob.invalidate();
+        return result;
+    }
+    blob.cursor.?.deinit();
+    blob.cursor = null;
+    return blobSeekToRow(blob, blob.rowid);
+}
+
+pub export fn sqlite3_blob_read(pointer: ?*sqlite3_blob, output: ?*anyopaque, amount: c_int, offset: c_int) callconv(.c) c_int {
+    const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
+    return blobReadWrite(blob, output, amount, offset, false).toC();
+}
+
+pub export fn sqlite3_blob_write(pointer: ?*sqlite3_blob, input: ?*const anyopaque, amount: c_int, offset: c_int) callconv(.c) c_int {
+    const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
+    return blobReadWrite(blob, @constCast(input), amount, offset, true).toC();
 }
 
 const Backup = struct { destination: *Connection, source: *Connection, remaining: c_int = 1, pages: c_int = 1, result: ResultCode = .ok };
@@ -1571,6 +2901,8 @@ pub export fn sqlite3_backup_init(destination_pointer: ?*sqlite3, destination_na
         return null;
     };
     backup.* = .{ .destination = destination, .source = source };
+    destination.active_backups += 1;
+    source.active_backups += 1;
     return @ptrCast(backup);
 }
 pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callconv(.c) c_int {
@@ -1595,7 +2927,20 @@ pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callc
 pub export fn sqlite3_backup_finish(pointer: ?*sqlite3_backup) callconv(.c) c_int {
     const backup: *Backup = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.ok.toC();
     const rc = backup.result;
-    backup.destination.allocator.destroy(backup);
+    const destination = backup.destination;
+    const source = backup.source;
+    destination.allocator.destroy(backup);
+    std.debug.assert(destination.active_backups > 0 and source.active_backups > 0);
+    destination.active_backups -= 1;
+    source.active_backups -= 1;
+    const close_destination = !connectionIsBusy(destination) and destination.deferred_close;
+    const close_source = !connectionIsBusy(source) and source.deferred_close;
+    if (close_destination) {
+        _ = destination.finishClose();
+    }
+    if (close_source) {
+        _ = source.finishClose();
+    }
     return rc.toC();
 }
 pub export fn sqlite3_backup_remaining(pointer: ?*sqlite3_backup) callconv(.c) c_int {
@@ -1607,38 +2952,123 @@ pub export fn sqlite3_backup_pagecount(pointer: ?*sqlite3_backup) callconv(.c) c
     return backup.pages;
 }
 
-pub export fn sqlite3_wal_hook(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, ?*sqlite3, [*:0]const u8, c_int) callconv(.c) c_int, context: ?*anyopaque) callconv(.c) ?*anyopaque {
-    const connection = asConnection(pointer) orelse return null;
-    const previous: ?*anyopaque = if (connection.wal_callback) |value| @ptrCast(@constCast(value)) else null;
+/// Source `doWalCallbacks()`: obtain the committed WAL frame count and return
+/// the first hook failure instead of discarding it after a successful commit.
+fn doWalCallbacks(connection: *Connection) ResultCode {
+    const database = connection.database orelse return .ok;
+    if (!database.pager.isWalMode()) return .ok;
+    const frame_count: c_int = if (database.pager.wal_state) |*state| @intCast(state.frame_count) else 0;
+    if (frame_count <= 0) return .ok;
+    const callback = connection.wal_callback orelse return .ok;
+    return ResultCode.fromC(callback(connection.wal_context, toOpaque(connection), "main", frame_count));
+}
+
+/// Source `sqlite3WalDefaultHook()`: checkpoint only after the committed WAL
+/// frame count reaches the configured threshold.
+fn walDefaultHook(context: ?*anyopaque, database: ?*sqlite3, schema: [*:0]const u8, frames: c_int) callconv(.c) c_int {
+    const threshold: c_int = if (context) |pointer| @intCast(@intFromPtr(pointer)) else 0;
+    if (threshold > 0 and frames >= threshold) return sqlite3_wal_checkpoint(database, schema);
+    return ResultCode.ok.toC();
+}
+
+/// Source `sqlite3_wal_hook()`: replace the WAL callback atomically, return
+/// its former context, and disable the default autocheckpoint hook.
+fn configureWalHook(connection: *Connection, callback: ?*const fn (?*anyopaque, ?*sqlite3, [*:0]const u8, c_int) callconv(.c) c_int, context: ?*anyopaque) ?*anyopaque {
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    const previous = connection.wal_context;
     connection.wal_callback = callback;
     connection.wal_context = context;
     connection.wal_autocheckpoint_pages = 0;
     return previous;
 }
-pub export fn sqlite3_wal_autocheckpoint(pointer: ?*sqlite3, pages: c_int) callconv(.c) c_int {
-    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
-    connection.wal_callback = null;
-    connection.wal_autocheckpoint_pages = @max(pages, 0);
+
+pub export fn sqlite3_wal_hook(pointer: ?*sqlite3, callback: ?*const fn (?*anyopaque, ?*sqlite3, [*:0]const u8, c_int) callconv(.c) c_int, context: ?*anyopaque) callconv(.c) ?*anyopaque {
+    const connection = safetyCheckOk(pointer) orelse return null;
+    return configureWalHook(connection, callback, context);
+}
+/// Source `sqlite3_wal_autocheckpoint()`: replace any application WAL hook
+/// with the default threshold callback, or disable WAL callbacks entirely.
+fn configureWalAutocheckpoint(connection: *Connection, pages: c_int) c_int {
+    const threshold = @max(pages, 0);
+    _ = configureWalHook(connection, if (threshold > 0) &walDefaultHook else null, if (threshold > 0) @ptrFromInt(@as(usize, @intCast(threshold))) else null);
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    connection.wal_autocheckpoint_pages = threshold;
     return ResultCode.ok.toC();
 }
 
-pub export fn sqlite3_wal_checkpoint_v2(pointer: ?*sqlite3, schema: ?[*:0]const u8, mode: c_int, log_frames: ?*c_int, checkpointed_frames: ?*c_int) callconv(.c) c_int {
-    _ = mode;
-    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
-    if (schema) |name| if (!std.ascii.eqlIgnoreCase(std.mem.span(name), "main")) return ResultCode.error_.toC();
+pub export fn sqlite3_wal_autocheckpoint(pointer: ?*sqlite3, pages: c_int) callconv(.c) c_int {
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    return configureWalAutocheckpoint(connection, pages);
+}
+
+/// Source `sqlite3Checkpoint()`: dispatch one validated checkpoint mode to
+/// the selected pager and preserve separate log and backfill counts.
+fn checkpoint(connection: *Connection, mode: wal.CheckpointMode, log_frames: ?*c_int, checkpointed_frames: ?*c_int) c_int {
     const database = connection.database orelse return ResultCode.misuse.toC();
-    const result = database.pager.checkpointWal();
-    if (log_frames) |value| value.* = @intCast(result.frames);
-    if (checkpointed_frames) |value| value.* = @intCast(result.frames);
+    const result = database.pager.checkpointWalMode(mode);
+    if (log_frames) |value| {
+        value.* = @intCast(result.frames);
+    }
+    if (checkpointed_frames) |value| {
+        value.* = @intCast(result.checkpointed);
+    }
     return result.result.toC();
+}
+
+/// Source `sqlite3_wal_checkpoint_v2()`: validate the checkpoint mode and
+/// schema, initialize outputs, and clear an idle connection's interrupt.
+fn checkpointConnection(connection: *Connection, schema: ?[*:0]const u8, mode: c_int, log_frames: ?*c_int, checkpointed_frames: ?*c_int) c_int {
+    if (log_frames) |value| {
+        value.* = -1;
+    }
+    if (checkpointed_frames) |value| {
+        value.* = -1;
+    }
+    if (mode < -1 or mode > 3) return ResultCode.misuse.toC();
+    if (schema) |name| {
+        if (!std.ascii.eqlIgnoreCase(std.mem.span(name), "main")) return ResultCode.error_.toC();
+    }
+    const checkpoint_mode: wal.CheckpointMode = @enumFromInt(mode);
+    const result = checkpoint(connection, checkpoint_mode, log_frames, checkpointed_frames);
+    if (connection.active_statements == 0) {
+        connection.interrupted = false;
+    }
+    return result;
+}
+
+pub export fn sqlite3_wal_checkpoint_v2(pointer: ?*sqlite3, schema: ?[*:0]const u8, mode: c_int, log_frames: ?*c_int, checkpointed_frames: ?*c_int) callconv(.c) c_int {
+    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return checkpointConnection(connection, schema, mode, log_frames, checkpointed_frames);
 }
 pub export fn sqlite3_wal_checkpoint(pointer: ?*sqlite3, schema: ?[*:0]const u8) callconv(.c) c_int {
     return sqlite3_wal_checkpoint_v2(pointer, schema, 0, null, null);
 }
 
+/// Source `sqlite3_txn_state()`: report NONE, READ, or WRITE from the native
+/// pager state for the selected schema.
+fn transactionState(connection: *Connection, schema: ?[*:0]const u8) c_int {
+    if (schema) |name| {
+        const expected = if (connection.main_schema_name) |main_name| main_name else "main";
+        if (!std.ascii.eqlIgnoreCase(std.mem.span(name), expected)) return -1;
+    }
+    const database = connection.database orelse return 0;
+    return switch (database.pager.state) {
+        .open => 0,
+        .reader => 1,
+        .writer_locked, .writer_cache_modified, .writer_database_modified, .writer_finished => 2,
+        .error_, .closed => 0,
+    };
+}
+
 pub export fn sqlite3_txn_state(pointer: ?*sqlite3, schema: ?[*:0]const u8) callconv(.c) c_int {
-    _ = schema;
-    return if (asConnection(pointer) != null) 0 else -1;
+    const connection = safetyCheckOk(pointer) orelse return -1;
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return transactionState(connection, schema);
 }
 
 const Token = struct { typ: u16, text: []const u8, start: usize, end: usize };
@@ -1706,15 +3136,58 @@ fn virtualRowid(pointer: ?*anyopaque, output: *i64) ResultCode {
 }
 const virtual_source_template: vdbe.VirtualSource = .{ .context = null, .open = virtualOpen, .close = virtualClose, .filter = virtualFilter, .next = virtualNext, .eof = virtualEof, .column = virtualColumn, .rowid = virtualRowid };
 
+fn jsonVirtualOpen(context: ?*anyopaque, output: *?*anyopaque) ResultCode {
+    const plan: *JsonVirtualPlan = @ptrCast(@alignCast(context orelse return .misuse));
+    const cursor = json_vtable.open(plan.allocator, plan.connection) catch return .no_memory;
+    const handle = plan.allocator.create(JsonVirtualHandle) catch {
+        json_vtable.close(cursor);
+        return .no_memory;
+    };
+    handle.* = .{ .plan = plan, .cursor = cursor };
+    output.* = handle;
+    return .ok;
+}
+fn jsonVirtualClose(pointer: ?*anyopaque) void {
+    const handle: *JsonVirtualHandle = @ptrCast(@alignCast(pointer orelse return));
+    json_vtable.close(handle.cursor);
+    handle.plan.allocator.destroy(handle);
+}
+fn jsonVirtualFilter(pointer: ?*anyopaque) ResultCode {
+    const handle: *JsonVirtualHandle = @ptrCast(@alignCast(pointer orelse return .misuse));
+    json_vtable.filter(handle.cursor, handle.plan.input, handle.plan.input_is_blob, handle.plan.root) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+    return .ok;
+}
+fn jsonVirtualNext(pointer: ?*anyopaque) ResultCode {
+    const handle: *JsonVirtualHandle = @ptrCast(@alignCast(pointer orelse return .misuse));
+    json_vtable.next(handle.cursor) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+    return .ok;
+}
+fn jsonVirtualEof(pointer: ?*anyopaque) bool {
+    const handle: *JsonVirtualHandle = @ptrCast(@alignCast(pointer orelse return true));
+    return json_vtable.eof(handle.cursor);
+}
+fn jsonVirtualColumn(pointer: ?*anyopaque, index: usize, output: *vdbe.Mem) ResultCode {
+    const handle: *JsonVirtualHandle = @ptrCast(@alignCast(pointer orelse return .misuse));
+    const callback: *const fn (?*anyopaque, ?*statement.sqlite3_context, c_int) callconv(.c) c_int = @ptrCast(&json_vtable.columnCallback);
+    return statement.invokeVirtualColumn(callback, handle.cursor, index, output);
+}
+fn jsonVirtualRowid(pointer: ?*anyopaque, output: *i64) ResultCode {
+    const handle: *JsonVirtualHandle = @ptrCast(@alignCast(pointer orelse return .misuse));
+    output.* = json_vtable.rowid(handle.cursor);
+    return .ok;
+}
+const json_virtual_source_template: vdbe.VirtualSource = .{ .context = null, .open = jsonVirtualOpen, .close = jsonVirtualClose, .filter = jsonVirtualFilter, .next = jsonVirtualNext, .eof = jsonVirtualEof, .column = jsonVirtualColumn, .rowid = jsonVirtualRowid };
+
 const ProgramAction = union(enum) {
     create: struct { connection: *Connection, name: []const u8, sql: []const u8, if_not_exists: bool },
     virtual_create: struct { connection: *Connection, name: []const u8, module_name: []const u8 },
     virtual_drop: struct { connection: *Connection, name: []const u8 },
     drop: struct { connection: *Connection, name: []const u8, if_exists: bool },
     insert: struct { connection: *Connection, root_page: u32, table_name: []const u8, column_count: usize, integer_primary_key: ?usize, replace: bool, conflict_ignore: bool },
-    update: struct { connection: *Connection, root_page: u32, table_name: []const u8, target_column: usize },
-    delete: struct { connection: *Connection, root_page: u32, table_name: []const u8 },
+    update: struct { connection: *Connection, root_page: u32, table_name: []const u8, target_column: usize, foreign_key_old_mask: u32 },
+    delete: struct { connection: *Connection, root_page: u32, table_name: []const u8, foreign_key_old_mask: u32 },
     vacuum: struct { connection: *Connection },
+    analyze: struct { connection: *Connection, table_name: ?[]const u8 },
 };
 
 const Owner = struct {
@@ -1728,8 +3201,10 @@ const Owner = struct {
     indices: []usize = &.{},
     functions: [1]vdbe.Function = undefined,
     dynamic_functions: []vdbe.Function = &.{},
+    dynamic_collations: []vdbe.Collation = &.{},
     virtual_sources: []vdbe.VirtualSource = &.{},
     virtual_plan: ?*VirtualPlan = null,
+    json_virtual_plan: ?*JsonVirtualPlan = null,
     program: vdbe.Program,
 
     fn destroy(allocator: std.mem.Allocator, context: *anyopaque) void {
@@ -1743,15 +3218,24 @@ const Owner = struct {
         allocator.free(self.columns);
         allocator.free(self.indices);
         allocator.free(self.dynamic_functions);
+        allocator.free(self.dynamic_collations);
         allocator.free(self.virtual_sources);
         if (self.virtual_plan) |plan| {
             if (plan.index_string) |value| allocator.free(value);
+            allocator.destroy(plan);
+        }
+        if (self.json_virtual_plan) |plan| {
+            allocator.free(plan.input);
+            if (plan.root) |root| allocator.free(root);
             allocator.destroy(plan);
         }
         allocator.free(self.source);
         allocator.destroy(self);
     }
 };
+
+const VectorRange = struct { first: u16, count: u16 };
+const SubqueryCache = struct { start: usize, end: usize, first_register: u16 };
 
 const Parser = struct {
     allocator: std.mem.Allocator,
@@ -1767,6 +3251,10 @@ const Parser = struct {
     maximum_parameter: u16,
     connection: ?*Connection = null,
     functions: std.ArrayList(vdbe.Function) = .empty,
+    vectors: [32]VectorRange = undefined,
+    vector_count: u8 = 0,
+    subqueries: [16]SubqueryCache = undefined,
+    subquery_count: u8 = 0,
     error_offset: usize = 0,
 
     fn init(allocator: std.mem.Allocator, source: []const u8, token_list: []const Token, maximum_parameter: u16, connection: ?*Connection) Parser {
@@ -1830,6 +3318,412 @@ const Parser = struct {
         try self.instructions.append(self.allocator, instruction);
     }
 
+    fn patchJump(self: *Parser, address: usize, destination: usize) void {
+        std.debug.assert(address < self.instructions.items.len);
+        self.instructions.items[address].p2 = @intCast(destination);
+    }
+
+    /// Runtime-code counterpart of source `sqlite3ExprIfTrue()` for an
+    /// already-evaluated bounded expression register.
+    fn expressionIfTrue(self: *Parser, source: u16, destination: i32, jump_if_null: bool) !usize {
+        const address = self.instructions.items.len;
+        try self.emit(.{ .opcode = .if_, .p1 = source, .p2 = destination, .p3 = @intFromBool(jump_if_null) });
+        return address;
+    }
+
+    /// Runtime-code counterpart of source `sqlite3ExprIfFalse()` for an
+    /// already-evaluated bounded expression register.
+    fn expressionIfFalse(self: *Parser, source: u16, destination: i32, jump_if_null: bool) !usize {
+        const address = self.instructions.items.len;
+        try self.emit(.{ .opcode = .if_not, .p1 = source, .p2 = destination, .p3 = @intFromBool(jump_if_null) });
+        return address;
+    }
+
+    fn vectorLength(self: *const Parser, first: u16) u16 {
+        var index: usize = 0;
+        while (index < self.vector_count) : (index += 1) {
+            if (self.vectors[index].first == first) return self.vectors[index].count;
+        }
+        return 1;
+    }
+
+    /// Source `exprVectorRegister()`: resolve one field from a contiguous
+    /// row-value register range.
+    fn expressionVectorRegister(self: *const Parser, first: u16, field: u16) !u16 {
+        const count = self.vectorLength(first);
+        if (field >= count) return error.Syntax;
+        return first + field;
+    }
+
+    /// Source `exprCodeVector()`: copy scalar results into a stable contiguous
+    /// register range and retain its width for comparison code generation.
+    fn expressionCodeVector(self: *Parser, values: []const u16) ParserError!u16 {
+        if (values.len == 0) return error.Syntax;
+        if (values.len == 1) return values[0];
+        if (values.len > 32 or @as(usize, self.vector_count) == self.vectors.len) return error.TooBig;
+        const first = self.next_register;
+        for (values) |source| {
+            const target = try self.allocateRegister();
+            try self.emit(.{ .opcode = .copy, .p1 = source, .p2 = target });
+        }
+        self.vectors[@intCast(self.vector_count)] = .{ .first = first, .count = @intCast(values.len) };
+        self.vector_count += 1;
+        return first;
+    }
+
+    fn codeScalarCompare(self: *Parser, left: u16, right: u16, opcode: vdbe.Opcode) !u16 {
+        const target = try self.allocateRegister();
+        try self.emit(.{ .opcode = .null_, .p2 = target });
+        const compare_address = self.instructions.items.len;
+        try self.emit(.{ .opcode = opcode, .p1 = right, .p3 = left });
+        const left_null_address = self.instructions.items.len;
+        try self.emit(.{ .opcode = .is_null, .p1 = left });
+        const right_null_address = self.instructions.items.len;
+        try self.emit(.{ .opcode = .is_null, .p1 = right });
+        try self.emit(.{ .opcode = .integer, .p1 = 0, .p2 = target });
+        const false_done_address = self.instructions.items.len;
+        try self.emit(.{ .opcode = .goto });
+        const true_address = self.instructions.items.len;
+        try self.emit(.{ .opcode = .integer, .p1 = 1, .p2 = target });
+        const done = self.instructions.items.len;
+        self.patchJump(compare_address, true_address);
+        self.patchJump(left_null_address, done);
+        self.patchJump(right_null_address, done);
+        self.patchJump(false_done_address, done);
+        return target;
+    }
+
+    /// Source `codeVectorCompare()`: materialize scalar or row-value
+    /// comparisons with left-to-right NULL and lexicographic semantics.
+    fn codeVectorCompare(self: *Parser, left: u16, right: u16, opcode: vdbe.Opcode) ParserError!u16 {
+        const left_count = self.vectorLength(left);
+        const right_count = self.vectorLength(right);
+        if (left_count != right_count) return error.Syntax;
+        if (left_count == 1) return self.codeScalarCompare(left, right, opcode);
+
+        if (opcode == .eq or opcode == .ne) {
+            var result = try self.allocateRegister();
+            try self.emit(.{ .opcode = .integer, .p1 = 1, .p2 = result });
+            var field: u16 = 0;
+            while (field < left_count) : (field += 1) {
+                const left_field = try self.expressionVectorRegister(left, field);
+                const right_field = try self.expressionVectorRegister(right, field);
+                const equal = try self.codeScalarCompare(left_field, right_field, .eq);
+                const combined = try self.allocateRegister();
+                try self.emit(.{ .opcode = .and_, .p1 = equal, .p2 = result, .p3 = combined });
+                result = combined;
+            }
+            if (opcode == .ne) {
+                const inverted = try self.allocateRegister();
+                try self.emit(.{ .opcode = .not, .p1 = result, .p2 = inverted });
+                return inverted;
+            }
+            return result;
+        }
+
+        const strict_opcode: vdbe.Opcode = switch (opcode) {
+            .lt, .le => .lt,
+            .gt, .ge => .gt,
+            else => return error.Syntax,
+        };
+        const target = try self.allocateRegister();
+        try self.emit(.{ .opcode = .null_, .p2 = target });
+        var done_jumps: [32]usize = undefined;
+        var null_jumps: [32]usize = undefined;
+        var jump_count: usize = 0;
+        var field: u16 = 0;
+        while (field < left_count) : (field += 1) {
+            const left_field = try self.expressionVectorRegister(left, field);
+            const right_field = try self.expressionVectorRegister(right, field);
+            const equal = try self.codeScalarCompare(left_field, right_field, .eq);
+            const equal_branch = try self.expressionIfTrue(equal, 0, false);
+            null_jumps[jump_count] = self.instructions.items.len;
+            try self.emit(.{ .opcode = .is_null, .p1 = equal });
+            const decisive = try self.codeScalarCompare(left_field, right_field, strict_opcode);
+            try self.emit(.{ .opcode = .copy, .p1 = decisive, .p2 = target });
+            done_jumps[jump_count] = self.instructions.items.len;
+            try self.emit(.{ .opcode = .goto });
+            jump_count += 1;
+            self.patchJump(equal_branch, self.instructions.items.len);
+        }
+        try self.emit(.{ .opcode = .integer, .p1 = @intFromBool(opcode == .le or opcode == .ge), .p2 = target });
+        const done = self.instructions.items.len;
+        for (done_jumps[0..jump_count]) |address| {
+            self.patchJump(address, done);
+        }
+        for (null_jumps[0..jump_count]) |address| {
+            self.patchJump(address, done);
+        }
+        return target;
+    }
+
+    fn codeNullPredicate(self: *Parser, source: u16, not_null: bool) !u16 {
+        const target = try self.allocateRegister();
+        try self.emit(.{ .opcode = .integer, .p1 = @intFromBool(not_null), .p2 = target });
+        const branch = self.instructions.items.len;
+        try self.emit(.{ .opcode = .is_null, .p1 = source });
+        const done_jump = self.instructions.items.len;
+        try self.emit(.{ .opcode = .goto });
+        const null_address = self.instructions.items.len;
+        try self.emit(.{ .opcode = .integer, .p1 = @intFromBool(!not_null), .p2 = target });
+        const done = self.instructions.items.len;
+        self.patchJump(branch, null_address);
+        self.patchJump(done_jump, done);
+        return target;
+    }
+
+    /// Source `exprCodeTargetAndOr()`: branch around an operand only when the
+    /// first value fully determines the result, while preserving NULL logic.
+    fn expressionCodeTargetAndOr(self: *Parser, left: u16, operator: u16, right_precedence: u8) ParserError!u16 {
+        const target = try self.allocateRegister();
+        const branch = if (operator == tokens.tk_and)
+            try self.expressionIfFalse(left, 0, true)
+        else
+            try self.expressionIfTrue(left, 0, false);
+        const right = try self.expression(right_precedence);
+        try self.emit(.{ .opcode = if (operator == tokens.tk_and) .and_ else .or_, .p1 = right, .p2 = left, .p3 = target });
+        const done_jump = self.instructions.items.len;
+        try self.emit(.{ .opcode = .goto });
+        const short_circuit = self.instructions.items.len;
+        try self.emit(.{ .opcode = .or_, .p1 = left, .p2 = left, .p3 = target });
+        const done = self.instructions.items.len;
+        self.patchJump(branch, short_circuit);
+        self.patchJump(done_jump, done);
+        return target;
+    }
+
+    /// Source `exprCodeBetween()`: evaluate the common LHS once and combine
+    /// the lower and upper comparisons using SQLite three-valued AND.
+    fn expressionCodeBetween(self: *Parser, value: u16, right_precedence: u8) ParserError!u16 {
+        const lower = try self.expression(right_precedence);
+        _ = try self.require(tokens.tk_and);
+        const upper = try self.expression(right_precedence);
+        const lower_result = try self.codeVectorCompare(value, lower, .ge);
+        const upper_result = try self.codeVectorCompare(value, upper, .le);
+        const target = try self.allocateRegister();
+        try self.emit(.{ .opcode = .and_, .p1 = upper_result, .p2 = lower_result, .p3 = target });
+        return target;
+    }
+
+    fn subqueryClosingToken(self: *const Parser) ?usize {
+        var depth: usize = 1;
+        var index = self.position;
+        while (index < self.token_list.len) : (index += 1) {
+            if (self.token_list[index].typ == tokens.tk_lp) depth += 1;
+            if (self.token_list[index].typ == tokens.tk_rp) {
+                depth -= 1;
+                if (depth == 0) return index;
+            }
+        }
+        return null;
+    }
+
+    fn subqueryHasVariable(self: *const Parser, closing: usize) bool {
+        for (self.token_list[self.position..closing]) |token| {
+            if (token.typ == tokens.tk_variable) return true;
+        }
+        return false;
+    }
+
+    /// Source `findCompatibleInRhsSubrtn()`: reuse an already materialized,
+    /// uncorrelated subquery with the same normalized token bytes.
+    fn findCompatibleInRhsSubroutine(self: *const Parser, start: usize, end: usize) ?u16 {
+        var index: usize = 0;
+        while (index < self.subquery_count) : (index += 1) {
+            const cached = self.subqueries[index];
+            if (std.mem.eql(u8, self.source[start..end], self.source[cached.start..cached.end])) return cached.first_register;
+        }
+        return null;
+    }
+
+    fn rememberSubquery(self: *Parser, start: usize, end: usize, first_register: u16) !void {
+        if (@as(usize, self.subquery_count) == self.subqueries.len) return error.TooBig;
+        self.subqueries[@intCast(self.subquery_count)] = .{ .start = start, .end = end, .first_register = first_register };
+        self.subquery_count += 1;
+    }
+
+    /// Source `sqlite3CodeSubselect()`: compile a bounded scalar SELECT into a
+    /// stable result register and reuse identical uncorrelated subqueries.
+    fn expressionCodeSubselect(self: *Parser) ParserError!u16 {
+        const closing = self.subqueryClosingToken() orelse return error.Syntax;
+        const start = self.token_list[self.position].start;
+        const end = self.token_list[closing].end;
+        const reusable = !self.subqueryHasVariable(closing);
+        if (reusable) {
+            if (self.findCompatibleInRhsSubroutine(start, end)) |register| {
+                self.position = closing + 1;
+                return register;
+            }
+        }
+        _ = try self.require(tokens.tk_select);
+        const value = try self.expression(0);
+        _ = try self.require(tokens.tk_rp);
+        const stable = try self.allocateRegister();
+        try self.emit(.{ .opcode = .copy, .p1 = value, .p2 = stable });
+        if (reusable) try self.rememberSubquery(start, end, stable);
+        return stable;
+    }
+
+    /// Source `sqlite3CodeRhsOfIN()`: materialize the scalar SELECT RHS of an
+    /// IN operator once and compare it using the normal three-valued path.
+    fn expressionCodeRhsOfIn(self: *Parser, value: u16, negated: bool) ParserError!u16 {
+        const candidate = try self.expressionCodeSubselect();
+        var result = try self.codeVectorCompare(value, candidate, .eq);
+        if (negated) {
+            const inverted = try self.allocateRegister();
+            try self.emit(.{ .opcode = .not, .p1 = result, .p2 = inverted });
+            result = inverted;
+        }
+        return result;
+    }
+
+    /// Source `sqlite3FindInIndex()` bounded ephemeral-index path. Constant
+    /// integer lists large enough to justify indexing use a RowSet probe;
+    /// smaller or dynamic lists fall back to comparison code.
+    fn findInIndex(self: *Parser, value: u16, negated: bool) ParserError!?u16 {
+        const closing = self.subqueryClosingToken() orelse return error.Syntax;
+        var scan = self.position;
+        var count: usize = 0;
+        var expect_value = true;
+        while (scan < closing) : (scan += 1) {
+            const token = self.token_list[scan];
+            if (expect_value) {
+                if (token.typ != tokens.tk_integer) return null;
+                count += 1;
+            } else if (token.typ != tokens.tk_comma) return null;
+            expect_value = !expect_value;
+        }
+        if (expect_value or count < 3) return null;
+
+        const set_register = try self.allocateRegister();
+        var item: usize = 0;
+        while (item < count) : (item += 1) {
+            const token = try self.require(tokens.tk_integer);
+            const integer = std.fmt.parseInt(i64, token.text, 10) catch return error.TooBig;
+            const candidate = try self.allocateRegister();
+            if (integer >= std.math.minInt(i32) and integer <= std.math.maxInt(i32)) {
+                try self.emit(.{ .opcode = .integer, .p1 = @intCast(integer), .p2 = candidate });
+            } else {
+                try self.emit(.{ .opcode = .int64, .p2 = candidate, .p4 = .{ .integer = integer } });
+            }
+            try self.emit(.{ .opcode = .row_set_add, .p1 = set_register, .p2 = candidate });
+            if (item + 1 < count) _ = try self.require(tokens.tk_comma);
+        }
+        _ = try self.require(tokens.tk_rp);
+
+        const result = try self.allocateRegister();
+        try self.emit(.{ .opcode = .null_, .p2 = result });
+        const null_jump = self.instructions.items.len;
+        try self.emit(.{ .opcode = .is_null, .p1 = value });
+        try self.emit(.{ .opcode = .integer, .p1 = 0, .p2 = result });
+        const found_jump = self.instructions.items.len;
+        try self.emit(.{ .opcode = .row_set_test, .p1 = set_register, .p3 = value, .p4 = .{ .integer = -1 } });
+        const done_jump = self.instructions.items.len;
+        try self.emit(.{ .opcode = .goto });
+        const found = self.instructions.items.len;
+        try self.emit(.{ .opcode = .integer, .p1 = 1, .p2 = result });
+        const done = self.instructions.items.len;
+        self.patchJump(null_jump, done);
+        self.patchJump(found_jump, found);
+        self.patchJump(done_jump, done);
+        if (negated) {
+            const inverted = try self.allocateRegister();
+            try self.emit(.{ .opcode = .not, .p1 = result, .p2 = inverted });
+            return inverted;
+        }
+        return result;
+    }
+
+    /// Source `sqlite3ExprCodeIN()` list path. The OR reduction retains NULL
+    /// whenever no equality is true but either side of a comparison is NULL.
+    fn expressionCodeIn(self: *Parser, value: u16, negated: bool) ParserError!u16 {
+        _ = try self.require(tokens.tk_lp);
+        if (self.current()) |token| {
+            if (token.typ == tokens.tk_select) return self.expressionCodeRhsOfIn(value, negated);
+        }
+        if (try self.findInIndex(value, negated)) |indexed| return indexed;
+        var result = try self.allocateRegister();
+        try self.emit(.{ .opcode = .integer, .p1 = 0, .p2 = result });
+        if (!self.accept(tokens.tk_rp)) {
+            while (true) {
+                const candidate = try self.expression(0);
+                const equal = try self.codeVectorCompare(value, candidate, .eq);
+                const combined = try self.allocateRegister();
+                try self.emit(.{ .opcode = .or_, .p1 = equal, .p2 = result, .p3 = combined });
+                result = combined;
+                if (self.accept(tokens.tk_rp)) break;
+                _ = try self.require(tokens.tk_comma);
+            }
+        }
+        if (negated) {
+            const inverted = try self.allocateRegister();
+            try self.emit(.{ .opcode = .not, .p1 = result, .p2 = inverted });
+            return inverted;
+        }
+        return result;
+    }
+
+    /// Source `exprCodeInlineFunction()`: compile COALESCE/IFNULL and IIF as
+    /// lazy control flow so unselected arguments are never evaluated.
+    fn expressionCodeInlineFunction(self: *Parser, name: []const u8) ParserError!u16 {
+        const target = try self.allocateRegister();
+        if (std.ascii.eqlIgnoreCase(name, "coalesce") or std.ascii.eqlIgnoreCase(name, "ifnull")) {
+            var branches: [32]usize = undefined;
+            var branch_count: usize = 0;
+            var argument_count: usize = 0;
+            while (true) {
+                const value = try self.expression(0);
+                argument_count += 1;
+                try self.emit(.{ .opcode = .copy, .p1 = value, .p2 = target });
+                if (self.accept(tokens.tk_rp)) break;
+                if (branch_count == branches.len) return error.TooBig;
+                branches[branch_count] = self.instructions.items.len;
+                branch_count += 1;
+                try self.emit(.{ .opcode = .not_null, .p1 = target });
+                _ = try self.require(tokens.tk_comma);
+            }
+            if (argument_count < 2 or (std.ascii.eqlIgnoreCase(name, "ifnull") and argument_count != 2)) return error.Syntax;
+            const done = self.instructions.items.len;
+            for (branches[0..branch_count]) |address| {
+                self.patchJump(address, done);
+            }
+            return target;
+        }
+
+        var done_jumps: [32]usize = undefined;
+        var done_count: usize = 0;
+        var pending_false: ?usize = null;
+        while (true) {
+            const candidate_start = self.instructions.items.len;
+            if (pending_false) |address| self.patchJump(address, candidate_start);
+            const candidate = try self.expression(0);
+            if (self.accept(tokens.tk_rp)) {
+                try self.emit(.{ .opcode = .copy, .p1 = candidate, .p2 = target });
+                break;
+            }
+            _ = try self.require(tokens.tk_comma);
+            const false_branch = try self.expressionIfFalse(candidate, 0, false);
+            const value = try self.expression(0);
+            try self.emit(.{ .opcode = .copy, .p1 = value, .p2 = target });
+            if (done_count == done_jumps.len) return error.TooBig;
+            done_jumps[done_count] = self.instructions.items.len;
+            done_count += 1;
+            try self.emit(.{ .opcode = .goto });
+            if (self.accept(tokens.tk_rp)) {
+                self.patchJump(false_branch, self.instructions.items.len);
+                try self.emit(.{ .opcode = .null_, .p2 = target });
+                break;
+            }
+            _ = try self.require(tokens.tk_comma);
+            pending_false = false_branch;
+        }
+        const done = self.instructions.items.len;
+        for (done_jumps[0..done_count]) |address| {
+            self.patchJump(address, done);
+        }
+        return target;
+    }
+
     fn ownBytes(self: *Parser, bytes: []const u8) ![]u8 {
         const copy = try self.allocator.dupe(u8, bytes);
         errdefer self.allocator.free(copy);
@@ -1861,13 +3755,25 @@ const Parser = struct {
     fn primary(self: *Parser) ParserError!u16 {
         const token = self.current() orelse return error.Syntax;
         if (self.accept(tokens.tk_lp)) {
-            const result = try self.expression(0);
+            if (self.current()) |current_token| {
+                if (current_token.typ == tokens.tk_select) return self.expressionCodeSubselect();
+            }
+            var values = std.ArrayList(u16).empty;
+            defer values.deinit(self.allocator);
+            try values.append(self.allocator, try self.expression(0));
+            while (self.accept(tokens.tk_comma)) {
+                try values.append(self.allocator, try self.expression(0));
+            }
             _ = try self.require(tokens.tk_rp);
-            return result;
+            return self.expressionCodeVector(values.items);
         }
         if (token.typ == tokens.tk_id and self.position + 1 < self.token_list.len and self.token_list[self.position + 1].typ == tokens.tk_lp) {
-            const connection = self.connection orelse return error.Syntax;
             self.position += 2;
+            if (std.ascii.eqlIgnoreCase(token.text, "coalesce") or std.ascii.eqlIgnoreCase(token.text, "ifnull") or std.ascii.eqlIgnoreCase(token.text, "iif")) {
+                if (self.accept(tokens.tk_rp)) return error.Syntax;
+                return self.expressionCodeInlineFunction(token.text);
+            }
+            const connection = self.connection orelse return error.Syntax;
             var arguments = std.ArrayList(u16).empty;
             defer arguments.deinit(self.allocator);
             if (!self.accept(tokens.tk_rp)) {
@@ -1970,9 +3876,20 @@ const Parser = struct {
         return switch (typ) {
             tokens.tk_or => 1,
             tokens.tk_and => 2,
-            tokens.tk_concat => 8,
+            tokens.tk_between,
+            tokens.tk_in,
+            tokens.tk_isnull,
+            tokens.tk_notnull,
+            tokens.tk_eq,
+            tokens.tk_ne,
+            tokens.tk_lt,
+            tokens.tk_le,
+            tokens.tk_gt,
+            tokens.tk_ge,
+            => 3,
             tokens.tk_plus, tokens.tk_minus => 6,
             tokens.tk_star, tokens.tk_slash, tokens.tk_rem => 7,
+            tokens.tk_concat => 8,
             else => 0,
         };
     }
@@ -1980,20 +3897,56 @@ const Parser = struct {
     fn expression(self: *Parser, minimum: u8) ParserError!u16 {
         var left = try self.unary();
         while (self.current()) |operator| {
-            const level = precedence(operator.typ);
+            var operator_type = operator.typ;
+            var negated_in = false;
+            if (operator_type == tokens.tk_not and self.position + 1 < self.token_list.len and self.token_list[self.position + 1].typ == tokens.tk_in) {
+                operator_type = tokens.tk_in;
+                negated_in = true;
+            }
+            const level = precedence(operator_type);
             if (level == 0 or level < minimum) break;
-            self.position += 1;
+            self.position += if (negated_in) 2 else 1;
+            if (operator_type == tokens.tk_and or operator_type == tokens.tk_or) {
+                left = try self.expressionCodeTargetAndOr(left, operator_type, level + 1);
+                continue;
+            }
+            if (operator_type == tokens.tk_between) {
+                left = try self.expressionCodeBetween(left, level + 1);
+                continue;
+            }
+            if (operator_type == tokens.tk_in) {
+                left = try self.expressionCodeIn(left, negated_in);
+                continue;
+            }
+            if (operator_type == tokens.tk_isnull or operator_type == tokens.tk_notnull) {
+                left = try self.codeNullPredicate(left, operator_type == tokens.tk_notnull);
+                continue;
+            }
             const right = try self.expression(level + 1);
+            if (operator_type == tokens.tk_eq or operator_type == tokens.tk_ne or
+                operator_type == tokens.tk_lt or operator_type == tokens.tk_le or
+                operator_type == tokens.tk_gt or operator_type == tokens.tk_ge)
+            {
+                const comparison: vdbe.Opcode = switch (operator_type) {
+                    tokens.tk_eq => .eq,
+                    tokens.tk_ne => .ne,
+                    tokens.tk_lt => .lt,
+                    tokens.tk_le => .le,
+                    tokens.tk_gt => .gt,
+                    tokens.tk_ge => .ge,
+                    else => unreachable,
+                };
+                left = try self.codeVectorCompare(left, right, comparison);
+                continue;
+            }
             const target = try self.allocateRegister();
-            const opcode: vdbe.Opcode = switch (operator.typ) {
+            const opcode: vdbe.Opcode = switch (operator_type) {
                 tokens.tk_plus => .add,
                 tokens.tk_minus => .subtract,
                 tokens.tk_star => .multiply,
                 tokens.tk_slash => .divide,
                 tokens.tk_rem => .remainder,
                 tokens.tk_concat => .concat,
-                tokens.tk_and => .and_,
-                tokens.tk_or => .or_,
                 else => unreachable,
             };
             try self.emit(.{ .opcode = opcode, .p1 = right, .p2 = left, .p3 = target });
@@ -2082,7 +4035,28 @@ fn scanParameters(allocator: std.mem.Allocator, token_list: []const Token) !stru
     return .{ .maximum = maximum, .names = names, .owned = owned, .map = map };
 }
 
-const ResolvedColumn = struct { name: []const u8, declared_type: []const u8, record_index: usize, integer_primary_key: bool, not_null: bool };
+const ResolvedColumn = struct {
+    name: []const u8,
+    declared_type: []const u8,
+    collation: []const u8,
+    record_index: usize,
+    integer_primary_key: bool,
+    primary_key: bool,
+    unique: bool,
+    not_null: bool,
+    default_start: ?usize,
+    default_end: usize,
+    generated_start: ?usize,
+    generated_end: usize,
+    generated_virtual: bool,
+    scan_expression: bool,
+};
+
+fn isTableConstraintStart(token_type: u16) bool {
+    return token_type == tokens.tk_constraint or token_type == tokens.tk_primary or
+        token_type == tokens.tk_unique or token_type == tokens.tk_check or
+        token_type == tokens.tk_foreign;
+}
 
 fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { source: [:0]u8, tokens: []Token, columns: []ResolvedColumn } {
     const source = try allocator.dupeZ(u8, sql);
@@ -2097,6 +4071,24 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
     position += 1;
     var record_index: usize = 0;
     while (position < parsed.tokens.len and parsed.tokens[position].typ != tokens.tk_rp) {
+        if (isTableConstraintStart(parsed.tokens[position].typ)) {
+            var constraint_depth: usize = 0;
+            while (position < parsed.tokens.len) : (position += 1) {
+                const constraint_type = parsed.tokens[position].typ;
+                if (constraint_type == tokens.tk_lp) {
+                    constraint_depth += 1;
+                }
+                if (constraint_type == tokens.tk_rp) {
+                    if (constraint_depth == 0) break;
+                    constraint_depth -= 1;
+                }
+                if (constraint_type == tokens.tk_comma and constraint_depth == 0) break;
+            }
+            if (position < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_comma) {
+                position += 1;
+            }
+            continue;
+        }
         if (parsed.tokens[position].typ != tokens.tk_id) return error.Syntax;
         const name = parsed.tokens[position].text;
         const start = position;
@@ -2112,17 +4104,1114 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         }
         const declared_type = if (start + 1 < position) parsed.tokens[start + 1].text else "";
         var primary = false;
+        var unique = false;
         var not_null = false;
+        var collation: []const u8 = "BINARY";
+        var default_start: ?usize = null;
+        var default_end = position;
+        var generated_start: ?usize = null;
+        var generated_end = position;
+        var generated_virtual = false;
         var index = start + 1;
-        while (index + 1 < position) : (index += 1) {
-            if (parsed.tokens[index].typ == tokens.tk_primary and parsed.tokens[index + 1].typ == tokens.tk_key) primary = true;
-            if (parsed.tokens[index].typ == tokens.tk_not and parsed.tokens[index + 1].typ == tokens.tk_null) not_null = true;
+        while (index < position) : (index += 1) {
+            if (index + 1 < position and parsed.tokens[index].typ == tokens.tk_primary and parsed.tokens[index + 1].typ == tokens.tk_key) {
+                primary = true;
+            }
+            if (parsed.tokens[index].typ == tokens.tk_unique) {
+                unique = true;
+            }
+            if (index + 1 < position and parsed.tokens[index].typ == tokens.tk_not and parsed.tokens[index + 1].typ == tokens.tk_null) {
+                not_null = true;
+            }
+            if (index + 1 < position and parsed.tokens[index].typ == tokens.tk_collate) {
+                collation = parsed.tokens[index + 1].text;
+            }
+            if (parsed.tokens[index].typ == tokens.tk_default and index + 1 < position and default_start == null) {
+                default_start = index + 1;
+                default_end = index + 2;
+                if (parsed.tokens[index + 1].typ == tokens.tk_lp) {
+                    var default_depth: usize = 1;
+                    while (default_end < position and default_depth != 0) : (default_end += 1) {
+                        if (parsed.tokens[default_end].typ == tokens.tk_lp) {
+                            default_depth += 1;
+                        }
+                        if (parsed.tokens[default_end].typ == tokens.tk_rp) {
+                            default_depth -= 1;
+                        }
+                    }
+                } else if ((parsed.tokens[index + 1].typ == tokens.tk_plus or parsed.tokens[index + 1].typ == tokens.tk_minus) and default_end < position) {
+                    default_end += 1;
+                }
+            }
+            if (parsed.tokens[index].typ == tokens.tk_as and index + 2 < position and parsed.tokens[index + 1].typ == tokens.tk_lp and generated_start == null) {
+                generated_start = index + 2;
+                generated_end = generated_start.?;
+                var generated_depth: usize = 1;
+                while (generated_end < position and generated_depth != 0) : (generated_end += 1) {
+                    if (parsed.tokens[generated_end].typ == tokens.tk_lp) {
+                        generated_depth += 1;
+                    }
+                    if (parsed.tokens[generated_end].typ == tokens.tk_rp) {
+                        generated_depth -= 1;
+                    }
+                }
+                if (generated_depth != 0) return error.Syntax;
+                generated_end -= 1;
+                const storage_position = generated_end + 1;
+                generated_virtual = storage_position >= position or parsed.tokens[storage_position].typ == tokens.tk_virtual or !std.ascii.eqlIgnoreCase(parsed.tokens[storage_position].text, "stored");
+            }
         }
-        try columns.append(allocator, .{ .name = name, .declared_type = declared_type, .record_index = record_index, .integer_primary_key = primary, .not_null = not_null });
-        record_index += 1;
+        try columns.append(allocator, .{ .name = name, .declared_type = declared_type, .collation = collation, .record_index = record_index, .integer_primary_key = primary and std.ascii.eqlIgnoreCase(declared_type, "INTEGER"), .primary_key = primary, .unique = unique or primary, .not_null = not_null, .default_start = default_start, .default_end = default_end, .generated_start = generated_start, .generated_end = generated_end, .generated_virtual = generated_virtual, .scan_expression = false });
+        if (!generated_virtual) {
+            record_index += 1;
+        }
         if (position < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_comma) position += 1;
     }
     return .{ .source = source, .tokens = parsed.tokens, .columns = try columns.toOwnedSlice(allocator) };
+}
+
+const ForeignKeyAction = enum(u8) {
+    no_action,
+    restrict,
+    cascade,
+    set_null,
+    set_default,
+};
+
+const ForeignKeyMapping = struct {
+    child_column: usize,
+    parent_column: ?[]const u8,
+};
+
+const ForeignKeyDefinition = struct {
+    parent_table: []const u8,
+    mapping_start: usize,
+    mapping_count: usize,
+    on_delete: ForeignKeyAction = .no_action,
+    on_update: ForeignKeyAction = .no_action,
+    deferred: bool = false,
+};
+
+const ForeignKeyDefinitions = struct {
+    allocator: std.mem.Allocator,
+    source: [:0]u8,
+    tokens: []Token,
+    keys: []ForeignKeyDefinition,
+    mappings: []ForeignKeyMapping,
+
+    fn deinit(self: *ForeignKeyDefinitions) void {
+        self.allocator.free(self.mappings);
+        self.allocator.free(self.keys);
+        self.allocator.free(self.tokens);
+        self.allocator.free(self.source);
+        self.* = undefined;
+    }
+
+    fn keyMappings(self: *const ForeignKeyDefinitions, key: ForeignKeyDefinition) []const ForeignKeyMapping {
+        return self.mappings[key.mapping_start..][0..key.mapping_count];
+    }
+};
+
+fn resolvedColumnIndex(columns: []const ResolvedColumn, name: []const u8) ?usize {
+    for (columns, 0..) |column, index| {
+        if (std.ascii.eqlIgnoreCase(column.name, name)) return index;
+    }
+    return null;
+}
+
+fn parseForeignKeyColumnList(token_list: []const Token, position: *usize, end: usize, output: *std.ArrayList([]const u8), allocator: std.mem.Allocator) !void {
+    if (position.* >= end or token_list[position.*].typ != tokens.tk_lp) return error.Syntax;
+    position.* += 1;
+    while (position.* < end) {
+        if (token_list[position.*].typ != tokens.tk_id) return error.Syntax;
+        try output.append(allocator, token_list[position.*].text);
+        position.* += 1;
+        if (position.* < end and token_list[position.*].typ == tokens.tk_comma) {
+            position.* += 1;
+            continue;
+        }
+        if (position.* >= end or token_list[position.*].typ != tokens.tk_rp) return error.Syntax;
+        position.* += 1;
+        return;
+    }
+    return error.Syntax;
+}
+
+fn parseForeignKeyAction(token_list: []const Token, position: *usize, end: usize) !ForeignKeyAction {
+    if (position.* >= end) return error.Syntax;
+    const first = token_list[position.*].typ;
+    position.* += 1;
+    if (first == tokens.tk_cascade) return .cascade;
+    if (first == tokens.tk_restrict) return .restrict;
+    if (first == tokens.tk_no) {
+        if (position.* >= end or token_list[position.*].typ != tokens.tk_action) return error.Syntax;
+        position.* += 1;
+        return .no_action;
+    }
+    if (first == tokens.tk_set) {
+        if (position.* >= end) return error.Syntax;
+        const second = token_list[position.*].typ;
+        position.* += 1;
+        if (second == tokens.tk_null) return .set_null;
+        if (second == tokens.tk_default) return .set_default;
+    }
+    return error.Syntax;
+}
+
+fn appendForeignKeySegment(
+    allocator: std.mem.Allocator,
+    token_list: []const Token,
+    segment_start: usize,
+    segment_end: usize,
+    columns: []const ResolvedColumn,
+    keys: *std.ArrayList(ForeignKeyDefinition),
+    mappings: *std.ArrayList(ForeignKeyMapping),
+) !void {
+    var position = segment_start;
+    if (position >= segment_end) return;
+    if (token_list[position].typ == tokens.tk_constraint) {
+        if (position + 1 >= segment_end or token_list[position + 1].typ != tokens.tk_id) return error.Syntax;
+        position += 2;
+    }
+
+    var child_names = std.ArrayList([]const u8).empty;
+    defer child_names.deinit(allocator);
+    if (position < segment_end and token_list[position].typ == tokens.tk_foreign) {
+        position += 1;
+        if (position >= segment_end or token_list[position].typ != tokens.tk_key) return error.Syntax;
+        position += 1;
+        try parseForeignKeyColumnList(token_list, &position, segment_end, &child_names, allocator);
+        if (position >= segment_end or token_list[position].typ != tokens.tk_references) return error.Syntax;
+    } else {
+        if (token_list[segment_start].typ != tokens.tk_id) return;
+        try child_names.append(allocator, token_list[segment_start].text);
+        position = segment_start + 1;
+        while (position < segment_end and token_list[position].typ != tokens.tk_references) : (position += 1) {}
+        if (position == segment_end) return;
+    }
+    position += 1;
+    if (position >= segment_end or token_list[position].typ != tokens.tk_id) return error.Syntax;
+    const parent_table = token_list[position].text;
+    position += 1;
+
+    var parent_names = std.ArrayList([]const u8).empty;
+    defer parent_names.deinit(allocator);
+    if (position < segment_end and token_list[position].typ == tokens.tk_lp) {
+        try parseForeignKeyColumnList(token_list, &position, segment_end, &parent_names, allocator);
+        if (parent_names.items.len != child_names.items.len) return error.Syntax;
+    }
+
+    var definition = ForeignKeyDefinition{
+        .parent_table = parent_table,
+        .mapping_start = mappings.items.len,
+        .mapping_count = child_names.items.len,
+    };
+    for (child_names.items, 0..) |child_name, index| {
+        const child_column = resolvedColumnIndex(columns, child_name) orelse return error.Syntax;
+        try mappings.append(allocator, .{
+            .child_column = child_column,
+            .parent_column = if (parent_names.items.len == 0) null else parent_names.items[index],
+        });
+    }
+    errdefer mappings.shrinkRetainingCapacity(definition.mapping_start);
+
+    while (position < segment_end) {
+        if (token_list[position].typ == tokens.tk_on) {
+            if (position + 1 >= segment_end) return error.Syntax;
+            const event = token_list[position + 1].typ;
+            position += 2;
+            const action = try parseForeignKeyAction(token_list, &position, segment_end);
+            if (event == tokens.tk_delete) {
+                definition.on_delete = action;
+            } else if (event == tokens.tk_update) {
+                definition.on_update = action;
+            } else {
+                return error.Syntax;
+            }
+            continue;
+        }
+        if (token_list[position].typ == tokens.tk_initially) {
+            if (position + 1 >= segment_end) return error.Syntax;
+            definition.deferred = token_list[position + 1].typ == tokens.tk_deferred;
+            position += 2;
+            continue;
+        }
+        position += 1;
+    }
+    try keys.append(allocator, definition);
+}
+
+fn resolveForeignKeys(allocator: std.mem.Allocator, sql: []const u8, columns: []const ResolvedColumn) !ForeignKeyDefinitions {
+    const source = try allocator.dupeZ(u8, sql);
+    errdefer allocator.free(source);
+    const parsed = try tokenize(allocator, source);
+    errdefer allocator.free(parsed.tokens);
+    var keys = std.ArrayList(ForeignKeyDefinition).empty;
+    errdefer keys.deinit(allocator);
+    var mappings = std.ArrayList(ForeignKeyMapping).empty;
+    errdefer mappings.deinit(allocator);
+
+    var position: usize = 0;
+    while (position < parsed.tokens.len and parsed.tokens[position].typ != tokens.tk_lp) : (position += 1) {}
+    if (position == parsed.tokens.len) return error.Syntax;
+    position += 1;
+    while (position < parsed.tokens.len and parsed.tokens[position].typ != tokens.tk_rp) {
+        const segment_start = position;
+        var depth: usize = 0;
+        while (position < parsed.tokens.len) : (position += 1) {
+            const token_type = parsed.tokens[position].typ;
+            if (token_type == tokens.tk_lp) depth += 1;
+            if (token_type == tokens.tk_rp) {
+                if (depth == 0) break;
+                depth -= 1;
+            }
+            if (token_type == tokens.tk_comma and depth == 0) break;
+        }
+        try appendForeignKeySegment(allocator, parsed.tokens, segment_start, position, columns, &keys, &mappings);
+        if (position < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_comma) position += 1;
+    }
+    return .{
+        .allocator = allocator,
+        .source = source,
+        .tokens = parsed.tokens,
+        .keys = try keys.toOwnedSlice(allocator),
+        .mappings = try mappings.toOwnedSlice(allocator),
+    };
+}
+
+fn tableKeyConstraintMatches(allocator: std.mem.Allocator, token_list: []const Token, columns: []const ResolvedColumn, requested: []const ForeignKeyMapping, primary_only: bool) !bool {
+    var position: usize = 0;
+    while (position < token_list.len and token_list[position].typ != tokens.tk_lp) : (position += 1) {}
+    if (position == token_list.len) return error.Syntax;
+    position += 1;
+    while (position < token_list.len and token_list[position].typ != tokens.tk_rp) {
+        const segment_start = position;
+        var depth: usize = 0;
+        while (position < token_list.len) : (position += 1) {
+            const token_type = token_list[position].typ;
+            if (token_type == tokens.tk_lp) depth += 1;
+            if (token_type == tokens.tk_rp) {
+                if (depth == 0) break;
+                depth -= 1;
+            }
+            if (token_type == tokens.tk_comma and depth == 0) break;
+        }
+        var cursor = segment_start;
+        if (cursor < position and token_list[cursor].typ == tokens.tk_constraint) {
+            cursor += 2;
+        }
+        const primary = cursor + 1 < position and token_list[cursor].typ == tokens.tk_primary and token_list[cursor + 1].typ == tokens.tk_key;
+        const unique = cursor < position and token_list[cursor].typ == tokens.tk_unique;
+        if (primary or (!primary_only and unique)) {
+            cursor += if (primary) 2 else 1;
+            var names = std.ArrayList([]const u8).empty;
+            defer names.deinit(allocator);
+            try parseForeignKeyColumnList(token_list, &cursor, position, &names, allocator);
+            if (names.items.len == requested.len) {
+                var matched = true;
+                for (requested) |mapping| {
+                    const parent_name = mapping.parent_column orelse {
+                        matched = false;
+                        break;
+                    };
+                    var found = false;
+                    for (names.items) |name| {
+                        if (std.ascii.eqlIgnoreCase(name, parent_name)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found or resolvedColumnIndex(columns, parent_name) == null) {
+                        matched = false;
+                        break;
+                    }
+                }
+                if (matched) return true;
+            }
+        }
+        if (position < token_list.len and token_list[position].typ == tokens.tk_comma) position += 1;
+    }
+    return false;
+}
+
+/// Runtime counterpart of source `sqlite3FkLocateIndex()`. The bounded
+/// frontend has no CREATE INDEX path yet, so eligible parent keys are inline
+/// UNIQUE/PRIMARY KEY declarations or table-level UNIQUE/PRIMARY KEY clauses.
+fn locateForeignKeyIndex(
+    allocator: std.mem.Allocator,
+    parent_columns: []const ResolvedColumn,
+    parent_tokens: []const Token,
+    mappings: []const ForeignKeyMapping,
+) ![]usize {
+    if (mappings.len == 0) return error.ForeignKeyMismatch;
+    const result = try allocator.alloc(usize, mappings.len);
+    errdefer allocator.free(result);
+
+    if (mappings[0].parent_column == null) {
+        for (mappings) |mapping| {
+            if (mapping.parent_column != null) return error.ForeignKeyMismatch;
+        }
+        if (mappings.len == 1) {
+            for (parent_columns, 0..) |column, index| {
+                if (column.primary_key) {
+                    result[0] = index;
+                    return result;
+                }
+            }
+        }
+        var primary_mappings = std.ArrayList(ForeignKeyMapping).empty;
+        defer primary_mappings.deinit(allocator);
+        var position: usize = 0;
+        while (position < parent_tokens.len and parent_tokens[position].typ != tokens.tk_primary) : (position += 1) {}
+        while (position + 2 < parent_tokens.len) : (position += 1) {
+            if (parent_tokens[position].typ != tokens.tk_primary or parent_tokens[position + 1].typ != tokens.tk_key or parent_tokens[position + 2].typ != tokens.tk_lp) continue;
+            var cursor = position + 2;
+            var names = std.ArrayList([]const u8).empty;
+            defer names.deinit(allocator);
+            try parseForeignKeyColumnList(parent_tokens, &cursor, parent_tokens.len, &names, allocator);
+            if (names.items.len != mappings.len) return error.ForeignKeyMismatch;
+            for (names.items, 0..) |name, index| {
+                result[index] = resolvedColumnIndex(parent_columns, name) orelse return error.ForeignKeyMismatch;
+            }
+            return result;
+        }
+        return error.ForeignKeyMismatch;
+    }
+
+    for (mappings, 0..) |mapping, index| {
+        const parent_name = mapping.parent_column orelse return error.ForeignKeyMismatch;
+        result[index] = resolvedColumnIndex(parent_columns, parent_name) orelse return error.ForeignKeyMismatch;
+    }
+    if (mappings.len == 1 and parent_columns[result[0]].unique) return result;
+    if (!try tableKeyConstraintMatches(allocator, parent_tokens, parent_columns, mappings, false)) return error.ForeignKeyMismatch;
+    return result;
+}
+
+const ForeignKeyLookupOutcome = struct { result: ResultCode, found: bool = false };
+
+fn foreignKeyValueIsNull(value: btree.Value) bool {
+    return switch (value) {
+        .null_ => true,
+        else => false,
+    };
+}
+
+fn foreignKeyValueEqual(parent: btree.Value, child: btree.Value) bool {
+    return switch (parent) {
+        .null_ => foreignKeyValueIsNull(child),
+        .integer => |left| switch (child) {
+            .integer => |right| left == right,
+            .real => |right| @as(f64, @floatFromInt(left)) == right,
+            else => false,
+        },
+        .real => |left| switch (child) {
+            .integer => |right| left == @as(f64, @floatFromInt(right)),
+            .real => |right| left == right,
+            else => false,
+        },
+        .text => |left| switch (child) {
+            .text => |right| std.mem.eql(u8, left, right),
+            else => false,
+        },
+        .blob => |left| switch (child) {
+            .blob => |right| std.mem.eql(u8, left, right),
+            else => false,
+        },
+    };
+}
+
+fn containsAsciiIgnoreCase(haystack: []const u8, needle: []const u8) bool {
+    if (needle.len > haystack.len) return false;
+    for (0..haystack.len - needle.len + 1) |start| {
+        if (std.ascii.eqlIgnoreCase(haystack[start..][0..needle.len], needle)) return true;
+    }
+    return false;
+}
+
+const ForeignKeyAffinity = enum { blob, text, numeric, integer, real };
+
+fn foreignKeyAffinity(column: ResolvedColumn) ForeignKeyAffinity {
+    if (containsAsciiIgnoreCase(column.declared_type, "INT")) return .integer;
+    if (containsAsciiIgnoreCase(column.declared_type, "CHAR") or containsAsciiIgnoreCase(column.declared_type, "CLOB") or containsAsciiIgnoreCase(column.declared_type, "TEXT")) return .text;
+    if (column.declared_type.len == 0 or containsAsciiIgnoreCase(column.declared_type, "BLOB")) return .blob;
+    if (containsAsciiIgnoreCase(column.declared_type, "REAL") or containsAsciiIgnoreCase(column.declared_type, "FLOA") or containsAsciiIgnoreCase(column.declared_type, "DOUB")) return .real;
+    return .numeric;
+}
+
+const ForeignKeyNumeric = union(enum) { integer: i64, real: f64 };
+
+fn foreignKeyNumeric(value: btree.Value) ?ForeignKeyNumeric {
+    return switch (value) {
+        .integer => |integer| .{ .integer = integer },
+        .real => |real| .{ .real = real },
+        .text => |text| blk: {
+            const trimmed = std.mem.trim(u8, text, " \t\r\n");
+            if (std.fmt.parseInt(i64, trimmed, 10)) |integer| break :blk .{ .integer = integer } else |_| {}
+            if (std.fmt.parseFloat(f64, trimmed)) |real| break :blk .{ .real = real } else |_| return null;
+        },
+        else => null,
+    };
+}
+
+fn foreignKeyNumericEqual(left: ForeignKeyNumeric, right: ForeignKeyNumeric) bool {
+    return switch (left) {
+        .integer => |left_integer| switch (right) {
+            .integer => |right_integer| left_integer == right_integer,
+            .real => |right_real| @as(f64, @floatFromInt(left_integer)) == right_real,
+        },
+        .real => |left_real| switch (right) {
+            .integer => |right_integer| left_real == @as(f64, @floatFromInt(right_integer)),
+            .real => |right_real| left_real == right_real,
+        },
+    };
+}
+
+fn trimForeignKeySpaces(value: []const u8) []const u8 {
+    var end = value.len;
+    while (end != 0 and value[end - 1] == ' ') {
+        end -= 1;
+    }
+    return value[0..end];
+}
+
+fn foreignKeyTextEqual(collation: []const u8, left: []const u8, right: []const u8) bool {
+    if (std.ascii.eqlIgnoreCase(collation, "NOCASE")) return std.ascii.eqlIgnoreCase(left, right);
+    if (std.ascii.eqlIgnoreCase(collation, "RTRIM")) return std.mem.eql(u8, trimForeignKeySpaces(left), trimForeignKeySpaces(right));
+    return std.mem.eql(u8, left, right);
+}
+
+fn foreignKeyValueText(value: btree.Value, buffer: []u8) ?[]const u8 {
+    return switch (value) {
+        .text => |text| text,
+        .integer => |integer| std.fmt.bufPrint(buffer, "{d}", .{integer}) catch null,
+        .real => |real| std.fmt.bufPrint(buffer, "{d}", .{real}) catch null,
+        else => null,
+    };
+}
+
+fn foreignKeyTextValueEqual(column: ResolvedColumn, parent: btree.Value, child: btree.Value) bool {
+    var parent_buffer: [128]u8 = undefined;
+    var child_buffer: [128]u8 = undefined;
+    const parent_text = foreignKeyValueText(parent, &parent_buffer) orelse return false;
+    const child_text = foreignKeyValueText(child, &child_buffer) orelse return false;
+    return foreignKeyTextEqual(column.collation, parent_text, child_text);
+}
+
+fn foreignKeyColumnValueEqual(column: ResolvedColumn, parent: btree.Value, child: btree.Value) bool {
+    return switch (foreignKeyAffinity(column)) {
+        .integer, .numeric, .real => {
+            const left = foreignKeyNumeric(parent) orelse return foreignKeyValueEqual(parent, child);
+            const right = foreignKeyNumeric(child) orelse return false;
+            return foreignKeyNumericEqual(left, right);
+        },
+        .text => foreignKeyTextValueEqual(column, parent, child),
+        .blob => foreignKeyValueEqual(parent, child),
+    };
+}
+
+fn foreignKeyRowValue(column: ResolvedColumn, rowid: i64, record_values: []const btree.Value) ?btree.Value {
+    if (column.integer_primary_key) return .{ .integer = rowid };
+    if (column.record_index >= record_values.len) return null;
+    return record_values[column.record_index];
+}
+
+fn proposedForeignKeyValue(column: ResolvedColumn, rowid: i64, values: []const btree.Value) ?btree.Value {
+    if (column.integer_primary_key) return .{ .integer = rowid };
+    if (column.record_index >= values.len) return null;
+    return values[column.record_index];
+}
+
+fn foreignKeyValuesMatch(
+    parent_columns: []const ResolvedColumn,
+    parent_indices: []const usize,
+    parent_rowid: i64,
+    parent_values: []const btree.Value,
+    child_values: []const btree.Value,
+    mappings: []const ForeignKeyMapping,
+) bool {
+    for (mappings, parent_indices) |mapping, parent_index| {
+        const child = child_values[mapping.child_column];
+        const parent = foreignKeyRowValue(parent_columns[parent_index], parent_rowid, parent_values) orelse return false;
+        if (!foreignKeyColumnValueEqual(parent_columns[parent_index], parent, child)) return false;
+    }
+    return true;
+}
+
+fn pendingParentRowIsReplaced(connection: *const Connection, table_name: []const u8, rowid: i64) bool {
+    for (connection.pending_foreign_key_parents.items) |pending| {
+        if (pending.old_rowid == rowid and std.ascii.eqlIgnoreCase(pending.table_name, table_name)) return true;
+    }
+    return false;
+}
+
+/// Runtime counterpart of source `fkLookupParent()`. Pending parent changes
+/// are searched before the on-disk tree so cascaded updates see the NEW parent
+/// key and never mistake the OLD key for a surviving row.
+fn lookupForeignKeyParent(
+    connection: *Connection,
+    parent_table_name: []const u8,
+    parent_root_page: u32,
+    parent_columns: []const ResolvedColumn,
+    parent_indices: []const usize,
+    child_values: []const btree.Value,
+    mappings: []const ForeignKeyMapping,
+    self_rowid: ?i64,
+) ForeignKeyLookupOutcome {
+    for (mappings) |mapping| {
+        if (foreignKeyValueIsNull(child_values[mapping.child_column])) return .{ .result = .ok, .found = true };
+    }
+    if (self_rowid) |rowid| {
+        var self_matches = true;
+        for (mappings, parent_indices) |mapping, parent_index| {
+            const parent = proposedForeignKeyValue(parent_columns[parent_index], rowid, child_values) orelse {
+                self_matches = false;
+                break;
+            };
+            if (!foreignKeyColumnValueEqual(parent_columns[parent_index], parent, child_values[mapping.child_column])) {
+                self_matches = false;
+                break;
+            }
+        }
+        if (self_matches) return .{ .result = .ok, .found = true };
+    }
+    for (connection.pending_foreign_key_parents.items) |pending| {
+        if (!std.ascii.eqlIgnoreCase(pending.table_name, parent_table_name)) continue;
+        const pending_values = pending.new_values orelse continue;
+        if (foreignKeyValuesMatch(parent_columns, parent_indices, pending.new_rowid, pending_values, child_values, mappings)) {
+            return .{ .result = .ok, .found = true };
+        }
+    }
+    const database = connection.database orelse return .{ .result = .misuse };
+    const opened = database.openCursor(parent_root_page, .table);
+    if (opened.result != .ok) return .{ .result = opened.result };
+    var cursor = opened.cursor.?;
+    defer cursor.deinit();
+    if (parent_indices.len == 1 and parent_columns[parent_indices[0]].integer_primary_key) {
+        const child = child_values[mappings[0].child_column];
+        const rowid = switch (child) {
+            .integer => |value| value,
+            else => return .{ .result = .ok },
+        };
+        if (pendingParentRowIsReplaced(connection, parent_table_name, rowid)) return .{ .result = .ok };
+        return .{ .result = .ok, .found = cursor.seekTable(rowid) };
+    }
+    if (!cursor.first()) return .{ .result = .ok };
+    while (true) {
+        const entry = cursor.current() orelse return .{ .result = .corrupt };
+        const rowid = entry.rowid orelse return .{ .result = .corrupt };
+        if (!pendingParentRowIsReplaced(connection, parent_table_name, rowid) and (self_rowid == null or self_rowid.? != rowid)) {
+            const decoded = cursor.record();
+            if (decoded.result != .ok) return .{ .result = decoded.result };
+            var record = decoded.record.?;
+            defer record.deinit();
+            if (foreignKeyValuesMatch(parent_columns, parent_indices, rowid, record.values, child_values, mappings)) {
+                return .{ .result = .ok, .found = true };
+            }
+        }
+        if (!cursor.next()) break;
+    }
+    return .{ .result = .ok };
+}
+
+fn checkChildForeignKeyParents(connection: *Connection, table_name: []const u8, rowid: i64, values: []const btree.Value) ResultCode {
+    if (connection.database_configuration[2] == 0) return .ok;
+    const database = connection.database orelse return .misuse;
+    const child_schema_outcome = database.schemaTable(table_name);
+    if (child_schema_outcome.result != .ok) return child_schema_outcome.result;
+    var child_schema = child_schema_outcome.table.?;
+    defer child_schema.deinit();
+    const child_columns = resolveColumns(connection.allocator, child_schema.sql) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+    defer {
+        connection.allocator.free(child_columns.columns);
+        connection.allocator.free(child_columns.tokens);
+        connection.allocator.free(child_columns.source);
+    }
+    var foreign_keys = resolveForeignKeys(connection.allocator, child_schema.sql, child_columns.columns) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+    defer foreign_keys.deinit();
+    for (foreign_keys.keys) |key| {
+        const parent_schema_outcome = database.schemaTable(key.parent_table);
+        if (parent_schema_outcome.result != .ok) return if (parent_schema_outcome.result == .no_memory) .no_memory else .error_;
+        var parent_schema = parent_schema_outcome.table.?;
+        defer parent_schema.deinit();
+        const parent_columns = resolveColumns(connection.allocator, parent_schema.sql) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+        defer {
+            connection.allocator.free(parent_columns.columns);
+            connection.allocator.free(parent_columns.tokens);
+            connection.allocator.free(parent_columns.source);
+        }
+        const mappings = foreign_keys.keyMappings(key);
+        const parent_indices = locateForeignKeyIndex(connection.allocator, parent_columns.columns, parent_columns.tokens, mappings) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+        defer connection.allocator.free(parent_indices);
+        const same_table = std.ascii.eqlIgnoreCase(table_name, key.parent_table);
+        const lookup = lookupForeignKeyParent(connection, key.parent_table, parent_schema.root_page, parent_columns.columns, parent_indices, values, mappings, if (same_table) rowid else null);
+        if (lookup.result != .ok) return lookup.result;
+        if (!lookup.found) return ResultCode.fromC(ResultCode.constraint.toC() | (3 << 8));
+    }
+    return .ok;
+}
+
+fn childRowMatchesParent(
+    child_columns: []const ResolvedColumn,
+    child_rowid: i64,
+    child_values: []const btree.Value,
+    mappings: []const ForeignKeyMapping,
+    parent_columns: []const ResolvedColumn,
+    parent_indices: []const usize,
+    parent_rowid: i64,
+    parent_values: []const btree.Value,
+) bool {
+    for (mappings, parent_indices) |mapping, parent_index| {
+        const child = foreignKeyRowValue(child_columns[mapping.child_column], child_rowid, child_values) orelse return false;
+        if (foreignKeyValueIsNull(child)) return false;
+        const parent = foreignKeyRowValue(parent_columns[parent_index], parent_rowid, parent_values) orelse return false;
+        if (!foreignKeyColumnValueEqual(parent_columns[parent_index], parent, child)) return false;
+    }
+    return true;
+}
+
+/// Runtime counterpart of source `fkScanChildren()`: scan every child row
+/// matching the OLD parent key. The caller either raises a constraint or
+/// applies the configured action to the collected rowids.
+fn scanForeignKeyChildren(
+    database: *btree.Database,
+    child_root_page: u32,
+    child_columns: []const ResolvedColumn,
+    mappings: []const ForeignKeyMapping,
+    parent_columns: []const ResolvedColumn,
+    parent_indices: []const usize,
+    parent_rowid: i64,
+    parent_values: []const btree.Value,
+    ignored_rowid: ?i64,
+    rowids: *std.ArrayList(i64),
+) ResultCode {
+    const opened = database.openCursor(child_root_page, .table);
+    if (opened.result != .ok) return opened.result;
+    var cursor = opened.cursor.?;
+    defer cursor.deinit();
+    if (!cursor.first()) return .ok;
+    while (true) {
+        const entry = cursor.current() orelse return .corrupt;
+        const child_rowid = entry.rowid orelse return .corrupt;
+        if (ignored_rowid == null or child_rowid != ignored_rowid.?) {
+            const decoded = cursor.record();
+            if (decoded.result != .ok) return decoded.result;
+            var record = decoded.record.?;
+            defer record.deinit();
+            if (childRowMatchesParent(child_columns, child_rowid, record.values, mappings, parent_columns, parent_indices, parent_rowid, parent_values)) {
+                rowids.append(database.allocator, child_rowid) catch return .no_memory;
+            }
+        }
+        if (!cursor.next()) break;
+    }
+    return .ok;
+}
+
+const ForeignKeyDefaultOutcome = struct {
+    result: ResultCode,
+    value: btree.Value = .null_,
+    owned: ?[]u8 = null,
+};
+
+fn foreignKeyDefaultValue(allocator: std.mem.Allocator, token_list: []const Token, column: ResolvedColumn) ForeignKeyDefaultOutcome {
+    var start = column.default_start orelse return .{ .result = .ok };
+    var end = @min(column.default_end, token_list.len);
+    while (end > start + 1 and token_list[start].typ == tokens.tk_lp and token_list[end - 1].typ == tokens.tk_rp) {
+        start += 1;
+        end -= 1;
+    }
+    if (start >= end) return .{ .result = .error_ };
+    var negative = false;
+    if (token_list[start].typ == tokens.tk_plus or token_list[start].typ == tokens.tk_minus) {
+        negative = token_list[start].typ == tokens.tk_minus;
+        start += 1;
+        if (start >= end) return .{ .result = .error_ };
+    }
+    const token = token_list[start];
+    if (token.typ == tokens.tk_null) return .{ .result = .ok };
+    if (token.typ == tokens.tk_integer) {
+        const magnitude = std.fmt.parseInt(u64, token.text, 10) catch return .{ .result = .too_big };
+        const value: i64 = if (negative) blk: {
+            const minimum_magnitude: u64 = @as(u64, std.math.maxInt(i64)) + 1;
+            if (magnitude > minimum_magnitude) return .{ .result = .too_big };
+            if (magnitude == minimum_magnitude) break :blk std.math.minInt(i64);
+            break :blk -@as(i64, @intCast(magnitude));
+        } else std.math.cast(i64, magnitude) orelse return .{ .result = .too_big };
+        return .{ .result = .ok, .value = .{ .integer = value } };
+    }
+    if (token.typ == tokens.tk_float) {
+        var value = std.fmt.parseFloat(f64, token.text) catch return .{ .result = .error_ };
+        if (negative) {
+            value = -value;
+        }
+        return .{ .result = .ok, .value = .{ .real = value } };
+    }
+    if (negative) return .{ .result = .error_ };
+    if (token.typ == tokens.tk_truefalse) {
+        return .{ .result = .ok, .value = .{ .integer = @intFromBool(std.ascii.eqlIgnoreCase(token.text, "true")) } };
+    }
+    if (token.typ == tokens.tk_string) {
+        if (token.text.len < 2) return .{ .result = .error_ };
+        var decoded = std.ArrayList(u8).empty;
+        defer decoded.deinit(allocator);
+        var index: usize = 1;
+        while (index + 1 < token.text.len) : (index += 1) {
+            if (token.text[index] == '\'' and index + 1 < token.text.len - 1 and token.text[index + 1] == '\'') index += 1;
+            decoded.append(allocator, token.text[index]) catch return .{ .result = .no_memory };
+        }
+        const owned = decoded.toOwnedSlice(allocator) catch return .{ .result = .no_memory };
+        return .{ .result = .ok, .value = .{ .text = owned }, .owned = owned };
+    }
+    if (token.typ == tokens.tk_blob) {
+        if (token.text.len < 3 or token.text.len % 2 == 0) return .{ .result = .error_ };
+        const owned = allocator.alloc(u8, (token.text.len - 3) / 2) catch return .{ .result = .no_memory };
+        for (owned, 0..) |*byte, index| {
+            byte.* = std.fmt.parseInt(u8, token.text[2 + index * 2 ..][0..2], 16) catch {
+                allocator.free(owned);
+                return .{ .result = .error_ };
+            };
+        }
+        return .{ .result = .ok, .value = .{ .blob = owned }, .owned = owned };
+    }
+    return .{ .result = .error_ };
+}
+
+fn assignForeignKeyActionValue(database: *btree.Database, root_page: u32, column: ResolvedColumn, value: btree.Value, rowid: *i64, values: []btree.Value) ResultCode {
+    if (column.integer_primary_key) {
+        rowid.* = switch (value) {
+            .null_ => blk: {
+                const next = database.nextTableRowid(root_page);
+                if (next.result != .ok) return next.result;
+                break :blk next.rowid;
+            },
+            .integer => |integer| integer,
+            else => return .mismatch,
+        };
+        return .ok;
+    }
+    if (column.record_index >= values.len) return .corrupt;
+    values[column.record_index] = value;
+    return .ok;
+}
+
+fn clearForeignKeyActionAllocations(connection: *Connection) void {
+    for (connection.foreign_key_action_allocations.items) |allocation| {
+        connection.allocator.free(allocation);
+    }
+    connection.foreign_key_action_allocations.deinit(connection.allocator);
+    connection.foreign_key_action_allocations = .empty;
+}
+
+fn notifyForeignKeyMutation(connection: *Connection, operation: c_int, table_name: []const u8, rowid: i64) ResultCode {
+    connection.total_changes += 1;
+    if (connection.update_callback) |callback| {
+        const name = connection.allocator.dupeZ(u8, table_name) catch return .no_memory;
+        defer connection.allocator.free(name);
+        callback(connection.update_context, operation, "main", name.ptr, rowid);
+    }
+    return .ok;
+}
+
+/// Runtime action program synthesized from source `fkActionTrigger()`.
+fn foreignKeyActionTrigger(
+    connection: *Connection,
+    child_table_name: []const u8,
+    child_root_page: u32,
+    child_columns: []const ResolvedColumn,
+    child_tokens: []const Token,
+    mappings: []const ForeignKeyMapping,
+    parent_columns: []const ResolvedColumn,
+    parent_indices: []const usize,
+    parent_table_name: []const u8,
+    parent_rowid: i64,
+    parent_new_values: ?[]btree.Value,
+    child_rowid: i64,
+    action: ForeignKeyAction,
+) ResultCode {
+    const database = connection.database orelse return .misuse;
+    const opened = database.openCursor(child_root_page, .table);
+    if (opened.result != .ok) return opened.result;
+    var cursor = opened.cursor.?;
+    defer cursor.deinit();
+    if (!cursor.seekTable(child_rowid)) return .ok;
+    const decoded = cursor.record();
+    if (decoded.result != .ok) return decoded.result;
+    var record = decoded.record.?;
+    defer record.deinit();
+
+    if (action == .cascade and parent_new_values == null) {
+        const checked = checkForeignKeys(connection, child_table_name, child_rowid, .{ .parent_delete = .{ .old_values = record.values } });
+        if (checked != .ok) return checked;
+        const nested = applyForeignKeyActions(connection, child_table_name, child_rowid, record.values, null, null);
+        if (nested != .ok) return nested;
+        const deleted = database.deleteTable(child_root_page, child_rowid);
+        if (deleted == .not_found) return .ok;
+        if (deleted != .ok) return deleted;
+        return notifyForeignKeyMutation(connection, 9, child_table_name, child_rowid);
+    }
+
+    const self_update = std.ascii.eqlIgnoreCase(child_table_name, parent_table_name) and child_rowid == parent_rowid and parent_new_values != null;
+    const base_values = if (self_update) parent_new_values.? else record.values;
+    const values = connection.allocator.dupe(btree.Value, base_values) catch return .no_memory;
+    defer connection.allocator.free(values);
+    var new_rowid = child_rowid;
+    for (mappings, parent_indices) |mapping, parent_index| {
+        const value = switch (action) {
+            .cascade => proposedForeignKeyValue(parent_columns[parent_index], parent_rowid, parent_new_values.?) orelse return .corrupt,
+            .set_null => @as(btree.Value, .null_),
+            .set_default => blk: {
+                const default = foreignKeyDefaultValue(connection.allocator, child_tokens, child_columns[mapping.child_column]);
+                if (default.result != .ok) return default.result;
+                if (default.owned) |owned| connection.foreign_key_action_allocations.append(connection.allocator, owned) catch {
+                    connection.allocator.free(owned);
+                    return .no_memory;
+                };
+                break :blk default.value;
+            },
+            else => return .constraint,
+        };
+        const assigned = assignForeignKeyActionValue(database, child_root_page, child_columns[mapping.child_column], value, &new_rowid, values);
+        if (assigned != .ok) return assigned;
+    }
+
+    if (self_update) {
+        if (new_rowid != child_rowid or parent_new_values.?.len != values.len) return .error_;
+        @memcpy(parent_new_values.?, values);
+        return .ok;
+    }
+
+    const checked = checkForeignKeys(connection, child_table_name, child_rowid, .{ .parent_update = .{ .old_values = record.values, .new_values = values } });
+    if (checked != .ok) return checked;
+    const nested = applyForeignKeyActions(connection, child_table_name, child_rowid, record.values, values, null);
+    if (nested != .ok) return nested;
+    const child_check = checkForeignKeys(connection, child_table_name, new_rowid, .{ .child_insert = .{ .values = values } });
+    if (child_check != .ok) return child_check;
+    const payload = btree.encodeRecord(connection.allocator, values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+    defer connection.allocator.free(payload);
+    if (new_rowid != child_rowid) {
+        const destination = database.openCursor(child_root_page, .table);
+        if (destination.result != .ok) return destination.result;
+        var destination_cursor = destination.cursor.?;
+        defer destination_cursor.deinit();
+        if (destination_cursor.seekTable(new_rowid)) return .constraint;
+        const deleted = database.deleteTable(child_root_page, child_rowid);
+        if (deleted != .ok) return deleted;
+        const inserted = database.insertTable(child_root_page, new_rowid, payload, false);
+        if (inserted != .ok) return inserted;
+    } else {
+        const inserted = database.insertTable(child_root_page, child_rowid, payload, true);
+        if (inserted != .ok) return inserted;
+    }
+    return notifyForeignKeyMutation(connection, 23, child_table_name, new_rowid);
+}
+
+fn schemaEntryText(value: btree.Value) ?[]const u8 {
+    return switch (value) {
+        .text => |text| text,
+        else => null,
+    };
+}
+
+fn schemaEntryRoot(value: btree.Value) ?u32 {
+    return switch (value) {
+        .integer => |root| if (root > 0 and root <= std.math.maxInt(u32)) @intCast(root) else null,
+        else => null,
+    };
+}
+
+fn parentKeyChanged(
+    parent_columns: []const ResolvedColumn,
+    parent_indices: []const usize,
+    rowid: i64,
+    old_values: []const btree.Value,
+    new_values: []const btree.Value,
+) bool {
+    for (parent_indices) |parent_index| {
+        const old = foreignKeyRowValue(parent_columns[parent_index], rowid, old_values) orelse return true;
+        const new = proposedForeignKeyValue(parent_columns[parent_index], rowid, new_values) orelse return true;
+        if (!foreignKeyColumnValueEqual(parent_columns[parent_index], old, new)) return true;
+    }
+    return false;
+}
+
+fn processParentForeignKeys(
+    connection: *Connection,
+    parent_table_name: []const u8,
+    parent_columns: []const ResolvedColumn,
+    parent_tokens: []const Token,
+    parent_rowid: i64,
+    old_values: []const btree.Value,
+    new_values: ?[]btree.Value,
+    dropping_table: ?[]const u8,
+    apply_actions: bool,
+) ResultCode {
+    if (connection.database_configuration[2] == 0) return .ok;
+    if (connection.foreign_key_action_depth >= @as(usize, @intCast(@max(connection.limits[10], 0)))) return .error_;
+    const database = connection.database orelse return .misuse;
+    connection.pending_foreign_key_parents.append(connection.allocator, .{
+        .table_name = parent_table_name,
+        .old_rowid = parent_rowid,
+        .new_rowid = parent_rowid,
+        .new_values = new_values,
+    }) catch return .no_memory;
+    defer {
+        _ = connection.pending_foreign_key_parents.pop();
+        if (connection.pending_foreign_key_parents.items.len == 0) {
+            connection.pending_foreign_key_parents.deinit(connection.allocator);
+            connection.pending_foreign_key_parents = .empty;
+        }
+    }
+    connection.foreign_key_action_depth += 1;
+    defer connection.foreign_key_action_depth -= 1;
+
+    const opened = database.openCursor(1, .table);
+    if (opened.result != .ok) return opened.result;
+    var schema_cursor = opened.cursor.?;
+    defer schema_cursor.deinit();
+    for (schema_cursor.entries.items) |entry| {
+        const decoded = btree.decodeRecord(connection.allocator, entry.payload);
+        if (decoded.result != .ok) return decoded.result;
+        var schema_record = decoded.record.?;
+        defer schema_record.deinit();
+        if (schema_record.values.len < 5) continue;
+        const object_type = schemaEntryText(schema_record.values[0]) orelse continue;
+        if (!std.mem.eql(u8, object_type, "table")) continue;
+        const child_table_name = schemaEntryText(schema_record.values[1]) orelse continue;
+        if (dropping_table) |dropped| {
+            if (std.ascii.eqlIgnoreCase(child_table_name, dropped)) continue;
+        }
+        const child_root_page = schemaEntryRoot(schema_record.values[3]) orelse continue;
+        const child_sql = schemaEntryText(schema_record.values[4]) orelse continue;
+        const child_columns = resolveColumns(connection.allocator, child_sql) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+        defer {
+            connection.allocator.free(child_columns.columns);
+            connection.allocator.free(child_columns.tokens);
+            connection.allocator.free(child_columns.source);
+        }
+        var foreign_keys = resolveForeignKeys(connection.allocator, child_sql, child_columns.columns) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+        defer foreign_keys.deinit();
+        for (foreign_keys.keys) |key| {
+            if (!std.ascii.eqlIgnoreCase(key.parent_table, parent_table_name)) continue;
+            const mappings = foreign_keys.keyMappings(key);
+            const parent_indices = locateForeignKeyIndex(connection.allocator, parent_columns, parent_tokens, mappings) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+            defer connection.allocator.free(parent_indices);
+            if (new_values) |new| {
+                if (!parentKeyChanged(parent_columns, parent_indices, parent_rowid, old_values, new)) continue;
+            }
+            var rowids = std.ArrayList(i64).empty;
+            defer rowids.deinit(connection.allocator);
+            const same_table = std.ascii.eqlIgnoreCase(child_table_name, parent_table_name);
+            const collected = scanForeignKeyChildren(database, child_root_page, child_columns.columns, mappings, parent_columns, parent_indices, parent_rowid, old_values, if (same_table and new_values == null) parent_rowid else null, &rowids);
+            if (collected != .ok) return collected;
+            if (rowids.items.len == 0) continue;
+            const action = if (new_values == null) key.on_delete else key.on_update;
+            if (!apply_actions) {
+                if (action == .no_action or action == .restrict) return ResultCode.fromC(ResultCode.constraint.toC() | (3 << 8));
+                continue;
+            }
+            if (action == .no_action or action == .restrict) continue;
+            for (rowids.items) |child_rowid| {
+                const mutated = foreignKeyActionTrigger(connection, child_table_name, child_root_page, child_columns.columns, child_columns.tokens, mappings, parent_columns, parent_indices, parent_table_name, parent_rowid, new_values, child_rowid, action);
+                if (mutated != .ok) return mutated;
+            }
+        }
+    }
+    return .ok;
+}
+
+fn processParentTableForeignKeys(connection: *Connection, table_name: []const u8, rowid: i64, old_values: []const btree.Value, new_values: ?[]btree.Value, dropping_table: ?[]const u8, apply_actions: bool) ResultCode {
+    if (connection.database_configuration[2] == 0) return .ok;
+    const database = connection.database orelse return .misuse;
+    const schema_outcome = database.schemaTable(table_name);
+    if (schema_outcome.result != .ok) return schema_outcome.result;
+    var table_schema = schema_outcome.table.?;
+    defer table_schema.deinit();
+    const columns = resolveColumns(connection.allocator, table_schema.sql) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+    defer {
+        connection.allocator.free(columns.columns);
+        connection.allocator.free(columns.tokens);
+        connection.allocator.free(columns.source);
+    }
+    return processParentForeignKeys(connection, table_name, columns.columns, columns.tokens, rowid, old_values, new_values, dropping_table, apply_actions);
+}
+
+const ForeignKeyOldMaskOutcome = struct { result: ResultCode, mask: u32 = 0 };
+
+fn foreignKeyColumnMask(index: usize) u32 {
+    return if (index > 31) std.math.maxInt(u32) else @as(u32, 1) << @intCast(index);
+}
+
+/// Runtime counterpart of source `sqlite3FkOldmask()`.
+fn foreignKeyOldMask(connection: *Connection, table_name: []const u8, table_columns: []const ResolvedColumn, table_tokens: []const Token) ForeignKeyOldMaskOutcome {
+    if (connection.database_configuration[2] == 0) return .{ .result = .ok };
+    const database = connection.database orelse return .{ .result = .misuse };
+    var mask: u32 = 0;
+    const table_schema = database.schemaTable(table_name);
+    if (table_schema.result != .ok) return .{ .result = table_schema.result };
+    var table = table_schema.table.?;
+    defer table.deinit();
+    var own_keys = resolveForeignKeys(connection.allocator, table.sql, table_columns) catch |err| return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_ };
+    defer own_keys.deinit();
+    for (own_keys.mappings) |mapping| {
+        mask |= foreignKeyColumnMask(mapping.child_column);
+    }
+
+    const opened = database.openCursor(1, .table);
+    if (opened.result != .ok) return .{ .result = opened.result };
+    var schema_cursor = opened.cursor.?;
+    defer schema_cursor.deinit();
+    for (schema_cursor.entries.items) |entry| {
+        const decoded = btree.decodeRecord(connection.allocator, entry.payload);
+        if (decoded.result != .ok) return .{ .result = decoded.result };
+        var schema_record = decoded.record.?;
+        defer schema_record.deinit();
+        if (schema_record.values.len < 5 or !std.mem.eql(u8, schemaEntryText(schema_record.values[0]) orelse continue, "table")) continue;
+        const child_sql = schemaEntryText(schema_record.values[4]) orelse continue;
+        const child_columns = resolveColumns(connection.allocator, child_sql) catch |err| return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_ };
+        defer {
+            connection.allocator.free(child_columns.columns);
+            connection.allocator.free(child_columns.tokens);
+            connection.allocator.free(child_columns.source);
+        }
+        var keys = resolveForeignKeys(connection.allocator, child_sql, child_columns.columns) catch |err| return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_ };
+        defer keys.deinit();
+        for (keys.keys) |key| {
+            if (!std.ascii.eqlIgnoreCase(key.parent_table, table_name)) continue;
+            const mappings = keys.keyMappings(key);
+            const indices = locateForeignKeyIndex(connection.allocator, table_columns, table_tokens, mappings) catch |err| return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_ };
+            defer connection.allocator.free(indices);
+            for (indices) |index| {
+                mask |= foreignKeyColumnMask(index);
+            }
+        }
+    }
+    return .{ .result = .ok, .mask = mask };
+}
+
+fn foreignKeyOldValuesAvailable(mask: u32, value_count: usize) bool {
+    if (mask == 0) return true;
+    if (value_count >= 32) return true;
+    const available: u32 = if (value_count == 0) 0 else (@as(u32, 1) << @intCast(value_count)) - 1;
+    return mask & ~available == 0;
+}
+
+const ForeignKeyCheckOperation = union(enum) {
+    child_insert: struct { values: []const btree.Value },
+    parent_delete: struct { old_values: []const btree.Value, dropping_table: ?[]const u8 = null },
+    parent_update: struct { old_values: []const btree.Value, new_values: []btree.Value },
+};
+
+/// Runtime counterpart of source `sqlite3FkCheck()`.
+fn checkForeignKeys(connection: *Connection, table_name: []const u8, rowid: i64, operation: ForeignKeyCheckOperation) ResultCode {
+    return switch (operation) {
+        .child_insert => |insert| checkChildForeignKeyParents(connection, table_name, rowid, insert.values),
+        .parent_delete => |delete| processParentTableForeignKeys(connection, table_name, rowid, delete.old_values, null, delete.dropping_table, false),
+        .parent_update => |update| processParentTableForeignKeys(connection, table_name, rowid, update.old_values, update.new_values, null, false),
+    };
+}
+
+/// Runtime counterpart of source `sqlite3FkActions()`.
+fn applyForeignKeyActions(connection: *Connection, table_name: []const u8, rowid: i64, old_values: []const btree.Value, new_values: ?[]btree.Value, dropping_table: ?[]const u8) ResultCode {
+    return processParentTableForeignKeys(connection, table_name, rowid, old_values, new_values, dropping_table, true);
 }
 
 const ScanPlan = struct {
@@ -2131,10 +5220,549 @@ const ScanPlan = struct {
     limit: ?i64 = null,
 };
 
-fn buildPlannedTableScan(connection: *Connection, source: [:0]u8, root_page: u32, index_scan: bool, selected: []const ResolvedColumn, plan: ScanPlan) !*statement.Statement {
+/// Source `sqlite3OpenTable()`: select table or primary-index cursor form and
+/// construct the bounded open instruction shared by scan code generators.
+fn openTable(root_page: u32, index_scan: bool, writable: bool) vdbe.Instruction {
+    std.debug.assert(!writable);
+    return .{
+        .opcode = .open_read,
+        .p1 = 0,
+        .p2 = @intCast(root_page),
+        .p3 = @intFromBool(index_scan),
+    };
+}
+
+fn schemaWithoutRowid(token_list: []const Token) bool {
+    var index: usize = 0;
+    while (index + 1 < token_list.len) : (index += 1) {
+        if (token_list[index].typ == tokens.tk_without and token_list[index + 1].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(token_list[index + 1].text, "rowid")) return true;
+    }
+    return false;
+}
+
+const EncodedColumnDefault = struct {
+    p4: vdbe.P4 = .none,
+    p5: u16 = 0,
+};
+
+fn realColumnAffinity(declared_type: []const u8) bool {
+    const markers = [_][]const u8{ "REAL", "FLOA", "DOUB" };
+    for (markers) |marker| {
+        if (declared_type.len < marker.len) continue;
+        for (0..declared_type.len - marker.len + 1) |offset| {
+            if (std.ascii.eqlIgnoreCase(declared_type[offset..][0..marker.len], marker)) return true;
+        }
+    }
+    return false;
+}
+
+/// Source `sqlite3ColumnDefault()`: encode literal ALTER TABLE defaults as
+/// OP_Column P4 values and preserve text versus blob storage class in P5.
+fn columnDefault(allocator: std.mem.Allocator, owner: *Owner, column: ResolvedColumn, token_list: []const Token) !EncodedColumnDefault {
+    var position = column.default_start orelse return .{};
+    var end = column.default_end;
+    while (position < end and token_list[position].typ == tokens.tk_lp) {
+        position += 1;
+    }
+    while (end > position and token_list[end - 1].typ == tokens.tk_rp) {
+        end -= 1;
+    }
+    if (position >= end) return .{};
+    var negative = false;
+    if (token_list[position].typ == tokens.tk_plus or token_list[position].typ == tokens.tk_minus) {
+        negative = token_list[position].typ == tokens.tk_minus;
+        position += 1;
+    }
+    if (position + 1 != end) return .{};
+    const token = token_list[position];
+    return switch (token.typ) {
+        tokens.tk_null => .{},
+        tokens.tk_integer => result: {
+            var value = std.fmt.parseInt(i128, token.text, 0) catch return error.Syntax;
+            if (negative) {
+                value = -value;
+            }
+            if (value < std.math.minInt(i64) or value > std.math.maxInt(i64)) return error.Syntax;
+            break :result .{ .p4 = .{ .integer = @intCast(value) } };
+        },
+        tokens.tk_float => result: {
+            var value = std.fmt.parseFloat(f64, token.text) catch return error.Syntax;
+            if (negative) {
+                value = -value;
+            }
+            break :result .{ .p4 = .{ .real = value } };
+        },
+        tokens.tk_string, tokens.tk_blob => result: {
+            if (negative) return error.Syntax;
+            const decoded = try decodeSqlToken(allocator, token);
+            errdefer allocator.free(decoded.bytes);
+            try owner.strings.append(allocator, decoded.bytes);
+            break :result .{ .p4 = .{ .bytes = decoded.bytes }, .p5 = if (decoded.blob) vdbe.column_default_blob else 0 };
+        },
+        else => .{},
+    };
+}
+
+/// Source `sqlite3ExprCodeGetColumnOfTable()`: emit rowid or record-column
+/// extraction, including literal defaults and REAL affinity correction.
+fn expressionCodeGetColumnOfTable(code: *std.ArrayList(vdbe.Instruction), allocator: std.mem.Allocator, owner: *Owner, column: ResolvedColumn, token_list: []const Token, cursor: i32, output: i32, index_scan: bool) !void {
+    if (column.integer_primary_key and !index_scan) {
+        try code.append(allocator, .{ .opcode = .rowid, .p1 = cursor, .p2 = output });
+        return;
+    }
+    const fallback = try columnDefault(allocator, owner, column, token_list);
+    try code.append(allocator, .{ .opcode = .column, .p1 = cursor, .p2 = @intCast(column.record_index), .p3 = output, .p4 = fallback.p4, .p5 = fallback.p5 });
+    if (realColumnAffinity(column.declared_type)) {
+        try code.append(allocator, .{ .opcode = .real_affinity, .p1 = output });
+    }
+}
+
+/// Source `sqlite3ExprCodeGetColumn()`: apply caller P5 flags to the column
+/// extraction generated for an open table cursor.
+fn expressionCodeGetColumn(code: *std.ArrayList(vdbe.Instruction), allocator: std.mem.Allocator, owner: *Owner, column: ResolvedColumn, token_list: []const Token, cursor: i32, output: i32, p5: u16) !void {
+    const operation_index = code.items.len;
+    try expressionCodeGetColumnOfTable(code, allocator, owner, column, token_list, cursor, output, false);
+    if (operation_index < code.items.len and code.items[operation_index].opcode == .column) {
+        code.items[operation_index].p5 |= p5;
+    }
+}
+
+/// Source `sqlite3ExprCodeLoadIndexColumn()`: load a covering-index field
+/// without applying the ordinary table's INTEGER PRIMARY KEY rowid alias.
+fn expressionCodeLoadIndexColumn(code: *std.ArrayList(vdbe.Instruction), allocator: std.mem.Allocator, owner: *Owner, column: ResolvedColumn, token_list: []const Token, cursor: i32, output: i32) !void {
+    try expressionCodeGetColumnOfTable(code, allocator, owner, column, token_list, cursor, output, true);
+}
+
+/// Source `sqlite3VdbeGetOp()`: return a mutable instruction after validating
+/// its address against the current program.
+fn getOperation(code: *std.ArrayList(vdbe.Instruction), address: usize) !*vdbe.Instruction {
+    if (address >= code.items.len) return error.InvalidOperationAddress;
+    return &code.items[address];
+}
+
+/// Source `sqlite3VdbeChangeToNoop()`: discard all operands and P4 state while
+/// replacing one instruction with OP_Noop.
+fn changeOperationToNoop(code: *std.ArrayList(vdbe.Instruction), address: usize) !void {
+    const operation = try getOperation(code, address);
+    operation.* = .{ .opcode = .noop };
+}
+
+/// Source `sqlite3VdbeJumpHereOrPopInst()`: remove a trailing no-op jump or
+/// bind an earlier jump to the next instruction.
+fn jumpHereOrPopOperation(code: *std.ArrayList(vdbe.Instruction), address: usize) !void {
+    const operation = try getOperation(code, address);
+    if (address + 1 == code.items.len and (operation.opcode == .once or operation.opcode == .if_)) {
+        _ = code.pop();
+        return;
+    }
+    operation.p2 = @intCast(code.items.len);
+}
+
+/// Source `sqlite3ExprCodeRunJustOnce()`: retain OP_Once around scalar
+/// expressions that do not acquire a dependency on the current cursor row.
+fn expressionCodeRunJustOnce(code: *std.ArrayList(vdbe.Instruction), once_index: usize, referenced_before: bool, referenced_after: bool) void {
+    std.debug.assert(once_index < code.items.len);
+    const operation = getOperation(code, once_index) catch unreachable;
+    std.debug.assert(operation.opcode == .once);
+    if (referenced_before != referenced_after) {
+        changeOperationToNoop(code, once_index) catch unreachable;
+        return;
+    }
+    jumpHereOrPopOperation(code, once_index) catch unreachable;
+}
+
+const GeneratedColumnError = error{ Syntax, TooBig, OutOfMemory, GeneratedColumnLoop };
+
+fn binaryExpressionCollation(_: ?*anyopaque, left: []const u8, right: []const u8) i32 {
+    const order = std.mem.order(u8, left, right);
+    return if (order == .lt) -1 else if (order == .gt) 1 else 0;
+}
+
+fn noCaseExpressionCollation(_: ?*anyopaque, left: []const u8, right: []const u8) i32 {
+    const common = @min(left.len, right.len);
+    for (left[0..common], right[0..common]) |left_byte, right_byte| {
+        const folded_left = std.ascii.toLower(left_byte);
+        const folded_right = std.ascii.toLower(right_byte);
+        if (folded_left != folded_right) return if (folded_left < folded_right) -1 else 1;
+    }
+    return if (left.len < right.len) -1 else if (left.len > right.len) 1 else 0;
+}
+
+fn rtrimExpressionCollation(_: ?*anyopaque, left: []const u8, right: []const u8) i32 {
+    var left_end = left.len;
+    while (left_end != 0 and left[left_end - 1] == ' ') {
+        left_end -= 1;
+    }
+    var right_end = right.len;
+    while (right_end != 0 and right[right_end - 1] == ' ') {
+        right_end -= 1;
+    }
+    return binaryExpressionCollation(null, left[0..left_end], right[0..right_end]);
+}
+
+const GeneratedColumnCompiler = struct {
+    allocator: std.mem.Allocator,
+    owner: *Owner,
+    code: *std.ArrayList(vdbe.Instruction),
+    token_list: []const Token,
+    column_tokens: []const Token,
+    columns: []const ResolvedColumn,
+    position: usize,
+    end: usize,
+    next_register: *u16,
+    cursor: i32,
+    index_scan: bool,
+    qualifier: ?[]const u8 = null,
+    connection: *Connection,
+    functions: *std.ArrayList(vdbe.Function),
+    collations: *std.ArrayList(vdbe.Collation),
+    pending_collation: ?u16 = null,
+    references_columns: bool = false,
+
+    fn allocateRegister(self: *GeneratedColumnCompiler) GeneratedColumnError!u16 {
+        if (self.next_register.* == std.math.maxInt(u16)) return error.TooBig;
+        const result = self.next_register.*;
+        self.next_register.* += 1;
+        return result;
+    }
+
+    fn primary(self: *GeneratedColumnCompiler) GeneratedColumnError!u16 {
+        if (self.position >= self.end) return error.Syntax;
+        const token = self.token_list[self.position];
+        if (token.typ == tokens.tk_lp) {
+            self.position += 1;
+            const result = try self.expression(0);
+            if (self.position >= self.end or self.token_list[self.position].typ != tokens.tk_rp) return error.Syntax;
+            self.position += 1;
+            return result;
+        }
+        if (token.typ == tokens.tk_id and self.position + 1 < self.end and self.token_list[self.position + 1].typ == tokens.tk_lp) {
+            self.position += 2;
+            const once_index = self.code.items.len;
+            try self.code.append(self.allocator, .{ .opcode = .once });
+            const referenced_before = self.references_columns;
+            var arguments = std.ArrayList(u16).empty;
+            defer arguments.deinit(self.allocator);
+            if (self.position < self.end and self.token_list[self.position].typ == tokens.tk_rp) {
+                self.position += 1;
+            } else {
+                while (true) {
+                    try arguments.append(self.allocator, try self.expression(0));
+                    if (self.position >= self.end) return error.Syntax;
+                    if (self.token_list[self.position].typ == tokens.tk_rp) {
+                        self.position += 1;
+                        break;
+                    }
+                    if (self.token_list[self.position].typ != tokens.tk_comma) return error.Syntax;
+                    self.position += 1;
+                }
+            }
+            const definition = self.connection.findScalar(token.text, arguments.items.len) orelse return error.Syntax;
+            var first_argument: u16 = 0;
+            for (arguments.items, 0..) |source, index| {
+                const destination = try self.allocateRegister();
+                if (index == 0) {
+                    first_argument = destination;
+                }
+                try self.code.append(self.allocator, .{ .opcode = .copy, .p1 = source, .p2 = destination });
+            }
+            const output = try self.allocateRegister();
+            const function_index = self.functions.items.len;
+            try self.functions.append(self.allocator, .{ .callback = statement.invokeScalar, .context = definition });
+            try self.code.append(self.allocator, .{ .opcode = .function, .p1 = @intCast(arguments.items.len), .p2 = first_argument, .p3 = output, .p4 = .{ .index = @intCast(function_index) } });
+            expressionCodeRunJustOnce(self.code, once_index, referenced_before, self.references_columns);
+            return output;
+        }
+        if (token.typ == tokens.tk_id) {
+            self.position += 1;
+            var column_name = token.text;
+            if (self.position + 1 < self.end and self.token_list[self.position].typ == tokens.tk_dot and self.token_list[self.position + 1].typ == tokens.tk_id) {
+                const qualifier = self.qualifier orelse return error.Syntax;
+                if (!std.ascii.eqlIgnoreCase(column_name, qualifier)) return error.Syntax;
+                column_name = self.token_list[self.position + 1].text;
+                self.position += 2;
+            }
+            const column_index = resolvedColumnIndex(self.columns, column_name) orelse return error.Syntax;
+            self.references_columns = true;
+            const column = self.columns[column_index];
+            if (column.generated_start != null) return error.GeneratedColumnLoop;
+            const output = try self.allocateRegister();
+            if (self.index_scan) {
+                try expressionCodeLoadIndexColumn(self.code, self.allocator, self.owner, column, self.column_tokens, self.cursor, output);
+            } else {
+                try expressionCodeGetColumn(self.code, self.allocator, self.owner, column, self.column_tokens, self.cursor, output, 0);
+            }
+            return output;
+        }
+        if (token.typ == tokens.tk_integer) {
+            self.position += 1;
+            const value = std.fmt.parseInt(i64, token.text, 0) catch return error.Syntax;
+            const output = try self.allocateRegister();
+            if (value >= std.math.minInt(i32) and value <= std.math.maxInt(i32)) {
+                try self.code.append(self.allocator, .{ .opcode = .integer, .p1 = @intCast(value), .p2 = output });
+            } else {
+                try self.code.append(self.allocator, .{ .opcode = .int64, .p2 = output, .p4 = .{ .integer = value } });
+            }
+            return output;
+        }
+        if (token.typ == tokens.tk_float) {
+            self.position += 1;
+            const value = std.fmt.parseFloat(f64, token.text) catch return error.Syntax;
+            const output = try self.allocateRegister();
+            try self.code.append(self.allocator, .{ .opcode = .real, .p2 = output, .p4 = .{ .real = value } });
+            return output;
+        }
+        if (token.typ == tokens.tk_string or token.typ == tokens.tk_blob) {
+            self.position += 1;
+            const decoded = try decodeSqlToken(self.allocator, token);
+            self.owner.strings.append(self.allocator, decoded.bytes) catch |err| {
+                self.allocator.free(decoded.bytes);
+                return err;
+            };
+            const output = try self.allocateRegister();
+            try self.code.append(self.allocator, .{ .opcode = if (decoded.blob) .blob else .string, .p2 = output, .p4 = .{ .bytes = decoded.bytes } });
+            return output;
+        }
+        return error.Syntax;
+    }
+
+    fn unary(self: *GeneratedColumnCompiler) GeneratedColumnError!u16 {
+        if (self.position < self.end and self.token_list[self.position].typ == tokens.tk_plus) {
+            self.position += 1;
+            return self.unary();
+        }
+        if (self.position < self.end and self.token_list[self.position].typ == tokens.tk_minus) {
+            self.position += 1;
+            const source = try self.unary();
+            const zero = try self.allocateRegister();
+            try self.code.append(self.allocator, .{ .opcode = .integer, .p1 = 0, .p2 = zero });
+            const output = try self.allocateRegister();
+            try self.code.append(self.allocator, .{ .opcode = .subtract, .p1 = source, .p2 = zero, .p3 = output });
+            return output;
+        }
+        return self.primary();
+    }
+
+    /// Source `sqlite3ExprAddCollateString()`: resolve a postfix collation
+    /// name and attach its VDBE callback to the next comparison operation.
+    fn addCollationString(self: *GeneratedColumnCompiler, name: []const u8) GeneratedColumnError!void {
+        const callback: vdbe.CollationCallback = if (std.ascii.eqlIgnoreCase(name, "BINARY"))
+            binaryExpressionCollation
+        else if (std.ascii.eqlIgnoreCase(name, "NOCASE"))
+            noCaseExpressionCollation
+        else if (std.ascii.eqlIgnoreCase(name, "RTRIM"))
+            rtrimExpressionCollation
+        else
+            return error.Syntax;
+        if (self.collations.items.len == std.math.maxInt(u16)) return error.TooBig;
+        self.pending_collation = @intCast(self.collations.items.len);
+        try self.collations.append(self.allocator, .{ .callback = callback });
+    }
+
+    fn consumeCollation(self: *GeneratedColumnCompiler) GeneratedColumnError!void {
+        while (self.position + 1 < self.end and self.token_list[self.position].typ == tokens.tk_collate) {
+            if (self.token_list[self.position + 1].typ != tokens.tk_id) return error.Syntax;
+            try self.addCollationString(self.token_list[self.position + 1].text);
+            self.position += 2;
+        }
+    }
+
+    fn precedence(token_type: u16) u8 {
+        return switch (token_type) {
+            tokens.tk_eq, tokens.tk_ne, tokens.tk_lt, tokens.tk_le, tokens.tk_gt, tokens.tk_ge => 1,
+            tokens.tk_plus, tokens.tk_minus => 2,
+            tokens.tk_star, tokens.tk_slash, tokens.tk_rem => 3,
+            tokens.tk_concat => 4,
+            else => 0,
+        };
+    }
+
+    /// Source `exprComputeOperands()`: compile the right operand at the next
+    /// precedence level and reserve a distinct result register.
+    fn computeOperands(self: *GeneratedColumnCompiler, level: u8) GeneratedColumnError!struct { right: u16, output: u16 } {
+        const right = try self.expression(level + 1);
+        const output = try self.allocateRegister();
+        if (right == output) return error.Syntax;
+        return .{ .right = right, .output = output };
+    }
+
+    fn expression(self: *GeneratedColumnCompiler, minimum: u8) GeneratedColumnError!u16 {
+        var left = try self.unary();
+        try self.consumeCollation();
+        while (self.position < self.end) {
+            const operation_token = self.token_list[self.position].typ;
+            const level = precedence(operation_token);
+            if (level == 0 or level < minimum) break;
+            self.position += 1;
+            const operands = try self.computeOperands(level);
+            const right = operands.right;
+            const output = operands.output;
+            const operation: vdbe.Opcode = switch (operation_token) {
+                tokens.tk_eq => .eq,
+                tokens.tk_ne => .ne,
+                tokens.tk_lt => .lt,
+                tokens.tk_le => .le,
+                tokens.tk_gt => .gt,
+                tokens.tk_ge => .ge,
+                tokens.tk_plus => .add,
+                tokens.tk_minus => .subtract,
+                tokens.tk_star => .multiply,
+                tokens.tk_slash => .divide,
+                tokens.tk_rem => .remainder,
+                tokens.tk_concat => .concat,
+                else => unreachable,
+            };
+            if (level == 1) {
+                try self.code.append(self.allocator, .{ .opcode = .integer, .p1 = 0, .p2 = output });
+                const comparison_index = self.code.items.len;
+                const p4: vdbe.P4 = if (self.pending_collation) |index| .{ .collation = index } else .none;
+                try self.code.append(self.allocator, .{ .opcode = operation, .p1 = right, .p3 = left, .p4 = p4 });
+                const end_index = self.code.items.len;
+                try self.code.append(self.allocator, .{ .opcode = .goto });
+                const true_index = self.code.items.len;
+                try self.code.append(self.allocator, .{ .opcode = .integer, .p1 = 1, .p2 = output });
+                self.code.items[comparison_index].p2 = @intCast(true_index);
+                self.code.items[end_index].p2 = @intCast(self.code.items.len);
+                self.pending_collation = null;
+            } else {
+                try self.code.append(self.allocator, .{ .opcode = operation, .p1 = right, .p2 = left, .p3 = output });
+            }
+            left = output;
+        }
+        return left;
+    }
+};
+
+/// Source `sqlite3ExprCodeGeneratedColumn()`: compile a virtual generated
+/// column expression against the current row and materialize its affinity.
+fn expressionCodeGeneratedColumn(code: *std.ArrayList(vdbe.Instruction), allocator: std.mem.Allocator, owner: *Owner, connection: *Connection, functions: *std.ArrayList(vdbe.Function), collations: *std.ArrayList(vdbe.Collation), column: ResolvedColumn, columns: []const ResolvedColumn, token_list: []const Token, cursor: i32, output: i32, index_scan: bool, next_register: *u16) !void {
+    var compiler: GeneratedColumnCompiler = .{ .allocator = allocator, .owner = owner, .code = code, .token_list = token_list, .column_tokens = token_list, .columns = columns, .position = column.generated_start orelse return error.Syntax, .end = column.generated_end, .next_register = next_register, .cursor = cursor, .index_scan = index_scan, .connection = connection, .functions = functions, .collations = collations };
+    const result = try compiler.expression(0);
+    if (compiler.position != compiler.end) return error.Syntax;
+    if (result != output) {
+        try code.append(allocator, .{ .opcode = .copy, .p1 = result, .p2 = output });
+    }
+    if (realColumnAffinity(column.declared_type)) {
+        try code.append(allocator, .{ .opcode = .real_affinity, .p1 = output });
+    }
+}
+
+/// Source `sqlite3ExprCodeTarget()`: evaluate a table-scan expression into
+/// its designated result register using the current cursor row.
+fn expressionCodeTarget(code: *std.ArrayList(vdbe.Instruction), allocator: std.mem.Allocator, owner: *Owner, connection: *Connection, functions: *std.ArrayList(vdbe.Function), collations: *std.ArrayList(vdbe.Collation), expression_column: ResolvedColumn, columns: []const ResolvedColumn, expression_tokens: []const Token, column_tokens: []const Token, qualifier: []const u8, output: i32, index_scan: bool, next_register: *u16) !void {
+    var compiler: GeneratedColumnCompiler = .{ .allocator = allocator, .owner = owner, .code = code, .token_list = expression_tokens, .column_tokens = column_tokens, .columns = columns, .position = expression_column.generated_start orelse return error.Syntax, .end = expression_column.generated_end, .next_register = next_register, .cursor = 0, .index_scan = index_scan, .qualifier = qualifier, .connection = connection, .functions = functions, .collations = collations };
+    const result = try compiler.expression(0);
+    if (compiler.position != compiler.end) return error.Syntax;
+    if (result != output) {
+        try code.append(allocator, .{ .opcode = .copy, .p1 = result, .p2 = output });
+    }
+}
+
+fn expressionCodeResultColumn(code: *std.ArrayList(vdbe.Instruction), allocator: std.mem.Allocator, owner: *Owner, connection: *Connection, functions: *std.ArrayList(vdbe.Function), collations: *std.ArrayList(vdbe.Collation), column: ResolvedColumn, all_columns: []const ResolvedColumn, schema_tokens: []const Token, expression_tokens: []const Token, qualifier: []const u8, index_scan: bool, output: i32, next_register: *u16) !void {
+    if (column.scan_expression) {
+        return expressionCodeTarget(code, allocator, owner, connection, functions, collations, column, all_columns, expression_tokens, schema_tokens, qualifier, output, index_scan, next_register);
+    }
+    if (column.generated_start != null and column.generated_virtual) {
+        return expressionCodeGeneratedColumn(code, allocator, owner, connection, functions, collations, column, all_columns, schema_tokens, 0, output, index_scan, next_register);
+    }
+    if (index_scan) {
+        return expressionCodeLoadIndexColumn(code, allocator, owner, column, schema_tokens, 0, output);
+    }
+    return expressionCodeGetColumn(code, allocator, owner, column, schema_tokens, 0, output, 0);
+}
+
+const IndexedExpression = struct { start: usize, end: usize, register: u16 };
+
+/// Source `exprCompareVariable()`: compare tokenized expressions while
+/// requiring parameter tokens to retain the same spelling and position.
+fn expressionCompareVariable(token_list: []const Token, first_start: usize, first_end: usize, second_start: usize, second_end: usize) bool {
+    if (first_end - first_start != second_end - second_start) return false;
+    for (token_list[first_start..first_end], token_list[second_start..second_end]) |first, second| {
+        if (first.typ != second.typ) return false;
+        if (first.typ == tokens.tk_variable) {
+            if (!std.mem.eql(u8, first.text, second.text)) return false;
+        } else if (first.typ == tokens.tk_id) {
+            if (!std.ascii.eqlIgnoreCase(first.text, second.text)) return false;
+        } else if (!std.mem.eql(u8, first.text, second.text)) return false;
+    }
+    return true;
+}
+
+/// Source `sqlite3IndexedExprLookup()`: find an already coded equivalent
+/// result expression so duplicate projection terms can reuse its register.
+fn indexedExpressionLookup(cache: []const IndexedExpression, column: ResolvedColumn, token_list: []const Token) ?u16 {
+    const start = column.generated_start orelse return null;
+    for (cache) |entry| {
+        if (expressionCompareVariable(token_list, entry.start, entry.end, start, column.generated_end)) return entry.register;
+    }
+    return null;
+}
+
+/// Source `exprPartidxExprLookup()`: resolve a simple expression column by
+/// schema identity for covering-index projection.
+fn partialIndexExpressionLookup(columns: []const ResolvedColumn, name: []const u8) ?usize {
+    for (columns, 0..) |column, index| {
+        if (column.scan_expression) continue;
+        if (std.ascii.eqlIgnoreCase(column.name, name)) return index;
+    }
+    return null;
+}
+
+/// Source `sqlite3ExprCodeExprList()`: emit each scan result expression into
+/// a contiguous register range while sharing temporary-register ownership.
+fn expressionCodeExpressionList(code: *std.ArrayList(vdbe.Instruction), allocator: std.mem.Allocator, owner: *Owner, connection: *Connection, functions: *std.ArrayList(vdbe.Function), collations: *std.ArrayList(vdbe.Collation), selected: []const ResolvedColumn, all_columns: []const ResolvedColumn, schema_tokens: []const Token, expression_tokens: []const Token, qualifier: []const u8, index_scan: bool, first_output: i32, next_register: *u16) !void {
+    var cache = std.ArrayList(IndexedExpression).empty;
+    defer cache.deinit(allocator);
+    for (selected, 0..) |column, index| {
+        const output: u16 = @intCast(first_output + @as(i32, @intCast(index)));
+        if (column.scan_expression) {
+            if (indexedExpressionLookup(cache.items, column, expression_tokens)) |prior| {
+                try code.append(allocator, .{ .opcode = .copy, .p1 = prior, .p2 = output });
+                continue;
+            }
+        }
+        try expressionCodeResultColumn(code, allocator, owner, connection, functions, collations, column, all_columns, schema_tokens, expression_tokens, qualifier, index_scan, output, next_register);
+        if (column.scan_expression) {
+            try cache.append(allocator, .{ .start = column.generated_start.?, .end = column.generated_end, .register = output });
+        }
+    }
+}
+
+/// Source `sqlite3VdbeSetNumCols()`: allocate the statement's result-column
+/// metadata array before names are attached.
+fn setResultColumnCount(allocator: std.mem.Allocator, owner: *Owner, count: usize) ![]statement.ColumnMetadata {
+    if (count > std.math.maxInt(u16)) return error.TooBig;
+    const columns = try allocator.alloc(statement.ColumnMetadata, count);
+    for (columns) |*column| {
+        column.* = .{ .name = "" };
+    }
+    owner.columns = columns;
+    return columns;
+}
+
+/// Source `sqlite3VdbeSetColName()`: transfer one owned result-column name to
+/// both statement metadata and owner cleanup tracking.
+fn setResultColumnName(allocator: std.mem.Allocator, owner: *Owner, columns: []statement.ColumnMetadata, index: usize, name_text: []const u8) !void {
+    if (index >= columns.len) return error.InvalidColumn;
+    const name = try allocator.dupeZ(u8, name_text);
+    owner.names.append(allocator, name) catch |err| {
+        allocator.free(name);
+        return err;
+    };
+    columns[index] = .{ .name = name };
+}
+
+/// Source `sqlite3ExprNullRegisterRange()`: initialize a contiguous register
+/// range to NULL with one VDBE operation.
+fn expressionNullRegisterRange(code: *std.ArrayList(vdbe.Instruction), allocator: std.mem.Allocator, first: u16, last: u16) !void {
+    if (first == 0 or last < first) return error.InvalidRegisterRange;
+    try code.append(allocator, .{ .opcode = .null_, .p2 = first, .p3 = last });
+}
+
+fn buildAggregateTableScan(connection: *Connection, source: [:0]u8, root_page: u32, index_scan: bool, selected: []const ResolvedColumn, all_columns: []const ResolvedColumn, schema_tokens: []const Token, expression_tokens: []const Token, qualifier: []const u8, analysis: *const AggregateAnalysis) !*statement.Statement {
     const allocator = connection.allocator;
     const database = connection.database orelse return error.Misuse;
-    if (selected.len > std.math.maxInt(u16) - 3) return error.TooBig;
+    if (selected.len == 0 or selected.len > std.math.maxInt(u16) - 8) return error.TooBig;
     const owner = allocator.create(Owner) catch |err| {
         allocator.free(source);
         return err;
@@ -2143,22 +5771,114 @@ fn buildPlannedTableScan(connection: *Connection, source: [:0]u8, root_page: u32
     errdefer Owner.destroy(allocator, owner);
     var code = std.ArrayList(vdbe.Instruction).empty;
     defer code.deinit(allocator);
+    var functions = std.ArrayList(vdbe.Function).empty;
+    defer functions.deinit(allocator);
+    var collations = std.ArrayList(vdbe.Collation).empty;
+    defer collations.deinit(allocator);
+    var accumulators = std.ArrayList(u16).empty;
+    defer accumulators.deinit(allocator);
+    var aggregate_functions = std.ArrayList(u16).empty;
+    defer aggregate_functions.deinit(allocator);
     const parameters = try allocator.alloc(statement.ParameterMetadata, 0);
     owner.parameters = parameters;
-    const columns = try allocator.alloc(statement.ColumnMetadata, selected.len);
-    owner.columns = columns;
-    try code.append(allocator, .{ .opcode = .open_read, .p1 = 0, .p2 = @intCast(root_page), .p3 = @intFromBool(index_scan) });
+    const columns = try setResultColumnCount(allocator, owner, selected.len);
+    try code.append(allocator, openTable(root_page, index_scan, false));
+    var next_register: u16 = @intCast(selected.len + 1);
+    for (analysis.functions.items) |_| {
+        try accumulators.append(allocator, next_register);
+        next_register += 1;
+    }
+    try expressionNullRegisterRange(&code, allocator, accumulators.items[0], accumulators.items[accumulators.items.len - 1]);
+    const rewind_index = code.items.len;
+    try code.append(allocator, .{ .opcode = .rewind, .p1 = 0 });
+    const loop_index = code.items.len;
+    for (analysis.functions.items, accumulators.items) |term, accumulator| {
+        var argument_results: [4]u16 = undefined;
+        for (term.arguments[0..term.argument_count], 0..) |argument, argument_index| {
+            const destination = next_register;
+            next_register += 1;
+            const expression_column = scanExpressionColumn(source, expression_tokens, argument.start, argument.end);
+            try expressionCodeTarget(&code, allocator, owner, connection, &functions, &collations, expression_column, all_columns, expression_tokens, schema_tokens, qualifier, destination, index_scan, &next_register);
+            argument_results[argument_index] = destination;
+        }
+        var first_argument: u16 = 1;
+        if (term.argument_count != 0) {
+            first_argument = next_register;
+            for (argument_results[0..term.argument_count]) |argument_result| {
+                const destination = next_register;
+                next_register += 1;
+                try code.append(allocator, .{ .opcode = .copy, .p1 = argument_result, .p2 = destination });
+            }
+        }
+        const function_index = functions.items.len;
+        try aggregate_functions.append(allocator, @intCast(function_index));
+        try functions.append(allocator, .{ .aggregate_step = statement.invokeAggregateStep, .aggregate_final = statement.finalizeAggregate, .context = term.definition });
+        try code.append(allocator, .{ .opcode = .agg_step, .p1 = @intCast(term.argument_count), .p2 = first_argument, .p3 = accumulator, .p4 = .{ .index = @intCast(function_index) } });
+    }
+    try code.append(allocator, .{ .opcode = .next, .p1 = 0, .p2 = @intCast(loop_index) });
+    const final_index = code.items.len;
+    code.items[rewind_index].p2 = @intCast(final_index);
+    for (analysis.functions.items, accumulators.items, aggregate_functions.items, 0..) |_, accumulator, function_index, index| {
+        try code.append(allocator, .{ .opcode = .agg_final, .p2 = accumulator, .p3 = @intCast(index + 1), .p4 = .{ .index = function_index } });
+    }
+    try code.append(allocator, .{ .opcode = .result_row, .p1 = 1, .p2 = @intCast(selected.len) });
+    try code.append(allocator, .{ .opcode = .halt });
+    for (selected, 0..) |column, index| {
+        try setResultColumnName(allocator, owner, columns, index, column.name);
+    }
+    const instructions = try code.toOwnedSlice(allocator);
+    owner.instructions = instructions;
+    owner.program.instructions = instructions;
+    owner.program.register_count = @max(owner.program.register_count, next_register - 1);
+    const dynamic_functions = try functions.toOwnedSlice(allocator);
+    functions = .empty;
+    owner.dynamic_functions = dynamic_functions;
+    owner.program.functions = dynamic_functions;
+    const dynamic_collations = try collations.toOwnedSlice(allocator);
+    collations = .empty;
+    owner.dynamic_collations = dynamic_collations;
+    owner.program.collations = dynamic_collations;
+    const prepared = try statement.Statement.createWithDatabase(allocator, &owner.program, parameters, columns, database);
+    prepared.adoptOwner(owner, Owner.destroy);
+    return prepared;
+}
+
+fn buildPlannedTableScan(connection: *Connection, source: [:0]u8, root_page: u32, index_scan: bool, selected: []const ResolvedColumn, all_columns: []const ResolvedColumn, schema_tokens: []const Token, expression_tokens: []const Token, qualifier: []const u8, plan: ScanPlan) !*statement.Statement {
+    const allocator = connection.allocator;
+    const database = connection.database orelse return error.Misuse;
+    if (selected.len > std.math.maxInt(u16) - 8) return error.TooBig;
+    const owner = allocator.create(Owner) catch |err| {
+        allocator.free(source);
+        return err;
+    };
+    owner.* = .{ .source = source, .instructions = &.{}, .parameters = &.{}, .columns = &.{}, .program = .{ .instructions = &.{}, .register_count = @intCast(selected.len + 3), .cursor_count = 1 } };
+    errdefer Owner.destroy(allocator, owner);
+    var code = std.ArrayList(vdbe.Instruction).empty;
+    defer code.deinit(allocator);
+    var functions = std.ArrayList(vdbe.Function).empty;
+    defer functions.deinit(allocator);
+    var collations = std.ArrayList(vdbe.Collation).empty;
+    defer collations.deinit(allocator);
+    const parameters = try allocator.alloc(statement.ParameterMetadata, 0);
+    owner.parameters = parameters;
+    const columns = try setResultColumnCount(allocator, owner, selected.len);
+    try code.append(allocator, openTable(root_page, index_scan, false));
     const predicate_register: i32 = @intCast(selected.len + 1);
     const rowid_register: i32 = @intCast(selected.len + 2);
     const limit_register: i32 = @intCast(selected.len + 3);
-    if (plan.predicate) |predicate| try code.append(allocator, .{ .opcode = .integer, .p1 = @intCast(predicate.value), .p2 = predicate_register });
-    if (plan.limit) |limit| try code.append(allocator, .{ .opcode = .integer, .p1 = @intCast(limit), .p2 = limit_register });
+    var next_register: u16 = @intCast(selected.len + 4);
+    if (plan.predicate) |predicate| {
+        try code.append(allocator, .{ .opcode = .integer, .p1 = @intCast(predicate.value), .p2 = predicate_register });
+    }
+    if (plan.limit) |limit| {
+        try code.append(allocator, .{ .opcode = .integer, .p1 = @intCast(limit), .p2 = limit_register });
+    }
     if (plan.limit == 0) {
         try code.append(allocator, .{ .opcode = .halt });
-    } else if (plan.predicate != null and plan.predicate.?.opcode == .eq) {
+    } else if (!index_scan and plan.predicate != null and plan.predicate.?.opcode == .eq) {
         const seek_index = code.items.len;
         try code.append(allocator, .{ .opcode = .seek_rowid, .p1 = 0, .p3 = predicate_register });
-        for (selected, 0..) |column, index| try code.append(allocator, if (column.integer_primary_key) .{ .opcode = .rowid, .p1 = 0, .p2 = @intCast(index + 1) } else .{ .opcode = .column, .p1 = 0, .p2 = @intCast(column.record_index), .p3 = @intCast(index + 1) });
+        try expressionCodeExpressionList(&code, allocator, owner, connection, &functions, &collations, selected, all_columns, schema_tokens, expression_tokens, qualifier, index_scan, 1, &next_register);
         try code.append(allocator, .{ .opcode = .result_row, .p1 = 1, .p2 = @intCast(selected.len) });
         const halt_index = code.items.len;
         try code.append(allocator, .{ .opcode = .halt });
@@ -2182,7 +5902,7 @@ fn buildPlannedTableScan(connection: *Connection, source: [:0]u8, root_page: u32
             };
             try code.append(allocator, .{ .opcode = inverse, .p1 = predicate_register, .p3 = rowid_register });
         }
-        for (selected, 0..) |column, index| try code.append(allocator, if (column.integer_primary_key) .{ .opcode = .rowid, .p1 = 0, .p2 = @intCast(index + 1) } else .{ .opcode = .column, .p1 = 0, .p2 = @intCast(column.record_index), .p3 = @intCast(index + 1) });
+        try expressionCodeExpressionList(&code, allocator, owner, connection, &functions, &collations, selected, all_columns, schema_tokens, expression_tokens, qualifier, index_scan, 1, &next_register);
         try code.append(allocator, .{ .opcode = .result_row, .p1 = 1, .p2 = @intCast(selected.len) });
         var limit_index: ?usize = null;
         if (plan.limit != null) {
@@ -2194,27 +5914,35 @@ fn buildPlannedTableScan(connection: *Connection, source: [:0]u8, root_page: u32
         const halt_index = code.items.len;
         try code.append(allocator, .{ .opcode = .halt });
         code.items[position_index].p2 = @intCast(halt_index);
-        if (reject_index) |index| code.items[index].p2 = @intCast(advance_index);
-        if (limit_index) |index| code.items[index].p2 = @intCast(halt_index);
+        if (reject_index) |index| {
+            code.items[index].p2 = @intCast(advance_index);
+        }
+        if (limit_index) |index| {
+            code.items[index].p2 = @intCast(halt_index);
+        }
     }
     for (selected, 0..) |column, index| {
-        const name = try allocator.dupeZ(u8, column.name);
-        owner.names.append(allocator, name) catch |err| {
-            allocator.free(name);
-            return err;
-        };
-        columns[index] = .{ .name = name };
+        try setResultColumnName(allocator, owner, columns, index, column.name);
     }
     const instructions = try code.toOwnedSlice(allocator);
     owner.instructions = instructions;
     owner.program.instructions = instructions;
+    owner.program.register_count = @max(owner.program.register_count, next_register - 1);
+    const dynamic_functions = try functions.toOwnedSlice(allocator);
+    functions = .empty;
+    owner.dynamic_functions = dynamic_functions;
+    owner.program.functions = dynamic_functions;
+    const dynamic_collations = try collations.toOwnedSlice(allocator);
+    collations = .empty;
+    owner.dynamic_collations = dynamic_collations;
+    owner.program.collations = dynamic_collations;
     const prepared = try statement.Statement.createWithDatabase(allocator, &owner.program, parameters, columns, database);
     prepared.adoptOwner(owner, Owner.destroy);
     return prepared;
 }
 
-fn compilePlannedTableScan(connection: *Connection, source: [:0]u8, consumed: usize, root_page: u32, index_scan: bool, selected: []const ResolvedColumn, plan: ScanPlan) CompileOutcome {
-    const prepared = buildPlannedTableScan(connection, source, root_page, index_scan, selected, plan) catch |err| {
+fn compilePlannedTableScan(connection: *Connection, source: [:0]u8, consumed: usize, root_page: u32, index_scan: bool, selected: []const ResolvedColumn, all_columns: []const ResolvedColumn, schema_tokens: []const Token, expression_tokens: []const Token, qualifier: []const u8, plan: ScanPlan) CompileOutcome {
+    const prepared = buildPlannedTableScan(connection, source, root_page, index_scan, selected, all_columns, schema_tokens, expression_tokens, qualifier, plan) catch |err| {
         return .{ .result = switch (err) {
             error.OutOfMemory => .no_memory,
             error.TooBig => .too_big,
@@ -2234,10 +5962,12 @@ fn compileVirtualScan(connection: *Connection, table: *VirtualTable, source: [:0
     var selected = std.ArrayList(usize).empty;
     defer selected.deinit(allocator);
     if (from_position == 2 and token_list[1].typ == tokens.tk_star) {
-        for (0..table.columns.items.len) |index| selected.append(allocator, index) catch {
-            allocator.free(source);
-            return .{ .result = .no_memory, .consumed = consumed };
-        };
+        for (0..table.columns.items.len) |index| {
+            selected.append(allocator, index) catch {
+                allocator.free(source);
+                return .{ .result = .no_memory, .consumed = consumed };
+            };
+        }
     } else {
         var position: usize = 1;
         while (position < from_position) {
@@ -2246,10 +5976,12 @@ fn compileVirtualScan(connection: *Connection, table: *VirtualTable, source: [:0
                 return .{ .result = .error_, .consumed = consumed };
             }
             var found: ?usize = null;
-            for (table.columns.items, 0..) |name, index| if (std.ascii.eqlIgnoreCase(name, token_list[position].text)) {
-                found = index;
-                break;
-            };
+            for (table.columns.items, 0..) |name, index| {
+                if (std.ascii.eqlIgnoreCase(name, token_list[position].text)) {
+                    found = index;
+                    break;
+                }
+            }
             selected.append(allocator, found orelse {
                 allocator.free(source);
                 return .{ .result = .error_, .consumed = consumed };
@@ -2352,25 +6084,414 @@ fn compileVirtualScan(connection: *Connection, table: *VirtualTable, source: [:0
     return .{ .result = .ok, .statement = prepared, .consumed = consumed };
 }
 
+fn decodeSqlToken(allocator: std.mem.Allocator, token: Token) ParserError!struct { bytes: []u8, blob: bool } {
+    if (token.typ == tokens.tk_string) {
+        if (token.text.len < 2) return error.Syntax;
+        var decoded = std.ArrayList(u8).empty;
+        defer decoded.deinit(allocator);
+        var index: usize = 1;
+        while (index + 1 < token.text.len) : (index += 1) {
+            if (token.text[index] == '\'' and index + 1 < token.text.len - 1 and token.text[index + 1] == '\'') index += 1;
+            try decoded.append(allocator, token.text[index]);
+        }
+        return .{ .bytes = try decoded.toOwnedSlice(allocator), .blob = false };
+    }
+    if (token.typ == tokens.tk_blob) {
+        if (token.text.len < 3 or token.text.len % 2 == 0) return error.Syntax;
+        const output = try allocator.alloc(u8, (token.text.len - 3) / 2);
+        errdefer allocator.free(output);
+        for (output, 0..) |*byte, index| {
+            byte.* = std.fmt.parseInt(u8, token.text[2 + index * 2 ..][0..2], 16) catch return error.Syntax;
+        }
+        return .{ .bytes = output, .blob = true };
+    }
+    return error.Syntax;
+}
+
+fn compileJsonVirtualScan(connection: *Connection, configuration: json_vtable.Connection, source: [:0]u8, token_list: []const Token, consumed: usize, from_position: usize) CompileOutcome {
+    const allocator = connection.allocator;
+    const argument_position = from_position + 3;
+    if (argument_position + 1 >= token_list.len or token_list[from_position + 2].typ != tokens.tk_lp) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const decoded = decodeSqlToken(allocator, token_list[argument_position]) catch |err| {
+        allocator.free(source);
+        return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+    };
+    var root: ?[]u8 = null;
+    var closing = argument_position + 1;
+    if (closing < token_list.len and token_list[closing].typ == tokens.tk_comma) {
+        if (closing + 2 >= token_list.len) {
+            allocator.free(decoded.bytes);
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        const decoded_root = decodeSqlToken(allocator, token_list[closing + 1]) catch |err| {
+            allocator.free(decoded.bytes);
+            allocator.free(source);
+            return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+        };
+        if (decoded_root.blob) {
+            allocator.free(decoded_root.bytes);
+            allocator.free(decoded.bytes);
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        root = decoded_root.bytes;
+        closing += 2;
+    }
+    if (closing >= token_list.len or token_list[closing].typ != tokens.tk_rp or closing + 1 != token_list.len) {
+        if (root) |value| allocator.free(value);
+        allocator.free(decoded.bytes);
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const column_names = [_][]const u8{ "key", "value", "type", "atom", "id", "parent", "fullkey", "path", "json", "root" };
+    var selected = std.ArrayList(usize).empty;
+    defer selected.deinit(allocator);
+    if (from_position == 2 and token_list[1].typ == tokens.tk_star) {
+        for (0..8) |index| {
+            selected.append(allocator, index) catch {
+                if (root) |value| allocator.free(value);
+                allocator.free(decoded.bytes);
+                allocator.free(source);
+                return .{ .result = .no_memory, .consumed = consumed };
+            };
+        }
+    } else {
+        var position: usize = 1;
+        while (position < from_position) {
+            var found: ?usize = null;
+            for (&column_names, 0..) |name, index| {
+                if (std.ascii.eqlIgnoreCase(name, token_list[position].text)) {
+                    found = index;
+                    break;
+                }
+            }
+            selected.append(allocator, found orelse {
+                if (root) |value| allocator.free(value);
+                allocator.free(decoded.bytes);
+                allocator.free(source);
+                return .{ .result = .error_, .consumed = consumed };
+            }) catch {
+                if (root) |value| allocator.free(value);
+                allocator.free(decoded.bytes);
+                allocator.free(source);
+                return .{ .result = .no_memory, .consumed = consumed };
+            };
+            position += 1;
+            if (position == from_position) break;
+            if (token_list[position].typ != tokens.tk_comma) {
+                if (root) |value| allocator.free(value);
+                allocator.free(decoded.bytes);
+                allocator.free(source);
+                return .{ .result = .error_, .consumed = consumed };
+            }
+            position += 1;
+        }
+    }
+    if (selected.items.len == 0) {
+        if (root) |value| allocator.free(value);
+        allocator.free(decoded.bytes);
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    _ = json_vtable.bestIndex(&.{.{ .column = 8, .equal = true, .usable = true }}, false) catch unreachable;
+    const owner = allocator.create(Owner) catch {
+        if (root) |value| allocator.free(value);
+        allocator.free(decoded.bytes);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const plan = allocator.create(JsonVirtualPlan) catch {
+        allocator.destroy(owner);
+        if (root) |value| allocator.free(value);
+        allocator.free(decoded.bytes);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    plan.* = .{ .allocator = allocator, .connection = configuration, .input = decoded.bytes, .input_is_blob = decoded.blob, .root = root };
+    const instruction_count = selected.items.len + 5;
+    const instructions = allocator.alloc(vdbe.Instruction, instruction_count) catch {
+        allocator.free(plan.input);
+        if (plan.root) |value| allocator.free(value);
+        allocator.destroy(plan);
+        allocator.destroy(owner);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const parameters = allocator.alloc(statement.ParameterMetadata, 0) catch unreachable;
+    const columns = allocator.alloc(statement.ColumnMetadata, selected.items.len) catch {
+        allocator.free(instructions);
+        allocator.free(plan.input);
+        if (plan.root) |value| allocator.free(value);
+        allocator.destroy(plan);
+        allocator.destroy(owner);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const sources = allocator.alloc(vdbe.VirtualSource, 1) catch {
+        allocator.free(columns);
+        allocator.free(parameters);
+        allocator.free(instructions);
+        allocator.free(plan.input);
+        if (plan.root) |value| allocator.free(value);
+        allocator.destroy(plan);
+        allocator.destroy(owner);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    sources[0] = json_virtual_source_template;
+    sources[0].context = plan;
+    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .virtual_sources = sources, .json_virtual_plan = plan, .program = .{ .instructions = instructions, .register_count = @intCast(selected.items.len), .cursor_count = 1, .virtual_sources = sources } };
+    instructions[0] = .{ .opcode = .open_virtual, .p1 = 0, .p2 = 0 };
+    instructions[1] = .{ .opcode = .rewind, .p1 = 0, .p2 = @intCast(instruction_count - 1) };
+    for (selected.items, 0..) |column_index, index| {
+        instructions[2 + index] = .{ .opcode = .column, .p1 = 0, .p2 = @intCast(column_index), .p3 = @intCast(index + 1) };
+        const name = owner.names.addOne(allocator) catch {
+            Owner.destroy(allocator, owner);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        name.* = allocator.dupeZ(u8, column_names[column_index]) catch {
+            _ = owner.names.pop();
+            Owner.destroy(allocator, owner);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        columns[index] = .{ .name = name.* };
+    }
+    instructions[instruction_count - 3] = .{ .opcode = .result_row, .p1 = 1, .p2 = @intCast(selected.items.len) };
+    instructions[instruction_count - 2] = .{ .opcode = .next, .p1 = 0, .p2 = 2 };
+    instructions[instruction_count - 1] = .{ .opcode = .halt };
+    const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
+        Owner.destroy(allocator, owner);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    prepared.adoptOwner(owner, Owner.destroy);
+    return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+}
+
+const LocatedTableItem = struct {
+    table: btree.SchemaTable,
+    table_name: []const u8,
+    qualifier: []const u8,
+    after: usize,
+};
+
+const LocateTableItemOutcome = struct {
+    result: ResultCode,
+    item: ?LocatedTableItem = null,
+    error_offset: c_int = -1,
+};
+
+/// Source `sqlite3LocateTable()`: resolve a main-schema table and preserve
+/// the precise storage-layer result for callers that suppress diagnostics.
+fn locateTable(connection: *Connection, name: []const u8, database_name: ?[]const u8) btree.SchemaTableOutcome {
+    if (database_name) |schema_name| {
+        if (!std.ascii.eqlIgnoreCase(schema_name, "main")) return .{ .result = .not_found };
+    }
+    const database = connection.database orelse return .{ .result = .misuse };
+    return database.schemaTable(name);
+}
+
+/// Source `sqlite3LocateTableItem()`: parse an optionally schema-qualified
+/// FROM item, apply AS or bare aliases, and restrict lookup to its schema.
+fn locateTableItem(connection: *Connection, token_list: []const Token, from_position: usize) LocateTableItemOutcome {
+    var position = from_position + 1;
+    if (position >= token_list.len or token_list[position].typ != tokens.tk_id) {
+        return .{ .result = .error_, .error_offset = if (position < token_list.len) @intCast(token_list[position].start) else -1 };
+    }
+    var database_name: ?[]const u8 = null;
+    var table_name = token_list[position].text;
+    if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_dot and token_list[position + 2].typ == tokens.tk_id) {
+        database_name = table_name;
+        table_name = token_list[position + 2].text;
+        position += 3;
+    } else {
+        position += 1;
+    }
+    var qualifier = table_name;
+    if (position + 1 < token_list.len and token_list[position].typ == tokens.tk_as and token_list[position + 1].typ == tokens.tk_id) {
+        qualifier = token_list[position + 1].text;
+        position += 2;
+    } else if (position < token_list.len and token_list[position].typ == tokens.tk_id) {
+        qualifier = token_list[position].text;
+        position += 1;
+    }
+    const located = locateTable(connection, table_name, database_name);
+    if (located.result != .ok) return .{ .result = located.result, .error_offset = @intCast(token_list[from_position + 1].start) };
+    return .{ .result = .ok, .item = .{ .table = located.table.?, .table_name = table_name, .qualifier = qualifier, .after = position } };
+}
+
+fn selectedColumnToken(token_list: []const Token, position: usize, limit: usize, qualifier: []const u8) ?struct { token: Token, next: usize } {
+    if (position >= limit or token_list[position].typ != tokens.tk_id) return null;
+    if (position + 2 < limit and token_list[position + 1].typ == tokens.tk_dot) {
+        if (!std.ascii.eqlIgnoreCase(token_list[position].text, qualifier) or token_list[position + 2].typ != tokens.tk_id) return null;
+        return .{ .token = token_list[position + 2], .next = position + 3 };
+    }
+    return .{ .token = token_list[position], .next = position + 1 };
+}
+
+fn scanExpressionColumn(source: []const u8, token_list: []const Token, start: usize, end: usize) ResolvedColumn {
+    const first = token_list[start].start;
+    const last = token_list[end - 1];
+    return .{
+        .name = source[first .. last.start + last.text.len],
+        .declared_type = "",
+        .collation = "BINARY",
+        .record_index = 0,
+        .integer_primary_key = false,
+        .primary_key = false,
+        .unique = false,
+        .not_null = false,
+        .default_start = null,
+        .default_end = 0,
+        .generated_start = start,
+        .generated_end = end,
+        .generated_virtual = true,
+        .scan_expression = true,
+    };
+}
+
+const AggregateArgument = struct { start: usize, end: usize };
+const AggregateTerm = struct {
+    definition: *statement.FunctionDefinition,
+    arguments: [4]AggregateArgument = undefined,
+    argument_count: usize = 0,
+};
+const AggregateAnalysis = struct {
+    functions: std.ArrayList(AggregateTerm) = .empty,
+    columns: std.ArrayList(usize) = .empty,
+
+    fn deinit(self: *AggregateAnalysis, allocator: std.mem.Allocator) void {
+        self.functions.deinit(allocator);
+        self.columns.deinit(allocator);
+    }
+};
+
+/// Source `addAggInfoColumn()`: add a unique source-column dependency to the
+/// aggregate analysis arrays and return its stable slot.
+fn aggregateAddColumn(allocator: std.mem.Allocator, analysis: *AggregateAnalysis, column_index: usize) !usize {
+    for (analysis.columns.items, 0..) |existing, index| {
+        if (existing == column_index) return index;
+    }
+    const index = analysis.columns.items.len;
+    try analysis.columns.append(allocator, column_index);
+    return index;
+}
+
+/// Source `addAggInfoFunc()`: append one resolved aggregate function and its
+/// bounded argument ranges to the aggregate analysis.
+fn aggregateAddFunction(allocator: std.mem.Allocator, analysis: *AggregateAnalysis, definition: *statement.FunctionDefinition, arguments: []const AggregateArgument) !void {
+    if (arguments.len > 4) return error.TooManyArguments;
+    var term = AggregateTerm{ .definition = definition };
+    term.argument_count = arguments.len;
+    for (arguments, 0..) |argument, index| {
+        term.arguments[index] = argument;
+    }
+    try analysis.functions.append(allocator, term);
+}
+
+/// Source `sqlite3ExprAnalyzeAggregates()`: recognize top-level aggregate
+/// result expressions, resolve their argument columns, and build AggInfo-like
+/// function and column arrays for table-scan code generation.
+fn expressionAnalyzeAggregates(allocator: std.mem.Allocator, connection: *Connection, selected: []const ResolvedColumn, columns: []const ResolvedColumn, token_list: []const Token, qualifier: []const u8) !?AggregateAnalysis {
+    var analysis = AggregateAnalysis{};
+    var transferred = false;
+    defer if (!transferred) analysis.deinit(allocator);
+    for (selected) |column| {
+        if (!column.scan_expression) return null;
+        const start = column.generated_start orelse return null;
+        const end = column.generated_end;
+        if (end < start + 3 or token_list[start].typ != tokens.tk_id or token_list[start + 1].typ != tokens.tk_lp or token_list[end - 1].typ != tokens.tk_rp) return null;
+        const definition = connection.findScalar(token_list[start].text, 0) orelse connection.findScalar(token_list[start].text, 1) orelse connection.findScalar(token_list[start].text, 2) orelse return null;
+        if (definition.step_callback == null or definition.final_callback == null) return null;
+        var arguments: [4]AggregateArgument = undefined;
+        var argument_count: usize = 0;
+        var position = start + 2;
+        if (position + 2 == end and token_list[position].typ == tokens.tk_star) {
+            if (!std.ascii.eqlIgnoreCase(definition.name, "count")) return null;
+        } else if (position != end - 1) {
+            while (position < end - 1) {
+                if (argument_count == arguments.len) return error.TooManyArguments;
+                const argument_start = position;
+                var depth: usize = 0;
+                while (position < end - 1) : (position += 1) {
+                    if (token_list[position].typ == tokens.tk_lp) {
+                        depth += 1;
+                    } else if (token_list[position].typ == tokens.tk_rp) {
+                        if (depth == 0) return error.Syntax;
+                        depth -= 1;
+                    } else if (token_list[position].typ == tokens.tk_comma and depth == 0) break;
+                }
+                if (position == argument_start or depth != 0) return error.Syntax;
+                arguments[argument_count] = .{ .start = argument_start, .end = position };
+                argument_count += 1;
+                if (position < end - 1) {
+                    position += 1;
+                }
+            }
+        }
+        const exact_definition = connection.findScalar(token_list[start].text, argument_count) orelse return null;
+        if (exact_definition != definition and (exact_definition.step_callback == null or exact_definition.final_callback == null)) return null;
+        try aggregateAddFunction(allocator, &analysis, exact_definition, arguments[0..argument_count]);
+        for (arguments[0..argument_count]) |argument| {
+            var token_index = argument.start;
+            while (token_index < argument.end) : (token_index += 1) {
+                var name = token_list[token_index].text;
+                if (token_index + 2 < argument.end and token_list[token_index + 1].typ == tokens.tk_dot) {
+                    if (!std.ascii.eqlIgnoreCase(name, qualifier)) return error.Syntax;
+                    name = token_list[token_index + 2].text;
+                    token_index += 2;
+                }
+                if (token_list[token_index].typ != tokens.tk_id) continue;
+                if (resolvedColumnIndex(columns, name)) |column_index| {
+                    _ = try aggregateAddColumn(allocator, &analysis, column_index);
+                }
+            }
+        }
+    }
+    if (analysis.functions.items.len == 0) return null;
+    transferred = true;
+    return analysis;
+}
+
 fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize, from_position: usize) CompileOutcome {
     const allocator = connection.allocator;
-    const database = connection.database orelse {
-        allocator.free(source);
-        return .{ .result = .misuse, .consumed = consumed };
-    };
     if (from_position + 1 >= token_list.len or token_list[from_position + 1].typ != tokens.tk_id) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
-    for (connection.virtual_tables.items) |table| if (std.ascii.eqlIgnoreCase(table.name, token_list[from_position + 1].text)) return compileVirtualScan(connection, table, source, token_list, consumed, from_position);
-    const indexed = from_position + 5 == token_list.len and token_list[from_position + 2].typ == tokens.tk_indexed and token_list[from_position + 3].typ == tokens.tk_by and token_list[from_position + 4].typ == tokens.tk_id;
-    const joined = from_position + 8 == token_list.len and token_list[from_position + 2].typ == tokens.tk_join and token_list[from_position + 3].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(token_list[from_position + 1].text, token_list[from_position + 3].text) and token_list[from_position + 4].typ == tokens.tk_using and token_list[from_position + 5].typ == tokens.tk_lp and token_list[from_position + 6].typ == tokens.tk_id and token_list[from_position + 7].typ == tokens.tk_rp;
-    const schema_outcome = if (indexed) database.schemaIndex(token_list[from_position + 4].text) else database.schemaTable(token_list[from_position + 1].text);
-    if (schema_outcome.result != .ok) {
-        allocator.free(source);
-        return .{ .result = if (schema_outcome.result == .not_found) .error_ else schema_outcome.result, .consumed = consumed };
+    for (connection.virtual_tables.items) |table| {
+        if (std.ascii.eqlIgnoreCase(table.name, token_list[from_position + 1].text)) return compileVirtualScan(connection, table, source, token_list, consumed, from_position);
     }
-    var schema = schema_outcome.table.?;
+    if (connection.json_vtables_registered) {
+        if (json_vtable.connect(token_list[from_position + 1].text)) |configuration| return compileJsonVirtualScan(connection, configuration, source, token_list, consumed, from_position);
+    }
+    const database = connection.database orelse {
+        allocator.free(source);
+        return .{ .result = .misuse, .consumed = consumed };
+    };
+    const located_outcome = locateTableItem(connection, token_list, from_position);
+    if (located_outcome.result != .ok) {
+        allocator.free(source);
+        return .{ .result = if (located_outcome.result == .not_found) .error_ else located_outcome.result, .error_offset = located_outcome.error_offset, .consumed = consumed };
+    }
+    const located = located_outcome.item.?;
+    const after_table = located.after;
+    const indexed = after_table + 3 == token_list.len and token_list[after_table].typ == tokens.tk_indexed and token_list[after_table + 1].typ == tokens.tk_by and token_list[after_table + 2].typ == tokens.tk_id;
+    const joined = after_table + 6 == token_list.len and token_list[after_table].typ == tokens.tk_join and token_list[after_table + 1].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(located.table_name, token_list[after_table + 1].text) and token_list[after_table + 2].typ == tokens.tk_using and token_list[after_table + 3].typ == tokens.tk_lp and token_list[after_table + 4].typ == tokens.tk_id and token_list[after_table + 5].typ == tokens.tk_rp;
+    var schema = located.table;
+    if (indexed) {
+        const index_outcome = database.schemaIndex(token_list[after_table + 2].text);
+        if (index_outcome.result != .ok) {
+            schema.deinit();
+            allocator.free(source);
+            return .{ .result = if (index_outcome.result == .not_found) .error_ else index_outcome.result, .consumed = consumed };
+        }
+        schema.deinit();
+        schema = index_outcome.table.?;
+    }
     defer schema.deinit();
     const resolved = resolveColumns(allocator, schema.sql) catch |err| {
         allocator.free(source);
@@ -2381,9 +6502,12 @@ fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const
         allocator.free(resolved.tokens);
         allocator.free(resolved.source);
     }
+    const table_without_rowid = schemaWithoutRowid(resolved.tokens);
     var selected = std.ArrayList(ResolvedColumn).empty;
     defer selected.deinit(allocator);
-    if (from_position == 2 and token_list[1].typ == tokens.tk_star) {
+    const unqualified_star = from_position == 2 and token_list[1].typ == tokens.tk_star;
+    const qualified_star = from_position == 4 and token_list[1].typ == tokens.tk_id and token_list[2].typ == tokens.tk_dot and token_list[3].typ == tokens.tk_star and std.ascii.eqlIgnoreCase(token_list[1].text, located.qualifier);
+    if (unqualified_star or qualified_star) {
         selected.appendSlice(allocator, resolved.columns) catch {
             allocator.free(source);
             return .{ .result = .no_memory, .consumed = consumed };
@@ -2391,40 +6515,91 @@ fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const
     } else {
         var position: usize = 1;
         while (position < from_position) {
-            if (token_list[position].typ != tokens.tk_id) {
-                const offset = token_list[position].start;
-                allocator.free(source);
-                return .{ .result = .error_, .error_offset = @intCast(offset), .consumed = consumed };
+            const segment_start = position;
+            var depth: usize = 0;
+            while (position < from_position) : (position += 1) {
+                const token_type = token_list[position].typ;
+                if (token_type == tokens.tk_lp) {
+                    depth += 1;
+                } else if (token_type == tokens.tk_rp) {
+                    if (depth == 0) {
+                        allocator.free(source);
+                        return .{ .result = .error_, .error_offset = @intCast(token_list[position].start), .consumed = consumed };
+                    }
+                    depth -= 1;
+                } else if (token_type == tokens.tk_comma and depth == 0) break;
             }
-            var found: ?ResolvedColumn = null;
-            for (resolved.columns) |column| if (std.ascii.eqlIgnoreCase(column.name, token_list[position].text)) {
-                found = column;
-                break;
-            };
-            selected.append(allocator, found orelse {
+            if (position == segment_start or depth != 0) {
                 allocator.free(source);
-                return .{ .result = .error_, .error_offset = @intCast(token_list[position].start), .consumed = consumed };
-            }) catch {
-                allocator.free(source);
-                return .{ .result = .no_memory, .consumed = consumed };
-            };
-            position += 1;
-            if (position == from_position) break;
-            if (token_list[position].typ != tokens.tk_comma) {
-                allocator.free(source);
-                return .{ .result = .error_, .error_offset = @intCast(token_list[position].start), .consumed = consumed };
+                return .{ .result = .error_, .error_offset = @intCast(token_list[segment_start].start), .consumed = consumed };
             }
-            position += 1;
+            const segment_end = position;
+            if (selectedColumnToken(token_list, segment_start, segment_end, located.qualifier)) |reference| {
+                if (reference.next == segment_end) {
+                    var found: ?ResolvedColumn = null;
+                    for (resolved.columns) |column| {
+                        if (std.ascii.eqlIgnoreCase(column.name, reference.token.text)) {
+                            found = column;
+                            break;
+                        }
+                    }
+                    selected.append(allocator, found orelse {
+                        allocator.free(source);
+                        return .{ .result = .error_, .error_offset = @intCast(reference.token.start), .consumed = consumed };
+                    }) catch {
+                        allocator.free(source);
+                        return .{ .result = .no_memory, .consumed = consumed };
+                    };
+                } else {
+                    selected.append(allocator, scanExpressionColumn(source, token_list, segment_start, segment_end)) catch {
+                        allocator.free(source);
+                        return .{ .result = .no_memory, .consumed = consumed };
+                    };
+                }
+            } else {
+                selected.append(allocator, scanExpressionColumn(source, token_list, segment_start, segment_end)) catch {
+                    allocator.free(source);
+                    return .{ .result = .no_memory, .consumed = consumed };
+                };
+            }
+            if (position < from_position) {
+                position += 1;
+            }
         }
     }
     if (selected.items.len == 0 or selected.items.len > std.math.maxInt(u16)) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
-    if (!indexed and !joined and from_position + 2 < token_list.len) {
+    var selected_has_expressions = false;
+    for (selected.items) |column| {
+        if (column.scan_expression) {
+            selected_has_expressions = true;
+            break;
+        }
+    }
+    if (!indexed and !joined and after_table == token_list.len) {
+        var aggregate_analysis = expressionAnalyzeAggregates(allocator, connection, selected.items, resolved.columns, token_list, located.qualifier) catch |err| {
+            allocator.free(source);
+            return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+        };
+        defer if (aggregate_analysis) |*analysis| analysis.deinit(allocator);
+        if (aggregate_analysis) |*analysis| {
+            const prepared = buildAggregateTableScan(connection, source, schema.root_page, table_without_rowid, selected.items, resolved.columns, resolved.tokens, token_list, located.qualifier, analysis) catch |err| {
+                return .{ .result = switch (err) {
+                    error.OutOfMemory => .no_memory,
+                    error.TooBig => .too_big,
+                    error.Misuse => .misuse,
+                    else => .error_,
+                }, .consumed = consumed };
+            };
+            return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+        }
+    }
+    if (!indexed and !joined and after_table < token_list.len) {
         var plan: ScanPlan = .{};
-        var position = from_position + 2;
-        if (token_list[position].typ == tokens.tk_order and position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_by and token_list[position + 2].typ == tokens.tk_id) {
+        var position = after_table;
+        if (!selected_has_expressions and token_list[position].typ == tokens.tk_order and position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_by and token_list[position + 2].typ == tokens.tk_id) {
             const order_column = token_list[position + 2].text;
             var ordered_is_primary = false;
             for (resolved.columns) |column| if (column.integer_primary_key and std.ascii.eqlIgnoreCase(column.name, order_column)) {
@@ -2452,7 +6627,7 @@ fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const
                     allocator.free(source);
                     return .{ .result = .error_, .consumed = consumed };
                 }
-                const index_name = std.fmt.allocPrint(allocator, "{s}_{s}", .{ token_list[from_position + 1].text, order_column }) catch {
+                const index_name = std.fmt.allocPrint(allocator, "{s}_{s}", .{ located.table_name, order_column }) catch {
                     allocator.free(source);
                     return .{ .result = .no_memory, .consumed = consumed };
                 };
@@ -2494,11 +6669,7 @@ fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const
                 var index_selected = std.ArrayList(ResolvedColumn).empty;
                 defer index_selected.deinit(allocator);
                 for (selected.items) |wanted| {
-                    var found: ?ResolvedColumn = null;
-                    for (index_resolved.columns) |column| if (std.ascii.eqlIgnoreCase(column.name, wanted.name)) {
-                        found = column;
-                        break;
-                    };
+                    const found = if (partialIndexExpressionLookup(index_resolved.columns, wanted.name)) |index| index_resolved.columns[index] else null;
                     index_selected.append(allocator, found orelse {
                         allocator.free(source);
                         return .{ .result = .error_, .consumed = consumed };
@@ -2507,10 +6678,10 @@ fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const
                         return .{ .result = .no_memory, .consumed = consumed };
                     };
                 }
-                return compilePlannedTableScan(connection, source, consumed, index_schema.root_page, true, index_selected.items, plan);
+                return compilePlannedTableScan(connection, source, consumed, index_schema.root_page, true, index_selected.items, index_resolved.columns, index_resolved.tokens, token_list, located.qualifier, plan);
             }
         }
-        position = from_position + 2;
+        position = after_table;
         var primary_key: ?ResolvedColumn = null;
         for (resolved.columns) |column| if (column.integer_primary_key) {
             primary_key = column;
@@ -2570,73 +6741,18 @@ fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const
             allocator.free(source);
             return .{ .result = .error_, .error_offset = @intCast(token_list[position].start), .consumed = consumed };
         }
-        return compilePlannedTableScan(connection, source, consumed, schema.root_page, false, selected.items, plan);
+        if (table_without_rowid and plan.predicate != null) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        return compilePlannedTableScan(connection, source, consumed, schema.root_page, table_without_rowid, selected.items, resolved.columns, resolved.tokens, token_list, located.qualifier, plan);
     }
-    if (!indexed and !joined and from_position + 2 != token_list.len) {
+    if (!indexed and !joined and after_table != token_list.len) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
-    const owner = allocator.create(Owner) catch {
-        allocator.free(source);
-        return .{ .result = .no_memory, .consumed = consumed };
-    };
-    const instruction_count = selected.items.len + 4;
-    const instructions = allocator.alloc(vdbe.Instruction, instruction_count) catch {
-        allocator.destroy(owner);
-        allocator.free(source);
-        return .{ .result = .no_memory, .consumed = consumed };
-    };
-    const parameters = allocator.alloc(statement.ParameterMetadata, 0) catch unreachable;
-    const columns = allocator.alloc(statement.ColumnMetadata, selected.items.len) catch {
-        allocator.free(parameters);
-        allocator.free(instructions);
-        allocator.destroy(owner);
-        allocator.free(source);
-        return .{ .result = .no_memory, .consumed = consumed };
-    };
-    owner.* = .{
-        .source = source,
-        .instructions = instructions,
-        .parameters = parameters,
-        .columns = columns,
-        .program = .{ .instructions = instructions, .register_count = @intCast(selected.items.len), .cursor_count = 1 },
-    };
-    instructions[0] = .{ .opcode = .open_read, .p1 = 0, .p2 = @intCast(schema.root_page), .p3 = @intFromBool(indexed) };
-    instructions[1] = .{ .opcode = .rewind, .p1 = 0, .p2 = @intCast(instruction_count - 1) };
-    for (selected.items, 0..) |column, index| {
-        instructions[2 + index] = if (column.integer_primary_key)
-            .{ .opcode = .rowid, .p1 = 0, .p2 = @intCast(index + 1) }
-        else
-            .{ .opcode = .column, .p1 = 0, .p2 = @intCast(column.record_index), .p3 = @intCast(index + 1) };
-        const name = owner.names.addOne(allocator) catch {
-            Owner.destroy(allocator, owner);
-            return .{ .result = .no_memory, .consumed = consumed };
-        };
-        name.* = allocator.dupeZ(u8, column.name) catch {
-            _ = owner.names.pop();
-            Owner.destroy(allocator, owner);
-            return .{ .result = .no_memory, .consumed = consumed };
-        };
-        columns[index] = .{ .name = name.* };
-    }
-    instructions[instruction_count - 2] = .{ .opcode = .result_row, .p1 = 1, .p2 = @intCast(selected.items.len) };
-    // Resume at the first column extraction after each cursor advance.
-    instructions[instruction_count - 1] = .{ .opcode = .next, .p1 = 0, .p2 = 2 };
-    // Rewind's empty target and NEXT fallthrough need a terminal instruction.
-    const expanded = allocator.realloc(instructions, instruction_count + 1) catch {
-        Owner.destroy(allocator, owner);
-        return .{ .result = .no_memory, .consumed = consumed };
-    };
-    owner.instructions = expanded;
-    owner.program.instructions = expanded;
-    expanded[instruction_count] = .{ .opcode = .halt };
-    expanded[1].p2 = @intCast(instruction_count);
-    const prepared = statement.Statement.createWithDatabase(allocator, &owner.program, parameters, columns, database) catch {
-        Owner.destroy(allocator, owner);
-        return .{ .result = .no_memory, .consumed = consumed };
-    };
-    prepared.adoptOwner(owner, Owner.destroy);
-    return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+    const cursor_is_index = indexed or table_without_rowid;
+    return compilePlannedTableScan(connection, source, consumed, schema.root_page, cursor_is_index, selected.items, resolved.columns, resolved.tokens, token_list, located.qualifier, .{});
 }
 
 fn memToBtreeValue(value: *vdbe.Mem) ?btree.Value {
@@ -2655,11 +6771,147 @@ fn memToBtreeValue(value: *vdbe.Mem) ?btree.Value {
     };
 }
 
+/// Runtime counterpart of source `sqlite3FkDropTable()`.
+fn dropTableForeignKeyActions(connection: *Connection, table_name: []const u8) ResultCode {
+    if (connection.database_configuration[2] == 0) return .ok;
+    const database = connection.database orelse return .misuse;
+    const schema = database.schemaTable(table_name);
+    if (schema.result == .not_found) return .ok;
+    if (schema.result != .ok) return schema.result;
+    var table = schema.table.?;
+    defer table.deinit();
+    const opened = database.openCursor(table.root_page, .table);
+    if (opened.result != .ok) return opened.result;
+    var cursor = opened.cursor.?;
+    var rowids = std.ArrayList(i64).empty;
+    defer rowids.deinit(connection.allocator);
+    for (cursor.entries.items) |entry| {
+        rowids.append(connection.allocator, entry.rowid orelse {
+            cursor.deinit();
+            return .corrupt;
+        }) catch {
+            cursor.deinit();
+            return .no_memory;
+        };
+    }
+    cursor.deinit();
+    for (rowids.items) |rowid| {
+        const current = database.openCursor(table.root_page, .table);
+        if (current.result != .ok) return current.result;
+        var current_cursor = current.cursor.?;
+        if (!current_cursor.seekTable(rowid)) {
+            current_cursor.deinit();
+            continue;
+        }
+        const decoded = current_cursor.record();
+        if (decoded.result != .ok) {
+            current_cursor.deinit();
+            return decoded.result;
+        }
+        var record = decoded.record.?;
+        current_cursor.deinit();
+        defer record.deinit();
+        const checked = checkForeignKeys(connection, table_name, rowid, .{ .parent_delete = .{ .old_values = record.values, .dropping_table = table_name } });
+        if (checked != .ok) return checked;
+        const actions = applyForeignKeyActions(connection, table_name, rowid, record.values, null, table_name);
+        if (actions != .ok) return actions;
+        const deleted = database.deleteTable(table.root_page, rowid);
+        if (deleted != .ok and deleted != .not_found) return deleted;
+    }
+    return .ok;
+}
+
+fn reloadAnalysis(connection: *Connection) ResultCode {
+    const statistics = connection.statistics orelse return .misuse;
+    const loaded = connection.allocator.create(analysis_stats.LoadedAnalysis) catch return .no_memory;
+    loaded.* = analysis_stats.loadAnalysis(connection.allocator, statistics) catch |err| {
+        connection.allocator.destroy(loaded);
+        return if (err == error.OutOfMemory) .no_memory else .error_;
+    };
+    if (connection.loaded_analysis) |prior| {
+        prior.deinit();
+        connection.allocator.destroy(prior);
+    }
+    connection.loaded_analysis = loaded;
+    return .ok;
+}
+
+fn runAnalyze(connection: *Connection, table_name: ?[]const u8) ResultCode {
+    const database = connection.database orelse return .misuse;
+    if (connection.statistics == null) {
+        const statistics = connection.allocator.create(analysis_stats.StatTable) catch return .no_memory;
+        statistics.* = analysis_stats.StatTable.init(connection.allocator);
+        connection.statistics = statistics;
+    }
+    const statistics = connection.statistics.?;
+    if (table_name) |name| {
+        const schema_outcome = database.schemaTable(name);
+        if (schema_outcome.result != .ok) return schema_outcome.result;
+        var schema = schema_outcome.table.?;
+        defer schema.deinit();
+        const cursor_outcome = database.openCursor(schema.root_page, .table);
+        if (cursor_outcome.result != .ok) return cursor_outcome.result;
+        var cursor = cursor_outcome.cursor.?;
+        defer cursor.deinit();
+        analysis_stats.analyzeTable(statistics, .{ .name = name, .row_count = cursor.count() }, null) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+        return reloadAnalysis(connection);
+    }
+
+    analysis_stats.openStatisticsTable(statistics, null, false);
+    const schema_outcome = database.openCursor(1, .table);
+    if (schema_outcome.result != .ok) return schema_outcome.result;
+    var schema_cursor = schema_outcome.cursor.?;
+    defer schema_cursor.deinit();
+    if (schema_cursor.first()) {
+        while (true) {
+            const decoded = schema_cursor.record();
+            if (decoded.result != .ok) return decoded.result;
+            var record = decoded.record.?;
+            defer record.deinit();
+            if (record.values.len >= 4) {
+                const object_type = switch (record.values[0]) {
+                    .text => |text| text,
+                    else => &.{},
+                };
+                const name = switch (record.values[1]) {
+                    .text => |text| text,
+                    else => &.{},
+                };
+                const root_page: ?u32 = switch (record.values[3]) {
+                    .integer => |value| if (value > 0 and value <= std.math.maxInt(u32)) @intCast(value) else null,
+                    else => null,
+                };
+                if (std.ascii.eqlIgnoreCase(object_type, "table") and root_page != null) {
+                    const cursor_outcome = database.openCursor(root_page.?, .table);
+                    if (cursor_outcome.result != .ok) return cursor_outcome.result;
+                    var table_cursor = cursor_outcome.cursor.?;
+                    defer table_cursor.deinit();
+                    analysis_stats.analyzeOneTable(statistics, .{ .name = name, .row_count = table_cursor.count() }, null) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+                }
+            }
+            if (!schema_cursor.next()) break;
+        }
+    }
+    return reloadAnalysis(connection);
+}
+
 fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *vdbe.Mem, allocator: std.mem.Allocator) ResultCode {
     const owner: *Owner = @ptrCast(@alignCast(context orelse return .misuse));
     vdbe.vdbe_mem.setNull(output);
     return switch (owner.action orelse return .misuse) {
         .virtual_create => |action| blk: {
+            if (action.connection.virtual_table_state == null) {
+                const state = action.connection.allocator.create(virtual_table_lifecycle.State) catch break :blk .no_memory;
+                state.* = virtual_table_lifecycle.State.init(action.connection.allocator);
+                action.connection.virtual_table_state = state;
+            }
+            const lifecycle_table = virtual_table_lifecycle.beginVirtualParse(action.connection.allocator, "main", action.name, action.module_name, @intCast(action.connection.limits[2])) catch |err| break :blk if (err == error.OutOfMemory) .no_memory else .error_;
+            var lifecycle_adopted = false;
+            defer if (!lifecycle_adopted) {
+                lifecycle_table.deinit();
+                action.connection.allocator.destroy(lifecycle_table);
+            };
+            action.connection.virtual_tables.ensureUnusedCapacity(action.connection.allocator, 1) catch break :blk .no_memory;
             var registered: ?@TypeOf(action.connection.modules.items[0]) = null;
             for (action.connection.modules.items) |module| if (std.ascii.eqlIgnoreCase(module.name, action.module_name)) {
                 registered = module;
@@ -2736,7 +6988,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 }
                 break :blk .no_memory;
             }
-            action.connection.virtual_tables.append(action.connection.allocator, table) catch {
+            virtual_table_lifecycle.finishVirtualParse(action.connection.virtual_table_state.?, lifecycle_table, owner.source) catch |err| {
                 for (table.columns.items) |column| action.connection.allocator.free(column);
                 table.columns.deinit(action.connection.allocator);
                 action.connection.allocator.destroy(table);
@@ -2744,8 +6996,10 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                     const disconnect: *const fn (*sqlite3_vtab) callconv(.c) c_int = @ptrCast(@alignCast(disconnect_raw));
                     _ = disconnect(instance.?);
                 }
-                break :blk .no_memory;
+                break :blk if (err == error.OutOfMemory) .no_memory else .error_;
             };
+            lifecycle_adopted = true;
+            action.connection.virtual_tables.appendAssumeCapacity(table);
             table_name_adopted = true;
             break :blk .ok;
         },
@@ -2776,10 +7030,24 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             break :blk action.connection.afterWrite(database.createSchemaTable(action.name, action.sql, action.if_not_exists), null, action.name, 0);
         },
         .drop => |action| blk: {
+            std.debug.assert(action.connection.foreign_key_action_allocations.items.len == 0);
+            defer clearForeignKeyActionAllocations(action.connection);
             const database = action.connection.database orelse break :blk .misuse;
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
-            break :blk action.connection.afterWrite(database.dropSchemaTable(action.name, action.if_exists), null, action.name, 0);
+            const begin = database.beginMutationBatch();
+            if (begin != .ok) break :blk begin;
+            var batch_active = true;
+            defer {
+                if (batch_active) _ = database.rollbackMutationBatch();
+            }
+            const cleared = dropTableForeignKeyActions(action.connection, action.name);
+            if (cleared != .ok) break :blk cleared;
+            const dropped = database.dropSchemaTable(action.name, action.if_exists);
+            if (dropped != .ok) break :blk dropped;
+            const committed = database.commitMutationBatch();
+            batch_active = false;
+            break :blk action.connection.afterWrite(committed, null, action.name, 0);
         },
         .vacuum => |action| blk: {
             const database = action.connection.database orelse break :blk .misuse;
@@ -2788,7 +7056,10 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             if (permission != .ok) break :blk permission;
             break :blk action.connection.afterWrite(database.vacuumCompactNoop(), null, "", 0);
         },
+        .analyze => |action| runAnalyze(action.connection, action.table_name),
         .update => |action| blk: {
+            std.debug.assert(action.connection.foreign_key_action_allocations.items.len == 0);
+            defer clearForeignKeyActionAllocations(action.connection);
             const database = action.connection.database orelse break :blk .misuse;
             if (arguments.len != 2) break :blk .corrupt;
             if (vdbe.vdbe_mem.valueType(&arguments[1]) != 1) break :blk .mismatch;
@@ -2805,40 +7076,86 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             if (decoded.result != .ok) break :blk decoded.result;
             var record = decoded.record.?;
             defer record.deinit();
+            if (!foreignKeyOldValuesAvailable(action.foreign_key_old_mask, record.values.len)) break :blk .corrupt;
             if (action.target_column >= record.values.len) break :blk .corrupt;
+            const permission = action.connection.beforeWrite();
+            if (permission != .ok) break :blk permission;
+            const begin = database.beginMutationBatch();
+            if (begin != .ok) break :blk begin;
+            var batch_active = true;
+            defer {
+                if (batch_active) _ = database.rollbackMutationBatch();
+            }
             const values = allocator.dupe(btree.Value, record.values) catch break :blk .no_memory;
             defer allocator.free(values);
             values[action.target_column] = memToBtreeValue(&arguments[0]) orelse break :blk .no_memory;
+            const parent_foreign_key_result = checkForeignKeys(action.connection, action.table_name, rowid, .{ .parent_update = .{ .old_values = record.values, .new_values = values } });
+            if (parent_foreign_key_result != .ok) break :blk parent_foreign_key_result;
+            const actions = applyForeignKeyActions(action.connection, action.table_name, rowid, record.values, values, null);
+            if (actions != .ok) break :blk actions;
+            const child_foreign_key_result = checkForeignKeys(action.connection, action.table_name, rowid, .{ .child_insert = .{ .values = values } });
+            if (child_foreign_key_result != .ok) break :blk child_foreign_key_result;
             const payload = btree.encodeRecord(allocator, values) catch |err| break :blk if (err == error.OutOfMemory) .no_memory else .too_big;
             defer allocator.free(payload);
-            const permission = action.connection.beforeWrite();
-            if (permission != .ok) break :blk permission;
             const rc = database.insertTable(action.root_page, rowid, payload, true);
-            if (rc == .ok) {
+            if (rc != .ok) break :blk rc;
+            const committed = database.commitMutationBatch();
+            batch_active = false;
+            if (committed == .ok) {
                 action.connection.changes = 1;
                 action.connection.total_changes += 1;
             }
-            break :blk action.connection.afterWrite(rc, 23, action.table_name, rowid);
+            break :blk action.connection.afterWrite(committed, 23, action.table_name, rowid);
         },
         .delete => |action| blk: {
+            std.debug.assert(action.connection.foreign_key_action_allocations.items.len == 0);
+            defer clearForeignKeyActionAllocations(action.connection);
             const database = action.connection.database orelse break :blk .misuse;
             if (arguments.len != 1) break :blk .corrupt;
             if (vdbe.vdbe_mem.valueType(&arguments[0]) != 1) break :blk .mismatch;
             const rowid = vdbe.vdbe_mem.valueInt64(&arguments[0]);
+            const opened = database.openCursor(action.root_page, .table);
+            if (opened.result != .ok) break :blk opened.result;
+            var cursor = opened.cursor.?;
+            defer cursor.deinit();
+            if (!cursor.seekTable(rowid)) {
+                action.connection.changes = 0;
+                break :blk .ok;
+            }
+            const decoded = cursor.record();
+            if (decoded.result != .ok) break :blk decoded.result;
+            var record = decoded.record.?;
+            defer record.deinit();
+            if (!foreignKeyOldValuesAvailable(action.foreign_key_old_mask, record.values.len)) break :blk .corrupt;
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
+            const begin = database.beginMutationBatch();
+            if (begin != .ok) break :blk begin;
+            var batch_active = true;
+            defer {
+                if (batch_active) _ = database.rollbackMutationBatch();
+            }
+            const foreign_key_result = checkForeignKeys(action.connection, action.table_name, rowid, .{ .parent_delete = .{ .old_values = record.values } });
+            if (foreign_key_result != .ok) break :blk foreign_key_result;
+            const actions = applyForeignKeyActions(action.connection, action.table_name, rowid, record.values, null, null);
+            if (actions != .ok) break :blk actions;
             const rc = database.deleteTable(action.root_page, rowid);
             if (rc == .not_found) {
                 action.connection.changes = 0;
                 break :blk .ok;
             }
-            if (rc == .ok) {
+            if (rc != .ok) break :blk rc;
+            const committed = database.commitMutationBatch();
+            batch_active = false;
+            if (committed == .ok) {
                 action.connection.changes = 1;
                 action.connection.total_changes += 1;
             }
-            break :blk action.connection.afterWrite(rc, 9, action.table_name, rowid);
+            break :blk action.connection.afterWrite(committed, 9, action.table_name, rowid);
         },
         .insert => |action| blk: {
+            std.debug.assert(action.connection.foreign_key_action_allocations.items.len == 0);
+            defer clearForeignKeyActionAllocations(action.connection);
             const database = action.connection.database orelse break :blk .misuse;
             if (arguments.len != owner.indices.len) break :blk .corrupt;
             const values = allocator.alloc(btree.Value, action.column_count) catch break :blk .no_memory;
@@ -2862,21 +7179,55 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 if (next.result != .ok) break :blk next.result;
                 rowid = next.rowid;
             }
-            const payload = btree.encodeRecord(allocator, values) catch |err| break :blk if (err == error.OutOfMemory) .no_memory else .too_big;
-            defer allocator.free(payload);
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
+            const begin = database.beginMutationBatch();
+            if (begin != .ok) break :blk begin;
+            var batch_active = true;
+            defer {
+                if (batch_active) _ = database.rollbackMutationBatch();
+            }
+            if (action.replace) {
+                const existing = database.openCursor(action.root_page, .table);
+                if (existing.result != .ok) break :blk existing.result;
+                var existing_cursor = existing.cursor.?;
+                if (existing_cursor.seekTable(rowid)) {
+                    const decoded = existing_cursor.record();
+                    if (decoded.result != .ok) {
+                        existing_cursor.deinit();
+                        break :blk decoded.result;
+                    }
+                    var old_record = decoded.record.?;
+                    existing_cursor.deinit();
+                    defer old_record.deinit();
+                    const replaced = checkForeignKeys(action.connection, action.table_name, rowid, .{ .parent_delete = .{ .old_values = old_record.values } });
+                    if (replaced != .ok) break :blk replaced;
+                    const actions = applyForeignKeyActions(action.connection, action.table_name, rowid, old_record.values, null, null);
+                    if (actions != .ok) break :blk actions;
+                } else {
+                    existing_cursor.deinit();
+                }
+            }
+            const foreign_key_result = checkForeignKeys(action.connection, action.table_name, rowid, .{ .child_insert = .{ .values = values } });
+            if (foreign_key_result != .ok) break :blk foreign_key_result;
+            const payload = btree.encodeRecord(allocator, values) catch |err| break :blk if (err == error.OutOfMemory) .no_memory else .too_big;
+            defer allocator.free(payload);
             const rc = database.insertTable(action.root_page, rowid, payload, action.replace);
             if (rc == .constraint and action.conflict_ignore) {
+                const rolled_back = database.rollbackMutationBatch();
+                batch_active = false;
                 action.connection.changes = 0;
-                break :blk .ok;
+                break :blk rolled_back;
             }
-            if (rc == .ok) {
+            if (rc != .ok) break :blk rc;
+            const committed = database.commitMutationBatch();
+            batch_active = false;
+            if (committed == .ok) {
                 action.connection.changes = 1;
                 action.connection.total_changes += 1;
                 action.connection.last_insert_rowid = rowid;
             }
-            break :blk action.connection.afterWrite(rc, 18, action.table_name, rowid);
+            break :blk action.connection.afterWrite(committed, 18, action.table_name, rowid);
         },
     };
 }
@@ -2959,7 +7310,11 @@ fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const To
         return .{ .result = .misuse, .consumed = consumed };
     }
     if (token_list.len > 1 and token_list[0].typ == tokens.tk_create and token_list[1].typ == tokens.tk_virtual) return compileVirtualSchema(connection, source, token_list, consumed);
-    if (token_list.len == 3 and token_list[0].typ == tokens.tk_drop and token_list[1].typ == tokens.tk_table and token_list[2].typ == tokens.tk_id) for (connection.virtual_tables.items) |table| if (std.ascii.eqlIgnoreCase(table.name, token_list[2].text)) return compileVirtualDrop(connection, source, token_list, consumed);
+    if (token_list.len == 3 and token_list[0].typ == tokens.tk_drop and token_list[1].typ == tokens.tk_table and token_list[2].typ == tokens.tk_id) {
+        for (connection.virtual_tables.items) |table| {
+            if (std.ascii.eqlIgnoreCase(table.name, token_list[2].text)) return compileVirtualDrop(connection, source, token_list, consumed);
+        }
+    }
     var position: usize = 0;
     const creating = token_list[position].typ == tokens.tk_create;
     const dropping = token_list[position].typ == tokens.tk_drop;
@@ -3218,6 +7573,9 @@ fn buildRowMutation(connection: *Connection, source: [:0]u8, token_list: []const
         allocator.free(resolved.tokens);
         allocator.free(resolved.source);
     }
+    const old_mask = foreignKeyOldMask(connection, table_name, resolved.columns, resolved.tokens);
+    if (old_mask.result == .no_memory) return error.OutOfMemory;
+    if (old_mask.result != .ok) return error.Syntax;
     var primary_key: ?usize = null;
     for (resolved.columns, 0..) |column, index| if (column.integer_primary_key) {
         primary_key = index;
@@ -3301,7 +7659,7 @@ fn buildRowMutation(connection: *Connection, source: [:0]u8, token_list: []const
     parser.parameter_names = .empty;
     parser.named_parameters.deinit();
     parser.named_parameters = std.StringHashMap(u16).init(allocator);
-    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .strings = parser.strings, .names = parser.names, .action = if (updating) .{ .update = .{ .connection = connection, .root_page = schema.root_page, .table_name = table_name, .target_column = target_column } } else .{ .delete = .{ .connection = connection, .root_page = schema.root_page, .table_name = table_name } }, .program = .{ .instructions = instructions, .register_count = parser.next_register - 1 } };
+    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .strings = parser.strings, .names = parser.names, .action = if (updating) .{ .update = .{ .connection = connection, .root_page = schema.root_page, .table_name = table_name, .target_column = target_column, .foreign_key_old_mask = old_mask.mask } } else .{ .delete = .{ .connection = connection, .root_page = schema.root_page, .table_name = table_name, .foreign_key_old_mask = old_mask.mask } }, .program = .{ .instructions = instructions, .register_count = parser.next_register - 1 } };
     owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
     owner.program.functions = owner.functions[0..];
     const prepared = try statement.Statement.create(allocator, &owner.program, parameters, columns);
@@ -3337,11 +7695,93 @@ fn compileInsert(connection: *Connection, source: [:0]u8, token_list: []const To
     return .{ .result = .ok, .statement = prepared, .consumed = consumed };
 }
 
+fn compileAnalyze(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
+    const allocator = connection.allocator;
+    if (connection.database == null or token_list.len > 4 or
+        (token_list.len == 2 and token_list[1].typ != tokens.tk_id) or
+        (token_list.len > 2 and (token_list.len != 4 or token_list[1].typ != tokens.tk_id or token_list[2].typ != tokens.tk_dot or token_list[3].typ != tokens.tk_id)))
+    {
+        allocator.free(source);
+        return .{ .result = if (connection.database == null) .misuse else .error_, .consumed = consumed };
+    }
+    const table_name: ?[]const u8 = if (token_list.len == 1 or
+        (token_list.len == 2 and std.ascii.eqlIgnoreCase(token_list[1].text, "main")))
+        null
+    else if (token_list.len == 2)
+        token_list[1].text
+    else if (std.ascii.eqlIgnoreCase(token_list[1].text, "main"))
+        token_list[3].text
+    else {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    };
+    const owner = allocator.create(Owner) catch {
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const instructions = allocator.alloc(vdbe.Instruction, 2) catch {
+        allocator.destroy(owner);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const parameters = allocator.alloc(statement.ParameterMetadata, 0) catch unreachable;
+    const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
+    instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
+    instructions[1] = .{ .opcode = .halt };
+    owner.* = .{
+        .source = source,
+        .instructions = instructions,
+        .parameters = parameters,
+        .columns = columns,
+        .action = .{ .analyze = .{ .connection = connection, .table_name = table_name } },
+        .program = .{ .instructions = instructions, .register_count = 1 },
+    };
+    owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
+    owner.program.functions = owner.functions[0..];
+    const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
+        Owner.destroy(allocator, owner);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    prepared.adoptOwner(owner, Owner.destroy);
+    prepared.markWritable();
+    return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+}
+
+fn evaluateSingleRowWindow(allocator: std.mem.Allocator, name: []const u8) error{OutOfMemory}!?i32 {
+    const function: query_execution.WindowFunction = if (std.ascii.eqlIgnoreCase(name, "row_number"))
+        .row_number
+    else if (std.ascii.eqlIgnoreCase(name, "dense_rank"))
+        .dense_rank
+    else if (std.ascii.eqlIgnoreCase(name, "rank"))
+        .rank
+    else if (std.ascii.eqlIgnoreCase(name, "percent_rank"))
+        .percent_rank
+    else if (std.ascii.eqlIgnoreCase(name, "cume_dist"))
+        .cume_dist
+    else
+        return null;
+    const rows = [_]query_execution.WindowRow{.{ .values = &.{} }};
+    const values = query_execution.codeWindowStep(allocator, &rows, .{ .function = function }) catch return error.OutOfMemory;
+    defer allocator.free(values);
+    return switch (values[0]) {
+        .integer => |value| std.math.cast(i32, value),
+        .real => |value| if (std.math.isFinite(value) and value >= std.math.minInt(i32) and value <= std.math.maxInt(i32)) @intFromFloat(value) else null,
+        else => null,
+    };
+}
+
 fn compileAdvanced(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
     const allocator = connection.allocator;
     const is_vacuum = token_list.len == 1 and token_list[0].typ == tokens.tk_vacuum;
-    const is_pragma = token_list.len == 2 and token_list[0].typ == tokens.tk_pragma and token_list[1].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(token_list[1].text, "user_version");
-    const is_window = token_list.len == 7 and token_list[0].typ == tokens.tk_select and token_list[1].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(token_list[1].text, "row_number") and token_list[2].typ == tokens.tk_lp and token_list[3].typ == tokens.tk_rp and token_list[4].typ == tokens.tk_over and token_list[5].typ == tokens.tk_lp and token_list[6].typ == tokens.tk_rp;
+    const is_pragma = token_list.len == 2 and token_list[0].typ == tokens.tk_pragma and token_list[1].typ == tokens.tk_id and pragma_runtime.locatePragma(token_list[1].text) != null;
+    const window_value = if (token_list.len == 7 and token_list[0].typ == tokens.tk_select and token_list[1].typ == tokens.tk_id and token_list[2].typ == tokens.tk_lp and token_list[3].typ == tokens.tk_rp and token_list[4].typ == tokens.tk_over and token_list[5].typ == tokens.tk_lp and token_list[6].typ == tokens.tk_rp)
+        evaluateSingleRowWindow(allocator, token_list[1].text) catch {
+            allocator.free(source);
+            return .{ .result = .no_memory, .consumed = consumed };
+        }
+    else
+        null;
+    const is_window = window_value != null;
     if (!is_vacuum and !is_pragma and !is_window) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
@@ -3350,14 +7790,34 @@ fn compileAdvanced(connection: *Connection, source: [:0]u8, token_list: []const 
         allocator.free(source);
         return .{ .result = .misuse, .consumed = consumed };
     };
-    var value: i32 = 1;
+    var value: i32 = window_value orelse 1;
+    var pragma_definition: ?*const pragma_runtime.Definition = null;
     if (is_pragma) {
-        const read = database.userVersion();
-        if (read.result != .ok or read.value > std.math.maxInt(i32)) {
-            allocator.free(source);
-            return .{ .result = if (read.result == .ok) .too_big else read.result, .consumed = consumed };
+        pragma_definition = pragma_runtime.locatePragma(token_list[1].text).?;
+        if (pragma_definition.?.kind == .user_version) {
+            const read = database.userVersion();
+            if (read.result != .ok) {
+                allocator.free(source);
+                return .{ .result = read.result, .consumed = consumed };
+            }
+            connection.pragma_state.user_version = read.value;
+        } else if (pragma_definition.?.kind == .page_count) {
+            connection.pragma_state.page_count = database.declared_pages;
         }
-        value = @intCast(read.value);
+        const result = pragma_runtime.executePragma(&connection.pragma_state, .{ .name = token_list[1].text }) catch {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        };
+        value = switch (result.values[0]) {
+            .integer => |integer| std.math.cast(i32, integer) orelse {
+                allocator.free(source);
+                return .{ .result = .too_big, .consumed = consumed };
+            },
+            .text => {
+                allocator.free(source);
+                return .{ .result = .error_, .consumed = consumed };
+            },
+        };
     }
     const instruction_count: usize = if (is_vacuum) 2 else 3;
     const owner = allocator.create(Owner) catch {
@@ -3387,7 +7847,12 @@ fn compileAdvanced(connection: *Connection, source: [:0]u8, token_list: []const 
         instructions[0] = .{ .opcode = .integer, .p1 = value, .p2 = 1 };
         instructions[1] = .{ .opcode = .result_row, .p1 = 1, .p2 = 1 };
         instructions[2] = .{ .opcode = .halt };
-        const name = allocator.dupeZ(u8, if (is_pragma) "user_version" else "row_number() OVER ()") catch {
+        const window_name = if (is_window) std.fmt.allocPrint(allocator, "{s}() OVER ()", .{token_list[1].text}) catch {
+            Owner.destroy(allocator, owner);
+            return .{ .result = .no_memory, .consumed = consumed };
+        } else null;
+        defer if (window_name) |name| allocator.free(name);
+        const name = allocator.dupeZ(u8, if (pragma_definition) |definition| definition.column_names[0] else window_name.?) catch {
             Owner.destroy(allocator, owner);
             return .{ .result = .no_memory, .consumed = consumed };
         };
@@ -3407,6 +7872,131 @@ fn compileAdvanced(connection: *Connection, source: [:0]u8, token_list: []const 
     return .{ .result = .ok, .statement = prepared, .consumed = consumed };
 }
 
+fn createExplainStatement(allocator: std.mem.Allocator, source: [:0]u8, program: *const vdbe.Program) !*statement.Statement {
+    const rows = try vdbe_explain.list(allocator, program);
+    defer vdbe_explain.deinitRows(allocator, rows);
+    var parser = Parser.init(allocator, source, &.{}, 0, null);
+    errdefer parser.deinitFailure();
+    parser.next_register = 9;
+    for (rows) |row| {
+        const address = std.math.cast(i32, row.address) orelse return error.TooBig;
+        const opcode = try parser.ownBytes(row.opcode);
+        const p4 = try parser.ownBytes(row.p4);
+        try parser.emit(.{ .opcode = .integer, .p1 = address, .p2 = 1 });
+        try parser.emit(.{ .opcode = .string, .p2 = 2, .p4 = .{ .bytes = opcode } });
+        try parser.emit(.{ .opcode = .integer, .p1 = row.p1, .p2 = 3 });
+        try parser.emit(.{ .opcode = .integer, .p1 = row.p2, .p2 = 4 });
+        try parser.emit(.{ .opcode = .integer, .p1 = row.p3, .p2 = 5 });
+        try parser.emit(.{ .opcode = .string, .p2 = 6, .p4 = .{ .bytes = p4 } });
+        try parser.emit(.{ .opcode = .integer, .p1 = row.p5, .p2 = 7 });
+        try parser.emit(.{ .opcode = .null_, .p2 = 8 });
+        try parser.emit(.{ .opcode = .result_row, .p1 = 1, .p2 = 8 });
+    }
+    try parser.emit(.{ .opcode = .halt });
+
+    const owner = try allocator.create(Owner);
+    var transferred = false;
+    errdefer {
+        if (!transferred) allocator.destroy(owner);
+    }
+    const instructions = try parser.instructions.toOwnedSlice(allocator);
+    parser.instructions = .empty;
+    errdefer {
+        if (!transferred) allocator.free(instructions);
+    }
+    const parameters = try allocator.alloc(statement.ParameterMetadata, 0);
+    errdefer {
+        if (!transferred) allocator.free(parameters);
+    }
+    const columns = try allocator.alloc(statement.ColumnMetadata, 8);
+    errdefer {
+        if (!transferred) allocator.free(columns);
+    }
+    const column_names = [_][]const u8{ "addr", "opcode", "p1", "p2", "p3", "p4", "p5", "comment" };
+    for (columns, column_names) |*column, name| {
+        column.* = .{ .name = try parser.ownName(name) };
+    }
+    const dynamic_functions = try parser.functions.toOwnedSlice(allocator);
+    parser.functions = .empty;
+    errdefer {
+        if (!transferred) allocator.free(dynamic_functions);
+    }
+    parser.parameter_names.deinit(allocator);
+    parser.parameter_names = .empty;
+    parser.named_parameters.deinit();
+    parser.named_parameters = std.StringHashMap(u16).init(allocator);
+    owner.* = .{
+        .source = source,
+        .instructions = instructions,
+        .parameters = parameters,
+        .columns = columns,
+        .strings = parser.strings,
+        .names = parser.names,
+        .dynamic_functions = dynamic_functions,
+        .program = .{ .instructions = instructions, .register_count = 8, .functions = dynamic_functions },
+    };
+    parser.strings = .empty;
+    parser.names = .empty;
+    transferred = true;
+    const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch |err| {
+        for (owner.strings.items) |bytes| allocator.free(bytes);
+        owner.strings.deinit(allocator);
+        for (owner.names.items) |name| allocator.free(name);
+        owner.names.deinit(allocator);
+        allocator.free(owner.instructions);
+        allocator.free(owner.parameters);
+        allocator.free(owner.columns);
+        allocator.free(owner.dynamic_functions);
+        allocator.destroy(owner);
+        return err;
+    };
+    parser.deinitFailure();
+    prepared.adoptOwner(owner, Owner.destroy);
+    return prepared;
+}
+
+fn compileExplain(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
+    if (token_list.len < 2 or token_list[1].typ == tokens.tk_query) {
+        const offset = if (token_list.len < 2) source.len else token_list[1].start;
+        connection.allocator.free(source);
+        return .{ .result = .error_, .error_offset = @intCast(offset), .consumed = consumed };
+    }
+    const inner = compile(connection, source[token_list[1].start..]);
+    const explained = inner.statement orelse {
+        connection.allocator.free(source);
+        return .{ .result = inner.result, .error_offset = inner.error_offset, .consumed = consumed };
+    };
+    defer _ = statement.sqlite3_finalize(statement.toOpaque(explained));
+    const prepared = createExplainStatement(connection.allocator, source, explained.vm.program) catch |err| {
+        connection.allocator.free(source);
+        return .{ .result = if (err == error.TooBig) .too_big else .no_memory, .consumed = consumed };
+    };
+    return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+}
+
+fn ensureSchemaModel(connection: *Connection) ResultCode {
+    const database = connection.database orelse return .ok;
+    const version = database.schemaVersion();
+    if (version.result != .ok) return version.result;
+    const model = &connection.schema_model;
+    if (model.loaded and schema_initialization.validateSchemaCookies(&.{model}, &.{version.value})) return .ok;
+    var known_ok = false;
+    const metadata = schema_initialization.Metadata{
+        .schema_cookie = version.value,
+        .file_format = 1,
+        .cache_size = -2000,
+        .encoding = 1,
+        .maximum_page = database.declared_pages,
+    };
+    const no_rows: []const schema_initialization.CatalogRow = &.{};
+    schema_initialization.readSchema(&.{model}, &.{metadata}, &.{no_rows}, false, &known_ok) catch |err| return switch (err) {
+        error.OutOfMemory => .no_memory,
+        error.Corrupt => .corrupt,
+        else => .error_,
+    };
+    return if (known_ok) .ok else .error_;
+}
+
 fn compile(connection: *Connection, source_bytes: []const u8) CompileOutcome {
     const allocator = connection.allocator;
     const source = allocator.dupeZ(u8, source_bytes) catch return .{ .result = .no_memory };
@@ -3419,8 +8009,17 @@ fn compile(connection: *Connection, source_bytes: []const u8) CompileOutcome {
         allocator.free(source);
         return .{ .result = .ok, .consumed = tokenized.consumed };
     }
+    if (tokenized.tokens[0].typ == tokens.tk_explain)
+        return compileExplain(connection, source, tokenized.tokens, tokenized.consumed);
+    const schema_result = ensureSchemaModel(connection);
+    if (schema_result != .ok) {
+        allocator.free(source);
+        return .{ .result = schema_result, .consumed = tokenized.consumed };
+    }
+    if (tokenized.tokens[0].typ == tokens.tk_analyze)
+        return compileAnalyze(connection, source, tokenized.tokens, tokenized.consumed);
     if (tokenized.tokens[0].typ == tokens.tk_pragma or tokenized.tokens[0].typ == tokens.tk_vacuum or
-        (tokenized.tokens[0].typ == tokens.tk_select and tokenized.tokens.len > 1 and tokenized.tokens[1].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(tokenized.tokens[1].text, "row_number")))
+        (tokenized.tokens[0].typ == tokens.tk_select and tokenized.tokens.len > 1 and tokenized.tokens[1].typ == tokens.tk_id and schema_program_runtime.singleRowWindowValue(tokenized.tokens[1].text) != null))
         return compileAdvanced(connection, source, tokenized.tokens, tokenized.consumed);
     if (tokenized.tokens[0].typ == tokens.tk_create or tokenized.tokens[0].typ == tokens.tk_drop)
         return compileSchema(connection, source, tokenized.tokens, tokenized.consumed);
@@ -3606,6 +8205,16 @@ fn prepareUtf8(
     output.* = null;
     const sql = sql_pointer orelse return ResultCode.misuse.toC();
     const length = inputLength(sql, byte_count);
+    const bounded_sql = sql[0..length];
+    if (std.mem.trim(u8, bounded_sql, " \t\r\n;").len != 0) {
+        connection.prepare_state.max_sql = @intCast(@max(connection.limits[1], 0));
+        _ = query_compiler.lockAndPrepare(&connection.prepare_state, bounded_sql, false) catch |err| {
+            connection.last_result = if (err == error.TooBig) .too_big else .error_;
+            connection.error_offset = 0;
+            if (tail_output) |tail| tail.* = sql;
+            return connection.last_result.toC();
+        };
+    }
     if (connection.authorizer_callback) |callback| {
         var first: usize = 0;
         while (first < length and std.ascii.isWhitespace(sql[first])) : (first += 1) {}
@@ -3634,6 +8243,7 @@ fn prepareUtf8(
         connection.statement_head = prepared;
         connection.active_statements += 1;
         prepared.onFinalize(connection, Connection.statementFinalized, &connection.interrupted);
+        prepared.setResultMask(&connection.error_mask);
         output.* = statement.toOpaque(prepared);
     }
     return outcome.result.toC();
@@ -3658,14 +8268,10 @@ fn prepareUtf16(database: ?*sqlite3, sql_pointer: ?*const anyopaque, byte_count:
     statement_pointer.* = null;
     const raw = sql_pointer orelse return ResultCode.misuse.toC();
     const bytes: [*]const u8 = @ptrCast(@alignCast(raw));
-    var length: usize = if (byte_count < 0) 0 else @intCast(byte_count & ~@as(c_int, 1));
-    if (byte_count < 0) {
-        while (bytes[length] != 0 or bytes[length + 1] != 0) : (length += 2) {}
-    }
-    const units = connection.allocator.alloc(u16, length / 2) catch return ResultCode.no_memory.toC();
-    defer connection.allocator.free(units);
-    for (units, 0..) |*unit, index| unit.* = @as(u16, bytes[index * 2]) | (@as(u16, bytes[index * 2 + 1]) << 8);
-    const utf8 = std.unicode.utf16LeToUtf8Alloc(connection.allocator, units) catch return ResultCode.no_memory.toC();
+    const maximum: ?usize = if (byte_count < 0) null else @intCast(byte_count & ~@as(c_int, 1));
+    var length: usize = 0;
+    while ((maximum == null or length < maximum.?) and (bytes[length] != 0 or bytes[length + 1] != 0)) : (length += 2) {}
+    const utf8 = utf16NativeToUtf8(connection.allocator, bytes[0..length]) catch return ResultCode.no_memory.toC();
     defer connection.allocator.free(utf8);
     if (flags & ~@as(u32, 0x0f) != 0) return ResultCode.misuse.toC();
     const source = connection.allocator.dupeZ(u8, utf8) catch return ResultCode.no_memory.toC();
@@ -3680,22 +8286,39 @@ fn prepareUtf16(database: ?*sqlite3, sql_pointer: ?*const anyopaque, byte_count:
         };
         var iterator = view.iterator();
         var unit_count: usize = 0;
-        while (iterator.nextCodepoint()) |codepoint| unit_count += if (codepoint > 0xffff) 2 else 1;
+        while (iterator.nextCodepoint()) |codepoint| {
+            unit_count += if (codepoint > 0xffff) 2 else 1;
+        }
         tail.* = @ptrCast(bytes + unit_count * 2);
     }
     return rc;
 }
 
+/// Source `sqlite3_prepare16()`.
+fn prepare16Legacy(database: ?*sqlite3, sql: ?*const anyopaque, byte_count: c_int, output: ?*?*statement.sqlite3_stmt, tail: ?*?*const anyopaque) c_int {
+    return prepareUtf16(database, sql, byte_count, output, tail, 0);
+}
+
 pub export fn sqlite3_prepare16(database: ?*sqlite3, sql: ?*const anyopaque, byte_count: c_int, output: ?*?*statement.sqlite3_stmt, tail: ?*?*const anyopaque) callconv(.c) c_int {
+    return prepare16Legacy(database, sql, byte_count, output, tail);
+}
+
+/// Source `sqlite3_prepare16_v2()`.
+fn prepare16Saved(database: ?*sqlite3, sql: ?*const anyopaque, byte_count: c_int, output: ?*?*statement.sqlite3_stmt, tail: ?*?*const anyopaque) c_int {
     return prepareUtf16(database, sql, byte_count, output, tail, 0);
 }
 
 pub export fn sqlite3_prepare16_v2(database: ?*sqlite3, sql: ?*const anyopaque, byte_count: c_int, output: ?*?*statement.sqlite3_stmt, tail: ?*?*const anyopaque) callconv(.c) c_int {
-    return prepareUtf16(database, sql, byte_count, output, tail, 0);
+    return prepare16Saved(database, sql, byte_count, output, tail);
+}
+
+/// Source `sqlite3_prepare16_v3()`.
+fn prepare16WithFlags(database: ?*sqlite3, sql: ?*const anyopaque, byte_count: c_int, flags: u32, output: ?*?*statement.sqlite3_stmt, tail: ?*?*const anyopaque) c_int {
+    return prepareUtf16(database, sql, byte_count, output, tail, flags & 0x0f);
 }
 
 pub export fn sqlite3_prepare16_v3(database: ?*sqlite3, sql: ?*const anyopaque, byte_count: c_int, flags: u32, output: ?*?*statement.sqlite3_stmt, tail: ?*?*const anyopaque) callconv(.c) c_int {
-    return prepareUtf16(database, sql, byte_count, output, tail, flags);
+    return prepare16WithFlags(database, sql, byte_count, flags, output, tail);
 }
 
 test "expression SELECT prepare bind step reset tail and syntax errors" {
@@ -3728,6 +8351,128 @@ test "expression SELECT prepare bind step reset tail and syntax errors" {
     try std.testing.expectEqual(@as(?*statement.sqlite3_stmt, null), prepared);
     try std.testing.expect(connection.error_offset >= 0);
     try std.testing.expectEqual(ResultCode.misuse.toC(), sqlite3_prepare_v3(toOpaque(connection), "SELECT 1", -1, 0x8000_0000, &prepared, null));
+    try std.testing.expectEqual(@as(c_int, 1_000_000_000), sqlite3_limit(toOpaque(connection), 1, 8));
+    try std.testing.expectEqual(ResultCode.too_big.toC(), sqlite3_prepare_v2(toOpaque(connection), "SELECT 123", -1, &prepared, null));
+    try std.testing.expectEqual(@as(c_int, 8), sqlite3_limit(toOpaque(connection), 1, 1_000_000_000));
+}
+
+test "EXPLAIN lists bounded VDBE instructions" {
+    const connection = try Connection.create(std.testing.allocator);
+    defer connection.destroy();
+    var prepared: ?*statement.sqlite3_stmt = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(connection), "EXPLAIN SELECT 1+2", -1, &prepared, null));
+    var row_count: usize = 0;
+    var saw_add = false;
+    while (statement.sqlite3_step(prepared) == ResultCode.row.toC()) {
+        try std.testing.expect(statement.sqlite3_column_text(prepared, 1) != null);
+        if (std.mem.eql(u8, std.mem.span(statement.sqlite3_column_text(prepared, 1).?), "add")) saw_add = true;
+        row_count += 1;
+    }
+    try std.testing.expect(row_count > 0);
+    try std.testing.expect(saw_add);
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+}
+
+test "comparison row value BETWEEN IN and lazy inline expressions execute" {
+    const connection = try Connection.create(std.testing.allocator);
+    defer connection.destroy();
+    var prepared: ?*statement.sqlite3_stmt = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(connection), "SELECT 2<3,3 BETWEEN 2 AND 4,4 IN(1,4,NULL),5 NOT IN(1,4),NULL IN(1,2,NULL),(1,2)<(1,3),(1,NULL)=(1,NULL),coalesce(NULL,7,8),iif(0,11,22),(SELECT 6)+1,4 IN(SELECT 4),(SELECT 6),(SELECT 6),7 IN(1,7,9),NULL IN(1,2,3)", -1, &prepared, null));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+    const expected = [_]?i64{ 1, 1, 1, 1, null, 1, null, 7, 22, 7, 1, 6, 6, 1, null };
+    for (expected, 0..) |value, index| {
+        if (value) |integer| {
+            try std.testing.expectEqual(integer, statement.sqlite3_column_int64(prepared, @intCast(index)));
+        } else {
+            try std.testing.expectEqual(@as(c_int, 5), statement.sqlite3_column_type(prepared, @intCast(index)));
+        }
+    }
+    try std.testing.expectEqual(ResultCode.done.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+}
+
+test "registered JSON functions execute through prepared SQL" {
+    const connection = try Connection.create(std.testing.allocator);
+    defer connection.destroy();
+    const cases = [_]struct { sql: [:0]const u8, expected: []const u8 }{
+        .{ .sql = "SELECT json('{a:\"x\",b:[1,2,]/*c*/}')", .expected = "{\"a\":\"x\",\"b\":[1,2]}" },
+        .{ .sql = "SELECT json_array(1,'x',null)", .expected = "[1,\"x\",null]" },
+        .{ .sql = "SELECT json_extract('{\"a\":[10,20]}','$.a[1]')", .expected = "20" },
+        .{ .sql = "SELECT json_remove('{\"a\":1,\"b\":2}','$.a')", .expected = "{\"b\":2}" },
+        .{ .sql = "SELECT json_set('{}','$.a',json_array(1,2))", .expected = "{\"a\":[1,2]}" },
+        .{ .sql = "SELECT json_patch('{\"a\":{\"x\":1,\"y\":2}}','{\"a\":{\"x\":null,\"z\":3}}')", .expected = "{\"a\":{\"y\":2,\"z\":3}}" },
+        .{ .sql = "SELECT json_group_array(7)", .expected = "[7]" },
+        .{ .sql = "SELECT json_group_object('a',7)", .expected = "{\"a\":7}" },
+    };
+    for (cases) |case| {
+        var prepared: ?*statement.sqlite3_stmt = null;
+        try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(connection), case.sql.ptr, -1, &prepared, null));
+        try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+        try std.testing.expectEqualStrings(case.expected, std.mem.span(statement.sqlite3_column_text(prepared, 0).?));
+        try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+    }
+}
+
+test "registered core scalar functions execute through prepared SQL" {
+    const connection = try Connection.create(std.testing.allocator);
+    defer connection.destroy();
+    var prepared: ?*statement.sqlite3_stmt = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(connection), "SELECT length('hé'),abs(-5),round(1.6),unicode('A'),instr('abc','b'),typeof(1),sign(-9),sqlite_version()", -1, &prepared, null));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(@as(i64, 2), statement.sqlite3_column_int64(prepared, 0));
+    try std.testing.expectEqual(@as(i64, 5), statement.sqlite3_column_int64(prepared, 1));
+    try std.testing.expectEqual(@as(f64, 2), statement.sqlite3_column_double(prepared, 2));
+    try std.testing.expectEqual(@as(i64, 65), statement.sqlite3_column_int64(prepared, 3));
+    try std.testing.expectEqual(@as(i64, 2), statement.sqlite3_column_int64(prepared, 4));
+    try std.testing.expectEqualStrings("integer", std.mem.span(statement.sqlite3_column_text(prepared, 5).?));
+    try std.testing.expectEqual(@as(i64, -1), statement.sqlite3_column_int64(prepared, 6));
+    try std.testing.expect(std.mem.span(statement.sqlite3_column_text(prepared, 7).?).len > 0);
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+}
+
+test "registered date and time functions execute through prepared SQL" {
+    const connection = try Connection.create(std.testing.allocator);
+    defer connection.destroy();
+    const cases = [_]struct { sql: [:0]const u8, expected: []const u8 }{
+        .{ .sql = "SELECT date('2000-01-02 03:04:05')", .expected = "2000-01-02" },
+        .{ .sql = "SELECT time('2000-01-02 03:04:05')", .expected = "03:04:05" },
+        .{ .sql = "SELECT datetime('2000-01-02 03:04:05')", .expected = "2000-01-02 03:04:05" },
+        .{ .sql = "SELECT strftime('%Y-%m','2000-01-02')", .expected = "2000-01" },
+    };
+    for (cases) |case| {
+        var prepared: ?*statement.sqlite3_stmt = null;
+        try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(connection), case.sql.ptr, -1, &prepared, null));
+        try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+        try std.testing.expectEqualStrings(case.expected, std.mem.span(statement.sqlite3_column_text(prepared, 0).?));
+        try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+    }
+}
+
+test "SQL load_extension function enforces connection opt-in" {
+    const connection = try Connection.create(std.testing.allocator);
+    defer connection.destroy();
+    var prepared: ?*statement.sqlite3_stmt = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(connection), "SELECT load_extension('missing-extension')", -1, &prepared, null));
+    try std.testing.expectEqual(ResultCode.error_.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(ResultCode.error_.toC(), statement.sqlite3_finalize(prepared));
+}
+
+test "JSON table-valued cursors execute through prepared SQL" {
+    const connection = try Connection.create(std.testing.allocator);
+    defer connection.destroy();
+    var prepared: ?*statement.sqlite3_stmt = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(connection), "SELECT key,value,type,atom,fullkey,path FROM json_each('[10,20]')", -1, &prepared, null));
+    for (0..2) |index| {
+        try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+        try std.testing.expectEqual(@as(i64, @intCast(index)), statement.sqlite3_column_int64(prepared, 0));
+        try std.testing.expectEqual(@as(i64, @intCast(10 + index * 10)), statement.sqlite3_column_int64(prepared, 1));
+        try std.testing.expectEqualStrings("integer", std.mem.span(statement.sqlite3_column_text(prepared, 2).?));
+        try std.testing.expectEqual(@as(i64, @intCast(10 + index * 10)), statement.sqlite3_column_int64(prepared, 3));
+        try std.testing.expectEqualStrings(if (index == 0) "$[0]" else "$[1]", std.mem.span(statement.sqlite3_column_text(prepared, 4).?));
+        try std.testing.expectEqualStrings("$", std.mem.span(statement.sqlite3_column_text(prepared, 5).?));
+    }
+    try std.testing.expectEqual(ResultCode.done.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
 }
 
 test "UTF-16 prepare executes expression SELECT" {
@@ -3815,6 +8560,105 @@ test "schema DDL prepare creates and drops a durable table" {
     try std.testing.expectEqual(ResultCode.ok, database.close());
 }
 
+test "table scans apply literal defaults to records created before added columns" {
+    const bytes = try std.Io.Dir.cwd().readFileAlloc(std.testing.io, "tests/fixtures/pager/valid-empty-4096.db", std.testing.allocator, .limited(2 * 1024 * 1024));
+    defer std.testing.allocator.free(bytes);
+    var memory = btree.vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    const file = memory.open("column-default.db", btree.vfs.OPEN_READWRITE | btree.vfs.OPEN_CREATE | btree.vfs.OPEN_MAIN_DB).file.?;
+    try std.testing.expectEqual(btree.vfs.OK, file.write(bytes, 0));
+    try std.testing.expectEqual(btree.vfs.OK, file.sync());
+    try std.testing.expectEqual(btree.vfs.OK, memory.closeAndDestroy(file));
+    var adapter = btree.vfs.AbiAdapter.init("sql-column-default", &memory);
+    var database = btree.Database.openWritable(std.testing.allocator, &adapter.abi, "column-default.db").database.?;
+    var connection = Connection.init(std.testing.allocator, &database);
+    var prepared: ?*statement.sqlite3_stmt = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(&connection), "CREATE TABLE defaults(a INTEGER, b TEXT DEFAULT 'later', c BLOB DEFAULT X'0102', r REAL DEFAULT 2, g REAL AS (a * 1.5 + 1) VIRTUAL)", -1, &prepared, null));
+    try std.testing.expectEqual(ResultCode.done.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+    var schema = database.schemaTable("defaults").table.?;
+    defer schema.deinit();
+    const payload = try btree.encodeRecord(std.testing.allocator, &.{.{ .integer = 7 }});
+    defer std.testing.allocator.free(payload);
+    try std.testing.expectEqual(ResultCode.ok, database.insertTable(schema.root_page, 1, payload, false));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(&connection), "SELECT b,c,r,g FROM defaults", -1, &prepared, null));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqualStrings("later", std.mem.span(statement.sqlite3_column_text(prepared, 0).?));
+    try std.testing.expectEqual(@as(c_int, 2), statement.sqlite3_column_bytes(prepared, 1));
+    try std.testing.expectEqual(@as(f64, 2.0), statement.sqlite3_column_double(prepared, 2));
+    try std.testing.expectEqual(@as(f64, 11.5), statement.sqlite3_column_double(prepared, 3));
+    try std.testing.expectEqual(ResultCode.done.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+    try std.testing.expectEqual(ResultCode.ok, database.close());
+}
+
+test "foreign keys enforce composite parents and execute update delete and drop actions" {
+    const bytes = try std.Io.Dir.cwd().readFileAlloc(std.testing.io, "tests/fixtures/pager/valid-empty-4096.db", std.testing.allocator, .limited(2 * 1024 * 1024));
+    defer std.testing.allocator.free(bytes);
+    var memory = btree.vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    const file = memory.open("foreign-key.db", btree.vfs.OPEN_READWRITE | btree.vfs.OPEN_CREATE | btree.vfs.OPEN_MAIN_DB).file.?;
+    try std.testing.expectEqual(btree.vfs.OK, file.write(bytes, 0));
+    try std.testing.expectEqual(btree.vfs.OK, file.sync());
+    try std.testing.expectEqual(btree.vfs.OK, memory.closeAndDestroy(file));
+    var adapter = btree.vfs.AbiAdapter.init("sql-foreign-key", &memory);
+    var database = btree.Database.openWritable(std.testing.allocator, &adapter.abi, "foreign-key.db").database.?;
+    var connection = Connection.init(std.testing.allocator, &database);
+    connection.database_configuration[2] = 1;
+    const handle = toOpaque(&connection);
+
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(handle, "CREATE TABLE parent(id INTEGER PRIMARY KEY, k INTEGER UNIQUE); CREATE TABLE cascaded(id INTEGER PRIMARY KEY, pid INTEGER REFERENCES parent(k) ON UPDATE CASCADE ON DELETE CASCADE); CREATE TABLE nulled(id INTEGER PRIMARY KEY, pid INTEGER REFERENCES parent(k) ON UPDATE SET NULL ON DELETE SET NULL); CREATE TABLE defaulted(id INTEGER PRIMARY KEY, pid INTEGER DEFAULT 20 REFERENCES parent(k) ON UPDATE SET DEFAULT ON DELETE SET DEFAULT)", null, null, null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(handle, "INSERT INTO parent VALUES(1,10); INSERT INTO parent VALUES(2,20); INSERT INTO cascaded VALUES(1,10); INSERT INTO nulled VALUES(1,10); INSERT INTO defaulted VALUES(1,10)", null, null, null));
+    var violating: ?*statement.sqlite3_stmt = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(handle, "INSERT INTO cascaded VALUES(2,99)", -1, &violating, null));
+    try std.testing.expectEqual(ResultCode.constraint.toC(), statement.sqlite3_step(violating));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_extended_result_codes(handle, 1));
+    try std.testing.expectEqual(ResultCode.constraint.toC() | (3 << 8), statement.sqlite3_reset(violating));
+    try std.testing.expectEqual(ResultCode.constraint.toC() | (3 << 8), statement.sqlite3_step(violating));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_extended_result_codes(handle, 0));
+    try std.testing.expectEqual(ResultCode.constraint.toC(), statement.sqlite3_finalize(violating));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(handle, "UPDATE parent SET k=11 WHERE id=1", null, null, null));
+
+    var cascaded_schema = database.schemaTable("cascaded").table.?;
+    defer cascaded_schema.deinit();
+    var cursor = database.openCursor(cascaded_schema.root_page, .table).cursor.?;
+    try std.testing.expect(cursor.seekTable(1));
+    var record = cursor.record().record.?;
+    try std.testing.expectEqual(@as(i64, 11), record.values[1].integer);
+    record.deinit();
+    cursor.deinit();
+
+    var nulled_schema = database.schemaTable("nulled").table.?;
+    defer nulled_schema.deinit();
+    cursor = database.openCursor(nulled_schema.root_page, .table).cursor.?;
+    try std.testing.expect(cursor.seekTable(1));
+    record = cursor.record().record.?;
+    try std.testing.expect(foreignKeyValueIsNull(record.values[1]));
+    record.deinit();
+    cursor.deinit();
+
+    var defaulted_schema = database.schemaTable("defaulted").table.?;
+    defer defaulted_schema.deinit();
+    cursor = database.openCursor(defaulted_schema.root_page, .table).cursor.?;
+    try std.testing.expect(cursor.seekTable(1));
+    record = cursor.record().record.?;
+    try std.testing.expectEqual(@as(i64, 20), record.values[1].integer);
+    record.deinit();
+    cursor.deinit();
+
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(handle, "DELETE FROM parent WHERE id=1", null, null, null));
+    cursor = database.openCursor(cascaded_schema.root_page, .table).cursor.?;
+    try std.testing.expect(!cursor.seekTable(1));
+    cursor.deinit();
+
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(handle, "CREATE TABLE composite_parent(a INTEGER, b TEXT, UNIQUE(a,b)); CREATE TABLE composite_child(x INTEGER, y TEXT, FOREIGN KEY(x,y) REFERENCES composite_parent(a,b)); INSERT INTO composite_parent VALUES(7,'seven'); INSERT INTO composite_child VALUES(7,'seven')", null, null, null));
+    try std.testing.expectEqual(ResultCode.constraint.toC(), sqlite3_exec(handle, "INSERT INTO composite_child VALUES(7,'missing')", null, null, null));
+    try std.testing.expectEqual(ResultCode.constraint.toC(), sqlite3_exec(handle, "DROP TABLE parent", null, null, null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(handle, "DELETE FROM defaulted WHERE id=1; DROP TABLE parent", null, null, null));
+    try std.testing.expectEqual(ResultCode.not_found, database.schemaTable("parent").result);
+    try std.testing.expectEqual(ResultCode.ok, database.close());
+}
+
 test "table scan SELECT resolves schema columns and emits B-tree cursor loop" {
     const bytes = try std.Io.Dir.cwd().readFileAlloc(std.testing.io, "tests/fixtures/btree-mutation/none-512.db", std.testing.allocator, .limited(2 * 1024 * 1024));
     defer std.testing.allocator.free(bytes);
@@ -3844,6 +8688,32 @@ test "table scan SELECT resolves schema columns and emits B-tree cursor loop" {
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(&connection), "SELECT * FROM t", -1, &prepared, null));
     try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
     try std.testing.expectEqual(@as(i64, 1), statement.sqlite3_column_int64(prepared, 0));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(&connection), "SELECT x.id,x.v FROM main.t AS x", -1, &prepared, null));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(@as(i64, 1), statement.sqlite3_column_int64(prepared, 0));
+    try std.testing.expect(statement.sqlite3_column_bytes(prepared, 1) > 0);
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(&connection), "SELECT x.id*2+1,x.v||'!' FROM main.t AS x LIMIT 1", -1, &prepared, null));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(@as(i64, 3), statement.sqlite3_column_int64(prepared, 0));
+    try std.testing.expect(statement.sqlite3_column_bytes(prepared, 1) > 1);
+    try std.testing.expectEqual(ResultCode.done.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(&connection), "SELECT length(x.v),abs(x.id-3) FROM t x LIMIT 1", -1, &prepared, null));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expect(statement.sqlite3_column_int64(prepared, 0) > 0);
+    try std.testing.expectEqual(@as(i64, 2), statement.sqlite3_column_int64(prepared, 1));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(&connection), "SELECT count(*),sum(x.id),avg(x.id),min(x.id),max(x.id),total(x.id) FROM t x", -1, &prepared, null));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(@as(i64, 300), statement.sqlite3_column_int64(prepared, 0));
+    try std.testing.expectEqual(@as(i64, 45150), statement.sqlite3_column_int64(prepared, 1));
+    try std.testing.expectApproxEqAbs(@as(f64, 150.5), statement.sqlite3_column_double(prepared, 2), 0.0001);
+    try std.testing.expectEqual(@as(i64, 1), statement.sqlite3_column_int64(prepared, 3));
+    try std.testing.expectEqual(@as(i64, 300), statement.sqlite3_column_int64(prepared, 4));
+    try std.testing.expectApproxEqAbs(@as(f64, 45150), statement.sqlite3_column_double(prepared, 5), 0.0001);
+    try std.testing.expectEqual(ResultCode.done.toC(), statement.sqlite3_step(prepared));
     try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
     try std.testing.expectEqual(ResultCode.ok, database.close());
 }
@@ -3996,6 +8866,7 @@ test "generated INSERT rolls back VFS faults and continues" {
         var adapter = btree.vfs.AbiAdapter.init("sql-insert-fault", &memory);
         var database = btree.Database.openWritable(std.testing.allocator, &adapter.abi, name).database.?;
         var connection = Connection.init(std.testing.allocator, &database);
+        try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_extended_result_codes(toOpaque(&connection), 1));
         var prepared: ?*statement.sqlite3_stmt = null;
         try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(&connection), "INSERT INTO t(id,v) VALUES(2000,x'01')", -1, &prepared, null));
         var rules = [_]btree.vfs.FaultRule{.{ .method = case[0], .code = case[1] }};
@@ -4148,6 +9019,7 @@ test "generated UPDATE DELETE rollback faults and WAL continuation" {
         var adapter = btree.vfs.AbiAdapter.init("sql-row-fault", &memory);
         var database = btree.Database.openWritable(std.testing.allocator, &adapter.abi, name).database.?;
         var connection = Connection.init(std.testing.allocator, &database);
+        try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_extended_result_codes(toOpaque(&connection), 1));
         var prepared: ?*statement.sqlite3_stmt = null;
         try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(toOpaque(&connection), "DELETE FROM t WHERE id=2", -1, &prepared, null));
         const code = if (method == .write) btree.vfs.IOERR_WRITE else btree.vfs.IOERR_FSYNC;
@@ -4335,6 +9207,25 @@ test "automatic covering-index planning survives every bounded allocation failur
     try std.testing.expectEqual(btree.vfs.OK, memory.closeAndDestroy(opened.file.?));
     var adapter = btree.vfs.AbiAdapter.init("sql-index-plan-oom", &memory);
     try std.testing.checkAllAllocationFailures(std.testing.allocator, indexPlannerAllocationExercise, .{&adapter});
+}
+
+test "named memory URI cache is shared until the final connection closes" {
+    var first: ?*sqlite3 = null;
+    var second: ?*sqlite3 = null;
+    const flags = 0x02 | 0x04 | 0x40;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open_v2("file:shared-cache?mode=memory&cache=shared", &first, flags, null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(first, "CREATE TABLE t(x); INSERT INTO t VALUES(42)", null, null, null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open_v2("file:shared-cache?mode=memory&cache=shared", &second, flags, null));
+    var prepared: ?*statement.sqlite3_stmt = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(second, "SELECT x FROM t", -1, &prepared, null));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(@as(i64, 42), statement.sqlite3_column_int64(prepared, 0));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
+    try std.testing.expect(memdb.access("shared-cache"));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_close(first));
+    try std.testing.expect(memdb.access("shared-cache"));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_close(second));
+    try std.testing.expect(!memdb.access("shared-cache"));
 }
 
 test "serialize NOCOPY nullable size and deserialize armor preserve source contracts" {

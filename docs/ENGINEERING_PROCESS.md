@@ -2,132 +2,75 @@
 
 ## Purpose
 
-Deliver SQLite’s implementation, not a compatible substitute. This document defines the mandatory unit, evidence, integration, containment, and reporting gates.
+This is the single normative workflow for source translation, integration, evidence, containment, and reporting.
 
 ## Evidence states
 
 ```text
-inventoried
-→ source-context-reviewed
-→ scaffolded (only if needed)
-→ source-translated
-→ internal-trace-equivalent
-→ subsystem-integrated
-→ assurance-passed
-→ independently-fidelity-reviewed
+inventoried → source-context-reviewed → scaffolded (if needed)
+→ source-translated → internal-trace-equivalent
+→ subsystem-integrated → assurance-passed
 ```
 
-Only the final state contributes objective completion. In this solo project, “independently” means a review pass isolated from implementation: immutable snapshot, fresh source re-read, adversarial checklist, mutation evidence, and recorded artifact. It does not require another person. Layouts, declarations, mappings, hooks, action/opcode names, bounded substitutes, and C-only tests are accounting or scaffolding.
+Only assurance-passed contributes objective completion. Independent fidelity review is deferred and is not a current objective or gate. Layouts, declarations, mappings, hooks, bounded substitutes, and C-only tests are accounting or scaffolding.
 
 ## Atomic unit
 
-Work uses **dependency-closed atomic source units**. A dossier records:
+Use a dependency-closed source unit. Its dossier identifies exact source and generated inputs; complete callers/callees and behavior; state, ownership, allocation, cleanup, results, locks, callbacks, I/O, and continuation; final and retiring owners; representation differences; neutral observations; and applicable fault/crash/concurrency/fuzz/performance obligations. Strongly connected functions and private state normally move together.
 
-1. source files, spans, identities, hashes, predicates, generated inputs, and behavioral blocks;
-2. complete implementation, callers, callees, assertions, branches, cleanup, and upstream tests;
-3. input/output, state, ownership, allocation, results, locks, callbacks, I/O, and continuation;
-4. dependency boundary and one final production owner;
-5. representation differences;
-6. neutral oracle protocol and internal observations;
-7. applicable OOM, I/O, crash, malformed-input, concurrency, fuzz, and performance obligations;
-8. the bounded owner to retire.
+## Instruction and work lock
 
-Strongly connected functions and private state normally move together.
+Persist user changes to scope, priorities, workflow, acceptance, reporting, or stop conditions before other work. Keep one dependency-critical unit active. Unrelated refactors, metrics, and prose wait unless explicitly requested or needed for a stop-line defect.
 
-## Efficient execution
+## Translation batch gate
 
-### Work lock
+A checkpoint promotion requires either:
 
-Keep one dependency-critical dossier active. Questions, passing tests, and corrected mismatches do not end it. Unrelated refactors, naming changes, metrics, and documentation wait unless they resolve a stop-line defect.
+- **200 short functions**: pinned source span below 10 physical lines; or
+- **50 substantive functions**: pinned source span at least 10 physical lines and corresponding Zig behavior.
 
-### Effort budget
+Count only net-new production behavior. Never count tests, adapters, wrappers around existing behavior, mappings, generated artifacts, prose, renames, pre-existing functions, or unreconciled historical claims. Each active entry carries the exact source/declaration hashes and atomic-unit owner; `zig build port-batch-checkpoint` accepts it only after canonical mapping and atomic-unit promotion.
 
-During normal unit execution:
+Ordinary compilation, tests, generators, read-only audits, and incident recovery remain available below the threshold. `upstream/active-port-batch.json` owns the active delta, `upstream/historical-port-claims.json` quarantines retired no-credit claims, `upstream/port-checkpoints.json` owns accepted checkpoints, and `upstream/port-status.json` owns the generated summary. After a threshold, validate once, repair targeted failures, synchronize generated facts/prose once, then record a durable checkpoint. Broad suites additionally require a completed slice or explicit request.
 
-- **80% or more:** source analysis, translation, integration, and targeted behavioral evidence;
-- **15% or less:** broader assurance and review preparation;
-- **5% or less:** aggregate ledgers, status, and documentation.
+## Execution budget and cadence
 
-Incidents may temporarily override the budget. If process work occupies two consecutive checkpoints without advancing or invalidating the active unit, stop and simplify the process.
+During normal implementation, spend at least 95% on source research and production porting and at most 5% on validation, status, process, and prose. Explicit audits and incidents may temporarily override this.
 
-### One-pass cadence
-
-1. Lock the unit and complete admission once.
-2. Translate with targeted compile/unit checks.
-3. Build one neutral differential and applicable fault cases.
+1. Complete admission and source review once.
+2. Reach a translation threshold.
+3. Run focused compile, invariant, differential, and applicable fault checks.
 4. Integrate through the final owner and retire the duplicate.
 5. Run broad gates once at promotion or handoff.
-6. Regenerate aggregate ledgers and synchronized prose once.
-7. Perform the isolated fidelity-closure review on the immutable result.
+6. Regenerate ledgers and synchronized prose once.
+7. Record exact evidence and blockers.
 
-Do not rerun the full suite after every edit. Do not regenerate inventories or rewrite prose unless a mapping, evidence state, synchronized fact, or incident changed.
+An unchanged repeated broad run adds no evidence.
 
-## Admission gate
+## Admission and translation gates
 
-Before coding behavior:
+Before coding, name the dependency boundary, final/retiring owners, complete source context, applicable tests, observations, and resource budgets. The translation preserves recognizable source decomposition and control order, widths and overflow, encoding, allocation timing/domain, sticky errors, cleanup, callbacks, locks, I/O, results, and invariants. Refactoring follows in a separate patch.
 
-- dossier and dependency closure are complete;
-- final and retiring owners are named;
-- source context and applicable tests are reviewed;
-- oracle observations and resource budgets are declared;
-- no substitute algorithm or parallel production owner is planned.
+## Test and containment gates
 
-Automation may collect identities and call sites but may not infer semantic review.
+C and Zig should consume one symbolic operation specification. Compare relevant branches, PCs, state, flags, aliases, allocation, callbacks, destructors, locks, VFS operations, files, results, and continuation—not only final output. Normalizers are narrow and mutation-tested.
 
-## Translation gate
+Every oracle, native worker, fuzzer, and crash child uses `tools/bounded_subprocess.py` for wall time, process-group memory/address space, output, file size, CPU, process, descriptor, argument, and input limits. Timeouts, signals, limits, and host OOM invalidate evidence. See `docs/TESTING.md` for result ownership and interpretation.
 
-The fidelity patch:
+## Integration and assurance
 
-- follows canonical source and preserves recognizable decomposition and control order;
-- preserves widths, overflow, encoding, allocation timing/domain, sticky errors, cleanup, callbacks, locks, I/O, and results;
-- keeps source invariants;
-- does not redesign or expand a frozen substitute;
-- records only the evidence state reached.
+Integration requires the real native path to reach source-corresponding callers/state/callees, correct ownership and failure crossing, adapted native tests, retirement or test quarantine of the duplicate, and exactly one ledger owner. Run only applicable failure, crash, concurrency, fuzz, continuation, platform, and performance gates.
 
-Idiomatic cleanup is a separate later patch.
+## Tool and documentation ownership
 
-## Test gate
+Every maintained script has one build/importing owner and bounded execution; `tools/verify_tooling.py` enforces this. Every maintained document has one purpose in `docs/README.md`; `tools/verify_docs.py` validates the registry, references, documented build targets, result-owner paths, and synchronized facts. Remove an artifact when its distinct purpose or owner disappears.
 
-C and Zig consume one symbolic operation specification when possible. Compare applicable branches, PCs, states, flags, aliases, allocations, callbacks, destructors, locks, VFS operations, files, results, and continued use—not only final output. Normalizers are narrow and mutation-tested.
+Ignored `.zig-cache/`, `zig-out/`, `.reference-build/`, and `.test-artifacts/` content is disposable output, never source or completion evidence.
 
-The inner loop runs only the unit’s compile, invariant, differential, and fault checks. The promotion loop runs aggregate controls and `zig build test -j1` once before transition, handoff, invalidation closure, or requested report.
+## Incidents and status integrity
 
-## Mandatory worker containment
-
-Every oracle, native worker, fuzzer, and crash child has enforced wall time, process-group memory/address space, output, file size, CPU, process, descriptor, argument, and input limits through `tools/bounded_subprocess.py`. Signals, timeouts, and limit events fail evidence and preserve bounded artifacts.
-
-Broad builds use low concurrency on memory-pressured hosts. A host OOM invalidates the run and requires a clean lower-concurrency rerun.
-
-## Integration and retirement gate
-
-A unit is integrated only when:
-
-- the real native path reaches source-corresponding callers, state, and callees;
-- ownership and failures cross boundaries correctly;
-- adapted native tests exercise the path;
-- the bounded duplicate is removed or test-quarantined;
-- ledgers identify exactly one production owner.
-
-## Assurance and review
-
-Run only applicable failure, crash, concurrency, fuzz, continuation, platform, and performance gates. After assurance, start a fresh isolated review pass. Re-read source without relying on implementation notes, challenge unit closure and representation differences, rerun mutation/trace evidence, and record the snapshot plus review artifact before final promotion.
-
-## Status integrity
-
-Unsupported claims are downgraded immediately with dependent evidence invalidated. Remove code that exists only for an excluded transport, regenerate affected ledgers, synchronize facts, and rerun affected gates. Validator success never substitutes for semantic review.
-
-## Incident gate
-
-On unexplained mismatch, corruption, race, hang, runaway resource use, host OOM, or safety failure:
-
-1. preserve artifacts and reproducer;
-2. identify implementation, oracle, adapter, normalizer, containment, or environment cause;
-3. minimize and add a regression when project-controlled;
-4. audit siblings and invalidate affected evidence;
-5. rerun from a clean checkpoint before resuming.
+On mismatch, corruption, race, hang, runaway resources, host OOM, or safety failure: preserve bounded artifacts, classify the cause, minimize and regress project defects, audit siblings, invalidate affected evidence, and rerun from a clean checkpoint. Downgrade unsupported claims immediately; validator success never substitutes for semantic review.
 
 ## Reporting
 
-Report engineering changes, final-path owners reached, source units translated/integrated/assured, tests that exercised those owners, retired substitutes, defects, and blockers. Do not headline percentages or scaffold counts. Machine accounting remains in `upstream/port-status.json` and is consulted only when explicitly requested.
-
-A report is a checkpoint, not a reason to abandon the active unit.
+Report concrete translated/integrated owners, final paths exercised, tests, retired substitutes, defects, and blockers. Do not headline percentages or scaffold counts. Mutable accounting belongs to `upstream/port-status.json`; a report does not end the active unit.

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-record-serial-type-length-and-value-decode",
   "title": "VDBE record serial-type lengths and scalar value decode",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These helpers are the source record-format boundary that maps serial types to payload lengths and decodes NULL, signed integers, IEEE-754 values, zero/one constants, and ephemeral text/blob views into exact Mem state.",
@@ -178,7 +178,7 @@
     "The constant 128-byte size table is compile-time generated from the same fixed exceptional entries and alternating payload formula."
   ],
   "oracle": {
-    "protocol": "The shared worker decodes serial types 0 through 15 plus 127, 128, 129, 255, and 256 from sign-sensitive bytes, compares both length APIs, flags, n, union bits, and ephemeral pointer identity, then directly exercises serialGet7 with finite 1.0 and a NaN payload. C and Zig compare 363 observations.",
+    "protocol": "The shared worker decodes serial types 0 through 15 plus 127, 128, 129, 255, and 256 from sign-sensitive bytes, compares both length APIs, flags, n, union bits, and ephemeral pointer identity, then directly exercises serialGet7 with finite 1.0 and a NaN payload. C and Zig compare 366 observations.",
     "internal_observations": [
       "small and large serial lengths",
       "signed 8/16/24/32/48/64-bit decode",
@@ -192,8 +192,8 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation or OOM branch.",
     "io_crash_concurrency": "Pure byte decoding; no I/O, callback, or shared state.",
@@ -221,5 +221,35 @@
     "Integrate sqlite3VdbeRecordUnpack and comparison families.",
     "Connect record opcodes to exact helpers.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:3940-4001 was reviewed for the complete 128-byte size table and both serial-length APIs",
+      "upstream/sqlite/src/vdbeaux.c:4002-4061 was reviewed for inactive mixed-endian support context and all five big-endian extraction macros",
+      "upstream/sqlite/src/vdbeaux.c:4062-4214 was reviewed completely for serialGet, serialGet7, and sqlite3VdbeSerialGet",
+      "src/core/internal/vdbe_record.zig table, integer helpers, serialGet/serialGet7/serialGetValue, and length functions are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "vdbe.c OP_Column and related paths consume lengths/decode; vdbeaux.c record unpack, compare fast paths, rowid extraction, and debug display consume all helpers",
+      "vdbeapi.c values-from-bindings, vdbemem.c record field extraction, and vdbeblob.c blob length consume the public helpers",
+      "Follow-on unpack/compare/opcode units own caller integration; test_func.c is test-only"
+    ],
+    "callees": [
+      "Length functions use sqlite3SmallTypeSizes below 128 and floor((type-12)/2) above it",
+      "serialGet and serialGet7 assemble two big-endian 32-bit words, decode signed i64 or IEEE f64, and map NaN to MEM_Null",
+      "sqlite3VdbeSerialGet directly handles null/no-change, signed widths, constants, and ephemeral blob/text views; types 6/7 delegate to serialGet",
+      "No allocation, callback, lock, or I/O occurs"
+    ],
+    "assertions_branches_cleanup": [
+      "All 38 behavior IDs cover length threshold/assertions, float shape/NaN, and every serial-type switch family",
+      "Types 0/11 are NULL; 10 is NULL|Zero with n/nZero zero; 1..6 sign-extend exact widths; 7 finite is Real and NaN is Null; 8/9 are integer constants",
+      "Types >=12 borrow the input as MEM_Ephem and alternate blob/text by low bit with floor payload length; destination is required fresh and prior ownership is not released",
+      "Mixed-endian float and HP compiler workaround branches are inactive in the pinned profile"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/misc5.test, indexexpr2.test, and corruption/record tests exercise serial decoding through SQL and malformed records",
+      "test_func.c exposes record decode for upstream tests; VDBE and blob tests consume production callers",
+      "Project shared differential compares 366 exact observations across representative serial types, signs, finite/NaN bits, flags, lengths, and pointer identity; receipts remain later"
+    ]
+  }
 }

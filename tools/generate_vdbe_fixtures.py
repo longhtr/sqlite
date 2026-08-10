@@ -24,4 +24,8 @@ def main():
  out=Path(sys.argv[1]).resolve() if len(sys.argv)>1 else OUT;out.mkdir(parents=True,exist_ok=True)
  doc={'schema_version':1,'phase':'phase-11-vdbe-core','profile':'handcrafted-oracle-derived-v1','program_count':len(PROGRAMS),'observation_count':53,'programs':PROGRAMS,'native_only_classes':['gosub','destructor','interrupt','progress','instruction-limit','malformed-program','btree-cursor','oom']}
  (out/'manifest.json').write_text(json.dumps(doc,indent=2)+'\n');print(f'generate-vdbe-fixtures: wrote {len(PROGRAMS)} programs')
-if __name__=='__main__':main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

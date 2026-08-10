@@ -1,4 +1,4 @@
-# ADR-0016: Use profile-native pthread mutexes and an ordered initialization coordinator
+# ADR-0016: Use profile-native pthread mutexes and ordered initialization
 
 ## Status
 
@@ -6,22 +6,10 @@ Accepted for the mutex/initialization foundation.
 
 ## Decision
 
-The declared compile-time profile is `SQLITE_THREADSAFE=1`. The native abstraction supports its three runtime modes:
+For `SQLITE_THREADSAFE=1`, preserve runtime single-thread, multi-thread, and serialized modes; dynamic fast/recursive mutexes; stable static identities; ownership/depth assertions; nonblocking try; nullable no-op internal mutexes; and copied configured methods.
 
-- single-thread: core and connection mutexes disabled;
-- multi-thread: core mutexes enabled and connection mutexes disabled;
-- serialized: both enabled.
-
-The pthread implementation provides dynamic fast and recursive mutexes, stable identities for static IDs 2–13, ownership/depth assertions, nonblocking try semantics, and nullable no-op internal mutexes. The exact `sqlite3_mutex_methods` layout and a copied custom-method adapter are retained.
-
-Global initialization uses an explicit coordinator. Concurrent callers block behind one initializer, recursion from the initializing thread returns without deadlock, failures unwind initialized subsystems, and shutdown runs hooks before memory and mutex teardown. Configuration is rejected while initialized. Ordered hooks represent subsystem boundaries without granting implementation credit. At adoption, PCache, VFS, memdb, and built-in-function hooks were placeholders; PCache and the scoped Linux VFS/memdb owners have since gained atomic-unit evidence, while remaining hooks retain their recorded status.
-
-## Evidence
-
-- Differential traces cover all runtime modes, recursive entry, static identity, contention, copied custom methods, 100 initialization/reconfiguration cycles, and an eight-thread initialization race.
-- Native tests run recursive initialization, failed initialization/retry, contention loops, and dynamic-mutex one-shot/sticky OOM sweeps.
-- Migration layout tests fix `sqlite3_mutex_methods` at size 72, alignment 8, and pinned offsets.
+Use one initialization coordinator: concurrent callers serialize, same-thread recursion does not deadlock, failures unwind completed layers, shutdown order is explicit, and configuration is rejected while initialized. Hooks represent boundaries but grant no implementation credit.
 
 ## Consequences
 
-`THREADSAFE=0` and `THREADSAFE=2` are not claimed profiles. Zig public mutex and initialization integration remains open; later subsystem work fills the ordered initialization hooks.
+Other compile-time profiles remain unclaimed. Public mutex/initialization and unfinished subsystem hooks remain separate integration work. Changes require mode, recursion, identity, contention, failure/retry, and concurrency evidence under `docs/TESTING.md`.

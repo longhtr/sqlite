@@ -25,8 +25,7 @@ The final parser/compiler/VDBE/storage pipeline and complete Zig API do not yet 
 ## Commands
 
 ```sh
-zig build test -j1
-zig build atomic-unit-audit source-ledger port-audit verify-config docs-test tooling-audit -j1
+zig build test -j1            # aggregate regression and control graph
 zig build test-upstream       # C oracle only; not Zig progress
 zig build compatibility-report
 ```

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "memory-journal-chunks-spill-and-lifecycle",
   "title": "In-memory rollback-journal chunks, spill, and lifecycle",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "This unit owns the complete active memjournal.c chunk representation, sequential/header writes, cached reads, truncation, cleanup, optional atomic spill to the underlying VFS, open mode selection, identity, and size calculation. The native Journal is a direct source-shaped translation and its chunk/cursor/truncate/spill trace matches the pinned C implementation; production Pager ABI routing and complete failure assurance remain open.",
     "source_files": [
@@ -394,9 +394,9 @@
     "normalization": "Bytes, sizes, result codes and ordered method events are exact; allocation addresses are ignored."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "First chunk OOM and cleanup are covered; every chunk boundary and spill-storage/open/write OOM/fault site remains open.",
     "io_crash_concurrency": "Successful real-VFS spill and readback pass. Failed-open/write restoration and crash boundaries need exact differential coverage; source unit is single-threaded.",
@@ -421,6 +421,7 @@
     "notes": "Requires pinned C differential, complete failure matrix, Pager ABI integration, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate Journal behind Pager journal-open policy and sqlite3_file ABI storage.",
     "Extend the pinned C/Zig differential with all chunk-boundary and spill failure/OOM continuation cases.",
     "Complete all chunk-boundary and spill OOM/VFS fault continuation cases.",

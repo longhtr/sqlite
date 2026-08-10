@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-status-primitives",
   "title": "Global status value, increment, decrement, and highwater primitives",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the complete status.c state identities and four lock-assuming primitives used directly by the global allocation core. Manager now uses the source ten-slot current/highwater model rather than allocator-specific counters.",
@@ -184,9 +184,9 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
-    "subsystem_integrated": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
     "oom": "No allocation and no OOM path.",
     "io_crash_concurrency": "No I/O. Allocator and page-cache slots use distinct source-corresponding mutex identities; concurrent status differential remains open.",
     "malformed_input": "Invalid operations are source-precondition violations; all ten valid slots are representable.",
@@ -211,5 +211,38 @@
   "known_blockers": [
     "Allocator and page-cache producers share the status owner with source-corresponding lock selection; exact concurrent event evidence remains pending.",
     "Independent fidelity review is pending."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/status.c was reviewed in full; this unit selects lines 20-128 covering the active value type, ten-slot state, mutex routing table, WSD aliases, and all four primitive bodies",
+      "The 13 exact source identities and hashes in scope cover every selected declaration and the 18 assigned assertion/branch/return blocks",
+      "src/core/memory.zig Manager.now_value/max_value/lock and statusValue/statusUp/statusDown/statusHighwater are the canonical AST-hashed representation and primitive targets"
+    ],
+    "callers": [
+      "sqlite3StatusValue active calls are malloc.c:113/261/266/530; sqliteInt.h:4787 is its declaration",
+      "sqlite3StatusUp active producers are malloc.c:286-287/548 and pcache1.c:355/369; sqliteInt.h:4788 is its declaration",
+      "sqlite3StatusDown active producers are malloc.c:397-398 and pcache1.c:386/402; sqliteInt.h:4789 is its declaration",
+      "sqlite3StatusHighwater active producers are malloc.c:259/528, pcache1.c:354/368, and tokenize.c:722; sqliteInt.h:4790 is its declaration",
+      "Public sqlite3_status/status64 query/reset and non-allocator producer integration are downstream consumers explicitly excluded from this primitive unit"
+    ],
+    "callees": [
+      "All four primitives index the private nowValue/mxValue arrays directly; Up and Highwater conditionally replace one highwater slot and Down mutates only current",
+      "Source assertions call sqlite3Pcache1Mutex or sqlite3MallocMutex through statMutex and sqlite3_mutex_held; callers own those locks and the lock providers are external responsibilities",
+      "ArraySize and wsdStatInit/wsdStat are compile-time/WSD aliases; SQLITE_OMIT_WSD is absent so selected access is direct sqlite3Stat storage"
+    ],
+    "assertions_branches_cleanup": [
+      "sqlite3StatusValue validates operation range and lock ownership before returning current",
+      "sqlite3StatusUp validates range/lock, accepts signed N, updates current, and raises highwater only when current exceeds it",
+      "sqlite3StatusDown requires nonnegative N, valid range/lock, subtracts current, and never changes highwater",
+      "sqlite3StatusHighwater requires nonnegative X and one of MALLOC_SIZE/PAGECACHE_SIZE/PARSER_STACK, then conditionally raises only highwater",
+      "SQLITE_PTRSIZE>4 selects sqlite3_int64 slots; no primitive allocates, frees, performs I/O, invokes user callbacks, or owns cleanup"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/memsubsys1.test and memsubsys2.test exercise all status categories, current/highwater resets, allocator and page-cache producers",
+      "upstream/sqlite/test/pcache2.test covers PAGECACHE_USED current/highwater transitions",
+      "upstream/sqlite/test/vacuummem.test, dbstatus.test, malloc5.test, shrink.test, zeroblob.test, and incrblob2.test observe memory current/highwater continuation",
+      "upstream/sqlite/test/misc7.test covers invalid public status operation boundaries; public misuse behavior is outside this primitive unit",
+      "Project memory.zig status primitive tests and infrastructure differential cover selected numeric transitions but are not durable promotion receipts"
+    ]
+  }
 }

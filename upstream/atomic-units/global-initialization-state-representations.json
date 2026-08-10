@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-initialization-state-representations",
   "title": "Global initialization layer flags, progress owner, and waiter synchronization state",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These seven Sqlite3Config fields are the complete initialization-progress and per-layer state read or written by sqlite3_initialize/shutdown. Coordinator and subsystem owners now preserve partial-success state across late failures.",
@@ -121,8 +121,8 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Allocator/mutex failure state is represented; per-cache allocation OOM remains outside this representation unit.",
     "io_crash_concurrency": "No I/O at representation level. Eight-thread and recursive races pass; formal event proof remains pending.",
@@ -148,5 +148,34 @@
   "known_blockers": [
     "PCache and scoped OS/VFS process state owners are trace-equivalent; independent publication review remains open.",
     "Condition-variable versus nRefInitMutex event/performance equivalence needs independent review."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/sqliteInt.h:4313-4325 was reviewed for all seven post-configuration initialization fields and their zero-initialized boundary",
+      "upstream/sqlite/src/global.c:238-310 was reviewed for sqlite3Config initial values, including all seven fields initialized to zero",
+      "upstream/sqlite/src/main.c:195-419 was reviewed completely for initialize/shutdown reads, writes, waiter reference counting, partial layers, publication, and cleanup",
+      "src/core/global.zig Coordinator state/owner/state_lock/state_changed plus mutex, memory, and PCache layer-owned flags are the canonical AST-hashed targets"
+    ],
+    "callers": [
+      "sqlite3_initialize exclusively transitions isInit/inProgress/isMutexInit/isMallocInit/isPCacheInit/nRefInitMutex/pInitMutex during process startup",
+      "sqlite3_shutdown clears initialized OS, PCache, malloc, and mutex layers, including partial initialization when isInit is false",
+      "Public and auto-initialization paths converge on sqlite3_initialize/shutdown; concrete layer behavior belongs to global-library-initialize-shutdown"
+    ],
+    "callees": [
+      "Representation fields have no callees; lifecycle behavior calls mutex, allocator, PCache, OS, memdb, and built-in initialization owners",
+      "Zig explicit State, recursive owner, condition variable, and subsystem flags replace the C recursive mutex/reference-count representation without changing observable layer state",
+      "Publication barriers and callback ordering are behavior obligations, not declaration behavior"
+    ],
+    "assertions_branches_cleanup": [
+      "No behavioral blocks belong to these declarations; all fields begin zero/null and isInit is published only after all required layers succeed",
+      "Late failures retain successfully initialized mutex/malloc/PCache flags; retry skips those layers and shutdown cleans partial state",
+      "pInitMutex is released when nRefInitMutex reaches zero; Zig waiters use state_changed under state_lock instead of exposing the count",
+      "No I/O or allocation occurs at representation level"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/mutex2.test and init tests exercise failed initialization, retry, repeated calls, and shutdown",
+      "upstream/sqlite/test/thread001.test and thread_common.tcl provide concurrent initialization coverage",
+      "Project global tests and infrastructure differential cover 100 cycles, eight-thread races, recursion, layer failures, partial shutdown, and retry; receipts remain later"
+    ]
+  }
 }

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "profile-release-memory-noop",
   "title": "Pinned-profile sqlite3_release_memory no-op",
-  "status": "assurance-passed",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "The pinned profile omits SQLITE_ENABLE_MEMORY_MANAGEMENT, making sqlite3_release_memory an unconditional result-zero no-op used both publicly and by allocator alarm handoff.",
@@ -26,9 +26,38 @@
   "dependencies": {
     "atomic_unit_ids": [],
     "external_source_responsibilities": [
-      "Pinned build-profile proof that SQLITE_ENABLE_MEMORY_MANAGEMENT is omitted"
+      "Pinned build-profile proof that SQLITE_ENABLE_MEMORY_MANAGEMENT is omitted",
+      "src/sqliteInt.h::macro::UNUSED_PARAMETER::line-1326 folds the unused argument without a runtime call"
     ],
-    "caller_closure": "The one selected source body has no runtime dependency and is shared by the public export and global allocator alarm path."
+    "caller_closure": "All active core source calls are covered: sqlite3_soft_heap_limit64 after dropping mem0.mutex and sqlite3MallocAlarm between mutex leave/enter. Test-only test1.c and external public callers are outside the core source inventory."
+  },
+  "context_review": {
+    "implementation_spans": [
+      "src/malloc.c:23-33, exact source body 18d4d9a45d93a022c8b1e13d0880add981e35714823a94c363829c8610baae1b",
+      "src/core/memory.zig::function::releaseMemory, declaration e00745e63b658123653af6c9bcc84585934b8fd028e07ff54cd344828d31c59b",
+      "src/core/public_api.zig::function::sqlite3_release_memory, declaration c4ed8195549948c07d6e0d8a0678acb0aa6936e7d0cf36a80de91023429018d4"
+    ],
+    "callers": [
+      "src/malloc.c::function::sqlite3_soft_heap_limit64::line-95 calls at line 117 after leaving mem0.mutex",
+      "src/malloc.c::function::sqlite3MallocAlarm::line-217 calls at line 220 between sqlite3_mutex_leave/enter",
+      "src/core/memory.zig Manager.setSoftLimit and Manager.alarmWhileUnlocked preserve the two active source call sites",
+      "src/core/public_api.zig::function::sqlite3_release_memory exposes the public transport; arbitrary external callers are accepted"
+    ],
+    "callees": [
+      "The active #else branch invokes only src/sqliteInt.h::macro::UNUSED_PARAMETER::line-1326 and returns zero; it has no runtime callee",
+      "src/pcache1.c::function::sqlite3PcacheReleaseMemory::line-1236 is confined to the inactive SQLITE_ENABLE_MEMORY_MANAGEMENT branch"
+    ],
+    "assertions_branches_cleanup": [
+      "src/malloc.c::function::sqlite3_release_memory::behavior::return::line-31-column-3::ordinal-0 is the sole active control-flow block",
+      "The profile selects the #else branch because SQLITE_ENABLE_MEMORY_MANAGEMENT is absent from SQLITE_BUILD_PROFILE.json library_defines",
+      "No allocation, lock, callback, I/O, state mutation, error path, or cleanup occurs inside the selected body; caller-owned mutex handoff remains outside this unit"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/malloc5.test exercises release semantics only under the memorymanage capability and is skipped for the pinned profile",
+      "upstream/sqlite/test/ioerr.test memmanage-ioerr1 is likewise guarded by memorymanage and does not apply to this no-op profile",
+      "upstream/sqlite/src/test1.c sqlite3_release_memory Tcl transport supplies upstream test access but is excluded from the core source inventory",
+      "The project memory.zig soft-limit alarm test and infrastructure differential cover the selected zero-result and mutex-handoff observations"
+    ]
   },
   "contracts": {
     "inputs": [
@@ -65,9 +94,9 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
-    "subsystem_integrated": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
     "oom": "No allocation; exact no-op remains valid under OOM.",
     "io_crash_concurrency": "No I/O or internal lock. Allocator caller lock handoff is separately assigned.",
     "malformed_input": "All c_int values are ignored identically.",
@@ -89,5 +118,7 @@
     "review_commit": null,
     "notes": "Independent review must confirm the selected profile predicate, public/internal routing, and no hidden state mutation."
   },
-  "known_blockers": []
+  "known_blockers": [
+    "Translation, current-tree trace receipts, final public API ownership, and subsystem assurance remain separate promotions."
+  ]
 }

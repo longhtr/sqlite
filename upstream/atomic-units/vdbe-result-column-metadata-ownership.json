@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-result-column-metadata-ownership",
   "title": "VDBE result-column metadata allocation and string ownership",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "sqlite3VdbeSetNumCols and sqlite3VdbeSetColName own the pre-execution result-column metadata matrix. Count replacement releases prior Mem values/allocation, allocates COLNAME_N cells per column, and name assignment applies SQLite static/transient/dynamic string ownership.",
     "source_files": [
@@ -128,7 +128,7 @@
     "Uninitialized Mem fields such as zMalloc are intentionally not observed unless szMalloc establishes ownership."
   ],
   "oracle": {
-    "protocol": "The shared worker creates a Vdbe, allocates two-column metadata, sets static/transient/dynamic names in distinct matrix cells, replaces the matrix with one column, then forces initial matrix OOM and verifies sticky SetColName continuation. C and Zig compare 363 observations.",
+    "protocol": "The shared worker creates a Vdbe, allocates two-column metadata, sets static/transient/dynamic names in distinct matrix cells, replaces the matrix with one column, then forces initial matrix OOM and verifies sticky SetColName continuation. C and Zig compare 366 observations.",
     "internal_observations": [
       "published counts and matrix presence",
       "initial Mem flags/database owner",
@@ -142,9 +142,9 @@
     "normalization": "Text contents, pointer identity where contractually meaningful, flags/counts/results and null ownership are exact. Uninitialized non-owning fields are ignored."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Deterministic matrix-allocation OOM and subsequent SetColName NOMEM are reached; successful replacement releases three ownership strategies.",
     "io_crash_concurrency": "No I/O; caller mutex and destructor reentrancy remain integration obligations.",
@@ -169,6 +169,7 @@
     "notes": "Requires statement/public integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate public column metadata access with source Vdbe owner.",
     "Complete P4-aware Vdbe destruction for final matrix cleanup.",
     "Independent fidelity review remains open."

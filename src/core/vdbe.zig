@@ -8,6 +8,8 @@ pub const public_api = @import("public_api.zig");
 pub const btree = @import("btree.zig");
 const log_est = @import("log_est.zig");
 const varint = @import("varint.zig");
+const vdbe_sorter = @import("internal/vdbe_sorter.zig");
+const record_compare = @import("internal/record_compare.zig");
 pub const canonical_opcode = @import("generated/opcodes.zig");
 pub const vdbe_mem = @import("internal/vdbe_mem.zig");
 pub const vdbe_types = vdbe_mem.types;
@@ -98,6 +100,13 @@ pub const Opcode = enum {
     open_data,
     open_read,
     open_virtual,
+    sorter_open,
+    sorter_insert,
+    sorter_sort,
+    sorter_next,
+    sorter_data,
+    sorter_compare,
+    reset_sorter,
     rewind,
     last,
     seek_end,
@@ -117,6 +126,8 @@ pub const Opcode = enum {
     close,
     function,
     pure_func,
+    agg_step,
+    agg_final,
     program,
     param,
     clr_subtype,
@@ -134,7 +145,10 @@ pub const P4 = union(enum) {
     real: f64,
     bytes: []const u8,
     index: u16,
+    collation: u16,
 };
+
+pub const column_default_blob: u16 = 0x0100;
 
 pub const Instruction = struct {
     opcode: Opcode,
@@ -155,12 +169,29 @@ pub const FunctionCallback = *const fn (
     output: *Mem,
     allocator: std.mem.Allocator,
 ) ResultCode;
+pub const AggregateStepCallback = *const fn (
+    context: ?*anyopaque,
+    arguments: []Mem,
+    accumulator: *Mem,
+    allocator: std.mem.Allocator,
+) ResultCode;
+pub const AggregateFinalCallback = *const fn (
+    context: ?*anyopaque,
+    accumulator: *Mem,
+    output: *Mem,
+    allocator: std.mem.Allocator,
+) ResultCode;
 pub const Destructor = *const fn (?*anyopaque) void;
 pub const Function = struct {
-    callback: FunctionCallback,
+    callback: ?FunctionCallback = null,
+    aggregate_step: ?AggregateStepCallback = null,
+    aggregate_final: ?AggregateFinalCallback = null,
     context: ?*anyopaque = null,
     destructor: ?Destructor = null,
 };
+
+pub const CollationCallback = *const fn (?*anyopaque, []const u8, []const u8) i32;
+pub const Collation = struct { callback: CollationCallback, context: ?*anyopaque = null };
 
 pub const VirtualSource = struct {
     context: ?*anyopaque,
@@ -179,6 +210,7 @@ pub const Program = struct {
     cursor_count: u16 = 0,
     tables: []const Table = &.{},
     functions: []const Function = &.{},
+    collations: []const Collation = &.{},
     subprograms: []const Subprogram = &.{},
     virtual_sources: []const VirtualSource = &.{},
     variables: []const Literal = &.{},
@@ -195,11 +227,13 @@ const Cursor = union(enum) {
     memory: MemoryCursor,
     btree: btree.Cursor,
     virtual: VirtualCursor,
+    sorter: *vdbe_sorter.Sorter,
 
     fn deinit(self: *Cursor) void {
         switch (self.*) {
             .btree => |*cursor| cursor.deinit(),
             .virtual => |cursor| cursor.source.close(cursor.handle),
+            .sorter => |sorter| vdbe_sorter.close(sorter),
             else => {},
         }
         self.* = .closed;
@@ -246,7 +280,9 @@ pub const Vm = struct {
         if (program.register_count == 0) return error.InvalidProgram;
         const registers = try allocator.alloc(Mem, @as(usize, program.register_count) + 1);
         errdefer allocator.free(registers);
-        for (registers) |*mem| vdbe_mem.init(mem, null, mem_flag.null_);
+        for (registers) |*mem| {
+            vdbe_mem.init(mem, null, mem_flag.null_);
+        }
         const cursors = try allocator.alloc(Cursor, program.cursor_count);
         errdefer allocator.free(cursors);
         @memset(cursors, .closed);
@@ -857,7 +893,12 @@ pub const Vm = struct {
             .eq, .ne, .lt, .le, .gt, .ge => {
                 const right = self.checkRegister(instruction.p1) orelse return self.fail(.corrupt);
                 const left = self.checkRegister(instruction.p3) orelse return self.fail(.corrupt);
-                const compared = compare(&self.registers[left], &self.registers[right]);
+                const collation: ?*const Collation = switch (instruction.p4) {
+                    .none => null,
+                    .collation => |index| if (index < self.program.collations.len) &self.program.collations[index] else return self.fail(.corrupt),
+                    else => return self.fail(.corrupt),
+                };
+                const compared = compare(&self.registers[left], &self.registers[right], collation);
                 var take = false;
                 if (compared) |order| {
                     self.last_compare = order;
@@ -900,7 +941,9 @@ pub const Vm = struct {
                 const count: usize = @intCast(instruction.p3);
                 const permutation = if (instruction.p5 & 1 != 0) self.pending_permutation orelse return self.fail(.corrupt) else null;
                 defer self.pending_permutation = null;
-                if (permutation) |indexes| if (indexes.len != count) return self.fail(.corrupt);
+                if (permutation) |indexes| {
+                    if (indexes.len != count) return self.fail(.corrupt);
+                }
                 if (permutation == null and (left + count > self.registers.len or right + count > self.registers.len)) return self.fail(.corrupt);
                 self.last_compare = .eq;
                 for (0..count) |ordinal| {
@@ -956,6 +999,85 @@ pub const Vm = struct {
                 self.cursor_null_rows[cursor_index] = false;
                 self.cursor_sequences[cursor_index] = 0;
             },
+            .sorter_open => {
+                const cursor_index = cursorIndex(self, instruction.p1) orelse return self.fail(.corrupt);
+                const sorter = vdbe_sorter.init(self.allocator, vdbe_sorter.compareRecords) catch return self.fail(.no_memory);
+                self.cursors[cursor_index].deinit();
+                self.cursors[cursor_index] = .{ .sorter = sorter };
+                self.cursor_null_rows[cursor_index] = false;
+            },
+            .sorter_insert => {
+                const cursor_index = cursorIndex(self, instruction.p1) orelse return self.fail(.corrupt);
+                const source = self.checkRegister(instruction.p2) orelse return self.fail(.corrupt);
+                const sorter = switch (self.cursors[cursor_index]) {
+                    .sorter => |value| value,
+                    else => return self.fail(.corrupt),
+                };
+                const value = &self.registers[source];
+                const pointer = vdbe_mem.valueBlob(value) orelse vdbe_mem.valueText(value, 1) orelse return self.fail(.corrupt);
+                const bytes = pointer[0..@intCast(vdbe_mem.valueBytes(value, 1))];
+                vdbe_sorter.write(sorter, bytes) catch return self.fail(.no_memory);
+            },
+            .sorter_sort => {
+                const cursor_index = cursorIndex(self, instruction.p1) orelse return self.fail(.corrupt);
+                const sorter = switch (self.cursors[cursor_index]) {
+                    .sorter => |value| value,
+                    else => return self.fail(.corrupt),
+                };
+                const empty = vdbe_sorter.rewind(sorter) catch return self.fail(.no_memory);
+                self.cursor_null_rows[cursor_index] = empty;
+                if (empty) {
+                    const rc = self.jump(instruction.p2);
+                    if (rc != .ok) return self.fail(rc);
+                }
+            },
+            .sorter_next => {
+                const cursor_index = cursorIndex(self, instruction.p1) orelse return self.fail(.corrupt);
+                const sorter = switch (self.cursors[cursor_index]) {
+                    .sorter => |value| value,
+                    else => return self.fail(.corrupt),
+                };
+                const empty = vdbe_sorter.next(sorter) catch return self.fail(.corrupt);
+                self.cursor_null_rows[cursor_index] = empty;
+                if (!empty) {
+                    const rc = self.jump(instruction.p2);
+                    if (rc != .ok) return self.fail(rc);
+                }
+            },
+            .sorter_data => {
+                const cursor_index = cursorIndex(self, instruction.p1) orelse return self.fail(.corrupt);
+                const target = self.checkRegister(instruction.p2) orelse return self.fail(.corrupt);
+                const sorter = switch (self.cursors[cursor_index]) {
+                    .sorter => |value| value,
+                    else => return self.fail(.corrupt),
+                };
+                const key = vdbe_sorter.currentRowKey(sorter) orelse return self.fail(.corrupt);
+                const rc = self.setBytes(target, key, 0);
+                if (rc != .ok) return self.fail(rc);
+            },
+            .sorter_compare => {
+                const cursor_index = cursorIndex(self, instruction.p1) orelse return self.fail(.corrupt);
+                const source = self.checkRegister(instruction.p3) orelse return self.fail(.corrupt);
+                const sorter = switch (self.cursors[cursor_index]) {
+                    .sorter => |value| value,
+                    else => return self.fail(.corrupt),
+                };
+                const value = &self.registers[source];
+                const pointer = vdbe_mem.valueBlob(value) orelse vdbe_mem.valueText(value, 1) orelse return self.fail(.corrupt);
+                const bytes = pointer[0..@intCast(vdbe_mem.valueBytes(value, 1))];
+                const comparison = vdbe_sorter.compareCurrent(sorter, bytes) catch return self.fail(.corrupt);
+                if (comparison != 0) {
+                    const rc = self.jump(instruction.p2);
+                    if (rc != .ok) return self.fail(rc);
+                }
+            },
+            .reset_sorter => {
+                const cursor_index = cursorIndex(self, instruction.p1) orelse return self.fail(.corrupt);
+                switch (self.cursors[cursor_index]) {
+                    .sorter => |sorter| vdbe_sorter.reset(sorter),
+                    else => return self.fail(.corrupt),
+                }
+            },
             .rewind, .last, .seek_end => {
                 const cursor_index = cursorIndex(self, instruction.p1) orelse return self.fail(.corrupt);
                 if (instruction.opcode == .seek_end and instruction.p2 != 0) return self.fail(.corrupt);
@@ -990,6 +1112,8 @@ pub const Vm = struct {
             },
             .next, .prev => {
                 const cursor_index = cursorIndex(self, instruction.p1) orelse return self.fail(.corrupt);
+                const moved_rc = handleMovedCursor(&self.cursors[cursor_index]);
+                if (moved_rc != .ok) return self.fail(moved_rc);
                 const positioned = cursorAdvance(&self.cursors[cursor_index], self.program, instruction.opcode == .prev);
                 self.cursor_null_rows[cursor_index] = !positioned;
                 if (cursorResult(&self.cursors[cursor_index]) != .ok) return self.fail(cursorResult(&self.cursors[cursor_index]));
@@ -1051,15 +1175,8 @@ pub const Vm = struct {
                 } else switch (self.cursors[cursor_index]) {
                     .btree => |*cursor| {
                         if (cursor.kind != .index) return self.fail(.corrupt);
-                        const outcome = cursor.record();
-                        if (outcome.result != .ok) return self.fail(outcome.result);
-                        var record = outcome.record.?;
-                        defer record.deinit();
-                        if (record.values.len == 0) return self.fail(.corrupt);
-                        const rowid_value = switch (record.values[record.values.len - 1]) {
-                            .integer => |value| value,
-                            else => return self.fail(.corrupt),
-                        };
+                        const entry = cursor.current() orelse return self.fail(.corrupt);
+                        const rowid_value = record_compare.indexRowid(entry.payload) catch return self.fail(.corrupt);
                         self.setInteger(target, rowid_value);
                     },
                     else => return self.fail(.corrupt),
@@ -1067,8 +1184,10 @@ pub const Vm = struct {
             },
             .column => {
                 const cursor_index = cursorIndex(self, instruction.p1) orelse return self.fail(.corrupt);
+                const moved_rc = handleMovedCursor(&self.cursors[cursor_index]);
+                if (moved_rc != .ok) return self.fail(moved_rc);
                 const target = self.checkRegister(instruction.p3) orelse return self.fail(.corrupt);
-                const rc = self.cursorColumn(cursor_index, instruction.p2, target);
+                const rc = self.cursorColumn(cursor_index, instruction.p2, target, instruction.p4, instruction.p5);
                 if (rc != .ok) return self.fail(rc);
             },
             .count => {
@@ -1096,12 +1215,51 @@ pub const Vm = struct {
                 const output = self.checkRegister(instruction.p3) orelse return self.fail(.corrupt);
                 var result = std.mem.zeroes(Mem);
                 vdbe_mem.init(&result, null, mem_flag.null_);
-                const rc = self.program.functions[function_index].callback(
-                    self.program.functions[function_index].context,
+                const function = self.program.functions[function_index];
+                const callback = function.callback orelse {
+                    vdbe_mem.release(&result);
+                    return self.fail(.corrupt);
+                };
+                const rc = callback(
+                    function.context,
                     self.registers[first..][0..count],
                     &result,
                     self.allocator,
                 );
+                if (rc != .ok) {
+                    vdbe_mem.release(&result);
+                    return self.fail(rc);
+                }
+                vdbe_mem.move(&self.registers[output], &result);
+            },
+            .agg_step => {
+                const function_index = switch (instruction.p4) {
+                    .index => |value| value,
+                    else => return self.fail(.corrupt),
+                };
+                if (function_index >= self.program.functions.len or instruction.p1 < 0) return self.fail(.corrupt);
+                const function = self.program.functions[function_index];
+                const callback = function.aggregate_step orelse return self.fail(.corrupt);
+                const count: usize = @intCast(instruction.p1);
+                const first = if (count == 0) @as(usize, 1) else self.checkRegister(instruction.p2) orelse return self.fail(.corrupt);
+                if (first + count > self.registers.len) return self.fail(.corrupt);
+                const accumulator = self.checkRegister(instruction.p3) orelse return self.fail(.corrupt);
+                const rc = callback(function.context, self.registers[first..][0..count], &self.registers[accumulator], self.allocator);
+                if (rc != .ok) return self.fail(rc);
+            },
+            .agg_final => {
+                const function_index = switch (instruction.p4) {
+                    .index => |value| value,
+                    else => return self.fail(.corrupt),
+                };
+                if (function_index >= self.program.functions.len) return self.fail(.corrupt);
+                const function = self.program.functions[function_index];
+                const callback = function.aggregate_final orelse return self.fail(.corrupt);
+                const accumulator = self.checkRegister(instruction.p2) orelse return self.fail(.corrupt);
+                const output = self.checkRegister(instruction.p3) orelse return self.fail(.corrupt);
+                var result = std.mem.zeroes(Mem);
+                vdbe_mem.init(&result, null, mem_flag.null_);
+                const rc = callback(function.context, &self.registers[accumulator], &result, self.allocator);
                 if (rc != .ok) {
                     vdbe_mem.release(&result);
                     return self.fail(rc);
@@ -1187,7 +1345,7 @@ pub const Vm = struct {
     fn cursorStorageType(self: *Vm, cursor_index: usize, column_index: usize, fallback: P4) ?u8 {
         if (self.cursor_null_rows[cursor_index]) return 5;
         return switch (self.cursors[cursor_index]) {
-            .closed, .virtual => null,
+            .closed, .virtual, .sorter => null,
             .memory => |memory| blk: {
                 const position = memory.position orelse break :blk null;
                 const values = self.program.tables[memory.table].rows[position].values;
@@ -1211,7 +1369,26 @@ pub const Vm = struct {
         };
     }
 
-    fn cursorColumn(self: *Vm, cursor_index: usize, column_index_value: i32, target: usize) ResultCode {
+    fn materializeColumnDefault(self: *Vm, target: usize, fallback: P4, p5: u16) ResultCode {
+        return switch (fallback) {
+            .none => result: {
+                self.setNull(target);
+                break :result .ok;
+            },
+            .integer => |value| result: {
+                self.setInteger(target, value);
+                break :result .ok;
+            },
+            .real => |value| result: {
+                self.setReal(target, value);
+                break :result .ok;
+            },
+            .bytes => |bytes| self.setBytes(target, bytes, if (p5 & column_default_blob != 0) 0 else 1),
+            .index, .collation => .corrupt,
+        };
+    }
+
+    fn cursorColumn(self: *Vm, cursor_index: usize, column_index_value: i32, target: usize, fallback: P4, p5: u16) ResultCode {
         if (column_index_value < 0) return .corrupt;
         if (self.cursor_null_rows[cursor_index]) {
             self.setNull(target);
@@ -1219,14 +1396,12 @@ pub const Vm = struct {
         }
         const column_index: usize = @intCast(column_index_value);
         switch (self.cursors[cursor_index]) {
-            .closed => return .corrupt,
+            .closed, .sorter => return .corrupt,
             .memory => |memory| {
                 const position = memory.position orelse return .corrupt;
                 const rows = self.program.tables[memory.table].rows;
-                if (position >= rows.len or column_index >= rows[position].values.len) {
-                    self.setNull(target);
-                    return .ok;
-                }
+                if (position >= rows.len) return .corrupt;
+                if (column_index >= rows[position].values.len) return self.materializeColumnDefault(target, fallback, p5);
                 return self.materialize(rows[position].values[column_index], target);
             },
             .virtual => |cursor| {
@@ -1245,10 +1420,7 @@ pub const Vm = struct {
                 if (outcome.result != .ok) return outcome.result;
                 var record = outcome.record.?;
                 defer record.deinit();
-                if (column_index >= record.values.len) {
-                    self.setNull(target);
-                    return .ok;
-                }
+                if (column_index >= record.values.len) return self.materializeColumnDefault(target, fallback, p5);
                 const source = record.values[column_index];
                 return switch (source) {
                     .null_ => result: {
@@ -1302,6 +1474,7 @@ fn cursorPosition(cursor: *Cursor, program: *const Program, last_position: bool)
             item.result = item.source.filter(item.handle);
             break :blk item.result == .ok and !item.source.eof(item.handle);
         },
+        .sorter => false,
     };
 }
 
@@ -1332,6 +1505,7 @@ fn cursorAdvance(cursor: *Cursor, program: *const Program, previous: bool) bool 
             item.result = item.source.next(item.handle);
             break :blk item.result == .ok and !item.source.eof(item.handle);
         },
+        .sorter => false,
     };
 }
 
@@ -1361,7 +1535,28 @@ fn cursorSeek(cursor: *Cursor, program: *const Program, rowid: i64) bool {
             break :blk true;
         },
         .btree => |*native| native.seekTable(rowid),
-        .virtual => false,
+        .virtual, .sorter => false,
+    };
+}
+
+/// Source `sqlite3VdbeFinishMoveto()`: restore a deferred B-tree cursor before
+/// an opcode reads its position.
+fn finishCursorMove(cursor: *Cursor) ResultCode {
+    return switch (cursor.*) {
+        .btree => |*btree_cursor| btree_cursor.restoreCursorPosition(),
+        .closed => .misuse,
+        else => .ok,
+    };
+}
+
+/// Source `sqlite3VdbeHandleMovedCursor()`: normalize a potentially saved
+/// cursor position and preserve the first restoration error.
+fn handleMovedCursor(cursor: *Cursor) ResultCode {
+    const rc = finishCursorMove(cursor);
+    if (rc != .ok) return rc;
+    return switch (cursor.*) {
+        .closed => .misuse,
+        else => .ok,
     };
 }
 
@@ -1375,6 +1570,7 @@ fn cursorRowid(cursor: *const Cursor, program: *const Program) ?i64 {
             if (item.source.rowid(item.handle, &rowid) != .ok) return null;
             break :value rowid;
         },
+        .sorter => null,
     };
 }
 
@@ -1384,6 +1580,7 @@ fn cursorCount(cursor: *const Cursor, program: *const Program) ?usize {
         .memory => |memory| program.tables[memory.table].rows.len,
         .btree => |native| native.count(),
         .virtual => null,
+        .sorter => |sorter| sorter.records.items.len,
     };
 }
 
@@ -1434,7 +1631,9 @@ fn encodeRecord(allocator: std.mem.Allocator, values: []Mem) RecordError![]u8 {
         payload_length = std.math.add(usize, payload_length, descriptor.length) catch return error.TooBig;
     }
     var header_length = header_body + varintLength(header_body + 1);
-    while (header_body + varintLength(header_length) != header_length) header_length = header_body + varintLength(header_length);
+    while (header_body + varintLength(header_length) != header_length) {
+        header_length = header_body + varintLength(header_length);
+    }
     const total = std.math.add(usize, header_length, payload_length) catch return error.TooBig;
     if (total > btree.maximum_payload) return error.TooBig;
     const output = allocator.alloc(u8, total) catch return error.OutOfMemory;
@@ -1598,13 +1797,99 @@ fn setBoolean(output: *Mem, opcode: Opcode, left: ?bool, right: ?bool) void {
     vdbe_mem.setInt64(output, 0);
 }
 
-fn compareStorage(left: *const Mem, right: *const Mem) std.math.Order {
-    return std.math.order(vdbe_mem.compare(left, right, null), 0);
+/// Source `sqlite3IntFloatCompare()`: compare signed integers and doubles
+/// without first rounding the integer through floating point.
+fn integerFloatCompare(integer: i64, real: f64) i32 {
+    if (std.math.isNan(real)) return 1;
+    if (real < -9223372036854775808.0) return 1;
+    if (real >= 9223372036854775808.0) return -1;
+    const truncated: i64 = @intFromFloat(real);
+    if (integer < truncated) return -1;
+    if (integer > truncated) return 1;
+    const converted: f64 = @floatFromInt(integer);
+    return if (converted < real) -1 else if (converted > real) 1 else 0;
 }
 
-fn compare(left: *const Mem, right: *const Mem) ?std.math.Order {
+fn memoryBytes(value: *const Mem) []const u8 {
+    if (value.n <= 0) return &.{};
+    const pointer = value.z orelse return &.{};
+    return pointer[0..@intCast(value.n)];
+}
+
+/// Source `sqlite3BlobCompare()`: compare ordinary and zero-filled blobs with
+/// SQLite's storage ordering and prefix rule.
+fn blobCompare(first: *const Mem, second: *const Mem) i32 {
+    const first_bytes = memoryBytes(first);
+    const second_bytes = memoryBytes(second);
+    const common = @min(first_bytes.len, second_bytes.len);
+    const order = std.mem.order(u8, first_bytes[0..common], second_bytes[0..common]);
+    if (order == .lt) return -1;
+    if (order == .gt) return 1;
+    const first_zero: usize = if (first.flags & mem_flag.zero != 0) @intCast(first.u.nZero) else 0;
+    const second_zero: usize = if (second.flags & mem_flag.zero != 0) @intCast(second.u.nZero) else 0;
+    const first_length = first_bytes.len + first_zero;
+    const second_length = second_bytes.len + second_zero;
+    if (common == first_bytes.len and common == second_bytes.len) {
+        return if (first_length < second_length) -1 else if (first_length > second_length) 1 else 0;
+    }
+    return if (first_bytes.len < second_bytes.len) -1 else if (first_bytes.len > second_bytes.len) 1 else 0;
+}
+
+/// Source `vdbeCompareMemStringWithEncodingChange()`: materialize temporary
+/// UTF-8 views before invoking a collation callback.
+fn compareMemoryStringWithEncodingChange(left: *const Mem, right: *const Mem, collation: *const Collation) i32 {
+    var left_copy = std.mem.zeroes(Mem);
+    var right_copy = std.mem.zeroes(Mem);
+    vdbe_mem.init(&left_copy, left.db, mem_flag.null_);
+    vdbe_mem.init(&right_copy, right.db, mem_flag.null_);
+    vdbe_mem.shallowCopy(&left_copy, left, mem_flag.ephemeral);
+    vdbe_mem.shallowCopy(&right_copy, right, mem_flag.ephemeral);
+    const left_pointer = vdbe_mem.valueText(&left_copy, 1) orelse return 0;
+    const right_pointer = vdbe_mem.valueText(&right_copy, 1) orelse return 0;
+    defer vdbe_mem.releaseMalloc(&left_copy);
+    defer vdbe_mem.releaseMalloc(&right_copy);
+    return collation.callback(collation.context, left_pointer[0..@intCast(left_copy.n)], right_pointer[0..@intCast(right_copy.n)]);
+}
+
+/// Source `vdbeCompareMemString()`: invoke a collation directly for UTF-8 or
+/// route through temporary encoding conversion.
+fn compareMemoryString(left: *const Mem, right: *const Mem, collation: *const Collation) i32 {
+    if (left.enc == 1 and right.enc == 1) {
+        return collation.callback(collation.context, memoryBytes(left), memoryBytes(right));
+    }
+    return compareMemoryStringWithEncodingChange(left, right, collation);
+}
+
+/// Source `sqlite3MemCompare()`: order NULL, numeric, text, and blob values,
+/// applying the selected collation only to two text values.
+fn memoryCompare(left: *const Mem, right: *const Mem, collation: ?*const Collation) i32 {
+    const left_flags = left.flags;
+    const right_flags = right.flags;
+    const combined = left_flags | right_flags;
+    if (combined & mem_flag.null_ != 0) return @as(i32, @intFromBool(right_flags & mem_flag.null_ != 0)) - @as(i32, @intFromBool(left_flags & mem_flag.null_ != 0));
+    const integer_flags = mem_flag.integer | mem_flag.integer_real;
+    if (combined & (integer_flags | mem_flag.real) != 0) {
+        if (left_flags & right_flags & integer_flags != 0) return if (left.u.i < right.u.i) -1 else if (left.u.i > right.u.i) 1 else 0;
+        if (left_flags & right_flags & mem_flag.real != 0) return if (left.u.r < right.u.r) -1 else if (left.u.r > right.u.r) 1 else 0;
+        if (left_flags & integer_flags != 0) return if (right_flags & mem_flag.real != 0) integerFloatCompare(left.u.i, right.u.r) else -1;
+        if (left_flags & mem_flag.real != 0) return if (right_flags & integer_flags != 0) -integerFloatCompare(right.u.i, left.u.r) else -1;
+        return 1;
+    }
+    if (combined & mem_flag.string != 0) {
+        if (left_flags & mem_flag.string == 0) return 1;
+        if (right_flags & mem_flag.string == 0) return -1;
+        if (collation) |sequence| return compareMemoryString(left, right, sequence);
+    }
+    return blobCompare(left, right);
+}
+
+fn compareStorage(left: *const Mem, right: *const Mem) std.math.Order {
+    return std.math.order(memoryCompare(left, right, null), 0);
+}
+
+fn compare(left: *const Mem, right: *const Mem, collation: ?*const Collation) ?std.math.Order {
     if (isNull(left) or isNull(right)) return null;
-    return std.math.order(vdbe_mem.compare(left, right, null), 0);
+    return std.math.order(memoryCompare(left, right, collation), 0);
 }
 
 fn textBytes(value: *Mem) ?[]const u8 {
@@ -2195,6 +2480,33 @@ test "Compare and three-way Jump retain the preceding register order" {
     defer vm.deinit();
     try std.testing.expectEqual(ResultCode.row, vm.step().result);
     try std.testing.expectEqual(@as(i64, -1), vm.column(0).?.u.i);
+    try std.testing.expectEqual(ResultCode.done, vm.step().result);
+}
+
+test "sorter opcodes order records and expose each row" {
+    const operations = [_]Instruction{
+        .{ .opcode = .sorter_open, .p1 = 0 },
+        .{ .opcode = .blob, .p2 = 1, .p4 = .{ .bytes = "c" } },
+        .{ .opcode = .sorter_insert, .p1 = 0, .p2 = 1 },
+        .{ .opcode = .blob, .p2 = 1, .p4 = .{ .bytes = "a" } },
+        .{ .opcode = .sorter_insert, .p1 = 0, .p2 = 1 },
+        .{ .opcode = .blob, .p2 = 1, .p4 = .{ .bytes = "b" } },
+        .{ .opcode = .sorter_insert, .p1 = 0, .p2 = 1 },
+        .{ .opcode = .sorter_sort, .p1 = 0, .p2 = 12 },
+        .{ .opcode = .sorter_data, .p1 = 0, .p2 = 2 },
+        .{ .opcode = .result_row, .p1 = 2, .p2 = 1 },
+        .{ .opcode = .sorter_next, .p1 = 0, .p2 = 8 },
+        .{ .opcode = .halt },
+        .{ .opcode = .halt },
+    };
+    const program = Program{ .instructions = &operations, .register_count = 2, .cursor_count = 1 };
+    var vm = try Vm.init(std.testing.allocator, &program, null);
+    defer vm.deinit();
+    for ([_][]const u8{ "a", "b", "c" }) |expected| {
+        try std.testing.expectEqual(ResultCode.row, vm.step().result);
+        const value = vdbe_mem.valueBlob(@constCast(vm.column(0).?)).?;
+        try std.testing.expectEqualStrings(expected, value[0..@intCast(vm.column(0).?.n)]);
+    }
     try std.testing.expectEqual(ResultCode.done, vm.step().result);
 }
 

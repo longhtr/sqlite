@@ -14,4 +14,8 @@ def main():
  out=Path(sys.argv[1]).resolve() if len(sys.argv)>1 else OUT;out.mkdir(parents=True,exist_ok=True)
  doc={'schema_version':1,'phase':'phase-13-expression-select-slice','status':'bounded-regression-evidence','profile':'expression-only-select-v1','cases':CASES,'case_count':5,'differential_observations':15,'prepare_symbols':['sqlite3_prepare','sqlite3_prepare_v2','sqlite3_prepare_v3','sqlite3_prepare16','sqlite3_prepare16_v2','sqlite3_prepare16_v3'],'operators':['unary +','unary -','NOT','*','/','%','+','-','||','AND','OR'],'values':['NULL','integer','real','text','blob','numbered parameter','named parameter']}
  (out/'manifest.json').write_text(json.dumps(doc,indent=2)+'\n');print('generate-sql-expression-fixtures: wrote 5 cases')
-if __name__=='__main__':main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

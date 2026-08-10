@@ -15,6 +15,7 @@ const columns = [_]statement.ColumnMetadata{
 };
 const error_ops = [_]vdbe.Instruction{.{ .opcode = .halt, .p1 = 2067 }};
 const error_program = vdbe.Program{ .instructions = &error_ops, .register_count = 1 };
+const extended_result_mask: c_int = -1;
 
 export fn sqlite3_zig_phase12_fixture(name: [*:0]const u8) ?*statement.sqlite3_stmt {
     if (statement.public_api.sqlite3_initialize() != 0) return null;
@@ -25,7 +26,9 @@ export fn sqlite3_zig_phase12_fixture(name: [*:0]const u8) ?*statement.sqlite3_s
         statement.Statement.create(std.heap.c_allocator, &error_program, &.{}, &.{})
     else
         return null;
-    return statement.toOpaque(created catch return null);
+    const prepared = created catch return null;
+    prepared.setResultMask(&extended_result_mask);
+    return statement.toOpaque(prepared);
 }
 
 comptime {

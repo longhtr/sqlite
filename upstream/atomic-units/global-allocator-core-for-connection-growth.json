@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-allocator-core-for-connection-growth",
   "title": "Global allocator, size, free, realloc, statistics, and alarm core",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These six malloc.c functions are the immediate global allocator closure beneath connection heap fallback and reallocation. They combine method-table calls, rounding, statistics, soft/hard alarms, and allocator ownership.",
@@ -156,8 +156,8 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Manager tests cover one-shot/sticky allocation and realloc failures; the C/Zig trace covers hard-limit rejection with old-pointer and byte preservation.",
     "io_crash_concurrency": "No I/O. The matched configured-mutex trace proves exact STATIC_MEM release/reacquire around the no-op release-memory alarm; broader global allocator concurrency assurance remains separate.",
@@ -185,5 +185,35 @@
     "Allocator lifecycle ownership is consolidated; source-equivalent top-level initialization/refcount event evidence remains required before subsystem-integration promotion.",
     "Complete broader concurrency/performance assurance through the final process allocator owner.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/malloc.c:205-309 was reviewed completely for alarm mutex handoff, rounded allocation, limits, status, memstat split, and alignment",
+      "upstream/sqlite/src/malloc.c:333-403 was reviewed for heap size and free, including status updates and callback lock domain",
+      "upstream/sqlite/src/malloc.c:495-556 was reviewed completely for realloc null/zero/oversize/equal-size, alarm/hard-limit, callback, status, and old-owner preservation",
+      "src/core/memory.zig releaseMemory and Manager alloc/size/free/realloc are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "Connection heap fallback and VDBE growth use sqlite3Malloc/sqlite3Realloc and sqlite3_free after process initialization",
+      "Public sqlite3_malloc/realloc wrappers add auto-initialization outside this unit; connection lookaside allocation is the immediate follow-on unit",
+      "Allocator lifecycle/configuration/status/limits and STATIC_MEM behavior are reviewed dependencies"
+    ],
+    "callees": [
+      "mallocWithAlarm invokes xRoundup, status highwater/value/update, optional alarm, xMalloc, and xSize under STATIC_MEM",
+      "sqlite3MallocAlarm releases STATIC_MEM, calls active-profile no-op sqlite3_release_memory, and reacquires the mutex",
+      "sqlite3_free obtains size, decrements byte/count status, calls xFree, then unlocks when memstat is enabled",
+      "sqlite3Realloc rounds before callback, handles growth alarm/hard limit, calls xRealloc, and updates only byte status on success"
+    ],
+    "assertions_branches_cleanup": [
+      "All 37 behavior IDs cover alarm guard/handoff, rounding and limits, memstat split, null/size/free, realloc ownership branches, callback failure, and alignment",
+      "Zero allocation or oversize returns null without callbacks; realloc(null,n) delegates to malloc and realloc(p,0) frees",
+      "Hard-limit or backend realloc failure preserves pOld and existing status; equal rounded size returns pOld",
+      "No I/O; configured allocator callbacks own their storage and later allocations continue after failure"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/malloc.test through malloc5.test, mallocA.test, and oomfault.test exercise callback failures, limits, sizes, realloc ownership, and continuation",
+      "upstream/sqlite/test/memsubsys1.test/memsubsys2.test observe current/highwater/count and alarm behavior",
+      "Project memory tests and infrastructure differential compare exact callbacks, rounded sizes, counters, hard-limit rejection, alarm lock events, old bytes, and continuation; receipts remain later"
+    ]
+  }
 }

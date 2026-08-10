@@ -22,15 +22,18 @@ def main() -> None:
         check=True,
         limits=subprocess.BUILD_LIMITS,
     )
+    # compatibility-report owns the Debug aggregate and export audit. Run the
+    # other optimization modes separately without repeating those Debug gates.
     for arguments in (
-        ["zig", "build", "-j1", "test"],
         ["zig", "build", "-j1", "test", "-Doptimize=ReleaseSafe"],
         ["zig", "build", "-j1", "test", "-Doptimize=ReleaseFast"],
-        ["zig", "build", "-j1", "verify-exports"],
         ["zig", "build", "-j1", "compatibility-report"],
     ):
         subprocess.run(arguments, cwd=ROOT, check=True, limits=subprocess.BUILD_LIMITS)
 
 
 if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
     main()

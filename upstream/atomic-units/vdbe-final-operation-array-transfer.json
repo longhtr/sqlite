@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-final-operation-array-transfer",
   "title": "VDBE finalized operation-array ownership transfer",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "sqlite3VdbeTakeOpArray is the unique no-copy ownership boundary that finalizes labels/metadata and detaches the operation allocation from its builder Vdbe for subprogram ownership. Its preconditions, outputs and nulling mutation are atomic.",
     "source_files": [
@@ -64,7 +64,7 @@
     "C returns VdbeOp* and nulls the field; Zig returns [*]VdbeOp and performs the same nullable-field transition."
   ],
   "oracle": {
-    "protocol": "The shared builder creates Init, unresolved jump label and target, then both workers call TakeOpArray. The 363-observation trace compares returned pointer identity, detached aOp nulling, operation count, final P2, max arguments and label retirement.",
+    "protocol": "The shared builder creates Init, unresolved jump label and target, then both workers call TakeOpArray. The 366-observation trace compares returned pointer identity, detached aOp nulling, operation count, final P2, max arguments and label retirement.",
     "internal_observations": [
       "returned pointer equals former aOp",
       "machine aOp null",
@@ -76,9 +76,9 @@
     "normalization": "Pointer address is normalized only to exact identity with the former owner. Counts, targets and null transitions are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation; source rejects sticky OOM. Preceding builder/fixup OOM paths are covered by dependency traces.",
     "io_crash_concurrency": "No I/O/callback. Production mutex and subprogram lifetime remain integration obligations.",
@@ -102,6 +102,7 @@
     "notes": "Requires destination owner integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port P4-aware operation-array destruction and SubProgram destination ownership.",
     "Migrate production compiler/subprogram construction to source VDBE owners.",
     "Independent fidelity review remains open."

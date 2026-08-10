@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "active-profile-limit-constants",
   "title": "Active-profile sqliteLimit.h constants",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "The 20 active immutable profile limits/defaults form one dependency-closed value unit; runtime enforcement remains in separately inventoried callers.",
@@ -214,8 +214,8 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "not-applicable immutable constants",
     "io_crash_concurrency": "not-applicable immutable constants",
@@ -241,5 +241,51 @@
   },
   "known_blockers": [
     "Obtain a fresh independent source/owner/evidence review after the duplicate-owner correction; the implementation pass cannot self-promote."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/sqliteLimit.h:1-270 was reviewed in full; selected file hash 6eec89d04286198f5e5f64fcb48c1283446809907f7d650caba40605080c3fe9",
+      "The 20 exact active source entity IDs and excerpt hashes in scope cover every selected default/hard-limit token and its selected preprocessor definition",
+      "config/limits.zig owns the corresponding explicitly typed values; tools/verify_limits.py compares them with the pinned production preprocessor"
+    ],
+    "callers": [
+      "SQLITE_MAX_LENGTH: active consumers in btree.c, func.c, main.c, printf.c, vdbe.c, vdbeaux.c, vdbemem.c, and wherecode.c; sqliteLimit.h lines 23 and definition guards are profile selection, not runtime consumers",
+      "SQLITE_MIN_LENGTH: main.c:3070-3071 validates runtime changes",
+      "SQLITE_MAX_ALLOCATION_SIZE: malloc.c:298/515 and vdbemem.c:1470-1472 enforce allocation/string bounds; sqliteLimit.h:42/45-46 are compile-time guards",
+      "SQLITE_MAX_COLUMN: build.c:1084-1085/2197 and main.c:2966/3009-3010/3047 initialize and enforce column limits",
+      "SQLITE_MAX_SQL_LENGTH: main.c:2965/2985-2992/3046 initializes and constrains SQL length; sqliteLimit.h:94/108 documents indirect parser/expression coupling",
+      "SQLITE_MAX_EXPR_DEPTH: expr.c, parse.y, resolve.c, select.c, sqliteInt.h, and main.c references gate expression-depth fields and walkers",
+      "SQLITE_MAX_PARSER_DEPTH: main.c:2976/3049 initializes the parser-depth category; sqliteLimit.h:95 is explanatory coupling",
+      "SQLITE_MAX_COMPOUND_SELECT: main.c:2968/2994-2995/3050 initializes and bounds compound terms",
+      "SQLITE_MAX_VDBE_OP: main.c:2969/2997-2998/3051 initializes the currently unenforced VDBE-op limit",
+      "SQLITE_MAX_FUNCTION_ARG: main.c:1967/2970/3000-3001/3052 enforces registration and connection limits",
+      "SQLITE_DEFAULT_CACHE_SIZE: btree.c:2811, pragma.c:575, and prepare.c:326/329 consume the default; os_win references are inactive on the selected Linux target",
+      "SQLITE_DEFAULT_WAL_AUTOCHECKPOINT: main.c:3690 installs the default WAL hook threshold",
+      "SQLITE_MAX_ATTACHED: build.c, main.c, and sqliteInt.h references size and enforce attached-database state",
+      "SQLITE_MAX_VARIABLE_NUMBER: main.c:2973/3056 and sqliteInt.h:2962/2970 initialize the category and select Expr storage",
+      "SQLITE_MAX_PAGE_SIZE: btree.c, pager.c, wal.c, and test_multiplex.h references enforce page/header/frame bounds; sqliteLimit.h:204-205 forcibly retires overrides",
+      "SQLITE_DEFAULT_PAGE_SIZE: pager.c:4802/5003/5011 consumes the default; os_win references are inactive; sqliteLimit.h:216-223 clamps it to maximum page size",
+      "SQLITE_MAX_DEFAULT_PAGE_SIZE: pager.c:5011-5025 chooses device-aware defaults; sqliteLimit.h:231-237 clamps it between default and maximum page sizes",
+      "SQLITE_MAX_PAGE_COUNT: pager.c:5095 installs the default maximum database page count",
+      "SQLITE_MAX_LIKE_PATTERN_LENGTH: main.c:2972/3006-3007/3055 initializes and validates the LIKE/GLOB pattern category",
+      "SQLITE_MAX_TRIGGER_DEPTH: main.c:2974/3012-3013/3057 initializes and validates recursive trigger depth"
+    ],
+    "callees": [
+      "These are immutable object-like macros and have no runtime callees or ownership transitions",
+      "SQLITE_DEFAULT_PAGE_SIZE and SQLITE_MAX_DEFAULT_PAGE_SIZE preprocessor clamps depend on SQLITE_MAX_PAGE_SIZE; all three exact values are in this unit",
+      "Runtime mutation and enforcement callers are explicitly excluded and remain independently inventoried rather than receiving closure credit here"
+    ],
+    "assertions_branches_cleanup": [
+      "Pinned empty configure arguments select all #ifndef defaults; SQLITE_MAX_PAGE_SIZE is forcibly undefined and reset to 65536",
+      "Compile-time guards cap allocation size at 2147483391 and columns at 32767; page default clamps preserve default_page_size <= max_default_page_size <= max_page_size",
+      "The selected constants contain no runtime branches, assertions, allocation, cleanup, locks, callbacks, or I/O; behavioral_block_ids is therefore empty"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/sqllimits1.test exercises attached, column, compound-select, expression, function-argument, length, LIKE, SQL-length, trigger, variable, and VDBE-op limits",
+      "upstream/sqlite/test/e_walauto.test and exclusive2.test cover WAL autocheckpoint and cache defaults",
+      "upstream/sqlite/test/pagesize.test, pager1.test, filefmt.test, io.test, wal.test, crash6.test, and crash8.test cover maximum/default page-size consequences",
+      "upstream/sqlite/test/attach.test, bind.test, func.test, select7.test, triggerC.test, bigrow.test, and printf.test provide focused limit consumers",
+      "tools/verify_limits.py and config/limits.zig cross-limit tests are the native profile-value controls; caller semantics remain separate units"
+    ]
+  }
 }

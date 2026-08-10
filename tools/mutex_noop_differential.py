@@ -17,4 +17,8 @@ def main() -> None:
             if left!=right: raise SystemExit(f"mutex-noop-differential: mismatch at observation {index}: oracle={left!r} native={right!r}")
         raise SystemExit("mutex-noop-differential: output length mismatch")
     print("mutex-noop-differential: 5 layout, callbacks, sentinel, try, and static-table observations match")
-if __name__=="__main__": main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

@@ -19,6 +19,7 @@ fn lookasideAllocationSize(db: *const types.Sqlite3, pointer: *const anyopaque) 
     return if (@intFromPtr(pointer) < @intFromPtr(middle)) db.lookaside.szTrue else types.lookaside_small;
 }
 
+/// Source `sqlite3DbMallocSize()`.
 pub fn allocationSize(db: ?*types.Sqlite3, pointer: *anyopaque) usize {
     if (db) |connection| {
         const address = @intFromPtr(pointer);
@@ -40,6 +41,7 @@ fn atomicStoreInterrupt(db: *types.Sqlite3, value: c_int) void {
     @atomicStore(c_int, &db.u1.isInterrupted, value, .monotonic);
 }
 
+/// Source `sqlite3OomFault()`.
 pub fn oomFault(db: *types.Sqlite3) ?*anyopaque {
     if (db.mallocFailed == 0 and db.bBenignMalloc == 0) {
         db.mallocFailed = 1;
@@ -92,6 +94,7 @@ fn pop(head: *?*types.LookasideSlot) ?*types.LookasideSlot {
     return slot;
 }
 
+/// Source `sqlite3DbMallocRawNN()` with two-size lookaside selection.
 pub fn mallocRawNN(db: *types.Sqlite3, amount: u64) ?*anyopaque {
     std.debug.assert(db.pnBytesFreed == null);
     if (amount > db.lookaside.sz) {
@@ -126,6 +129,7 @@ fn measureAllocationSize(db: *types.Sqlite3, pointer: *anyopaque) void {
     db.pnBytesFreed.?.* += @intCast(allocationSize(db, pointer));
 }
 
+/// Source `sqlite3DbFreeNN()`.
 pub fn freeNN(db: ?*types.Sqlite3, pointer: *anyopaque) void {
     if (db) |connection| {
         const address = @intFromPtr(pointer);
@@ -157,6 +161,7 @@ pub fn freeNN(db: ?*types.Sqlite3, pointer: *anyopaque) void {
     memory.processManager().free(pointer);
 }
 
+/// Source `sqlite3DbNNFreeNN()`; the non-null connection specialization.
 pub fn freeConnectionNN(db: *types.Sqlite3, pointer: *anyopaque) void {
     freeNN(db, pointer);
 }
@@ -165,6 +170,7 @@ pub fn free(db: ?*types.Sqlite3, pointer: ?*anyopaque) void {
     if (pointer) |value| freeNN(db, value);
 }
 
+/// Source `dbReallocFinish()`.
 fn reallocFinish(db: *types.Sqlite3, old: *anyopaque, amount: u64) ?*anyopaque {
     if (db.mallocFailed != 0) return null;
     if (isLookaside(db, old)) {
@@ -182,6 +188,7 @@ fn reallocFinish(db: *types.Sqlite3, old: *anyopaque, amount: u64) ?*anyopaque {
     return replacement;
 }
 
+/// Source `sqlite3DbRealloc()`.
 pub fn realloc(db: *types.Sqlite3, pointer: ?*anyopaque, amount: u64) ?*anyopaque {
     const old = pointer orelse return mallocRawNN(db, amount);
     const address = @intFromPtr(old);
@@ -207,6 +214,39 @@ pub fn reallocOrFree(db: *types.Sqlite3, pointer: ?*anyopaque, amount: u64) ?*an
     return replacement;
 }
 
+pub fn stdAllocator(db: *types.Sqlite3) std.mem.Allocator {
+    return .{ .ptr = db, .vtable = &connection_allocator_vtable };
+}
+
+const connection_allocator_vtable = std.mem.Allocator.VTable{
+    .alloc = connectionAllocate,
+    .resize = connectionResize,
+    .remap = connectionRemap,
+    .free = connectionFree,
+};
+
+fn connectionAllocate(context: *anyopaque, length: usize, alignment: std.mem.Alignment, _: usize) ?[*]u8 {
+    if (alignment.toByteUnits() > 8) return null;
+    const db: *types.Sqlite3 = @ptrCast(@alignCast(context));
+    return @ptrCast(mallocRawNN(db, length));
+}
+
+fn connectionResize(context: *anyopaque, buffer: []u8, _: std.mem.Alignment, new_length: usize, _: usize) bool {
+    const db: *types.Sqlite3 = @ptrCast(@alignCast(context));
+    return new_length <= allocationSize(db, buffer.ptr);
+}
+
+fn connectionRemap(context: *anyopaque, buffer: []u8, _: std.mem.Alignment, new_length: usize, _: usize) ?[*]u8 {
+    const db: *types.Sqlite3 = @ptrCast(@alignCast(context));
+    return @ptrCast(realloc(db, buffer.ptr, new_length));
+}
+
+fn connectionFree(context: *anyopaque, buffer: []u8, _: std.mem.Alignment, _: usize) void {
+    const db: *types.Sqlite3 = @ptrCast(@alignCast(context));
+    freeNN(db, buffer.ptr);
+}
+
+/// Source `sqlite3DbStrDup()`.
 pub fn stringDuplicate(db: ?*types.Sqlite3, input: ?[*:0]const u8) ?[*:0]u8 {
     const source = input orelse return null;
     const length = std.mem.len(source) + 1;
@@ -216,6 +256,34 @@ pub fn stringDuplicate(db: ?*types.Sqlite3, input: ?[*:0]const u8) ?[*:0]u8 {
     return @ptrCast(output);
 }
 
+/// Source `sqlite3ArrayAllocate()`.
+pub fn arrayAllocate(db: *types.Sqlite3, array_initial: ?*anyopaque, entry_size: c_int, entry_count: *c_int, new_index: *c_int) ?*anyopaque {
+    const count: i64 = entry_count.*;
+    new_index.* = entry_count.*;
+    var array = array_initial;
+    if (count & (count - 1) == 0) {
+        const capacity: i64 = if (count == 0) 1 else 2 * count;
+        array = realloc(db, array, @intCast(capacity * entry_size)) orelse {
+            new_index.* = -1;
+            return array_initial;
+        };
+    }
+    const bytes: [*]u8 = @ptrCast(array.?);
+    @memset(bytes[@intCast(count * entry_size)..@intCast((count + 1) * entry_size)], 0);
+    entry_count.* += 1;
+    return array;
+}
+
+/// Source `sqlite3DbSpanDup()`.
+pub fn spanDuplicate(db: *types.Sqlite3, start_initial: [*]const u8, end: [*]const u8) ?[*:0]u8 {
+    var start = start_initial;
+    while (std.ascii.isWhitespace(start[0])) start += 1;
+    var length: usize = @intCast(@intFromPtr(end) - @intFromPtr(start));
+    while (std.ascii.isWhitespace(start[length - 1])) length -= 1;
+    return stringNDuplicate(db, start, length);
+}
+
+/// Source `sqlite3DbStrNDup()`.
 pub fn stringNDuplicate(db: *types.Sqlite3, input: ?[*]const u8, length: usize) ?[*:0]u8 {
     std.debug.assert(length & 0x7fff_ffff == length);
     const source = input orelse return null;

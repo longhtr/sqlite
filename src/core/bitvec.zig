@@ -435,7 +435,9 @@ test "hash collision triggers recursive representation" {
 
 test "built-in mutable operation interpreter covers sequential random fault and negative modes" {
     var entropy: [44]u8 = undefined;
-    for (&entropy, 0..) |*byte, index| byte.* = @intCast(index);
+    for (&entropy, 0..) |*byte, index| {
+        byte.* = @intCast(index);
+    }
     var random_state = sqlite_random.State{};
     var sequential = [_]i32{ 1, 5, 1, 2, 2, 2, 1, 4, 0 };
     try std.testing.expectEqual(@as(i32, 0), builtinTest(std.testing.allocator, 100, &sequential, &random_state, &entropy));

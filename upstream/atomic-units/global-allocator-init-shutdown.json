@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-allocator-init-shutdown",
   "title": "Global allocator default-method selection, initialization, and shutdown",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These three functions select the pinned default mem1 backend, initialize allocator mutex/backend/page-cache configuration, clear mem0 on failure, and shut down/reset allocator state. They are the immediate lifecycle closure required before the global allocation core.",
@@ -101,8 +101,8 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Injected initialization failure clears allocator-local state; mutex-allocation OOM integration remains open.",
     "io_crash_concurrency": "No I/O. Top-level concurrent initialization and mutex lifecycle remain blocking.",
@@ -129,5 +129,34 @@
     "Top-level sqlite3_initialize/shutdown now has exclusive production ownership, but its source-equivalent refcount/condition event trace and final typed memory-configuration API remain integration work.",
     "Static page-cache configuration validation is trace-equivalent here, but the page-cache subsystem must consume the same configured owner before integration.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/malloc.c:150-194 was reviewed completely for sqlite3MallocInit/sqlite3MallocEnd and adjacent pressure-state ownership",
+      "upstream/sqlite/src/mem1.c:240-293 was reviewed for system allocator shutdown and the complete default sqlite3_mem_methods table installed by sqlite3MemSetDefault",
+      "upstream/sqlite/src/main.c:225-255 and 380-414 were reviewed for top-level start/partial-layer/shutdown ordering",
+      "src/core/memory.zig Manager.start/stop and systemBackend are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "sqlite3_initialize invokes sqlite3MallocInit after mutex initialization and marks isMallocInit only on success",
+      "sqlite3_shutdown calls sqlite3MallocEnd after PCache shutdown and before mutex shutdown, including partial initialized state",
+      "sqlite3MemSetDefault is selected only when xMalloc is null; sqlite3_config owns method-table copying/validation outside this unit"
+    ],
+    "callees": [
+      "sqlite3MallocInit selects mem1 defaults, borrows STATIC_MEM, validates pPage/szPage/nPage, invokes xInit(pAppData), and zeroes mem0 on failure",
+      "sqlite3MallocEnd conditionally invokes xShutdown(pAppData) and always zeroes mem0",
+      "mem1 default table binds malloc/free/realloc/size/roundup/init/shutdown and null context"
+    ],
+    "assertions_branches_cleanup": [
+      "Five behavior IDs cover absent-backend selection, invalid static page settings, failed xInit clearing, result return, and optional xShutdown",
+      "Invalid static page configuration clears pPage and szPage but source leaves nPage unchanged",
+      "Failed init owns no started mem0 state and permits retry; successful shutdown callback precedes local state clearing",
+      "No file I/O occurs; callback-owned resources remain callback responsibility"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/malloc.test family and memsubsys1.test/memsubsys2.test exercise allocator configuration, limits, lifecycle, faults, and status",
+      "upstream/sqlite/test/mutex2.test exercises initialization failures and continuation across subsystem boundaries",
+      "Project memory/global tests and infrastructure differential cover configured/default callbacks, invalid static page settings, failure clearing, cycles, and retry; receipts remain later"
+    ]
+  }
 }

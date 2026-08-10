@@ -97,7 +97,9 @@ test "Mem-backed SQL formatter adapts typed values and consumption" {
     vdbe_mem.setInt64(&cells[5], 5);
     vdbe_mem.setInt64(&cells[6], 9);
     var pointers: [7]?*vdbe_mem.types.Mem = undefined;
-    for (&pointers, &cells) |*pointer, *cell| pointer.* = cell;
+    for (&pointers, &cells) |*pointer, *cell| {
+        pointer.* = cell;
+    }
     var arguments = vdbe_mem.PrintfArguments{ .nArg = pointers.len, .nUsed = 0, .apArg = &pointers };
     var base: [128]u8 = undefined;
     var accumulator: formatter.Accumulator = undefined;

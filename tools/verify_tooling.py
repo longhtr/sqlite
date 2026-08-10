@@ -16,11 +16,9 @@ import bounded_subprocess as subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TOOLS = ROOT / "tools"
-MANUAL_TOOLS = {
-    "refresh_legacy_target_hashes.py": "manual refresh of non-reviewed legacy-candidate hashes only",
-}
 LIBRARIES = {
     "bounded_subprocess.py": "central resource-contained process execution",
+    "port_batch_gate.py": "canonical direct-tool translation-batch gate",
 }
 SPECIAL_ENTRYPOINTS = {
     "ci_quick.py": "manual and build-exposed three-mode CI driver",
@@ -35,8 +33,6 @@ SPECIAL_ENTRYPOINTS = {
 
 def category(path: pathlib.Path) -> str | None:
     name = path.name
-    if name in MANUAL_TOOLS:
-        return MANUAL_TOOLS[name]
     if name in LIBRARIES:
         return LIBRARIES[name]
     if name in SPECIAL_ENTRYPOINTS:
@@ -75,6 +71,8 @@ def verify_static() -> int:
             failures.append(f"{path.relative_to(ROOT)} has no tooling category")
         if path.name not in LIBRARIES and not has_main_guard(module):
             failures.append(f"{path.relative_to(ROOT)} lacks an explicit main guard")
+        if path.name not in LIBRARIES and "require_ready()" not in path.read_text():
+            failures.append(f"{path.relative_to(ROOT)} bypasses the active translation-batch gate")
         for node in ast.walk(module):
             if isinstance(node, ast.Import):
                 for alias in node.names:
@@ -91,7 +89,7 @@ def verify_static() -> int:
                 and node.func.attr in {"system", "popen", "spawnl", "spawnle", "spawnlp", "spawnlpe", "spawnv", "spawnve", "spawnvp", "spawnvpe"}
             ):
                 failures.append(f"{path.relative_to(ROOT)} calls unbounded os.{node.func.attr}")
-        if path.name not in LIBRARIES and path.name not in MANUAL_TOOLS:
+        if path.name not in LIBRARIES:
             references = sum(
                 candidate.read_text(errors="replace").count(path.name)
                 for candidate in reference_paths
@@ -138,7 +136,7 @@ def expect_failure(command: list[str], limits: subprocess.Limits, kind: str) -> 
 def process_exists(pid: int) -> bool:
     try:
         stat = pathlib.Path(f"/proc/{pid}/stat").read_text()
-    except FileNotFoundError:
+    except OSError:
         return False
     state = stat[stat.rfind(")") + 2 :].split()[0]
     return state != "Z"
@@ -232,4 +230,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
     main()

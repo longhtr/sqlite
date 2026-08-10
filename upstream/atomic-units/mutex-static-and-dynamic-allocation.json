@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "mutex-static-and-dynamic-allocation",
   "title": "Core-mutex gating and pthread static/dynamic mutex allocation",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These configuration fields and two complete allocation functions form the internal sqlite3MutexAlloc closure used to acquire STATIC_MEM and also preserve dynamic fast/recursive allocation and OOM semantics.",
@@ -124,8 +124,8 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "All deterministic dynamic allocation failure positions are tested sticky and one-shot. Static identities allocate no heap.",
     "io_crash_concurrency": "No I/O. Static identity and contended recursive operation are tested; process-wide initialization races remain open.",
@@ -153,5 +153,35 @@
     "Configured lifecycle is integrated; public auto-initialization event equivalence and final typed configuration remain open.",
     "Dynamic mutex free/destruction is separate.",
     "Independent review is pending."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/sqliteInt.h:4285-4304 was reviewed for bCoreMutex and configured mutex method-table ownership",
+      "upstream/sqlite/src/mutex_unix.c:104-215 was reviewed through UnixMutex layout, static initializer array, pthreadMutexAlloc kind switch, recursive attributes, OOM cleanup, and static identities",
+      "upstream/sqlite/src/mutex.c:286-306 was reviewed for internal core gating and configured xMutexAlloc dispatch",
+      "src/core/mutex.zig Subsystem.alloc, MethodsAdapter.alloc, processStatic, and process_static_mutexes are the canonical AST-hashed targets"
+    ],
+    "callers": [
+      "main.c initialization requests STATIC_MAIN and a recursive init mutex; connection open requests recursive mutex",
+      "malloc.c requests STATIC_MEM; pcache1.c, os.c/os_unix.c, memdb.c, btree.c, random.c, date.c, pragma.c, and loadext.c consume other stable static identities",
+      "sqlite3MutexAlloc returns null immediately when bCoreMutex is false and otherwise dispatches the selected copied method table",
+      "Public sqlite3_mutex_alloc auto-initialization and pthreadMutexFree remain separate units"
+    ],
+    "callees": [
+      "pthreadMutexAlloc calls sqlite3MallocZero only for FAST/RECURSIVE and pthread_mutex_init with recursive attributes only for RECURSIVE",
+      "Static kinds 2..13 index a process-static UnixMutex array initialized with PTHREAD_MUTEX_INITIALIZER and cannot report OOM",
+      "Configured allocation dispatch is callback-owned; Zig MethodsAdapter preserves callback transport while native Subsystem uses injected allocation"
+    ],
+    "assertions_branches_cleanup": [
+      "The 15 behavior IDs cover core-disabled null, callback assertions/return, dynamic kind branches, OOM, recursive attribute init, static selection, and final return",
+      "Dynamic allocation failure returns null; recursive attribute lifetime ends after pthread_mutex_init; successful dynamic ownership transfers to caller",
+      "API armor and invalid kinds are excluded; active callers provide kinds 0..13",
+      "Static identities are borrowed process-lifetime values and repeated requests return the same address"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/mutex1.test and mutex2.test exercise configured modes, allocation identities, init failures, and shutdown/retry",
+      "upstream/sqlite/test/thread001.test through thread005.test exercise contended default mutex behavior",
+      "Project mutex/memory tests and infrastructure differential cover all kinds, configured dispatch, recursive behavior, STATIC_MEM sharing, and deterministic OOM; durable receipts remain later"
+    ]
+  }
 }

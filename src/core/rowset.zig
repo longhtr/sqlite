@@ -350,7 +350,9 @@ test "chunk growth clear reuse and allocation failures" {
         fn run(allocator: Allocator) !void {
             var failing = RowSet.init(allocator);
             defer failing.deinit();
-            for (0..entries_per_chunk * 3) |index| try failing.insert(@intCast(index));
+            for (0..entries_per_chunk * 3) |index| {
+                try failing.insert(@intCast(index));
+            }
             _ = try failing.testValue(1, 7);
         }
     }.run, .{});

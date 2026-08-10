@@ -7,6 +7,7 @@ pub const vdbe = @import("vdbe.zig");
 const ResultCode = @import("result_code.zig").ResultCode;
 pub const public_api = @import("public_api.zig");
 const vdbe_mem = @import("internal/vdbe_mem.zig");
+const collation = @import("internal/collation.zig");
 const vdbe_types = vdbe_mem.types;
 pub const sqlite3_stmt = opaque {};
 pub const sqlite3_value = opaque {};
@@ -34,6 +35,7 @@ const Binding = struct {
 pub const FunctionDefinition = struct {
     name: [:0]u8,
     argument_count: c_int,
+    encoding: c_int = 1,
     callback: ?*const fn (?*sqlite3_context, c_int, [*]?*sqlite3_value) callconv(.c) void = null,
     step_callback: ?*const fn (?*sqlite3_context, c_int, [*]?*sqlite3_value) callconv(.c) void = null,
     final_callback: ?*const fn (?*sqlite3_context) callconv(.c) void = null,
@@ -76,10 +78,13 @@ pub const Statement = struct {
     connection_previous: ?*Statement = null,
     connection_next: ?*Statement = null,
     interrupt_flag: ?*const bool = null,
+    result_mask: ?*const c_int = null,
     sql_copy: ?[:0]u8 = null,
     event_context: ?*anyopaque = null,
     event_callback: ?*const fn (?*anyopaque, *Statement, c_uint) void = null,
     profile_emitted: bool = false,
+    profile_start_ms: i64 = 0,
+    variable_mask: u64 = 0,
 
     pub fn create(
         allocator: std.mem.Allocator,
@@ -102,7 +107,9 @@ pub const Statement = struct {
         errdefer allocator.destroy(statement);
         const bindings = try allocator.alloc(Binding, parameters.len);
         errdefer allocator.free(bindings);
-        for (bindings) |*binding| binding.init();
+        for (bindings) |*binding| {
+            binding.init();
+        }
         const caches = try allocator.alloc(ColumnCache, columns.len);
         errdefer allocator.free(caches);
         @memset(caches, .{});
@@ -142,6 +149,14 @@ pub const Statement = struct {
         self.finalize_context = context;
         self.finalize_callback = callback;
         self.interrupt_flag = interrupt_flag;
+    }
+
+    pub fn setResultMask(self: *Statement, result_mask: *const c_int) void {
+        self.result_mask = result_mask;
+    }
+
+    fn resultMask(self: *const Statement) c_int {
+        return if (self.result_mask) |mask| mask.* else 0xff;
     }
 
     fn clearCaches(self: *Statement) void {
@@ -192,7 +207,9 @@ pub const Statement = struct {
         }
         const outcome = self.vm.step();
         self.last_result = outcome.result;
-        if (outcome.result == .row) if (self.event_callback) |callback| callback(self.event_context, self, 4);
+        if (outcome.result == .row) {
+            if (self.event_callback) |callback| callback(self.event_context, self, 4);
+        }
         if (outcome.result == .done and !self.profile_emitted) {
             self.profile_emitted = true;
             if (self.event_callback) |callback| callback(self.event_context, self, 2);
@@ -211,6 +228,17 @@ pub const Statement = struct {
         return previous;
     }
 
+    /// Source `sqlite3VdbeSetVarmask()`: remember bound parameters used by
+    /// variable-sensitive planning, saturating indices above the mask width.
+    fn setVariableMask(self: *Statement, index: usize) void {
+        if (index == 0) return;
+        if (index > 64) {
+            self.variable_mask = std.math.maxInt(u64);
+        } else {
+            self.variable_mask |= @as(u64, 1) << @intCast(index - 1);
+        }
+    }
+
     fn bindMem(self: *Statement, index_value: c_int, value: *vdbe_types.Mem) ResultCode {
         if (self.in_api or self.started) {
             vdbe_mem.release(value);
@@ -223,6 +251,7 @@ pub const Statement = struct {
             return .range;
         }
         const index: usize = @intCast(index_value - 1);
+        self.setVariableMask(index + 1);
         vdbe_mem.move(&self.bindings[index].value, value);
         self.bindings[index].value.flags |= vdbe_types.mem_flag.from_bind;
         return .ok;
@@ -399,17 +428,31 @@ fn releaseInvocation(machine: *vdbe_types.Vdbe, accumulator: *vdbe_types.Mem, ou
     vdbe_mem.release(output);
 }
 
+fn attachInvocationCollation(machine: *vdbe_types.Vdbe, operation: *vdbe_types.VdbeOp, sequence: *vdbe_types.CollSeq) void {
+    sequence.* = std.mem.zeroes(vdbe_types.CollSeq);
+    sequence.enc = 1;
+    sequence.xCmp = collation.binary;
+    operation.* = std.mem.zeroes(vdbe_types.VdbeOp);
+    operation.p4.pColl = sequence;
+    machine.aOp = @ptrCast(operation);
+}
+
 pub fn invokeScalar(context: ?*anyopaque, arguments: []vdbe_types.Mem, output: *vdbe_types.Mem, allocator: std.mem.Allocator) ResultCode {
     const definition: *FunctionDefinition = @ptrCast(@alignCast(context orelse return .misuse));
     const argument_pointers = allocator.alloc(?*vdbe_types.Mem, arguments.len) catch return .no_memory;
     defer allocator.free(argument_pointers);
-    for (arguments, argument_pointers) |*mem, *pointer| pointer.* = mem;
+    for (arguments, argument_pointers) |*mem, *pointer| {
+        pointer.* = mem;
+    }
 
     var result_mem = std.mem.zeroes(vdbe_types.Mem);
     var aggregate_mem = std.mem.zeroes(vdbe_types.Mem);
     vdbe_mem.init(&result_mem, null, vdbe_types.mem_flag.null_);
     vdbe_mem.init(&aggregate_mem, null, vdbe_types.mem_flag.null_);
     var machine = std.mem.zeroes(vdbe_types.Vdbe);
+    var operation = std.mem.zeroes(vdbe_types.VdbeOp);
+    var sequence = std.mem.zeroes(vdbe_types.CollSeq);
+    attachInvocationCollation(&machine, &operation, &sequence);
     var native = NativeFunction{ .func = std.mem.zeroes(vdbe_types.FuncDef), .definition = definition };
     native.func.nArg = @intCast(definition.argument_count);
     native.func.pUserData = definition.user_data;
@@ -419,7 +462,7 @@ pub fn invokeScalar(context: ?*anyopaque, arguments: []vdbe_types.Mem, output: *
         .pFunc = &native.func,
         .pMem = &aggregate_mem,
         .pVdbe = &machine,
-        .iOp = 0,
+        .iOp = 1,
         .isError = 0,
         .enc = 1,
         .skipFlag = 0,
@@ -445,6 +488,83 @@ pub fn invokeScalar(context: ?*anyopaque, arguments: []vdbe_types.Mem, output: *
         } else if (definition.final_callback) |final_callback| final_callback(opaque_context);
     } else return .misuse;
     if (function_context.isError > 0) return ResultCode.fromC(function_context.isError);
+    vdbe_mem.move(output, &result_mem);
+    return .ok;
+}
+
+/// Source `createAggContext()`: initialize one aggregate invocation context
+/// around a persistent accumulator register and zeroed transient output.
+pub fn invokeAggregateStep(context: ?*anyopaque, arguments: []vdbe_types.Mem, accumulator: *vdbe_types.Mem, allocator: std.mem.Allocator) ResultCode {
+    const definition: *FunctionDefinition = @ptrCast(@alignCast(context orelse return .misuse));
+    const step_callback = definition.step_callback orelse return .misuse;
+    const argument_pointers = allocator.alloc(?*vdbe_types.Mem, arguments.len) catch return .no_memory;
+    defer allocator.free(argument_pointers);
+    for (arguments, argument_pointers) |*value, *pointer| {
+        pointer.* = value;
+    }
+    var result_mem = std.mem.zeroes(vdbe_types.Mem);
+    vdbe_mem.init(&result_mem, null, vdbe_types.mem_flag.null_);
+    defer vdbe_mem.release(&result_mem);
+    var machine = std.mem.zeroes(vdbe_types.Vdbe);
+    var operation = std.mem.zeroes(vdbe_types.VdbeOp);
+    var sequence = std.mem.zeroes(vdbe_types.CollSeq);
+    attachInvocationCollation(&machine, &operation, &sequence);
+    var native = NativeFunction{ .func = std.mem.zeroes(vdbe_types.FuncDef), .definition = definition };
+    native.func.nArg = @intCast(definition.argument_count);
+    native.func.pUserData = definition.user_data;
+    native.func.zName = definition.name.ptr;
+    var function_context = vdbe_types.Context{ .pOut = &result_mem, .pFunc = &native.func, .pMem = accumulator, .pVdbe = &machine, .iOp = 1, .isError = 0, .enc = 1, .skipFlag = 0, .argc = @intCast(arguments.len), .argv = .{} };
+    accumulator.n += 1;
+    step_callback(@ptrCast(&function_context), @intCast(arguments.len), @ptrCast(argument_pointers.ptr));
+    vdbe_mem.deleteAuxData(&machine, -1, 0);
+    return if (function_context.isError > 0) ResultCode.fromC(function_context.isError) else .ok;
+}
+
+/// Source `sqlite3VdbeMemFinalize()`: invoke an aggregate finalizer, transfer
+/// its result, and release the persistent aggregate context exactly once.
+pub fn finalizeAggregate(context: ?*anyopaque, accumulator: *vdbe_types.Mem, output: *vdbe_types.Mem, _: std.mem.Allocator) ResultCode {
+    const definition: *FunctionDefinition = @ptrCast(@alignCast(context orelse return .misuse));
+    const final_callback = definition.final_callback orelse return .misuse;
+    var result_mem = std.mem.zeroes(vdbe_types.Mem);
+    vdbe_mem.init(&result_mem, null, vdbe_types.mem_flag.null_);
+    var machine = std.mem.zeroes(vdbe_types.Vdbe);
+    var native = NativeFunction{ .func = std.mem.zeroes(vdbe_types.FuncDef), .definition = definition };
+    native.func.nArg = @intCast(definition.argument_count);
+    native.func.pUserData = definition.user_data;
+    native.func.zName = definition.name.ptr;
+    var function_context = vdbe_types.Context{ .pOut = &result_mem, .pFunc = &native.func, .pMem = accumulator, .pVdbe = &machine, .iOp = 0, .isError = 0, .enc = 1, .skipFlag = 0, .argc = 0, .argv = .{} };
+    final_callback(@ptrCast(&function_context));
+    vdbe_mem.deleteAuxData(&machine, -1, 0);
+    accumulator.flags &= ~vdbe_types.mem_flag.aggregate;
+    vdbe_mem.release(accumulator);
+    vdbe_mem.init(accumulator, null, vdbe_types.mem_flag.null_);
+    if (function_context.isError > 0) {
+        vdbe_mem.release(&result_mem);
+        return ResultCode.fromC(function_context.isError);
+    }
+    vdbe_mem.move(output, &result_mem);
+    return .ok;
+}
+
+/// Source `sqlite3VdbeMemAggValue()`: invoke a window aggregate xValue
+/// callback without consuming or releasing its accumulator state.
+pub fn valueAggregate(context: ?*anyopaque, accumulator: *vdbe_types.Mem, output: *vdbe_types.Mem, _: std.mem.Allocator) ResultCode {
+    const definition: *FunctionDefinition = @ptrCast(@alignCast(context orelse return .misuse));
+    const value_callback = definition.value_callback orelse return .misuse;
+    var result_mem = std.mem.zeroes(vdbe_types.Mem);
+    vdbe_mem.init(&result_mem, null, vdbe_types.mem_flag.null_);
+    var machine = std.mem.zeroes(vdbe_types.Vdbe);
+    var native = NativeFunction{ .func = std.mem.zeroes(vdbe_types.FuncDef), .definition = definition };
+    native.func.nArg = @intCast(definition.argument_count);
+    native.func.pUserData = definition.user_data;
+    native.func.zName = definition.name.ptr;
+    var function_context = vdbe_types.Context{ .pOut = &result_mem, .pFunc = &native.func, .pMem = accumulator, .pVdbe = &machine, .iOp = 0, .isError = 0, .enc = 1, .skipFlag = 0, .argc = 0, .argv = .{} };
+    value_callback(@ptrCast(&function_context));
+    vdbe_mem.deleteAuxData(&machine, -1, 0);
+    if (function_context.isError > 0) {
+        vdbe_mem.release(&result_mem);
+        return ResultCode.fromC(function_context.isError);
+    }
     vdbe_mem.move(output, &result_mem);
     return .ok;
 }
@@ -529,7 +649,11 @@ pub export fn sqlite3_result_double(pointer: ?*sqlite3_context, value: f64) call
     if (asContext(pointer)) |context| vdbe_mem.resultDouble(context, value);
 }
 pub export fn sqlite3_result_text(pointer: ?*sqlite3_context, input: ?[*:0]const u8, length: c_int, destructor: Destructor) callconv(.c) void {
-    if (asContext(pointer)) |context| vdbe_mem.resultText(context, input, length, ownership(destructor));
+    const context = asContext(pointer) orelse {
+        if (input) |value| invokeRejectedDestructor(destructor, @ptrCast(@constCast(value)));
+        return;
+    };
+    vdbe_mem.resultText(context, input, length, ownership(destructor));
 }
 pub export fn sqlite3_result_text16(pointer: ?*sqlite3_context, input: ?*const anyopaque, length: c_int, destructor: Destructor) callconv(.c) void {
     if (asContext(pointer)) |context| vdbe_mem.resultText16(context, if (input) |value| @ptrCast(value) else null, length, 2, ownership(destructor));
@@ -542,13 +666,29 @@ pub export fn sqlite3_result_text16be(pointer: ?*sqlite3_context, input: ?*const
 }
 
 pub export fn sqlite3_result_text64(pointer: ?*sqlite3_context, input: ?[*:0]const u8, length: u64, destructor: Destructor, encoding: u8) callconv(.c) void {
-    if (asContext(pointer)) |context| vdbe_mem.resultText64(context, input, length, encoding, ownership(destructor));
+    const context = asContext(pointer) orelse {
+        if (input) |value| invokeRejectedDestructor(destructor, @ptrCast(@constCast(value)));
+        return;
+    };
+    vdbe_mem.resultText64(context, input, length, encoding, ownership(destructor));
 }
 pub export fn sqlite3_result_blob(pointer: ?*sqlite3_context, input: ?*const anyopaque, length: c_int, destructor: Destructor) callconv(.c) void {
-    if (asContext(pointer)) |context| vdbe_mem.resultBlob(context, if (input) |value| @ptrCast(value) else null, length, ownership(destructor));
+    const context = asContext(pointer) orelse {
+        if (input != null) invokeRejectedDestructor(destructor, @constCast(input));
+        return;
+    };
+    if (length < 0) {
+        if (input != null) invokeRejectedDestructor(destructor, @constCast(input));
+        vdbe_mem.resultErrorTooBig(context);
+        return;
+    }
+    vdbe_mem.resultBlob(context, if (input) |value| @ptrCast(value) else null, length, ownership(destructor));
 }
 pub export fn sqlite3_result_blob64(pointer: ?*sqlite3_context, input: ?*const anyopaque, length: u64, destructor: Destructor) callconv(.c) c_int {
-    const context = asContext(pointer) orelse return ResultCode.misuse.toC();
+    const context = asContext(pointer) orelse {
+        if (input != null) invokeRejectedDestructor(destructor, @constCast(input));
+        return ResultCode.misuse.toC();
+    };
     vdbe_mem.resultBlob64(context, if (input) |value| @ptrCast(value) else null, length, ownership(destructor));
     return if (context.isError > 0) context.isError else ResultCode.ok.toC();
 }
@@ -583,19 +723,20 @@ pub export fn sqlite3_result_subtype(pointer: ?*sqlite3_context, subtype: c_uint
 
 pub export fn sqlite3_step(pointer: ?*sqlite3_stmt) callconv(.c) c_int {
     const statement = asStatement(pointer) orelse return ResultCode.misuse.toC();
-    return statement.step().toC();
+    return statement.step().toC() & statement.resultMask();
 }
 
 pub export fn sqlite3_reset(pointer: ?*sqlite3_stmt) callconv(.c) c_int {
     const statement = asStatement(pointer) orelse return ResultCode.misuse.toC();
-    return statement.reset().toC();
+    return statement.reset().toC() & statement.resultMask();
 }
 
 pub export fn sqlite3_finalize(pointer: ?*sqlite3_stmt) callconv(.c) c_int {
     const statement = asStatement(pointer) orelse return ResultCode.ok.toC();
     if (statement.in_api) return ResultCode.misuse.toC();
     statement.in_api = true;
-    return statement.destroy().toC();
+    const result_mask = statement.resultMask();
+    return statement.destroy().toC() & result_mask;
 }
 
 pub export fn sqlite3_clear_bindings(pointer: ?*sqlite3_stmt) callconv(.c) c_int {
@@ -644,11 +785,17 @@ pub export fn sqlite3_bind_pointer(pointer: ?*sqlite3_stmt, index: c_int, value:
 }
 
 pub export fn sqlite3_bind_value(pointer: ?*sqlite3_stmt, index: c_int, value_pointer: ?*const sqlite3_value) callconv(.c) c_int {
-    const statement = asStatement(pointer) orelse return ResultCode.misuse.toC();
-    var mem = std.mem.zeroes(vdbe_types.Mem);
-    vdbe_mem.init(&mem, null, vdbe_types.mem_flag.null_);
-    if (asValue(value_pointer)) |value| if (vdbe_mem.copy(&mem, value) != 0) return ResultCode.no_memory.toC();
-    return statement.bindMem(index, &mem).toC();
+    const value = asValue(value_pointer) orelse return sqlite3_bind_null(pointer, index);
+    return switch (vdbe_mem.valueType(value)) {
+        1 => sqlite3_bind_int64(pointer, index, value.u.i),
+        2 => sqlite3_bind_double(pointer, index, if (value.flags & vdbe_types.mem_flag.real != 0) value.u.r else @floatFromInt(value.u.i)),
+        3 => bindBytes(pointer, index, if (value.z) |text| @ptrCast(text) else null, value.n, @ptrFromInt(std.math.maxInt(usize)), true, false),
+        4 => if (value.flags & vdbe_types.mem_flag.zero != 0 and value.n == 0)
+            sqlite3_bind_zeroblob(pointer, index, value.u.nZero)
+        else
+            bindBytes(pointer, index, if (value.z) |blob| @ptrCast(blob) else null, value.n, @ptrFromInt(std.math.maxInt(usize)), false, false),
+        else => sqlite3_bind_null(pointer, index),
+    };
 }
 
 pub export fn sqlite3_bind_null(pointer: ?*sqlite3_stmt, index: c_int) callconv(.c) c_int {
@@ -694,19 +841,31 @@ pub export fn sqlite3_bind_blob64(pointer: ?*sqlite3_stmt, index: c_int, input: 
     return bindBytes(pointer, index, input, @intCast(length), destructor, false, false);
 }
 
-pub export fn sqlite3_bind_text64(pointer: ?*sqlite3_stmt, index: c_int, input: ?[*]const u8, length: u64, destructor: Destructor, encoding: u8) callconv(.c) c_int {
+pub export fn sqlite3_bind_text64(pointer: ?*sqlite3_stmt, index: c_int, input: ?[*]const u8, length_argument: u64, destructor: Destructor, encoding_argument: u8) callconv(.c) c_int {
     const raw: ?*const anyopaque = if (input) |value| @ptrCast(value) else null;
     const statement = asStatement(pointer) orelse {
         if (raw != null) invokeRejectedDestructor(destructor, @constCast(raw));
         return ResultCode.misuse.toC();
     };
-    if (encoding < 1 or encoding > 3 or length > std.math.maxInt(c_int)) {
+    var encoding = encoding_argument;
+    if (encoding == 4) encoding = 2;
+    if (encoding != 1 and encoding != 2 and encoding != 3 and encoding != 16) {
         if (raw != null) invokeRejectedDestructor(destructor, @constCast(raw));
-        return (if (encoding < 1 or encoding > 3) ResultCode.misuse else ResultCode.too_big).toC();
+        return ResultCode.misuse.toC();
+    }
+    var length = length_argument;
+    if (encoding != 1 and encoding != 16) length &= ~@as(u64, 1);
+    if (length > std.math.maxInt(c_int)) {
+        if (raw != null) invokeRejectedDestructor(destructor, @constCast(raw));
+        return ResultCode.too_big.toC();
     }
     var mem = std.mem.zeroes(vdbe_types.Mem);
     vdbe_mem.init(&mem, null, vdbe_types.mem_flag.null_);
-    const rc = vdbe_mem.setStr(&mem, input, @intCast(length), encoding, ownership(destructor));
+    const rc = if (encoding == 16) blk: {
+        const result = vdbe_mem.setStr(&mem, input, @intCast(length), 1, ownership(destructor));
+        mem.flags |= vdbe_types.mem_flag.terminated;
+        break :blk result;
+    } else vdbe_mem.setStr(&mem, input, @intCast(length), encoding, ownership(destructor));
     if (rc != 0) return ResultCode.fromC(rc).toC();
     return statement.bindMem(index, &mem).toC();
 }
@@ -849,14 +1008,155 @@ pub export fn sqlite3_sql(pointer: ?*sqlite3_stmt) callconv(.c) ?[*:0]const u8 {
     const self = asStatement(pointer) orelse return null;
     return if (self.sql_copy) |sql| sql.ptr else null;
 }
-pub export fn sqlite3_expanded_sql(pointer: ?*sqlite3_stmt) callconv(.c) ?[*:0]u8 {
-    const sql = sqlite3_sql(pointer) orelse return null;
-    const bytes = std.mem.span(sql);
-    const allocation = public_api.sqlite3_malloc64(bytes.len + 1) orelse return null;
+/// Source `sqlite3VdbeGetBoundValue()`: duplicate one bound parameter into an
+/// independently owned Mem cell for planning or expanded-SQL consumers.
+fn getBoundValue(statement: *Statement, parameter: usize) !?*vdbe_types.Mem {
+    if (parameter == 0 or parameter > statement.bindings.len) return null;
+    const value = try statement.allocator.create(vdbe_types.Mem);
+    vdbe_mem.init(value, null, vdbe_types.mem_flag.null_);
+    errdefer statement.allocator.destroy(value);
+    if (vdbe_mem.copy(value, &statement.bindings[parameter - 1].value) != 0) return error.OutOfMemory;
+    value.flags &= ~vdbe_types.mem_flag.from_bind;
+    return value;
+}
+
+fn freeBoundValue(statement: *Statement, value: *vdbe_types.Mem) void {
+    vdbe_mem.release(value);
+    statement.allocator.destroy(value);
+}
+
+fn appendExpandedValue(output: *std.ArrayList(u8), allocator: std.mem.Allocator, value: *const vdbe_types.Mem) !void {
+    if (value.flags & vdbe_types.mem_flag.null_ != 0) return output.appendSlice(allocator, "NULL");
+    if (value.flags & vdbe_types.mem_flag.integer != 0) {
+        var buffer: [32]u8 = undefined;
+        return output.appendSlice(allocator, try std.fmt.bufPrint(&buffer, "{d}", .{value.u.i}));
+    }
+    if (value.flags & vdbe_types.mem_flag.real != 0) {
+        var buffer: [64]u8 = undefined;
+        return output.appendSlice(allocator, try std.fmt.bufPrint(&buffer, "{d}", .{value.u.r}));
+    }
+    const count: usize = @intCast(@max(value.n, 0));
+    const bytes: []const u8 = if (value.z) |pointer| pointer[0..count] else &.{};
+    if (value.flags & vdbe_types.mem_flag.string != 0) {
+        try output.append(allocator, '\'');
+        for (bytes) |byte| {
+            try output.append(allocator, byte);
+            if (byte == '\'') try output.append(allocator, '\'');
+        }
+        return output.append(allocator, '\'');
+    }
+    if (value.flags & vdbe_types.mem_flag.zero != 0 and count == 0) {
+        var buffer: [48]u8 = undefined;
+        return output.appendSlice(allocator, try std.fmt.bufPrint(&buffer, "zeroblob({d})", .{value.u.nZero}));
+    }
+    try output.appendSlice(allocator, "x'");
+    const digits = "0123456789abcdef";
+    for (bytes) |byte| {
+        try output.append(allocator, digits[byte >> 4]);
+        try output.append(allocator, digits[byte & 0x0f]);
+    }
+    return output.append(allocator, '\'');
+}
+
+fn variableEnd(sql: []const u8, start: usize) usize {
+    if (sql[start] == '?') {
+        var end = start + 1;
+        while (end < sql.len and std.ascii.isDigit(sql[end])) : (end += 1) {}
+        return end;
+    }
+    var end = start + 1;
+    while (end < sql.len and (std.ascii.isAlphanumeric(sql[end]) or sql[end] == '_')) : (end += 1) {}
+    return end;
+}
+
+/// Source `sqlite3_expanded_sql()`: substitute bound values into saved SQL,
+/// preserving quoted literals/comments and allocating the result with
+/// sqlite3_malloc() for caller ownership.
+fn expandedSql(statement: *Statement) ?[*:0]u8 {
+    const sql = if (statement.sql_copy) |saved| saved else return null;
+    var expanded = std.ArrayList(u8).empty;
+    defer expanded.deinit(statement.allocator);
+    var index: usize = 0;
+    var next_parameter: usize = 1;
+    while (index < sql.len) {
+        if (sql[index] == '\'' or sql[index] == '"' or sql[index] == '`') {
+            const quote = sql[index];
+            expanded.append(statement.allocator, quote) catch return null;
+            index += 1;
+            while (index < sql.len) {
+                expanded.append(statement.allocator, sql[index]) catch return null;
+                if (sql[index] == quote) {
+                    if (index + 1 < sql.len and sql[index + 1] == quote) {
+                        expanded.append(statement.allocator, quote) catch return null;
+                        index += 2;
+                        continue;
+                    }
+                    index += 1;
+                    break;
+                }
+                index += 1;
+            }
+            continue;
+        }
+        if (sql[index] == '-' and index + 1 < sql.len and sql[index + 1] == '-') {
+            const relative = std.mem.indexOfScalar(u8, sql[index + 2 ..], '\n');
+            const end = if (relative) |offset| index + 2 + offset else sql.len;
+            expanded.appendSlice(statement.allocator, sql[index..end]) catch return null;
+            index = end;
+            continue;
+        }
+        if (sql[index] == '/' and index + 1 < sql.len and sql[index + 1] == '*') {
+            const relative = std.mem.indexOf(u8, sql[index + 2 ..], "*/") orelse {
+                expanded.appendSlice(statement.allocator, sql[index..]) catch return null;
+                break;
+            };
+            const end = index + 2 + relative + 2;
+            expanded.appendSlice(statement.allocator, sql[index..end]) catch return null;
+            index = end;
+            continue;
+        }
+        if (sql[index] == '?' or sql[index] == ':' or sql[index] == '@' or sql[index] == '$') {
+            const end = variableEnd(sql, index);
+            const token = sql[index..end];
+            var parameter_index: ?usize = null;
+            if (token[0] == '?' and token.len > 1) {
+                parameter_index = std.fmt.parseInt(usize, token[1..], 10) catch null;
+            } else if (token.len == 1 and token[0] == '?') {
+                parameter_index = next_parameter;
+            } else {
+                for (statement.parameters, 1..) |parameter, candidate| {
+                    if (parameter.name) |name| {
+                        if (std.mem.eql(u8, name, token)) {
+                            parameter_index = candidate;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (parameter_index) |parameter| {
+                next_parameter = @max(next_parameter, parameter + 1);
+                if (parameter > 0 and parameter <= statement.bindings.len) {
+                    const bound_optional = getBoundValue(statement, parameter) catch return null;
+                    const bound = bound_optional orelse return null;
+                    defer freeBoundValue(statement, bound);
+                    appendExpandedValue(&expanded, statement.allocator, bound) catch return null;
+                    index = end;
+                    continue;
+                }
+            }
+        }
+        expanded.append(statement.allocator, sql[index]) catch return null;
+        index += 1;
+    }
+    const allocation = public_api.sqlite3_malloc64(expanded.items.len + 1) orelse return null;
     const output: [*]u8 = @ptrCast(allocation);
-    @memcpy(output[0..bytes.len], bytes);
-    output[bytes.len] = 0;
+    @memcpy(output[0..expanded.items.len], expanded.items);
+    output[expanded.items.len] = 0;
     return @ptrCast(output);
+}
+
+pub export fn sqlite3_expanded_sql(pointer: ?*sqlite3_stmt) callconv(.c) ?[*:0]u8 {
+    return expandedSql(asStatement(pointer) orelse return null);
 }
 
 pub export fn sqlite3_expired(_: ?*sqlite3_stmt) callconv(.c) c_int {
@@ -962,6 +1262,39 @@ test "sqlite values duplicate independently and bind through source Mem" {
     try std.testing.expectEqual(ResultCode.row.toC(), sqlite3_step(second_handle));
     try std.testing.expectEqualStrings("SEVEN", std.mem.span(sqlite3_column_text(second_handle, 0).?));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_finalize(second_handle));
+}
+
+test "bind value snapshots static text and text64 normalizes native UTF16" {
+    var source: [6:0]u8 = "static".*;
+    var value = std.mem.zeroes(vdbe_types.Mem);
+    vdbe_mem.init(&value, null, vdbe_types.mem_flag.null_);
+    try std.testing.expectEqual(@as(c_int, 0), vdbe_mem.setStr(&value, &source, 6, 1, .static));
+
+    const statement = try Statement.create(std.testing.allocator, &test_statement_program, &test_parameters, &test_columns);
+    const handle = toOpaque(statement);
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_bind_value(handle, 1, @ptrCast(&value)));
+    source[0] = 'X';
+    try std.testing.expectEqual(ResultCode.row.toC(), sqlite3_step(handle));
+    try std.testing.expectEqualStrings("static", std.mem.span(sqlite3_column_text(handle, 0).?));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_finalize(handle));
+    vdbe_mem.release(&value);
+
+    const utf16_statement = try Statement.create(std.testing.allocator, &test_statement_program, &test_parameters, &test_columns);
+    const utf16_handle = toOpaque(utf16_statement);
+    const native = [_]u8{ 'A', 0, 'B', 0, 0 };
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_bind_text64(utf16_handle, 1, &native, native.len, transientDestructor(), 4));
+    try std.testing.expectEqual(ResultCode.row.toC(), sqlite3_step(utf16_handle));
+    try std.testing.expectEqualStrings("AB", std.mem.span(sqlite3_column_text(utf16_handle, 0).?));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_finalize(utf16_handle));
+}
+
+test "result APIs destroy rejected owned inputs" {
+    test_destructor_calls = 0;
+    const text: [1:0]u8 = "x".*;
+    sqlite3_result_text(null, &text, 1, @ptrCast(&testDestructor));
+    const blob = [_]u8{1};
+    _ = sqlite3_result_blob64(null, &blob, 1, @ptrCast(&testDestructor));
+    try std.testing.expectEqual(@as(usize, 2), test_destructor_calls);
 }
 
 test "statement misuse range negative lengths and error lifecycle return exact codes" {

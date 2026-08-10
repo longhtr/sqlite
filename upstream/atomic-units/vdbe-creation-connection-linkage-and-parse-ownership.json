@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-creation-connection-linkage-and-parse-ownership",
   "title": "VDBE creation, connection linkage, and Parse ownership",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "sqlite3VdbeCreate atomically allocates the statement object, initializes the zero-required tail, links it at the connection head, establishes Parse ownership, and appends mandatory OP_Init. sqlite3VdbeParser is the inverse owner accessor. The intrusive-list fields have no independent behavior outside this lifecycle.",
     "source_files": [
@@ -122,7 +122,7 @@
     "Intrusive ppVPrev pointer-to-owner-slot identity is retained directly rather than replaced by a container."
   ],
   "oracle": {
-    "protocol": "The shared symbolic builder worker creates one and two linked statements and injects deterministic object-allocation and initial-operation-allocation faults with lookaside disabled. C and Zig compare ownership/accessor identity, list links, state, Init operands/capacity, and OOM Parse/connection state in a 363-observation trace.",
+    "protocol": "The shared symbolic builder worker creates one and two linked statements and injects deterministic object-allocation and initial-operation-allocation faults with lookaside disabled. C and Zig compare ownership/accessor identity, list links, state, Init operands/capacity, and OOM Parse/connection state in a 366-observation trace.",
     "internal_observations": [
       "db head and Parse owner pointer identity",
       "parser accessor identity",
@@ -134,9 +134,9 @@
     "normalization": "Pointer values are normalized to exact identity/relationship booleans. Counts, state, operands, OOM flags and result codes are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Both Vdbe object-allocation failure and second-allocation OP_Init failure are deterministically reached and compared; cleanup returns lookaside/global storage.",
     "io_crash_concurrency": "No I/O or callback. Production mutex/cross-statement lifecycle remains integration work.",
@@ -161,6 +161,7 @@
     "notes": "Requires lifecycle integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port and integrate P4 ownership, MakeReady/operation transfer, and deletion.",
     "Switch compiler ownership from handwritten Program to source VDBE builder and retire the duplicate.",
     "Independent fidelity review remains open."

@@ -1,6 +1,7 @@
 const std = @import("std");
 const vdbe_module = @import("vdbe_builder");
 const builder = vdbe_module.vdbe_aux;
+const api = vdbe_module.vdbe_api;
 const btree_aux = vdbe_module.btree_aux;
 const vdbe_record = vdbe_module.vdbe_record;
 const memory = vdbe_module.memory;
@@ -24,24 +25,13 @@ fn progressCallback(raw: ?*anyopaque) callconv(.c) c_int {
 }
 
 fn clearCreated(db: *types.Sqlite3) void {
-    while (db.pVdbe) |machine| {
-        db.pVdbe = machine.pVNext;
-        if (machine.aColName) |columns| {
-            vdbe_mem.releaseArray(columns, @as(c_int, machine.nResAlloc) * @as(c_int, @intCast(types.column_name.count)));
-            builder.db_allocator.freeNN(db, @ptrCast(columns));
-        }
-        if (machine.zSql) |sql| builder.db_allocator.freeNN(db, @ptrCast(sql));
-        if (machine.pVList) |list| builder.db_allocator.freeNN(db, @ptrCast(list));
-        if (machine.pFree) |allocation| builder.db_allocator.freeNN(db, allocation);
-        if (machine.aOp) |operations| builder.db_allocator.freeNN(db, @ptrCast(operations));
-        builder.db_allocator.freeNN(db, @ptrCast(machine));
-    }
+    while (db.pVdbe) |machine| builder.deleteVdbe(machine);
 }
 
 fn resetMachine(db: *types.Sqlite3, parse: *types.Parse, machine: *types.Vdbe) void {
     clearCreated(db);
     if (db.mallocFailed != 0) builder.db_allocator.oomClear(db);
-    if (machine.aOp) |operations| builder.db_allocator.freeNN(db, @ptrCast(operations));
+    builder.freeOperationArray(db, machine.aOp, machine.nOp);
     if (machine.zErrMsg) |message| builder.db_allocator.freeNN(db, @ptrCast(message));
     if (parse.aLabel) |labels| builder.db_allocator.freeNN(db, @ptrCast(labels));
     db.xProgress = null;
@@ -713,6 +703,155 @@ pub fn main(init: std.process.Init) !void {
             sequence += 1;
             continue;
         }
+        if (std.mem.eql(u8, command, "APICOLUMNS")) {
+            var row = [_]types.Mem{ std.mem.zeroes(types.Mem), std.mem.zeroes(types.Mem) };
+            vdbe_mem.init(&row[0], &db, types.mem_flag.null_);
+            vdbe_mem.init(&row[1], &db, types.mem_flag.null_);
+            vdbe_mem.setInt64(&row[0], 42);
+            _ = vdbe_mem.setStr(&row[1], "text", 4, 1, .static);
+            machine.pResultRow = &row[0];
+            machine.nResColumn = 2;
+            const count_null = api.columnCount(null);
+            const count_live = api.columnCount(&machine);
+            const data_null = api.dataCount(null);
+            const data_live = api.dataCount(&machine);
+            const integer = api.columnInt(&machine, 0);
+            const value = api.columnValue(&machine, 0);
+            const text_type = api.columnType(&machine, 1);
+            const text = api.columnText(&machine, 1);
+            const bytes = api.columnBytes(&machine, 1);
+            const blob = api.columnBlob(&machine, 1);
+            const text16 = api.columnText16(&machine, 1);
+            const bytes16 = api.columnBytes16(&machine, 1);
+            const invalid = api.columnInt(&machine, 9);
+            const invalid_code = db.errCode;
+            std.debug.print("{s}\t{d}\tAPICOLUMNS\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, count_null, count_live, data_null, data_live, integer, @intFromBool(value == &row[0]), text_type, @intFromBool(text != null and std.mem.eql(u8, text.?[0..4], "text")), bytes, @intFromBool(blob != null), @intFromBool(text16 != null), bytes16, invalid, invalid_code });
+            vdbe_mem.release(&row[0]);
+            vdbe_mem.release(&row[1]);
+            machine.pResultRow = null;
+            machine.nResColumn = 0;
+            sequence += 1;
+            continue;
+        }
+        if (std.mem.eql(u8, command, "APIVLIST")) {
+            var list: ?*types.VList = null;
+            list = api.vlistAdd(&db, list, ":alpha", 6, 1);
+            list = api.vlistAdd(&db, list, "@beta", 5, 2);
+            machine.pVList = list;
+            machine.nVar = 2;
+            const first_name = api.bindParameterName(&machine, 1);
+            const first_index = api.bindParameterIndex(&machine, ":alpha");
+            const second_index = api.parameterIndex(&machine, "@beta", 5);
+            const missing = api.parameterIndex(&machine, "$missing", 8);
+            std.debug.print("{s}\t{d}\tAPIVLIST\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, api.bindParameterCount(&machine), @intFromBool(first_name != null and std.mem.eql(u8, std.mem.span(first_name.?), ":alpha")), first_index, second_index, missing, @intFromBool(list != null) });
+            builder.db_allocator.free(&db, if (list) |owned| @ptrCast(owned) else null);
+            machine.pVList = null;
+            machine.nVar = 0;
+            sequence += 1;
+            continue;
+        }
+        if (std.mem.eql(u8, command, "APIVLISTOOM")) {
+            db.lookaside.bDisable = 1;
+            db.lookaside.sz = 0;
+            var list: ?*types.VList = null;
+            list = api.vlistAdd(&db, list, "alpha", 5, 1);
+            list = api.vlistAdd(&db, list, "beta", 4, 2);
+            const before = list;
+            fault_backend.fail_at = fault_backend.attempt_count;
+            fault_backend.sticky = false;
+            fault_backend.fired = false;
+            list = api.vlistAdd(&db, list, "01234567890123456789", 20, 3);
+            const retained = list == before;
+            const missing = api.vlistNameToNumber(list, "01234567890123456789", 20);
+            const oom_state = db.mallocFailed;
+            if (db.mallocFailed != 0) builder.db_allocator.oomClear(&db);
+            fault_backend.fail_at = null;
+            fault_backend.sticky = false;
+            fault_backend.fired = false;
+            std.debug.print("{s}\t{d}\tAPIVLISTOOM\t{d}\t{d}\t{d}\n", .{ case_name, sequence, @intFromBool(retained), missing, oom_state });
+            builder.db_allocator.free(&db, if (list) |owned| @ptrCast(owned) else null);
+            db.lookaside.bDisable = 0;
+            db.lookaside.sz = db.lookaside.szTrue;
+            sequence += 1;
+            continue;
+        }
+        if (std.mem.eql(u8, command, "APIBINDINGS")) {
+            var from = std.mem.zeroes(types.Vdbe);
+            var to = std.mem.zeroes(types.Vdbe);
+            var from_values = [_]types.Mem{ std.mem.zeroes(types.Mem), std.mem.zeroes(types.Mem) };
+            var to_values = [_]types.Mem{ std.mem.zeroes(types.Mem), std.mem.zeroes(types.Mem) };
+            from.db = &db;
+            to.db = &db;
+            from.nVar = 2;
+            to.nVar = 2;
+            from.aVar = &from_values;
+            to.aVar = &to_values;
+            from.prepFlags = types.prepare_save_sql;
+            to.prepFlags = types.prepare_save_sql;
+            for (&from_values) |*value| vdbe_mem.init(value, &db, types.mem_flag.null_);
+            for (&to_values) |*value| vdbe_mem.init(value, &db, types.mem_flag.null_);
+            vdbe_mem.setInt64(&from_values[0], 11);
+            vdbe_mem.setInt64(&from_values[1], 22);
+            const direct_result = api.transferBindings(&from, &to);
+            vdbe_mem.setInt64(&from_values[0], 33);
+            vdbe_mem.setInt64(&from_values[1], 44);
+            from.expmask = 1;
+            to.expmask = 1;
+            const deprecated_result = api.transferBindingsDeprecated(&from, &to);
+            const clear_result = api.clearBindings(&to);
+            std.debug.print("{s}\t{d}\tAPIBINDINGS\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, direct_result, deprecated_result, clear_result, from.flags.expired, to.flags.expired, from_values[0].flags, to_values[0].flags, to_values[1].flags, to.expmask });
+            sequence += 1;
+            continue;
+        }
+        if (std.mem.eql(u8, command, "APIMETA")) {
+            var second = std.mem.zeroes(types.Vdbe);
+            var finalized = std.mem.zeroes(types.Vdbe);
+            second.db = &db;
+            machine.pVNext = &second;
+            db.pVdbe = &machine;
+            machine.flags.readOnly = true;
+            machine.flags.explain = 2;
+            machine.eVdbeState = types.vdbe_state.run;
+            machine.flags.expired = 2;
+            machine.zSql = @constCast("select 1");
+            machine.aCounter[3] = 17;
+            const counter_before = api.statementStatus(&machine, 3, true);
+            const counter_after = api.statementStatus(&machine, 3, false);
+            const sql_text = api.statementSql(&machine);
+            std.debug.print("{s}\t{d}\tAPIMETA\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, api.statementExpired(&machine), @intFromBool(api.databaseHandle(&machine) == &db), api.statementReadonly(&machine), api.statementIsExplain(&machine), api.statementBusy(&machine), @intFromBool(api.nextStatement(&db, null) == &machine), @intFromBool(api.nextStatement(&db, &machine) == &second), counter_before, counter_after, @intFromBool(sql_text != null and std.mem.eql(u8, std.mem.span(sql_text.?), "select 1")), @intFromBool(api.vdbeSafety(&machine)), @intFromBool(api.vdbeSafety(&finalized)), @intFromBool(api.vdbeSafetyNotNull(null)) });
+            db.pVdbe = null;
+            machine.pVNext = null;
+            machine.flags.readOnly = false;
+            machine.flags.explain = 0;
+            machine.flags.expired = 0;
+            machine.eVdbeState = types.vdbe_state.init;
+            machine.zSql = null;
+            sequence += 1;
+            continue;
+        }
+        if (std.mem.eql(u8, command, "APIMEMUSED")) {
+            var owner_parse = std.mem.zeroes(types.Parse);
+            owner_parse.db = @ptrCast(&db);
+            const owned = builder.create(&owner_parse).?;
+            _ = builder.addOperation0(owned, .Noop);
+            const measured = api.statementStatus(owned, 99, false);
+            const still_linked = db.pVdbe == owned and owned.db == &db;
+            std.debug.print("{s}\t{d}\tAPIMEMUSED\t{d}\t{d}\n", .{ case_name, sequence, @intFromBool(measured > 0), @intFromBool(still_linked) });
+            builder.deleteVdbe(owned);
+            sequence += 1;
+            continue;
+        }
+        if (std.mem.eql(u8, command, "APIEXIT")) {
+            db.errMask = 0xff;
+            const masked = api.apiExit(&db, 0x1234);
+            _ = builder.db_allocator.oomFault(&db);
+            const oom_result = api.apiExit(&db, 0);
+            const oom_state = db.mallocFailed;
+            const error_code = db.errCode;
+            std.debug.print("{s}\t{d}\tAPIEXIT\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, masked, oom_result, oom_state, error_code });
+            sequence += 1;
+            continue;
+        }
         if (std.mem.eql(u8, command, "SETSQLNULL")) {
             builder.setSql(null, "ignored", 7, 3);
             std.debug.print("{s}\t{d}\tSETSQLNULL\n", .{ case_name, sequence });
@@ -909,6 +1048,67 @@ pub fn main(init: std.process.Init) !void {
             machine.aOp.?[@intCast(address)].p4.p = owner;
             const changed = builder.changeToNoop(&machine, address);
             std.debug.print("{s}\t{d}\tP4NOOP\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, changed, @intFromBool(lookasideContains(&db, owner)), @intFromEnum(machine.aOp.?[@intCast(address)].opcode), machine.aOp.?[@intCast(address)].p4type });
+            sequence += 1;
+            continue;
+        }
+        if (std.mem.eql(u8, command, "P4CHANGE")) {
+            const static_text: [*:0]const u8 = "stable";
+            const address = builder.addOperation0(&machine, .Noop);
+            builder.changeP4(&machine, address, @ptrCast(@constCast(static_text)), types.p4.static);
+            const static_identity = machine.aOp.?[@intCast(address)].p4.z == static_text;
+            builder.changeP4Int32(&machine, address, 123456);
+            const integer_value = machine.aOp.?[@intCast(address)].p4.i;
+            builder.changeP4String(&machine, -1, "alphabet", 5);
+            const dynamic_owner = machine.aOp.?[@intCast(address)].p4.p.?;
+            const dynamic_type = machine.aOp.?[@intCast(address)].p4type;
+            const dynamic_text = std.mem.eql(u8, machine.aOp.?[@intCast(address)].p4.z.?[0..5], "alpha");
+            const dynamic_distinct = machine.aOp.?[@intCast(address)].p4.z != static_text;
+            _ = builder.changeToNoop(&machine, address);
+            const dynamic_freed = lookasideContains(&db, dynamic_owner);
+            const oom_address = builder.addOperation0(&machine, .Noop);
+            const oom_owner = builder.db_allocator.mallocRawNN(&db, 32).?;
+            _ = builder.db_allocator.oomFault(&db);
+            builder.changeP4(&machine, oom_address, oom_owner, types.p4.dynamic);
+            const oom_owner_freed = lookasideContains(&db, oom_owner);
+            const oom_operation_type = machine.aOp.?[@intCast(oom_address)].p4type;
+            const oom_state = db.mallocFailed;
+            builder.db_allocator.oomClear(&db);
+            std.debug.print("{s}\t{d}\tP4CHANGE\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, @intFromBool(static_identity), integer_value, dynamic_type, @intFromBool(dynamic_text), @intFromBool(dynamic_distinct), @intFromBool(dynamic_freed), @intFromBool(oom_owner_freed), oom_operation_type, oom_state });
+            sequence += 1;
+            continue;
+        }
+        if (std.mem.eql(u8, command, "P4CHANGEVTAB")) {
+            var table = std.mem.zeroes(types.VTable);
+            table.db = &db;
+            table.nRef = 1;
+            const address = builder.addOperation0(&machine, .Noop);
+            builder.changeP4(&machine, address, &table, types.p4.vtab);
+            const after_lock = table.nRef;
+            const pointer_identity = machine.aOp.?[@intCast(address)].p4.p == @as(*anyopaque, @ptrCast(&table));
+            const owner_type = machine.aOp.?[@intCast(address)].p4type;
+            _ = builder.changeToNoop(&machine, address);
+            const after_release = table.nRef;
+            std.debug.print("{s}\t{d}\tP4CHANGEVTAB\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, after_lock, @intFromBool(pointer_identity), owner_type, after_release });
+            sequence += 1;
+            continue;
+        }
+        if (std.mem.eql(u8, command, "P4APPEND")) {
+            const address = builder.addOperation0(&machine, .Noop);
+            const normal_owner = builder.db_allocator.mallocRawNN(&db, 32).?;
+            builder.appendP4(&machine, normal_owner, types.p4.dynamic);
+            const pointer_identity = machine.aOp.?[@intCast(address)].p4.p == normal_owner;
+            const owner_type = machine.aOp.?[@intCast(address)].p4type;
+            _ = builder.changeToNoop(&machine, address);
+            const normal_freed = lookasideContains(&db, normal_owner);
+            const oom_address = builder.addOperation0(&machine, .Noop);
+            const oom_owner = builder.db_allocator.mallocRawNN(&db, 32).?;
+            _ = builder.db_allocator.oomFault(&db);
+            builder.appendP4(&machine, oom_owner, types.p4.dynamic);
+            const oom_freed = lookasideContains(&db, oom_owner);
+            const oom_operation_type = machine.aOp.?[@intCast(oom_address)].p4type;
+            const oom_state = db.mallocFailed;
+            builder.db_allocator.oomClear(&db);
+            std.debug.print("{s}\t{d}\tP4APPEND\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, @intFromBool(pointer_identity), owner_type, @intFromBool(normal_freed), @intFromBool(oom_freed), oom_operation_type, oom_state });
             sequence += 1;
             continue;
         }

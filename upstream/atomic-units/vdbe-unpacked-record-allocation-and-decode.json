@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-unpacked-record-allocation-and-decode",
   "title": "UnpackedRecord connection allocation and record decode",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "These functions allocate the contiguous UnpackedRecord/Mem workspace from the owning connection and decode a record header into bounded Mem fields using the serial-format helpers, including malformed payload nulling.",
     "source_files": [
@@ -83,7 +83,7 @@
     "The source pointer correction in malformed-record cleanup always selects the last decoded field and is expressed directly as field_count-1."
   ],
   "oracle": {
-    "protocol": "The shared worker allocates a four-field workspace and checks one-block interior layout, disables lookaside and forces allocation OOM, decodes a mixed signed/text/NULL record, then decodes a logically truncated 64-bit field from physically safe fixture storage and verifies NULL overwrite. C and Zig compare 363 observations.",
+    "protocol": "The shared worker allocates a four-field workspace and checks one-block interior layout, disables lookaside and forces allocation OOM, decodes a mixed signed/text/NULL record, then decodes a logically truncated 64-bit field from physically safe fixture storage and verifies NULL overwrite. C and Zig compare 366 observations.",
     "internal_observations": [
       "allocation/null and sticky OOM",
       "capacity nKeyField+1",
@@ -96,9 +96,9 @@
     "normalization": "Interior pointer normalizes to exact expected offset; external addresses are not compared. Flags, values, counts, text pointer identity, and OOM state are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No-lookaside first allocation failure returns null and sets sticky OOM without partial publication.",
     "io_crash_concurrency": "No I/O/callback; connection mutex remains caller obligation.",
@@ -122,6 +122,7 @@
     "notes": "Requires record comparison/opcode integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port and integrate record comparison families.",
     "Connect index/search opcodes to exact unpacked records.",
     "Independent fidelity review remains open."

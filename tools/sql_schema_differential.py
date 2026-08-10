@@ -11,4 +11,8 @@ def main():
  oracle,native=map(run,sys.argv[1:])
  if oracle!=native:raise SystemExit(f'SQL schema mismatch\noracle={oracle!r}\nnative={native!r}')
  print(f'sql-schema-differential: {len(native)} DDL lifecycle observations match')
-if __name__=='__main__':main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

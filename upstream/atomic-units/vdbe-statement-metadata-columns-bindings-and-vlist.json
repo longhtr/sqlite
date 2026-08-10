@@ -1,0 +1,512 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-statement-metadata-columns-bindings-and-vlist",
+  "title": "VDBE statement metadata, result columns, bindings, and variable lists",
+  "status": "inventoried",
+  "admission_ready": false,
+  "scope": {
+    "rationale": "These 37 coupled active-profile routines form the allocation-aware prepared-statement observation and binding layer: API safety, result-column access, VList variable identity, binding transfer/clear, statement metadata, counters, and API-exit OOM conversion.",
+    "source_files": [
+      {
+        "path": "src/malloc.c",
+        "sha256": "19f728f9a323aec82906a3e1c5f0e656a308a6892136e58c5cfd0c6c3832c961"
+      },
+      {
+        "path": "src/util.c",
+        "sha256": "f3ad5a891625459352c1b57c053d3b89dcc973206644126a857c0ff82b7ce37f"
+      },
+      {
+        "path": "src/vdbeapi.c",
+        "sha256": "233846129dc649ec3d1ae321612ee8833c937ee775766eb8e39deda07a6b19a6"
+      }
+    ],
+    "source_entity_ids": [
+      "src/malloc.c::function::apiHandleError::line-866",
+      "src/vdbeapi.c::function::columnMallocFailure::line-1367",
+      "src/vdbeapi.c::function::columnMem::line-1332",
+      "src/vdbeapi.c::function::columnNullValue::line-1291",
+      "src/malloc.c::function::sqlite3ApiExit::line-887",
+      "src/vdbeapi.c::function::sqlite3TransferBindings::line-1970",
+      "src/util.c::function::sqlite3VListAdd::line-2190",
+      "src/util.c::function::sqlite3VListNameToNum::line-2244",
+      "src/util.c::function::sqlite3VListNumToName::line-2228",
+      "src/vdbeapi.c::function::sqlite3VdbeParameterIndex::line-1959",
+      "src/vdbeapi.c::function::sqlite3_bind_parameter_count::line-1937",
+      "src/vdbeapi.c::function::sqlite3_bind_parameter_index::line-1963",
+      "src/vdbeapi.c::function::sqlite3_bind_parameter_name::line-1948",
+      "src/vdbeapi.c::function::sqlite3_clear_bindings::line-155",
+      "src/vdbeapi.c::function::sqlite3_column_blob::line-1387",
+      "src/vdbeapi.c::function::sqlite3_column_bytes::line-1397",
+      "src/vdbeapi.c::function::sqlite3_column_bytes16::line-1402",
+      "src/vdbeapi.c::function::sqlite3_column_count::line-1272",
+      "src/vdbeapi.c::function::sqlite3_column_double::line-1407",
+      "src/vdbeapi.c::function::sqlite3_column_int::line-1412",
+      "src/vdbeapi.c::function::sqlite3_column_int64::line-1417",
+      "src/vdbeapi.c::function::sqlite3_column_text::line-1422",
+      "src/vdbeapi.c::function::sqlite3_column_text16::line-1437",
+      "src/vdbeapi.c::function::sqlite3_column_type::line-1443",
+      "src/vdbeapi.c::function::sqlite3_column_value::line-1427",
+      "src/vdbeapi.c::function::sqlite3_data_count::line-1282",
+      "src/vdbeapi.c::function::sqlite3_db_handle::line-2021",
+      "src/vdbeapi.c::function::sqlite3_expired::line-29",
+      "src/vdbeapi.c::function::sqlite3_next_stmt::line-2091",
+      "src/vdbeapi.c::function::sqlite3_sql::line-2144",
+      "src/vdbeapi.c::function::sqlite3_stmt_busy::line-2080",
+      "src/vdbeapi.c::function::sqlite3_stmt_isexplain::line-2037",
+      "src/vdbeapi.c::function::sqlite3_stmt_readonly::line-2029",
+      "src/vdbeapi.c::function::sqlite3_stmt_status::line-2112",
+      "src/vdbeapi.c::function::sqlite3_transfer_bindings::line-1997",
+      "src/vdbeapi.c::function::vdbeSafety::line-46",
+      "src/vdbeapi.c::function::vdbeSafetyNotNull::line-54"
+    ],
+    "behavioral_block_ids": [
+      "src/malloc.c::function::apiHandleError::behavior::if::line-867-column-3::ordinal-0",
+      "src/malloc.c::function::apiHandleError::behavior::return::line-870-column-5::ordinal-0",
+      "src/malloc.c::function::apiHandleError::behavior::return::line-872-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3ApiExit::behavior::assert::line-892-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3ApiExit::behavior::assert::line-893-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3ApiExit::behavior::if::line-894-column-3::ordinal-0",
+      "src/malloc.c::function::sqlite3ApiExit::behavior::return::line-895-column-5::ordinal-0",
+      "src/malloc.c::function::sqlite3ApiExit::behavior::return::line-897-column-3::ordinal-0",
+      "src/util.c::function::sqlite3VListAdd::behavior::assert::line-2202-column-3::ordinal-0",
+      "src/util.c::function::sqlite3VListAdd::behavior::if::line-2203-column-3::ordinal-0",
+      "src/util.c::function::sqlite3VListAdd::behavior::conditional::line-2205-column-29::ordinal-0",
+      "src/util.c::function::sqlite3VListAdd::behavior::if::line-2207-column-5::ordinal-0",
+      "src/util.c::function::sqlite3VListAdd::behavior::return::line-2207-column-19::ordinal-0",
+      "src/util.c::function::sqlite3VListAdd::behavior::if::line-2208-column-5::ordinal-0",
+      "src/util.c::function::sqlite3VListAdd::behavior::assert::line-2217-column-3::ordinal-0",
+      "src/util.c::function::sqlite3VListAdd::behavior::return::line-2220-column-3::ordinal-0",
+      "src/util.c::function::sqlite3VListNumToName::behavior::if::line-2230-column-3::ordinal-0",
+      "src/util.c::function::sqlite3VListNumToName::behavior::return::line-2230-column-16::ordinal-0",
+      "src/util.c::function::sqlite3VListNumToName::behavior::do::line-2233-column-3::ordinal-0",
+      "src/util.c::function::sqlite3VListNumToName::behavior::if::line-2234-column-5::ordinal-0",
+      "src/util.c::function::sqlite3VListNumToName::behavior::return::line-2234-column-24::ordinal-0",
+      "src/util.c::function::sqlite3VListNumToName::behavior::return::line-2237-column-3::ordinal-0",
+      "src/util.c::function::sqlite3VListNameToNum::behavior::if::line-2246-column-3::ordinal-0",
+      "src/util.c::function::sqlite3VListNameToNum::behavior::return::line-2246-column-16::ordinal-0",
+      "src/util.c::function::sqlite3VListNameToNum::behavior::do::line-2249-column-3::ordinal-0",
+      "src/util.c::function::sqlite3VListNameToNum::behavior::if::line-2251-column-5::ordinal-0",
+      "src/util.c::function::sqlite3VListNameToNum::behavior::return::line-2251-column-52::ordinal-0",
+      "src/util.c::function::sqlite3VListNameToNum::behavior::return::line-2254-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_expired::behavior::if::line-31-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_expired::behavior::return::line-37-column-3::ordinal-0",
+      "src/vdbeapi.c::function::vdbeSafety::behavior::if::line-47-column-3::ordinal-0",
+      "src/vdbeapi.c::function::vdbeSafety::behavior::return::line-49-column-5::ordinal-0",
+      "src/vdbeapi.c::function::vdbeSafety::behavior::return::line-51-column-5::ordinal-0",
+      "src/vdbeapi.c::function::vdbeSafetyNotNull::behavior::if::line-55-column-3::ordinal-0",
+      "src/vdbeapi.c::function::vdbeSafetyNotNull::behavior::return::line-57-column-5::ordinal-0",
+      "src/vdbeapi.c::function::vdbeSafetyNotNull::behavior::return::line-59-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_clear_bindings::behavior::for::line-171-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_clear_bindings::behavior::assert::line-175-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_clear_bindings::behavior::if::line-176-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_clear_bindings::behavior::return::line-180-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_count::behavior::if::line-1274-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_count::behavior::return::line-1274-column-16::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_count::behavior::return::line-1275-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_data_count::behavior::if::line-1284-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_data_count::behavior::return::line-1284-column-38::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_data_count::behavior::return::line-1285-column-3::ordinal-0",
+      "src/vdbeapi.c::function::columnNullValue::behavior::return::line-1323-column-3::ordinal-0",
+      "src/vdbeapi.c::function::columnMem::behavior::if::line-1337-column-3::ordinal-0",
+      "src/vdbeapi.c::function::columnMem::behavior::return::line-1337-column-16::ordinal-0",
+      "src/vdbeapi.c::function::columnMem::behavior::assert::line-1338-column-3::ordinal-0",
+      "src/vdbeapi.c::function::columnMem::behavior::if::line-1340-column-3::ordinal-0",
+      "src/vdbeapi.c::function::columnMem::behavior::return::line-1346-column-3::ordinal-0",
+      "src/vdbeapi.c::function::columnMallocFailure::behavior::if::line-1375-column-3::ordinal-0",
+      "src/vdbeapi.c::function::columnMallocFailure::behavior::assert::line-1376-column-5::ordinal-0",
+      "src/vdbeapi.c::function::columnMallocFailure::behavior::assert::line-1377-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_blob::behavior::return::line-1395-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_bytes::behavior::return::line-1400-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_bytes16::behavior::return::line-1405-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_double::behavior::return::line-1410-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_int::behavior::return::line-1415-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_int64::behavior::return::line-1420-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_text::behavior::return::line-1425-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_value::behavior::if::line-1429-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_value::behavior::return::line-1434-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_text16::behavior::return::line-1440-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_column_type::behavior::return::line-1446-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_parameter_count::behavior::return::line-1939-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_parameter_count::behavior::conditional::line-1939-column-10::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_parameter_name::behavior::if::line-1950-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_parameter_name::behavior::return::line-1950-column-14::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_parameter_name::behavior::return::line-1951-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3VdbeParameterIndex::behavior::if::line-1960-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3VdbeParameterIndex::behavior::return::line-1960-column-26::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3VdbeParameterIndex::behavior::return::line-1961-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_parameter_index::behavior::return::line-1964-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3TransferBindings::behavior::assert::line-1974-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3TransferBindings::behavior::assert::line-1975-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3TransferBindings::behavior::for::line-1977-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3TransferBindings::behavior::return::line-1981-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_transfer_bindings::behavior::if::line-2000-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_transfer_bindings::behavior::return::line-2001-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_transfer_bindings::behavior::assert::line-2003-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_transfer_bindings::behavior::if::line-2004-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_transfer_bindings::behavior::assert::line-2007-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_transfer_bindings::behavior::if::line-2008-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_transfer_bindings::behavior::return::line-2011-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_db_handle::behavior::return::line-2022-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_db_handle::behavior::conditional::line-2022-column-10::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_readonly::behavior::return::line-2030-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_readonly::behavior::conditional::line-2030-column-10::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_isexplain::behavior::return::line-2038-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_isexplain::behavior::conditional::line-2038-column-10::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_busy::behavior::return::line-2082-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_next_stmt::behavior::if::line-2100-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_next_stmt::behavior::return::line-2106-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_status::behavior::if::line-2123-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_status::behavior::assert::line-2128-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_status::behavior::if::line-2136-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_status::behavior::return::line-2138-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_sql::behavior::return::line-2146-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_sql::behavior::conditional::line-2146-column-10::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Step/reset/finalize execution lifecycle",
+      "Binding setters and column-name/declared-type encoding conversion",
+      "Expanded SQL rendering and statement explain-mode reprepare",
+      "VFS system-error lookup for unrelated CANTOPEN/IOERR paths"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "connection-allocation-for-vdbe-growth",
+      "vdbe-builder-state-representations",
+      "vdbe-result-column-metadata-ownership",
+      "vdbe-saved-sql-and-reprepare-bytecode-swap",
+      "vdbe-p4-attachment-dispatch-and-object-destruction"
+    ],
+    "external_source_responsibilities": [
+      "Connection mutex dispatch and Mem conversion/release primitives",
+      "sqlite3Error/sqlite3SystemError behavior outside the RANGE and NOMEM paths reached here"
+    ],
+    "caller_closure": "All active functions in the selected statement metadata/result-column/VList/binding slice are assigned. Step/reset/finalize, bind setters, column names, and expanded SQL remain separate follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "Nullable or live source-layout VDBE, result-row index, parameter identity, status operation, and connection",
+      "Source-layout Mem result/binding arrays and allocator-owned VList"
+    ],
+    "outputs": [
+      "Exact nullable metadata and result-column value conversions",
+      "Stable parameter count/name/index and moved-or-cleared binding owners",
+      "Statement-list traversal, counters, SQL owner, safety/expiration state, and normalized API result"
+    ],
+    "ownership": "Column access borrows result Mem storage; sqlite3_column_value converts static ownership to ephemeral. Binding transfer moves each Mem owner and nulls the source. VList growth preserves the old allocation on OOM. MEMUSED performs byte-count destruction without unlinking or freeing the live statement.",
+    "state_and_results": "Column APIs hold the connection mutex from column lookup through allocation-failure normalization. Invalid columns set RANGE. OOM at API exit becomes NOMEM and clears sticky OOM when no VDBE executes. Clear/transfer expiration follows expmask and SAVESQL invariants.",
+    "locks_callbacks_io": "Connection mutex brackets mutable statement, binding, list, and error state. Safety failures invoke the configured log callback. No direct I/O in the selected slice.",
+    "failure_and_continuation": "VList realloc OOM returns the original list unchanged. Column conversion OOM is normalized at API exit. Statements and binding arrays remain reusable after clear, move, invalid-column access, and status reads."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/malloc.c::function::apiHandleError::line-866",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::handleApiError"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::columnMallocFailure::line-1367",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnMallocFailure"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::columnMem::line-1332",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnMem"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::columnNullValue::line-1291",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnNullValue"
+      ]
+    },
+    {
+      "source_entity_id": "src/malloc.c::function::sqlite3ApiExit::line-887",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::apiExit"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3TransferBindings::line-1970",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::transferBindings"
+      ]
+    },
+    {
+      "source_entity_id": "src/util.c::function::sqlite3VListAdd::line-2190",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::vlistAdd"
+      ]
+    },
+    {
+      "source_entity_id": "src/util.c::function::sqlite3VListNameToNum::line-2244",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::vlistNameToNumber"
+      ]
+    },
+    {
+      "source_entity_id": "src/util.c::function::sqlite3VListNumToName::line-2228",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::vlistNumberToName"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3VdbeParameterIndex::line-1959",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::parameterIndex"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_parameter_count::line-1937",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::bindParameterCount"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_parameter_index::line-1963",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::bindParameterIndex"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_parameter_name::line-1948",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::bindParameterName"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_clear_bindings::line-155",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::clearBindings"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_column_blob::line-1387",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnBlob"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_column_bytes::line-1397",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnBytes"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_column_bytes16::line-1402",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnBytes16"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_column_count::line-1272",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnCount"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_column_double::line-1407",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnDouble"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_column_int::line-1412",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnInt"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_column_int64::line-1417",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnInt64"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_column_text::line-1422",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnText"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_column_text16::line-1437",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnText16"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_column_type::line-1443",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnType"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_column_value::line-1427",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::columnValue"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_data_count::line-1282",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::dataCount"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_db_handle::line-2021",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::databaseHandle"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_expired::line-29",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::statementExpired"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_next_stmt::line-2091",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::nextStatement"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_sql::line-2144",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::statementSql"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_stmt_busy::line-2080",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::statementBusy"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_stmt_isexplain::line-2037",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::statementIsExplain"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_stmt_readonly::line-2029",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::statementReadonly"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_stmt_status::line-2112",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::statementStatus"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_transfer_bindings::line-1997",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::transferBindingsDeprecated"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::vdbeSafety::line-46",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::vdbeSafety"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::vdbeSafetyNotNull::line-54",
+      "relation": "source-statement-api-and-vlist-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::vdbeSafetyNotNull"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C sqlite3_stmt casts become typed nullable Vdbe pointers.",
+    "The packed source Vdbe bitfields are accessed through the exact-layout VdbeFlags structure.",
+    "VList remains the source variable-length integer allocation behind an opaque pointer; helpers cast only at its ownership boundary.",
+    "UTF16NATIVE is selected from the Zig target endianness at compile time."
+  ],
+  "oracle": {
+    "protocol": "One shared worker exercises nullable/live column counts, every selected column conversion, invalid-column RANGE state, VList add/lookup/realloc OOM, direct/deprecated binding transfer and clear, expiration/list/status/SQL metadata, safety failures, byte-count destruction, and API-exit masking/OOM. C and Zig compare 373 observations.",
+    "internal_observations": [
+      "result-row identity, values, encodings, byte counts, types, and RANGE result",
+      "VList retained identity and lookups across realloc OOM",
+      "binding flags, expiration, move, clear, and result codes",
+      "statement list, state flags, counters, SQL identity, safety, and measured-memory continuation",
+      "API mask, OOM clear, and connection error code"
+    ],
+    "normalization": "Pointers normalize only to nullness, identity, retained allocation, and list ownership. Values, flags, counts, result codes, OOM state, and ordering are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "The neutral VList case forces heap realloc OOM and proves old-list continuation. Existing Mem and P4 dependencies cover conversion/allocation ownership; APIEXIT proves sticky OOM normalization.",
+    "io_crash_concurrency": "No direct I/O or crash boundary. Connection mutex entry/leave is preserved; broader concurrent statement use remains integration assurance.",
+    "malformed_input": "Nullable statement APIs and invalid result-column index behavior are covered. Source assertions remain for trusted VList lengths, status indices, and binding-count equality.",
+    "continuation": "Workers continue through column RANGE, VList OOM clear, binding clear/transfer, byte-count statement measurement, and API OOM normalization.",
+    "performance": "Column/metadata access remains constant time; VList growth and linear lookup preserve source complexity; binding operations remain linear in nVar.",
+    "commands": [
+      "zig build vdbe-builder-differential -j1",
+      "zig build vdbe-mem-differential -j1",
+      "python3 tools/verify_atomic_units.py"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_api.zig source-layout statement API layer",
+    "native_call_path": "Exported from src/root.zig and exercised through the source-layout native VDBE worker; public statement exports still use the bounded statement owner.",
+    "bounded_owner_retired": "No. Step/reset/finalize and bind-setter closure must land before switching public statement ownership."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires complete source-layout statement lifecycle integration and isolated fidelity review."
+  },
+  "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
+    "Port bind setters and column name/declared-type APIs.",
+    "Port and integrate VDBE step/reset/finalize before replacing bounded public statement ownership.",
+    "Independent fidelity review remains open."
+  ]
+}

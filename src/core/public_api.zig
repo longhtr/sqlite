@@ -9,10 +9,12 @@ const vfs = @import("vfs.zig");
 const mutex = @import("mutex.zig");
 const global = @import("global.zig");
 const auto_extension = @import("auto_extension.zig");
+const logging = @import("logging.zig");
+const function_registry = @import("internal/function_registry.zig");
+const pattern_match = @import("internal/pattern.zig");
+const numeric = @import("numeric.zig");
 pub const sqlite3_str = opaque {};
-const LogCallback = *const fn (?*anyopaque, c_int, [*:0]const u8) callconv(.c) void;
-var configured_log: ?LogCallback = null;
-var configured_log_context: ?*anyopaque = null;
+const LogCallback = logging.Callback;
 
 pub export fn zig_sqlite3_set_extension_api(pointer: ?*const anyopaque) callconv(.c) void {
     auto_extension.setApi(pointer);
@@ -24,6 +26,8 @@ pub fn runAutoExtensions(database: ?*anyopaque) c_int {
     return auto_extension.run(database);
 }
 pub export fn sqlite3_auto_extension(pointer: ?*const fn () callconv(.c) void) callconv(.c) c_int {
+    const rc = global.initializeProcess();
+    if (rc != 0) return rc;
     return auto_extension.add(pointer);
 }
 pub export fn sqlite3_cancel_auto_extension(pointer: ?*const fn () callconv(.c) void) callconv(.c) c_int {
@@ -33,22 +37,24 @@ pub export fn sqlite3_reset_auto_extension() callconv(.c) void {
     auto_extension.reset();
 }
 extern "c" fn getrandom(*anyopaque, usize, c_uint) isize;
-extern "c" fn usleep(c_uint) c_int;
 var random_lock: std.c.pthread_mutex_t = std.c.PTHREAD_MUTEX_INITIALIZER;
 
 fn ensure() void {
-    _ = global.initializeProcess();
+    if (global.initializeProcess() == 0) function_registry.registerPortedBuiltinFunctions();
 }
 pub export fn sqlite3_initialize() callconv(.c) c_int {
-    return global.initializeProcess();
+    const result = global.initializeProcess();
+    if (result == 0) function_registry.registerPortedBuiltinFunctions();
+    return result;
 }
 pub export fn sqlite3_shutdown() callconv(.c) c_int {
     return global.shutdownProcess();
 }
 pub export fn sqlite3_os_init() callconv(.c) c_int {
-    return 0;
+    return global.initializeOs();
 }
 pub export fn sqlite3_os_end() callconv(.c) c_int {
+    global.shutdownOs();
     return 0;
 }
 pub export fn zig_sqlite3_is_initialized() callconv(.c) c_int {
@@ -82,31 +88,17 @@ pub export fn zig_sqlite3_config_memstatus(enabled: c_int) callconv(.c) c_int {
     return 0;
 }
 pub export fn zig_sqlite3_config_log(callback: ?LogCallback, context: ?*anyopaque) callconv(.c) c_int {
-    configured_log = callback;
-    configured_log_context = context;
+    logging.configure(callback, context);
     return 0;
 }
 pub export fn zig_sqlite3_log_message(code: c_int, message: ?[*:0]const u8) callconv(.c) void {
-    const callback = configured_log orelse return;
-    callback(configured_log_context, code, message orelse return);
-}
-
-const TypedLogDispatch = struct {
-    callback: LogCallback,
-    context: ?*anyopaque,
-};
-
-fn dispatchTypedLog(context: ?*anyopaque, code: c_int, message: []const u8) void {
-    const dispatch: *TypedLogDispatch = @ptrCast(@alignCast(context.?));
-    dispatch.callback(dispatch.context, code, @ptrCast(message.ptr));
+    logging.message(code, message);
 }
 
 /// Zig-native typed sqlite3_log() responsibility.
 pub fn logFormat(code: c_int, format: []const u8, arguments: []const formatter.FormatArgument) void {
-    const callback = configured_log orelse return;
     ensure();
-    var dispatch = TypedLogDispatch{ .callback = callback, .context = configured_log_context };
-    formatter.renderLogMessage(&memory.process_manager, &dispatch, dispatchTypedLog, code, format, arguments);
+    logging.format(code, format, arguments);
 }
 
 pub export fn sqlite3_malloc(n: c_int) callconv(.c) ?*anyopaque {
@@ -154,8 +146,8 @@ pub export fn sqlite3_status(operation: c_int, current: ?*c_int, highwater: ?*c_
     var high: i64 = 0;
     const rc = sqlite3_status64(operation, &now, &high, reset);
     if (rc != 0 or current == null or highwater == null) return if (rc != 0) rc else 21;
-    current.?.* = @intCast(std.math.clamp(now, std.math.minInt(c_int), std.math.maxInt(c_int)));
-    highwater.?.* = @intCast(std.math.clamp(high, std.math.minInt(c_int), std.math.maxInt(c_int)));
+    current.?.* = @bitCast(@as(u32, @truncate(@as(u64, @bitCast(now)))));
+    highwater.?.* = @bitCast(@as(u32, @truncate(@as(u64, @bitCast(high)))));
     return 0;
 }
 pub export fn sqlite3_soft_heap_limit64(n: i64) callconv(.c) i64 {
@@ -172,9 +164,6 @@ pub export fn sqlite3_soft_heap_limit(n: c_int) callconv(.c) void {
 pub export fn sqlite3_release_memory(n: c_int) callconv(.c) c_int {
     return memory.releaseMemory(n);
 }
-pub export fn sqlite3_db_release_memory(database: ?*anyopaque) callconv(.c) c_int {
-    return if (database != null) 0 else 21;
-}
 pub export fn sqlite3_enable_shared_cache(_: c_int) callconv(.c) c_int {
     return 0;
 }
@@ -185,10 +174,18 @@ pub export fn sqlite3_thread_cleanup() callconv(.c) void {}
 pub export fn sqlite3_memory_alarm(_: ?*const anyopaque, _: ?*anyopaque, _: i64) callconv(.c) c_int {
     return memory.memoryAlarm();
 }
+/// Source `sqlite3_sleep()`: route millisecond sleeps through the active VFS
+/// microsecond callback and return its measured duration in milliseconds.
+fn sleepMilliseconds(milliseconds: c_int) c_int {
+    const process_vfs = vfs.findProcessVfs(null) orelse return 0;
+    const sleep = process_vfs.xSleep orelse return 0;
+    const bounded = @max(milliseconds, 0);
+    const microseconds = std.math.mul(c_int, bounded, 1000) catch std.math.maxInt(c_int);
+    return @divTrunc(sleep(process_vfs, microseconds), 1000);
+}
+
 pub export fn sqlite3_sleep(milliseconds: c_int) callconv(.c) c_int {
-    if (milliseconds <= 0) return 0;
-    _ = usleep(@intCast(@as(i64, milliseconds) * 1000));
-    return milliseconds;
+    return sleepMilliseconds(milliseconds);
 }
 pub export fn sqlite3_randomness(n: c_int, output: ?*anyopaque) callconv(.c) void {
     ensure();
@@ -206,19 +203,46 @@ pub export fn sqlite3_randomness(n: c_int, output: ?*anyopaque) callconv(.c) voi
     sqlite_random.process_state.fill(@as([*]u8, @ptrCast(output.?))[0..@intCast(n)], &entropy);
 }
 
-const options = [_][*:0]const u8{ "THREADSAFE=1", "DEFAULT_PAGE_SIZE=4096", "DEFAULT_SYNCHRONOUS=2", "DEFAULT_WAL_SYNCHRONOUS=1", "MAX_VARIABLE_NUMBER=32766" };
+const options = [_][*:0]const u8{
+    "THREADSAFE=1",
+    "DEFAULT_PAGE_SIZE=4096",
+    "DEFAULT_SYNCHRONOUS=2",
+    "DEFAULT_WAL_SYNCHRONOUS=2",
+    "ENABLE_MATH_FUNCTIONS",
+    "ENABLE_PERCENTILE",
+    "HAVE_ZLIB",
+    "MAX_LENGTH=1000000000",
+    "MAX_SQL_LENGTH=1000000000",
+    "MAX_COLUMN=2000",
+    "MAX_EXPR_DEPTH=1000",
+    "MAX_COMPOUND_SELECT=500",
+    "MAX_VDBE_OP=250000000",
+    "MAX_FUNCTION_ARG=1000",
+    "MAX_ATTACHED=10",
+    "MAX_LIKE_PATTERN_LENGTH=50000",
+    "MAX_VARIABLE_NUMBER=32766",
+    "MAX_TRIGGER_DEPTH=1000",
+    "MAX_WORKER_THREADS=8",
+    "MAX_PARSER_DEPTH=2500",
+};
 pub export fn sqlite3_compileoption_get(index: c_int) callconv(.c) ?[*:0]const u8 {
     return if (index >= 0 and index < options.len) options[@intCast(index)] else null;
 }
-pub export fn sqlite3_compileoption_used(name_pointer: ?[*:0]const u8) callconv(.c) c_int {
-    const name = if (name_pointer) |p| std.mem.span(p) else return 0;
-    const stripped = if (std.ascii.startsWithIgnoreCase(name, "SQLITE_")) name[7..] else name;
+/// Source `sqlite3_compileoption_used()`: match the pinned option table with
+/// optional SQLITE_ prefix and stop only at a non-identifier boundary.
+fn compileOptionUsed(name_pointer: ?[*:0]const u8) c_int {
+    const name = if (name_pointer) |pointer| std.mem.span(pointer) else return 0;
+    const sought = if (std.ascii.startsWithIgnoreCase(name, "SQLITE_")) name[7..] else name;
     for (options) |option| {
-        const text = std.mem.span(option);
-        const base = text[0..(std.mem.indexOfScalar(u8, text, '=') orelse text.len)];
-        if (std.ascii.eqlIgnoreCase(base, stripped)) return 1;
+        const candidate = std.mem.span(option);
+        if (sought.len > candidate.len or !std.ascii.eqlIgnoreCase(sought, candidate[0..sought.len])) continue;
+        if (sought.len == candidate.len or !(std.ascii.isAlphanumeric(candidate[sought.len]) or candidate[sought.len] == '_')) return 1;
     }
     return 0;
+}
+
+pub export fn sqlite3_compileoption_used(name_pointer: ?[*:0]const u8) callconv(.c) c_int {
+    return compileOptionUsed(name_pointer);
 }
 
 pub export fn sqlite3_keyword_count() callconv(.c) c_int {
@@ -254,34 +278,55 @@ fn compare(a: []const u8, b: []const u8, limit: ?usize) c_int {
     if (limit != null and n == limit.?) return 0;
     return if (a.len < b.len) -1 else if (a.len > b.len) 1 else 0;
 }
-fn wildcard(pattern: []const u8, text: []const u8, many: u8, one: u8, fold: bool) bool {
-    var p: usize = 0;
-    var t: usize = 0;
-    var star: ?usize = null;
-    var retry: usize = 0;
-    while (t < text.len) {
-        if (p < pattern.len and (pattern[p] == one or (if (fold) std.ascii.toLower(pattern[p]) == std.ascii.toLower(text[t]) else pattern[p] == text[t]))) {
-            p += 1;
-            t += 1;
-        } else if (p < pattern.len and pattern[p] == many) {
-            star = p;
-            p += 1;
-            retry = t;
-        } else if (star != null) {
-            p = star.? + 1;
-            retry += 1;
-            t = retry;
-        } else return false;
-    }
-    while (p < pattern.len and pattern[p] == many) p += 1;
-    return p == pattern.len;
-}
 pub export fn sqlite3_strglob(pattern: ?[*:0]const u8, text: ?[*:0]const u8) callconv(.c) c_int {
-    return if (pattern != null and text != null and wildcard(std.mem.span(pattern.?), std.mem.span(text.?), '*', '?', false)) 0 else 1;
+    return pattern_match.stringGlob(pattern, text);
 }
 pub export fn sqlite3_strlike(pattern: ?[*:0]const u8, text: ?[*:0]const u8, escape: c_uint) callconv(.c) c_int {
-    _ = escape;
-    return if (pattern != null and text != null and wildcard(std.mem.span(pattern.?), std.mem.span(text.?), '%', '_', true)) 0 else 1;
+    return pattern_match.stringLike(pattern, text, escape);
+}
+
+const CreatedFilename = struct {
+    database: [*:0]u8,
+    allocation: *anyopaque,
+    allocation_end: [*]u8,
+};
+const CreatedLayout = struct { parameters: [*:0]u8, journal: [*:0]u8, wal: [*:0]u8 };
+var created_filenames: [64]?CreatedFilename = [_]?CreatedFilename{null} ** 64;
+var filename_lock: std.c.pthread_mutex_t = std.c.PTHREAD_MUTEX_INITIALIZER;
+
+fn createdFilename(pointer: [*:0]const u8) ?CreatedFilename {
+    std.debug.assert(std.c.pthread_mutex_lock(&filename_lock) == .SUCCESS);
+    defer std.debug.assert(std.c.pthread_mutex_unlock(&filename_lock) == .SUCCESS);
+    for (created_filenames) |record| {
+        const present = record orelse continue;
+        if (@intFromPtr(present.database) == @intFromPtr(pointer)) return present;
+    }
+    return null;
+}
+
+fn registerCreatedFilename(record: CreatedFilename) bool {
+    std.debug.assert(std.c.pthread_mutex_lock(&filename_lock) == .SUCCESS);
+    defer std.debug.assert(std.c.pthread_mutex_unlock(&filename_lock) == .SUCCESS);
+    for (&created_filenames) |*slot| {
+        if (slot.* == null) {
+            slot.* = record;
+            return true;
+        }
+    }
+    return false;
+}
+
+fn createdFilenameLayout(pointer: [*:0]const u8) ?CreatedLayout {
+    const record = createdFilename(pointer) orelse return null;
+    var next: [*:0]u8 = record.database + std.mem.len(record.database) + 1;
+    while (next[0] != 0) {
+        next += std.mem.len(next) + 1;
+        next += std.mem.len(next) + 1;
+    }
+    const journal: [*:0]u8 = next + 1;
+    const wal: [*:0]u8 = journal + std.mem.len(journal) + 1;
+    if (@intFromPtr(wal) >= @intFromPtr(record.allocation_end)) return null;
+    return .{ .parameters = record.database + std.mem.len(record.database) + 1, .journal = journal, .wal = wal };
 }
 
 fn uriValue(filename: []const u8, key: []const u8) ?[]const u8 {
@@ -295,8 +340,18 @@ fn uriValue(filename: []const u8, key: []const u8) ?[]const u8 {
 }
 threadlocal var uri_buffer: [1024]u8 = undefined;
 pub export fn sqlite3_uri_parameter(filename: ?[*:0]const u8, key: ?[*:0]const u8) callconv(.c) ?[*:0]const u8 {
-    if (filename == null or key == null) return null;
-    const value = uriValue(std.mem.span(filename.?), std.mem.span(key.?)) orelse return null;
+    const filename_pointer = filename orelse return null;
+    const key_pointer = key orelse return null;
+    if (createdFilenameLayout(filename_pointer)) |layout| {
+        var parameter = layout.parameters;
+        while (parameter[0] != 0) {
+            const value = parameter + std.mem.len(parameter) + 1;
+            if (std.mem.eql(u8, std.mem.span(parameter), std.mem.span(key_pointer))) return value;
+            parameter = value + std.mem.len(value) + 1;
+        }
+        return null;
+    }
+    const value = uriValue(std.mem.span(filename_pointer), std.mem.span(key_pointer)) orelse return null;
     if (value.len >= uri_buffer.len) return null;
     var source: usize = 0;
     var target: usize = 0;
@@ -313,9 +368,24 @@ pub export fn sqlite3_uri_parameter(filename: ?[*:0]const u8, key: ?[*:0]const u
     uri_buffer[target] = 0;
     return @ptrCast(&uri_buffer);
 }
+
+/// Source `sqlite3_uri_key()`: walk encoded key/value pairs or a plain URI
+/// and return the requested key without decoding its value.
 pub export fn sqlite3_uri_key(filename: ?[*:0]const u8, index: c_int) callconv(.c) ?[*:0]const u8 {
-    if (filename == null or index < 0) return null;
-    const text = std.mem.span(filename.?);
+    const filename_pointer = filename orelse return null;
+    if (index < 0) return null;
+    if (createdFilenameLayout(filename_pointer)) |layout| {
+        var parameter = layout.parameters;
+        var current: c_int = 0;
+        while (parameter[0] != 0) {
+            if (current == index) return parameter;
+            const value = parameter + std.mem.len(parameter) + 1;
+            parameter = value + std.mem.len(value) + 1;
+            current += 1;
+        }
+        return null;
+    }
+    const text = std.mem.span(filename_pointer);
     const question = std.mem.indexOfScalar(u8, text, '?') orelse return null;
     var iterator = std.mem.splitScalar(u8, text[question + 1 ..], '&');
     var current: c_int = 0;
@@ -339,10 +409,15 @@ pub export fn sqlite3_uri_boolean(filename: ?[*:0]const u8, key: ?[*:0]const u8,
     if (std.ascii.eqlIgnoreCase(v, "no") or std.ascii.eqlIgnoreCase(v, "false") or std.mem.eql(u8, v, "0")) return 0;
     return default_value;
 }
+
+/// Source `sqlite3_uri_int64()`: accept SQLite decimal and hexadecimal integer
+/// syntax and preserve the caller default for absent or malformed values.
 pub export fn sqlite3_uri_int64(filename: ?[*:0]const u8, key: ?[*:0]const u8, default_value: i64) callconv(.c) i64 {
-    const p = sqlite3_uri_parameter(filename, key) orelse return default_value;
-    return std.fmt.parseInt(i64, std.mem.span(p), 10) catch default_value;
+    const value = sqlite3_uri_parameter(filename, key) orelse return default_value;
+    const parsed = numeric.parseDecimalOrHex(value);
+    return if (parsed.code == 0) parsed.value else default_value;
 }
+
 threadlocal var filename_buffer: [4096]u8 = undefined;
 fn filenameWithSuffix(filename: ?[*:0]const u8, suffix: []const u8) ?[*:0]const u8 {
     const input = if (filename) |value| std.mem.span(value) else return null;
@@ -355,44 +430,85 @@ fn filenameWithSuffix(filename: ?[*:0]const u8, suffix: []const u8) ?[*:0]const 
     return @ptrCast(&filename_buffer);
 }
 pub export fn sqlite3_filename_database(filename: ?[*:0]const u8) callconv(.c) ?[*:0]const u8 {
-    return filenameWithSuffix(filename, "");
+    const pointer = filename orelse return null;
+    return if (createdFilename(pointer) != null) pointer else filenameWithSuffix(pointer, "");
 }
+
+/// Source `sqlite3_filename_journal()`: locate the journal name embedded after
+/// the encoded URI key/value list produced by `sqlite3_create_filename()`.
 pub export fn sqlite3_filename_journal(filename: ?[*:0]const u8) callconv(.c) ?[*:0]const u8 {
-    return filenameWithSuffix(filename, "-journal");
+    const pointer = filename orelse return null;
+    return if (createdFilenameLayout(pointer)) |layout| layout.journal else filenameWithSuffix(pointer, "-journal");
 }
+
+/// Source `sqlite3_filename_wal()`: locate the WAL name following the journal
+/// name in the source-compatible encoded filename allocation.
 pub export fn sqlite3_filename_wal(filename: ?[*:0]const u8) callconv(.c) ?[*:0]const u8 {
-    return filenameWithSuffix(filename, "-wal");
+    const pointer = filename orelse return null;
+    return if (createdFilenameLayout(pointer)) |layout| layout.wal else filenameWithSuffix(pointer, "-wal");
 }
+
+fn appendFilenameText(output: [*]u8, position: *usize, text: []const u8) void {
+    @memcpy(output[position.*..][0..text.len], text);
+    position.* += text.len;
+    output[position.*] = 0;
+    position.* += 1;
+}
+
+/// Source `sqlite3_create_filename()`: allocate the pager-compatible database,
+/// URI pair, journal, and WAL string layout with the required sentinels.
 pub export fn sqlite3_create_filename(database: ?[*:0]const u8, journal: ?[*:0]const u8, wal: ?[*:0]const u8, parameter_count: c_int, parameters: ?[*]?[*:0]const u8) callconv(.c) ?[*:0]u8 {
-    _ = journal;
-    _ = wal;
-    const base = if (database) |value| std.mem.span(value) else return null;
+    const database_text = if (database) |value| std.mem.span(value) else return null;
+    const journal_text = if (journal) |value| std.mem.span(value) else return null;
+    const wal_text = if (wal) |value| std.mem.span(value) else return null;
     if (parameter_count < 0 or (parameter_count > 0 and parameters == null)) return null;
-    var total = base.len;
-    for (0..@intCast(parameter_count * 2)) |index| total += if (parameters.?[index]) |value| std.mem.len(value) else 0;
-    if (parameter_count > 0) total += @intCast(parameter_count * 2);
-    const allocation = sqlite3_malloc64(total + 1) orelse return null;
-    const output: [*]u8 = @ptrCast(allocation);
-    var position: usize = 0;
-    @memcpy(output[position..][0..base.len], base);
-    position += base.len;
-    for (0..@intCast(parameter_count)) |index| {
-        output[position] = if (index == 0) '?' else '&';
-        position += 1;
-        const key = if (parameters.?[index * 2]) |value| std.mem.span(value) else "";
-        @memcpy(output[position..][0..key.len], key);
-        position += key.len;
-        output[position] = '=';
-        position += 1;
-        const value = if (parameters.?[index * 2 + 1]) |item| std.mem.span(item) else "";
-        @memcpy(output[position..][0..value.len], value);
-        position += value.len;
+    const count: usize = @intCast(parameter_count);
+    const item_count = std.math.mul(usize, count, 2) catch return null;
+    var total: usize = 10;
+    total = std.math.add(usize, total, database_text.len) catch return null;
+    total = std.math.add(usize, total, journal_text.len) catch return null;
+    total = std.math.add(usize, total, wal_text.len) catch return null;
+    for (0..item_count) |index| {
+        const length = if (parameters.?[index]) |value| std.mem.len(value) else 0;
+        const terminated_length = std.math.add(usize, length, 1) catch return null;
+        total = std.math.add(usize, total, terminated_length) catch return null;
     }
-    output[position] = 0;
-    return @ptrCast(output);
+    const allocation = sqlite3_malloc64(total) orelse return null;
+    const output: [*]u8 = @ptrCast(allocation);
+    @memset(output[0..total], 0);
+    var position: usize = 4;
+    appendFilenameText(output, &position, database_text);
+    for (0..item_count) |index| {
+        appendFilenameText(output, &position, if (parameters.?[index]) |value| std.mem.span(value) else "");
+    }
+    position += 1;
+    appendFilenameText(output, &position, journal_text);
+    appendFilenameText(output, &position, wal_text);
+    position += 2;
+    std.debug.assert(position == total);
+    const result: [*:0]u8 = @ptrCast(output + 4);
+    if (!registerCreatedFilename(.{ .database = result, .allocation = allocation, .allocation_end = output + total })) {
+        sqlite3_free(allocation);
+        return null;
+    }
+    return result;
 }
+
 pub export fn sqlite3_free_filename(filename: ?[*:0]u8) callconv(.c) void {
-    sqlite3_free(if (filename) |value| @ptrCast(value) else null);
+    const pointer = filename orelse return;
+    var allocation: ?*anyopaque = null;
+    std.debug.assert(std.c.pthread_mutex_lock(&filename_lock) == .SUCCESS);
+    for (&created_filenames) |*slot| {
+        if (slot.*) |record| {
+            if (@intFromPtr(record.database) == @intFromPtr(pointer)) {
+                allocation = record.allocation;
+                slot.* = null;
+                break;
+            }
+        }
+    }
+    std.debug.assert(std.c.pthread_mutex_unlock(&filename_lock) == .SUCCESS);
+    sqlite3_free(allocation orelse @ptrCast(pointer));
 }
 pub export fn sqlite3_database_file_object(_: ?[*:0]const u8) callconv(.c) ?*vfs.sqlite3_file {
     return null;

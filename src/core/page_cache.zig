@@ -335,6 +335,7 @@ pub const Page = struct {
     flags: Flags = .{},
     dirty_prev: ?*Page = null,
     dirty_next: ?*Page = null,
+    sort_next: ?*Page = null,
     lru_stamp: u64 = 0,
     static_slot: ?*anyopaque = null,
     heap_words: ?[]u64 = null,
@@ -384,8 +385,10 @@ pub const Cache = struct {
     page_size: usize,
     extra_size: usize,
     max_pages: usize,
+    configured_pages: i64,
     spill_size: usize,
     purgeable: bool,
+    create_mode: FetchMode = .hard_create,
     dirty_head: ?*Page = null,
     dirty_tail: ?*Page = null,
     synced: ?*Page = null,
@@ -407,21 +410,32 @@ pub const Cache = struct {
     }
 
     pub fn initWithLifecycle(allocator: std.mem.Allocator, page_size: usize, extra_size: usize, purgeable: bool, max_pages: usize, lifecycle: ?*Lifecycle) Cache {
-        const limit = @max(max_pages, 1);
+        const limit = @min(max_pages, 0x7fff_0000);
         var result = Cache{
             .allocator = allocator,
             .pages = PageTable.init(allocator),
             .page_size = page_size,
             .extra_size = extra_size,
             .max_pages = limit,
-            .spill_size = limit,
+            .configured_pages = @intCast(limit),
+            .spill_size = @max(limit, 1),
             .purgeable = purgeable,
             .lifecycle = lifecycle,
         };
         if (purgeable) {
             if (lifecycle != null and !lifecycle.?.separate_cache) {
+                if (lifecycle.?.group_mutex) |*handle| {
+                    handle.enter();
+                }
+                defer {
+                    if (lifecycle.?.group_mutex) |*handle| {
+                        handle.leave();
+                    }
+                }
                 const group = &lifecycle.?.shared_group;
-                group.max_pages += limit;
+                const available = 0x7fff_0000 -| group.max_pages;
+                result.max_pages = @min(limit, available);
+                group.max_pages += result.max_pages;
                 group.min_pages += 10;
                 group.recomputeMaxPinned();
                 result.group_registered = true;
@@ -435,6 +449,7 @@ pub const Cache = struct {
     }
 
     pub fn deinit(self: *Cache) void {
+        self.enterGroup();
         var iterator = self.pages.iterator();
         while (iterator.next()) |entry| self.destroyPage(entry.value_ptr.*);
         self.releaseBulk();
@@ -444,10 +459,12 @@ pub const Cache = struct {
             group.max_pages -= self.max_pages;
             group.min_pages -= 10;
             group.recomputeMaxPinned();
+            self.enforceGroupMax();
             self.group_registered = false;
         }
         self.pages.deinit();
         self.events.deinit(trace_allocator);
+        self.leaveGroup();
         self.* = undefined;
     }
 
@@ -462,6 +479,24 @@ pub const Cache = struct {
     fn pageGroup(self: *Cache) *Group {
         if (self.usesSharedGroup()) return &self.lifecycle.?.shared_group;
         return &self.private_group;
+    }
+
+    /// Source `pcache1EnterMutex()`/`pcache1LeaveMutex()`: only the unified
+    /// PGroup needs serialization. Private cache groups deliberately avoid it.
+    fn enterGroup(self: *Cache) void {
+        if (self.usesSharedGroup()) {
+            if (self.lifecycle.?.group_mutex) |*handle| {
+                handle.enter();
+            }
+        }
+    }
+
+    fn leaveGroup(self: *Cache) void {
+        if (self.usesSharedGroup()) {
+            if (self.lifecycle.?.group_mutex) |*handle| {
+                handle.leave();
+            }
+        }
     }
 
     fn removeFromGroupLru(self: *Cache, page: *Page) void {
@@ -591,13 +626,10 @@ pub const Cache = struct {
                 extra = bytes[page_offset + @sizeOf(Page) ..][0..self.extra_size];
             }
         }
-        @memset(data, 0);
-        @memset(extra, 0);
         page.* = .{
             .key = key,
             .data = data,
             .extra = extra,
-            .ref_count = 1,
             .static_slot = static_slot,
             .heap_words = heap_words,
             .process_heap = process_heap,
@@ -605,6 +637,7 @@ pub const Cache = struct {
             .bulk_local = bulk_local,
             .owner = self,
         };
+        self.initializeFetchedPage(page);
         if (self.purgeable) self.pageGroup().purgeable_pages += 1;
         self.pages.put(key, page) catch {
             if (self.purgeable) {
@@ -624,9 +657,33 @@ pub const Cache = struct {
             }
             return .out_of_memory;
         };
-        self.ref_sum += 1;
         self.record(.create, page);
         return .ok;
+    }
+
+    /// Source `pcacheFetchFinishWithInit()`: initialize middleware state for a
+    /// newly allocated lower-cache page and clear only the guaranteed first
+    /// eight bytes of the caller-owned extra area.
+    fn initializeFetchedPage(_: *Cache, page: *Page) void {
+        @memset(page.data, 0);
+        @memset(page.extra[0..@min(page.extra.len, 8)], 0);
+        page.ref_count = 0;
+        page.flags = .{};
+        page.dirty_prev = null;
+        page.dirty_next = null;
+        page.sort_next = null;
+        page.lru_stamp = 0;
+        page.hash_next = null;
+        page.lru_prev = null;
+        page.lru_next = null;
+        page.on_group_lru = false;
+    }
+
+    /// Source `sqlite3PcacheFetchFinish()`: publish one reference after lower
+    /// cache lookup/allocation has completed.
+    fn finishFetch(self: *Cache, page: *Page) void {
+        page.ref_count += 1;
+        self.ref_sum += 1;
     }
 
     fn destroyPage(self: *Cache, page: *Page) void {
@@ -661,11 +718,17 @@ pub const Cache = struct {
         page.dirty_prev = null;
         page.dirty_next = null;
         page.flags.dirty = false;
+        if (self.dirty_head == null) {
+            self.create_mode = .hard_create;
+        }
         self.recomputeSynced();
     }
 
     fn insertDirtyFront(self: *Cache, page: *Page) void {
         std.debug.assert(!page.flags.dirty);
+        if (self.dirty_head == null and self.purgeable) {
+            self.create_mode = .soft_create;
+        }
         page.flags.dirty = true;
         page.dirty_prev = null;
         page.dirty_next = self.dirty_head;
@@ -719,13 +782,10 @@ pub const Cache = struct {
         const process_heap = victim.process_heap;
         const process_heap_size = victim.process_heap_size;
         const bulk_local = victim.bulk_local;
-        @memset(data, 0);
-        @memset(extra, 0);
         victim.* = .{
             .key = key,
             .data = data,
             .extra = extra,
-            .ref_count = 1,
             .static_slot = static_slot,
             .heap_words = heap_words,
             .process_heap = process_heap,
@@ -733,8 +793,8 @@ pub const Cache = struct {
             .bulk_local = bulk_local,
             .owner = self,
         };
+        self.initializeFetchedPage(victim);
         self.pages.putAssumeCapacity(key, victim);
-        self.ref_sum += 1;
         self.record(.create, victim);
         return .ok;
     }
@@ -757,27 +817,53 @@ pub const Cache = struct {
 
     const Room = struct { result: Result = .ok, page: ?*Page = null };
 
-    fn makeRoom(self: *Cache, key: u32, stress: ?Stress, under_pressure: bool) Room {
-        if (!self.purgeable or (self.pages.count() + 1 < self.max_pages and !under_pressure)) return .{};
-        if (self.pageGroup().lru_tail) |victim| {
+    /// Source `pcache1FetchStage2()`: enforce cache/group limits and recycle a
+    /// compatible clean LRU page before allocating or spilling dirty pages.
+    fn fetchStage2(self: *Cache, key: u32, under_pressure: bool) Room {
+        const group = self.pageGroup();
+        const cache_has_room = self.pages.count() + 1 < self.max_pages;
+        const group_has_room = group.purgeable_pages < group.max_pages;
+        if (!self.purgeable or (cache_has_room and group_has_room and !under_pressure)) return .{};
+        if (group.lru_tail) |victim| {
             const old_owner = if (self.usesSharedGroup()) victim.owner orelse return .{ .result = .corrupt } else self;
             if (old_owner.pageLayout().allocation_size == self.pageLayout().allocation_size) {
                 const result = self.recyclePage(victim, key);
+                if (result == .ok) {
+                    self.finishFetch(victim);
+                }
                 return .{ .result = result, .page = if (result == .ok) victim else null };
             }
             old_owner.discard(victim, .evict);
-            return .{};
         }
+        return .{};
+    }
+
+    /// Source `sqlite3PcacheFetchStress()` dirty-page spill stage.
+    fn makeRoom(self: *Cache, key: u32, stress: ?Stress, under_pressure: bool) Room {
+        const lower = self.fetchStage2(key, under_pressure);
+        if (lower.result != .ok or lower.page != null) return lower;
         if (self.pages.count() <= self.spill_size) return .{};
         var dirty = self.synced orelse self.dirty_tail;
         while (dirty) |candidate| : (dirty = candidate.dirty_prev) {
             if (candidate.ref_count == 0) {
                 if (stress) |handler| {
                     self.record(.stress, candidate);
+                    // pcache.c invokes xStress after the lower pcache xFetch()
+                    // has released the PGroup mutex. The callback may clean and
+                    // unpin this same page, so retaining the mutex deadlocks.
+                    const candidate_key = candidate.key;
+                    self.leaveGroup();
                     const result = handler.callback(handler.context, candidate);
-                    if (result != .ok) return .{ .result = result };
-                    if (!candidate.flags.dirty) {
-                        self.discard(candidate, .evict);
+                    self.enterGroup();
+                    if (result != .ok and result != .busy) return .{ .result = result };
+                    // The callback may have cleaned and immediately freed the
+                    // page because the unified group is over its limit.
+                    if (self.pages.get(candidate_key)) |remaining| {
+                        if (remaining == candidate and !remaining.flags.dirty) {
+                            self.discard(remaining, .evict);
+                            return .{};
+                        }
+                    } else {
                         return .{};
                     }
                 }
@@ -790,11 +876,12 @@ pub const Cache = struct {
     }
 
     pub fn fetch(self: *Cache, key: u32, mode: FetchMode, stress: ?Stress) struct { result: Result, page: ?*Page } {
+        self.enterGroup();
+        defer self.leaveGroup();
         if (key == 0) return .{ .result = .corrupt, .page = null };
         if (self.pages.get(key)) |page| {
             self.removeFromGroupLru(page);
-            page.ref_count += 1;
-            self.ref_sum += 1;
+            self.finishFetch(page);
             self.record(.fetch_hit, page);
             return .{ .result = .ok, .page = page };
         }
@@ -802,20 +889,30 @@ pub const Cache = struct {
         self.record(.fetch_miss, &phantom);
         if (mode == .lookup) return .{ .result = .not_found, .page = null };
         const under_pressure = self.underMemoryPressure();
-        if (mode == .soft_create) {
+        const effective_mode = if (mode == .hard_create) self.create_mode else mode;
+        if (effective_mode == .soft_create) {
             const counts = self.pinnedAndRecyclable();
             const ninety_percent = self.max_pages * 9 / 10;
-            if (counts.pinned >= self.pageGroup().max_pinned or counts.pinned >= ninety_percent or
-                (under_pressure and counts.recyclable < counts.pinned))
-                return .{ .result = .busy, .page = null };
+            const soft_refused = counts.pinned >= self.pageGroup().max_pinned or counts.pinned >= ninety_percent or
+                (under_pressure and counts.recyclable < counts.pinned);
+            if (soft_refused and mode == .soft_create) return .{ .result = .busy, .page = null };
+            // A middleware hard-create request first uses lower-cache soft
+            // admission while dirty pages exist, then falls through to the
+            // source stress path when that inexpensive attempt is refused.
         }
         const room = self.makeRoom(key, stress, under_pressure);
         if (room.result != .ok or room.page != null) return .{ .result = room.result, .page = room.page };
         const created = self.createPage(key);
-        return .{ .result = created, .page = if (created == .ok) self.pages.get(key) else null };
+        const page = if (created == .ok) self.pages.get(key).? else null;
+        if (page) |created_page| {
+            self.finishFetch(created_page);
+        }
+        return .{ .result = created, .page = page };
     }
 
     pub fn reference(self: *Cache, page: *Page) void {
+        self.enterGroup();
+        defer self.leaveGroup();
         self.removeFromGroupLru(page);
         page.ref_count += 1;
         self.ref_sum += 1;
@@ -823,6 +920,8 @@ pub const Cache = struct {
     }
 
     pub fn release(self: *Cache, page: *Page) Result {
+        self.enterGroup();
+        defer self.leaveGroup();
         if (page.ref_count == 0) return .corrupt;
         page.ref_count -= 1;
         self.ref_sum -= 1;
@@ -831,16 +930,24 @@ pub const Cache = struct {
             if (page.flags.dirty) {
                 self.removeDirty(page);
                 self.insertDirtyFront(page);
+            } else {
+                self.clock +%= 1;
+                page.lru_stamp = self.clock;
+                const group = self.pageGroup();
+                if (self.purgeable and group.purgeable_pages > group.max_pages) {
+                    self.discard(page, .evict);
+                } else {
+                    self.addToGroupLru(page);
+                    self.record(.unpin, page);
+                }
             }
-            self.clock +%= 1;
-            page.lru_stamp = self.clock;
-            self.addToGroupLru(page);
-            self.record(.unpin, page);
         }
         return .ok;
     }
 
     pub fn pin(self: *Cache, page: *Page) void {
+        self.enterGroup();
+        defer self.leaveGroup();
         self.removeFromGroupLru(page);
         if (page.ref_count == 0) {
             page.ref_count = 1;
@@ -850,8 +957,12 @@ pub const Cache = struct {
     }
 
     pub fn unpin(self: *Cache, page: *Page, discard_page: bool) Result {
+        self.enterGroup();
+        defer self.leaveGroup();
         if (page.ref_count != 0) return .busy;
-        if (discard_page) self.discard(page, .drop) else {
+        if (discard_page or (self.purgeable and self.pageGroup().purgeable_pages > self.pageGroup().max_pages)) {
+            self.discard(page, if (discard_page) .drop else .evict);
+        } else {
             self.clock +%= 1;
             page.lru_stamp = self.clock;
             self.addToGroupLru(page);
@@ -861,12 +972,16 @@ pub const Cache = struct {
     }
 
     pub fn drop(self: *Cache, page: *Page) Result {
-        if (page.ref_count == 0) return .corrupt;
+        self.enterGroup();
+        defer self.leaveGroup();
+        if (page.ref_count != 1) return .corrupt;
         self.discard(page, .drop);
         return .ok;
     }
 
     pub fn makeDirty(self: *Cache, page: *Page) void {
+        self.enterGroup();
+        defer self.leaveGroup();
         self.removeFromGroupLru(page);
         page.flags.dont_write = false;
         if (!page.flags.dirty) self.insertDirtyFront(page);
@@ -874,18 +989,28 @@ pub const Cache = struct {
     }
 
     pub fn makeClean(self: *Cache, page: *Page) void {
+        self.enterGroup();
+        defer self.leaveGroup();
         self.removeDirty(page);
         page.flags.need_sync = false;
         page.flags.writeable = false;
         page.flags.dont_write = false;
         page.flags.wal_append = false;
-        self.addToGroupLru(page);
         self.record(.clean, page);
+        if (page.ref_count == 0 and self.purgeable and self.pageGroup().purgeable_pages > self.pageGroup().max_pages) {
+            self.discard(page, .evict);
+        } else {
+            self.addToGroupLru(page);
+        }
     }
 
     pub fn clearWritable(self: *Cache) void {
         var page = self.dirty_head;
-        while (page) |current| : (page = current.dirty_next) current.flags.writeable = false;
+        while (page) |current| : (page = current.dirty_next) {
+            current.flags.writeable = false;
+            current.flags.need_sync = false;
+        }
+        self.synced = self.dirty_tail;
     }
 
     pub fn clearSyncFlags(self: *Cache) void {
@@ -898,28 +1023,56 @@ pub const Cache = struct {
         while (self.dirty_head) |page| self.makeClean(page);
     }
 
+    /// Source `sqlite3PcacheMove()`.
     pub fn move(self: *Cache, page: *Page, new_key: u32) Result {
-        if (new_key == 0 or (self.pages.get(new_key) != null and self.pages.get(new_key).? != page)) return .corrupt;
+        self.enterGroup();
+        defer self.leaveGroup();
+        if (new_key == 0) return .corrupt;
+        if (self.pages.get(new_key)) |other| {
+            if (other != page) {
+                if (other.ref_count != 0) return .corrupt;
+                self.discard(other, .drop);
+            }
+        }
         const old_key = page.key;
         if (old_key == new_key) return .ok;
         self.pages.rekey(page, old_key, new_key);
+        if (page.flags.dirty and page.flags.need_sync) {
+            self.removeDirty(page);
+            self.insertDirtyFront(page);
+        }
         self.record(.move, page);
         return .ok;
     }
 
+    /// Source `sqlite3PcacheTruncate()` including retained page-1 zeroing.
     pub fn truncate(self: *Cache, maximum_key: u32) void {
+        self.enterGroup();
+        defer self.leaveGroup();
+        var retained_page_one = false;
+        if (maximum_key == 0 and self.ref_sum != 0) {
+            if (self.pages.get(1)) |page_one| {
+                @memset(page_one.data, 0);
+                retained_page_one = true;
+            }
+        }
         while (true) {
             var candidate: ?*Page = null;
             var iterator = self.pages.iterator();
             while (iterator.next()) |entry| {
                 const page = entry.value_ptr.*;
-                if (page.key > maximum_key and (candidate == null or page.key > candidate.?.key)) candidate = page;
+                const remove = page.key > maximum_key and !(retained_page_one and page.key == 1);
+                if (remove and (candidate == null or page.key > candidate.?.key)) {
+                    candidate = page;
+                }
             }
             if (candidate) |page| self.discard(page, .truncate) else break;
         }
     }
 
     pub fn purge(self: *Cache, target_count: usize) usize {
+        self.enterGroup();
+        defer self.leaveGroup();
         if (!self.purgeable) return 0;
         var removed: usize = 0;
         while (self.pages.count() > target_count) {
@@ -932,6 +1085,8 @@ pub const Cache = struct {
     }
 
     pub fn shrink(self: *Cache) usize {
+        self.enterGroup();
+        defer self.leaveGroup();
         if (!self.purgeable) return 0;
         const group = self.pageGroup();
         const before = group.purgeable_pages;
@@ -947,6 +1102,9 @@ pub const Cache = struct {
         return self.pages.ready();
     }
     pub fn pageCount(self: *const Cache) usize {
+        const mutable: *Cache = @constCast(self);
+        mutable.enterGroup();
+        defer mutable.leaveGroup();
         return self.pages.count();
     }
     pub fn refCount(self: *const Cache) usize {
@@ -957,11 +1115,12 @@ pub const Cache = struct {
     }
 
     pub fn percentDirty(self: *const Cache) usize {
-        if (self.pages.count() == 0) return 0;
+        const configured = self.numberOfCachePages();
+        if (configured == 0) return 0;
         var count: usize = 0;
         var page = self.dirty_head;
         while (page) |current| : (page = current.dirty_next) count += 1;
-        return (count * 100) / self.pages.count();
+        return (count * 100) / configured;
     }
 
     fn enforceGroupMax(self: *Cache) void {
@@ -974,48 +1133,173 @@ pub const Cache = struct {
         }
     }
 
-    pub fn setCacheSize(self: *Cache, pages: usize) void {
-        const limit = @max(pages, 1);
+    /// Source `numberOfCachePages()`.
+    fn numberOfCachePages(self: *const Cache) usize {
+        if (self.configured_pages >= 0) return @intCast(self.configured_pages);
+        const bytes: i128 = -1024 * @as(i128, self.configured_pages);
+        const page_bytes = self.page_size + self.extra_size;
+        if (page_bytes == 0) return 0;
+        return @intCast(@min(@divTrunc(bytes, @as(i128, @intCast(page_bytes))), 1_000_000_000));
+    }
+
+    /// Source `pcache1Cachesize()` plus middleware signed-size conversion.
+    pub fn setConfiguredCacheSize(self: *Cache, pages: i64) void {
+        self.enterGroup();
+        defer self.leaveGroup();
+        self.configured_pages = pages;
+        const requested = self.numberOfCachePages();
+        var limit = @min(requested, 0x7fff_0000);
         const group = self.pageGroup();
         if (self.purgeable) {
             std.debug.assert(group.max_pages >= self.max_pages);
-            group.max_pages = group.max_pages - self.max_pages + limit;
+            const other_maximum = group.max_pages - self.max_pages;
+            limit = @min(limit, 0x7fff_0000 -| other_maximum);
+            group.max_pages = other_maximum + limit;
             group.recomputeMaxPinned();
         }
         self.max_pages = limit;
         self.enforceGroupMax();
         if (self.pages.count() == 0) self.releaseBulk();
     }
+
+    pub fn setCacheSize(self: *Cache, pages: usize) void {
+        self.setConfiguredCacheSize(@intCast(@min(pages, @as(usize, std.math.maxInt(i64)))));
+    }
+
+    /// Source `sqlite3PcacheSetSpillsize()`.
+    pub fn setConfiguredSpillSize(self: *Cache, pages: i64) usize {
+        if (pages != 0) {
+            const requested = if (pages < 0) blk: {
+                const page_bytes = self.page_size + self.extra_size;
+                if (page_bytes == 0) break :blk 0;
+                const bytes: i128 = -1024 * @as(i128, pages);
+                const count = @divTrunc(bytes, @as(i128, @intCast(page_bytes)));
+                break :blk @as(usize, @intCast(@min(count, std.math.maxInt(usize))));
+            } else @as(usize, @intCast(pages));
+            self.spill_size = requested;
+        }
+        return @max(self.numberOfCachePages(), self.spill_size);
+    }
+
     pub fn setSpillSize(self: *Cache, pages: usize) void {
-        self.spill_size = @max(pages, 1);
+        _ = self.setConfiguredSpillSize(@intCast(@min(pages, @as(usize, std.math.maxInt(i64)))));
     }
     pub fn setPageSize(self: *Cache, page_size: usize) Result {
+        self.enterGroup();
+        defer self.leaveGroup();
         if (self.pages.count() != 0) return .busy;
         self.releaseBulk();
         self.page_size = page_size;
+        var limit = @min(self.numberOfCachePages(), 0x7fff_0000);
+        if (self.purgeable) {
+            const group = self.pageGroup();
+            std.debug.assert(group.max_pages >= self.max_pages);
+            const other_maximum = group.max_pages - self.max_pages;
+            limit = @min(limit, 0x7fff_0000 -| other_maximum);
+            group.max_pages = other_maximum + limit;
+            group.recomputeMaxPinned();
+        }
+        self.max_pages = limit;
+        self.enforceGroupMax();
         return .ok;
     }
     pub fn clear(self: *Cache) void {
-        while (self.pages.count() != 0) {
-            var iterator = self.pages.iterator();
-            self.discard(iterator.next().?.value_ptr.*, .drop);
+        self.truncate(0);
+    }
+
+    /// Source `pcacheMergeDirtyList()`: merge through the disposable sort
+    /// linkage without touching the cache's LRU-ordered dirty linkage.
+    fn mergeDirtyLists(first: *Page, second: *Page) *Page {
+        var left: ?*Page = first;
+        var right: ?*Page = second;
+        var result: ?*Page = null;
+        var tail: ?*Page = null;
+        while (left != null and right != null) {
+            const chosen = if (left.?.key < right.?.key) blk: {
+                const value = left.?;
+                left = value.sort_next;
+                break :blk value;
+            } else blk: {
+                const value = right.?;
+                right = value.sort_next;
+                break :blk value;
+            };
+            chosen.sort_next = null;
+            if (tail) |previous| {
+                previous.sort_next = chosen;
+            } else {
+                result = chosen;
+            }
+            tail = chosen;
         }
+        tail.?.sort_next = left orelse right;
+        return result.?;
+    }
+
+    /// Source `pcacheSortDirtyList()`: fixed-bucket bottom-up merge sort. The
+    /// source bound follows from SQLite's 2^31-page database limit.
+    fn sortDirtyList(input_head: ?*Page) ?*Page {
+        var buckets = [_]?*Page{null} ** 32;
+        var input = input_head;
+        while (input) |item| {
+            input = item.sort_next;
+            item.sort_next = null;
+            var merged = item;
+            var bucket: usize = 0;
+            while (bucket < buckets.len - 1) : (bucket += 1) {
+                const prior = buckets[bucket] orelse {
+                    buckets[bucket] = merged;
+                    break;
+                };
+                merged = mergeDirtyLists(prior, merged);
+                buckets[bucket] = null;
+            }
+            if (bucket == buckets.len - 1) {
+                if (buckets[bucket]) |prior| {
+                    buckets[bucket] = mergeDirtyLists(prior, merged);
+                } else {
+                    buckets[bucket] = merged;
+                }
+            }
+        }
+        var result = buckets[0];
+        for (buckets[1..]) |bucket| {
+            if (bucket) |list| {
+                if (result) |prior| {
+                    result = mergeDirtyLists(prior, list);
+                } else {
+                    result = list;
+                }
+            }
+        }
+        return result;
+    }
+
+    /// Source `sqlite3PcacheDirtyList()`: return sorted dirty pages without an
+    /// allocator dependency on the commit path.
+    pub fn dirtyListHead(self: *Cache) ?*Page {
+        self.enterGroup();
+        defer self.leaveGroup();
+        var page = self.dirty_head;
+        while (page) |current| : (page = current.dirty_next) {
+            current.sort_next = current.dirty_next;
+        }
+        return sortDirtyList(self.dirty_head);
     }
 
     pub fn dirtyList(self: *Cache, allocator: std.mem.Allocator) ![]*Page {
         var result = std.ArrayList(*Page).empty;
         errdefer result.deinit(allocator);
-        var page = self.dirty_head;
-        while (page) |current| : (page = current.dirty_next) try result.append(allocator, current);
-        std.mem.sort(*Page, result.items, {}, struct {
-            fn less(_: void, left: *Page, right: *Page) bool {
-                return left.key < right.key;
-            }
-        }.less);
+        var page = self.dirtyListHead();
+        while (page) |current| : (page = current.sort_next) {
+            try result.append(allocator, current);
+        }
         return result.toOwnedSlice(allocator);
     }
 
     pub fn checkInvariants(self: *Cache) bool {
+        self.enterGroup();
+        defer self.leaveGroup();
         var refs: usize = 0;
         var dirty_count: usize = 0;
         var recyclable_count: usize = 0;
@@ -1129,10 +1413,12 @@ test "cache consumes and returns process static slots with heap fallback" {
     lifecycle.pageFree(direct_static);
     try std.testing.expectEqual(@as(c_int, 4), lifecycle.free_slot_count);
     var cache = Cache.initWithLifecycle(std.testing.allocator, 512, 32, true, 8, &lifecycle);
+    var static_pages: [4]*Page = undefined;
     for (1..5) |key| {
         const fetched = cache.fetch(@intCast(key), .hard_create, null);
         try std.testing.expectEqual(Result.ok, fetched.result);
         const page = fetched.page.?;
+        static_pages[key - 1] = page;
         try std.testing.expect(page.static_slot != null);
         try std.testing.expect(@intFromPtr(page.static_slot.?) >= @intFromPtr(&storage));
         try std.testing.expect(@intFromPtr(page.static_slot.?) < @intFromPtr(&storage) + storage.len);
@@ -1145,6 +1431,10 @@ test "cache consumes and returns process static slots with heap fallback" {
     try std.testing.expectEqual(null, overflow.page.?.static_slot);
     try std.testing.expect(manager.status(.pagecache_overflow, false).current > 0);
     try std.testing.expect(manager.status(.memory_used, false).current > 0);
+    for (static_pages) |page| {
+        try std.testing.expectEqual(Result.ok, cache.release(page));
+    }
+    try std.testing.expectEqual(Result.ok, cache.release(overflow.page.?));
     cache.clear();
     try std.testing.expectEqual(@as(c_int, 4), lifecycle.free_slot_count);
     try std.testing.expect(!lifecycle.under_pressure);
@@ -1176,6 +1466,7 @@ test "per-cache bulk pages precede PCache slots and release as one Manager alloc
         const fetched = cache.fetch(@intCast(key), .hard_create, null);
         try std.testing.expectEqual(Result.ok, fetched.result);
         try std.testing.expect(fetched.page.?.bulk_local);
+        try std.testing.expectEqual(Result.ok, cache.release(fetched.page.?));
     }
     try std.testing.expectEqual(@as(usize, 3), cache.bulk_page_count);
     try std.testing.expectEqual(@as(usize, 0), cache.bulk_free_count);
@@ -1184,6 +1475,7 @@ test "per-cache bulk pages precede PCache slots and release as one Manager alloc
     try std.testing.expectEqual(Result.ok, overflow.result);
     try std.testing.expect(!overflow.page.?.bulk_local and overflow.page.?.process_heap != null);
     try std.testing.expect(manager.status(.pagecache_overflow, false).current > 0);
+    try std.testing.expectEqual(Result.ok, cache.release(overflow.page.?));
     cache.clear();
     try std.testing.expectEqual(@as(usize, 3), cache.bulk_free_count);
     try std.testing.expect(cache.bulk_pointer != null);
@@ -1452,6 +1744,7 @@ test "page size changes only while empty" {
     const page = cache.fetch(1, .hard_create, null).page.?;
     try std.testing.expectEqual(@as(usize, 1024), page.data.len);
     try std.testing.expectEqual(.busy, cache.setPageSize(512));
+    try std.testing.expectEqual(Result.ok, cache.release(page));
     cache.clear();
     try std.testing.expectEqual(.ok, cache.setPageSize(512));
     try std.testing.expect(cache.checkInvariants());

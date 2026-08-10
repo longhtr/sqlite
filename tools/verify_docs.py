@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Structural checks for the normative porting documents."""
+"""Validate documentation ownership, references, commands, and synchronized facts."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import pathlib
 import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-REQUIRED = [
+REQUIRED = {
     "README.md",
     "PORTING_CHARTER.md",
     "ENGINEERING_PROCESS.md",
@@ -17,14 +17,31 @@ REQUIRED = [
     "RISK_REGISTER.md",
     "SCOPE.md",
     "THREAT_MODEL.md",
-    "COMPATIBILITY.md",
     "ARCHITECTURE.md",
-    "HYBRID_BOUNDARIES.md",
     "DURABILITY_MODEL.md",
-    "PORTING_RULES.md",
     "TESTING.md",
     "UPSTREAM_SYNC.md",
-]
+}
+EXCLUDED_PARTS = {"upstream", ".reference-build", ".zig-cache", "zig-out", ".git"}
+REMOVED_DOCUMENTS = {"docs/COMPATIBILITY.md", "docs/HYBRID_BOUNDARIES.md", "docs/PORTING_RULES.md"}
+
+
+def load_json(path: pathlib.Path) -> dict[str, object]:
+    """Load an object-root JSON file while rejecting duplicate keys."""
+    def unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise SystemExit(
+                    f"verify-docs: duplicate JSON key {key!r} in {path.relative_to(ROOT)}"
+                )
+            result[key] = value
+        return result
+
+    data = json.loads(path.read_text(), object_pairs_hook=unique_object)
+    if not isinstance(data, dict):
+        raise SystemExit(f"verify-docs: expected JSON object in {path.relative_to(ROOT)}")
+    return data
 
 
 def anchor(title: str) -> str:
@@ -32,110 +49,310 @@ def anchor(title: str) -> str:
     return re.sub(r"[^a-z0-9 _-]", "", title).replace(" ", "-")
 
 
-def main() -> None:
-    for name in REQUIRED:
-        path = ROOT / "docs" / name
-        if not path.is_file() or not path.read_text().strip():
-            raise SystemExit(f"verify-docs: missing or empty docs/{name}")
-
-    excluded_parts = {"upstream", ".reference-build", ".zig-cache", "zig-out", ".git"}
-    maintained_paths = sorted(
-        path for path in ROOT.rglob("*.md")
-        if not any(part in excluded_parts for part in path.relative_to(ROOT).parts)
+def maintained_paths() -> list[pathlib.Path]:
+    return sorted(
+        path
+        for path in ROOT.rglob("*.md")
+        if path.name != "AGENTS.md"
+        and not any(part in EXCLUDED_PARTS for part in path.relative_to(ROOT).parts)
     )
-    maintained_documents = {str(path.relative_to(ROOT)) for path in maintained_paths}
-    for path in maintained_paths:
-        lines = path.read_text().splitlines()
-        inside_fence = False
-        headings: set[str] = set()
-        for line in lines:
-            if line.startswith("```"):
-                inside_fence = not inside_fence
-                continue
-            if not inside_fence and (match := re.match(r"^#{1,6} (.*)$", line)):
-                headings.add(anchor(match.group(1)))
-        if inside_fence:
-            raise SystemExit(f"verify-docs: unbalanced Markdown code fence in {path.relative_to(ROOT)}")
-        for line in lines:
-            for target in re.findall(r"\]\(#([^)]+)\)", line):
-                if target not in headings:
-                    raise SystemExit(f"verify-docs: missing TOC target #{target} in {path.relative_to(ROOT)}")
-        if any(line.rstrip() != line for line in lines):
-            raise SystemExit(f"verify-docs: trailing whitespace in {path.relative_to(ROOT)}")
 
-    inventory_path = ROOT / "docs/README.md"
-    inventory_targets = set(re.findall(r"`([^`]+\.md)`", inventory_path.read_text()))
-    if inventory_targets != maintained_documents:
-        missing = sorted(maintained_documents - inventory_targets)
-        stale = sorted(inventory_targets - maintained_documents)
-        raise SystemExit(f"verify-docs: document inventory mismatch; missing={missing} stale={stale}")
+
+def verify_markdown(path: pathlib.Path) -> None:
+    lines = path.read_text().splitlines()
+    inside_fence = False
+    headings: set[str] = set()
+    for line in lines:
+        if line.startswith("```"):
+            inside_fence = not inside_fence
+            continue
+        if not inside_fence and (match := re.match(r"^#{1,6} (.*)$", line)):
+            headings.add(anchor(match.group(1)))
+    if inside_fence:
+        raise SystemExit(f"verify-docs: unbalanced code fence in {path.relative_to(ROOT)}")
+    if any(line.rstrip() != line for line in lines):
+        raise SystemExit(f"verify-docs: trailing whitespace in {path.relative_to(ROOT)}")
+    for line in lines:
+        for target in re.findall(r"\]\(#([^)]+)\)", line):
+            if target not in headings:
+                raise SystemExit(f"verify-docs: missing anchor #{target} in {path.relative_to(ROOT)}")
+
+
+def verify_inventory(paths: list[pathlib.Path]) -> None:
+    inventory = (ROOT / "docs/README.md").read_text()
+    maintained = {str(path.relative_to(ROOT)) for path in paths}
+    rows = re.findall(r"^\| `([^`]+\.md)` \| ([^|]+) \|$", inventory, re.MULTILINE)
+    row_targets = {target for target, _ in rows}
+    purposes = [purpose.strip() for _, purpose in rows]
+    if row_targets != maintained or len(rows) != len(maintained):
+        raise SystemExit(
+            "verify-docs: purpose-table inventory mismatch; "
+            f"missing={sorted(maintained - row_targets)} stale={sorted(row_targets - maintained)}"
+        )
+    if len(purposes) != len(set(purposes)):
+        raise SystemExit("verify-docs: document purposes must be non-duplicated")
+    agents = (ROOT / "AGENTS.md").read_text()
+    if "`docs/README.md` is the canonical documentation registry" not in agents:
+        raise SystemExit("verify-docs: AGENTS.md does not reference the complete documentation registry")
+
+
+def verify_local_references(paths: list[pathlib.Path]) -> None:
+    for path in paths:
+        text = path.read_text()
+        for link in re.findall(r"\]\(([^)#]+)(?:#[^)]+)?\)", text):
+            if "://" not in link and not (path.parent / link).resolve().exists():
+                raise SystemExit(f"verify-docs: missing Markdown link {link!r} in {path.relative_to(ROOT)}")
+        references = set(re.findall(r"`((?:config|docs|generated|reference|src|tests|tools|upstream)/[^`\s]+)`", text))
+        for reference in references:
+            cleaned = reference.rstrip(".,;:")
+            if any(character in cleaned for character in "*?["):
+                if not list(ROOT.glob(cleaned)):
+                    raise SystemExit(f"verify-docs: unmatched path pattern {cleaned!r} in {path.relative_to(ROOT)}")
+            elif not (ROOT / cleaned).exists():
+                raise SystemExit(f"verify-docs: missing path {cleaned!r} in {path.relative_to(ROOT)}")
+
+
+def verify_build_targets(paths: list[pathlib.Path]) -> int:
+    build_text = (ROOT / "build.zig").read_text()
+    targets = set(re.findall(r"\.step\(\"([^\"]+)\"", build_text))
+    documented: set[str] = set()
+    for path in paths:
+        for command in re.findall(r"zig build\s+([^\n`]+)", path.read_text()):
+            command = command.split("#", 1)[0]
+            for token in command.split():
+                if token.startswith("-"):
+                    continue
+                documented.add(token)
+    missing = sorted(documented - targets)
+    if missing:
+        raise SystemExit(f"verify-docs: documented build targets do not exist: {missing}")
+    required = {
+        "test",
+        "port-batch-audit",
+        "port-batch-checkpoint",
+        "atomic-unit-audit",
+        "source-ledger",
+        "port-audit",
+        "verify-config",
+        "docs-test",
+        "tooling-audit",
+        "test-upstream",
+    }
+    if not required <= documented:
+        raise SystemExit(f"verify-docs: result ownership omits build targets {sorted(required - documented)}")
+    return len(documented)
+
+
+def verify_aggregate_result_graph() -> int:
+    build = (ROOT / "build.zig").read_text()
+    public_steps = re.findall(r'b\.step\("([^"]+)",\s*"([^"]+)"', build)
+    names = [name for name, _ in public_steps]
+    descriptions = [description for _, description in public_steps]
+    if not public_steps or len(names) != len(set(names)) or len(descriptions) != len(set(descriptions)):
+        raise SystemExit("verify-docs: build result targets need unique names and purposes")
+
+    start = build.index('const test_step = b.step("test"')
+    end = build.index("const report =", start)
+    aggregate = build[start:end]
+    dependencies = re.findall(r"test_step\.dependOn\(([^)]+)\);", aggregate)
+    if not dependencies or len(dependencies) != len(set(dependencies)):
+        raise SystemExit("verify-docs: aggregate test graph has missing or duplicate result dependencies")
+    if "verify_config.step.dependOn(&port_audit.step);" not in build:
+        raise SystemExit("verify-docs: configuration verification does not own status verification")
+    if "test_step.dependOn(&port_audit.step);" in aggregate:
+        raise SystemExit("verify-docs: aggregate repeats the status verifier already owned by verify-config")
+
+    testing = (ROOT / "docs/TESTING.md").read_text()
+    required = (
+        "stdout is not a maintained artifact",
+        "aggregate dependencies",
+        "zig-out/compatibility-report.json",
+        "disposable digest-backed output",
+    )
+    if any(item not in testing for item in required):
+        raise SystemExit("verify-docs: aggregate or compatibility result ownership is not documented")
+    return len(dependencies)
+
+
+def verify_test_module_ownership() -> int:
+    candidates = sorted(
+        path
+        for directory in (ROOT / "tests", ROOT / "reference")
+        for extension in ("*.zig", "*.c")
+        for path in directory.rglob(extension)
+        if path.name not in {"sqlite3.c", "sqlite3-lines.c"}
+    )
+    owners = [ROOT / "build.zig", *sorted((ROOT / "tools").glob("*.py"))]
+    owners += sorted((ROOT / "src").rglob("*.zig"))
+    owners += candidates
+    owner_text = {owner: owner.read_text(errors="replace") for owner in owners}
+    for candidate in candidates:
+        relative = candidate.relative_to(ROOT).as_posix()
+        quoted_name = f'"{candidate.name}"'
+        referenced = any(
+            owner != candidate
+            and (relative in owner_text[owner] or quoted_name in owner_text[owner])
+            for owner in owners
+        )
+        if not referenced:
+            raise SystemExit(f"verify-docs: test/oracle module lacks an invocation or importing owner: {relative}")
+    return len(candidates)
+
+
+def verify_result_artifacts() -> tuple[int, int]:
+    baseline = dict(
+        line.split("=", 1)
+        for line in (ROOT / "upstream/SQLITE_BASELINE").read_text().splitlines()
+        if "=" in line
+    )
+    config_verifier = (ROOT / "tools/verify_config.py").read_text()
+    phase_paths = sorted((ROOT / "upstream").glob("phase*-manifest.json"))
+    phase_ids: set[str] = set()
+    for path in phase_paths:
+        data = load_json(path)
+        phase = data.get("phase")
+        if not isinstance(phase, str) or phase in phase_ids:
+            raise SystemExit(f"verify-docs: historical result has missing/duplicate purpose: {path.relative_to(ROOT)}")
+        phase_ids.add(phase)
+        if (
+            data.get("baseline_checkin") != baseline["fossil_checkin"]
+            or data.get("status") != "bounded-regression-evidence"
+            or data.get("evidence_classification") != "bounded-regression-only"
+            or data.get("project_completion_claim") is not False
+            or data.get("completion_claim", False) is not False
+        ):
+            raise SystemExit(f"verify-docs: historical result boundary is stale: {path.relative_to(ROOT)}")
+        if path.relative_to(ROOT).as_posix() not in config_verifier:
+            raise SystemExit(f"verify-docs: historical result lacks a verification owner: {path.relative_to(ROOT)}")
+        children = data.get("slices")
+        if isinstance(children, list) and all(isinstance(item, str) and item.endswith(".json") for item in children):
+            child_data = [load_json(path.parent / item) for item in children]
+            mapped = sum(item.get("mapped_entity_count", 0) for item in child_data)
+            if mapped != data.get("mapped_entity_count"):
+                raise SystemExit(f"verify-docs: aggregate result total is stale: {path.relative_to(ROOT)}")
+
+    build = (ROOT / "build.zig").read_text()
+    fixture_paths = sorted((ROOT / "tests/fixtures").glob("*/manifest.json"))
+    fixture_purposes: set[str] = set()
+    for path in fixture_paths:
+        data = load_json(path)
+        purpose = data.get("profile") or data.get("phase")
+        if not isinstance(purpose, str) or purpose in fixture_purposes:
+            raise SystemExit(f"verify-docs: fixture manifest has missing/duplicate purpose: {path.relative_to(ROOT)}")
+        fixture_purposes.add(purpose)
+        tool_name = f"generate_{path.parent.name.replace('-', '_')}_fixtures.py"
+        tool = ROOT / "tools" / tool_name
+        if not tool.is_file() or tool_name not in build:
+            raise SystemExit(f"verify-docs: fixture manifest lacks a build-owned generator: {path.relative_to(ROOT)}")
+    return len(phase_paths), len(fixture_paths)
+
+
+def verify_policy_and_facts(paths: list[pathlib.Path]) -> None:
+    all_text = "\n".join(path.read_text() for path in paths)
+    for removed in REMOVED_DOCUMENTS:
+        if removed in all_text or removed in (ROOT / "AGENTS.md").read_text():
+            raise SystemExit(f"verify-docs: stale consolidated document reference {removed}")
+    normative = [ROOT / "CONTRIBUTING.md", *(ROOT / "docs" / name for name in REQUIRED)]
+    for path in normative:
+        text = path.read_text()
+        if "fidelity-closure review" in text or "Independent fidelity review is required" in text:
+            raise SystemExit(f"verify-docs: deferred review revived in {path.relative_to(ROOT)}")
 
     charter = (ROOT / "docs/PORTING_CHARTER.md").read_text()
     scope = (ROOT / "docs/SCOPE.md").read_text()
     process = (ROOT / "docs/ENGINEERING_PROCESS.md").read_text()
     plan = (ROOT / "docs/EXECUTION_PLAN.md").read_text()
-    adr = ROOT / "docs/decisions/ADR-0040-pure-zig-product.md"
-    process_adr = ROOT / "docs/decisions/ADR-0041-source-faithful-gates.md"
-    if "source-faithful native Zig port" not in charter or "Production engine modules and artifacts contain only Zig" not in scope:
-        raise SystemExit("verify-docs: pure-Zig product charter is missing")
-    if "dependency-closed atomic source units" not in process or "Mandatory worker containment" not in process:
-        raise SystemExit("verify-docs: enforceable source-fidelity process gates are missing")
-    if "Stage 6 — complete Zig-native public API" not in plan:
-        raise SystemExit("verify-docs: execution plan still lacks the Zig-native API stage")
-    if not adr.is_file() or "Accepted" not in adr.read_text():
-        raise SystemExit("verify-docs: missing accepted pure-Zig product ADR")
-    if not process_adr.is_file() or "Accepted" not in process_adr.read_text():
-        raise SystemExit("verify-docs: missing accepted atomic source-fidelity process ADR")
-    forbidden = {
-        ROOT / "docs/SCOPE.md": "Static and shared Linux libraries with the pinned",
-        ROOT / "docs/PORTING_RULES.md": "C in native artifacts may unpack ABI arguments",
-        ROOT / "docs/EXECUTION_PLAN.md": "complete public API and extension ABI",
-    }
-    for path, text in forbidden.items():
-        if text in path.read_text():
-            raise SystemExit(f"verify-docs: stale C ABI product requirement in {path.relative_to(ROOT)}")
+    if "source-faithful native Zig core" not in charter or "Production engine modules and artifacts contain only Zig" not in scope:
+        raise SystemExit("verify-docs: pure-Zig source-faithful charter is missing")
+    if "dependency-closed source unit" not in process or "Every oracle, native worker" not in process:
+        raise SystemExit("verify-docs: source or containment gate is missing")
+    if "Work package 8 — built-ins and Zig API" not in plan:
+        raise SystemExit("verify-docs: Zig-native API work package is missing")
 
-    for path in ROOT.glob("**/*.json"):
-        if any(part in {".zig-cache", "zig-out", ".reference-build"} for part in path.parts):
-            continue
-        json.loads(path.read_text())
-
-    status = json.loads((ROOT / "upstream/port-status.json").read_text())
+    status = load_json(ROOT / "upstream/port-status.json")
     source = status["source"]
+    tracking = status["translation_tracking"]
     implementation = status["implementation"]
     engineering = status["engineering_process"]
-    parser_contracts = json.loads((ROOT / "upstream/parser-action-coverage.json").read_text())["summary"]
-    opcode_scaffold = json.loads((ROOT / "upstream/vdbe-opcode-coverage.json").read_text())["summary"]
-    synchronized_facts = {
-        f"{source['active_profile_entities']:,} active": [ROOT / "docs/CURRENT_STATE.md", ROOT / "docs/COMPATIBILITY.md"],
-        f"{source['active_entities_context_reviewed_or_later']:,}": [ROOT / "docs/CURRENT_STATE.md", ROOT / "docs/COMPATIBILITY.md"],
-        f"{source['active_entities_fidelity_reviewed']:,} fidelity-reviewed": [ROOT / "docs/COMPATIBILITY.md"],
-        f"{source['active_entities_unmapped']:,}": [ROOT / "docs/CURRENT_STATE.md", ROOT / "docs/RISK_REGISTER.md"],
-        f"{implementation['source_faithful_internal_layouts_total']}": [ROOT / "docs/CURRENT_STATE.md"],
-        f"{opcode_scaffold['canonical_execution_cases_with_bounded_runtime_mapping']}/{opcode_scaffold['canonical_execution_cases']}": [ROOT / "docs/CURRENT_STATE.md", ROOT / "docs/COMPATIBILITY.md", ROOT / "docs/ARCHITECTURE.md"],
-        f"{parser_contracts['typed_local_flow_contract_rules']}/{parser_contracts['canonical_semantic_action_rules']}": [ROOT / "docs/CURRENT_STATE.md", ROOT / "docs/COMPATIBILITY.md"],
-        f"{engineering['purposeful_python_tool_scripts']} purposeful Python": [ROOT / "docs/CURRENT_STATE.md"],
-        f"{source['behavioral_blocks_inventoried']:,}": [ROOT / "docs/CURRENT_STATE.md", ROOT / "docs/decisions/ADR-0041-source-faithful-gates.md"],
-        f"{source['behavioral_functions_inventoried']:,} functions": [ROOT / "docs/CURRENT_STATE.md"],
-        f"Atomic-unit dossiers total | {source['atomic_unit_dossiers_total']}": [ROOT / "docs/CURRENT_STATE.md"],
-        f"Admission-ready dossiers | {source['atomic_unit_dossiers_admission_ready']}": [ROOT / "docs/CURRENT_STATE.md"],
+    parser_data = load_json(ROOT / "upstream/parser-action-coverage.json")
+    opcode_data = load_json(ROOT / "upstream/vdbe-opcode-coverage.json")
+    parser = parser_data["summary"]
+    opcode = opcode_data["summary"]
+    current = (ROOT / "docs/CURRENT_STATE.md").read_text()
+    facts = {
+        f"| Active source entities | {source['active_profile_entities']:,} active |": current,
+        f"| Historical reviewed-or-later classifications | {source['active_entities_context_reviewed_or_later']:,} |": current,
+        f"| Inventoried, unpromoted entities | {source['active_entities_inventoried']:,} |": current,
+        f"| Unmapped entities | {source['active_entities_unmapped']:,} |": current,
+        f"| Behavioral inventory | {source['behavioral_blocks_inventoried']:,} blocks in {source['behavioral_functions_inventoried']:,} functions |": current,
+        f"| Atomic-unit dossiers total | {source['atomic_unit_dossiers_total']} |": current,
+        f"| Admission-ready dossiers | {source['atomic_unit_dossiers_admission_ready']} |": current,
+        f"| Historical mechanical function claims | {tracking['historical_mechanical_claims']:,}; {tracking['completion_credit']} completion credit |": current,
+        f"| Active batch and durable checkpoints | {tracking['active_batch_entries']} entries; {tracking['durable_checkpoints']} checkpoints |": current,
+        f"| Exact internal layouts | {implementation['source_faithful_internal_layouts_total']} |": current,
+        f"| Purposeful tools | {engineering['purposeful_python_tool_scripts']} purposeful Python scripts |": current,
+        f"| Bounded opcode mappings | {opcode['canonical_execution_cases_with_bounded_runtime_mapping']}/{opcode['canonical_execution_cases']}; {opcode['subsystem_integrated_execution_cases']} integrated |": current,
+        f"| Lemon action contracts | {parser['typed_local_flow_contract_rules']}/{parser['canonical_semantic_action_rules']}; {parser['subsystem_integrated_action_rules']} integrated |": current,
     }
-    for fact, paths in synchronized_facts.items():
-        for path in paths:
-            if fact not in path.read_text():
-                raise SystemExit(f"verify-docs: synchronized fact {fact!r} missing from {path.relative_to(ROOT)}")
-    if parser_contracts["subsystem_integrated_action_rules"] != 0 or opcode_scaffold["subsystem_integrated_execution_cases"] != 0:
+    for fact, text in facts.items():
+        if fact not in text:
+            raise SystemExit(f"verify-docs: synchronized fact {fact!r} is missing")
+    if parser["subsystem_integrated_action_rules"] != 0 or opcode["subsystem_integrated_execution_cases"] != 0:
         raise SystemExit("verify-docs: scaffold ledgers unexpectedly grant integration credit")
-    if source["reviewed_coverage_is_completion_metric"]:
-        raise SystemExit("verify-docs: reviewed coverage must never be a completion metric")
-    if "Do not headline percentages or scaffold counts" not in process:
-        raise SystemExit("verify-docs: engineering process lacks the execution-focused report contract")
 
-    boundary = json.loads((ROOT / "upstream/native-c-boundary.json").read_text())
+    boundary = load_json(ROOT / "upstream/native-c-boundary.json")
     if boundary["required_end_state"]["production_c_objects"] != 0:
         raise SystemExit("verify-docs: production C-object target is not zero")
-    print(f"verify-docs: {len(maintained_documents)} maintained documents and {len(REQUIRED)} required controls OK")
+
+    baseline = dict(
+        line.split("=", 1)
+        for line in (ROOT / "upstream/SQLITE_BASELINE").read_text().splitlines()
+        if "=" in line
+    )
+    baseline_owners = {
+        "README.md": (baseline["version"],),
+        "docs/PORTING_CHARTER.md": (baseline["version"],),
+        "docs/SCOPE.md": (baseline["version"], baseline["fossil_checkin"]),
+    }
+    for relative, required_values in baseline_owners.items():
+        text = (ROOT / relative).read_text()
+        for value in required_values:
+            if value not in text:
+                raise SystemExit(f"verify-docs: pinned baseline is stale in {relative}")
+
+    upstream_result = (ROOT / "reference/c_oracle/UPSTREAM_TEST_EVIDENCE.md").read_text()
+    for required in (baseline["version"], baseline["fossil_checkin"], "zig build test-upstream", "oracle validation only"):
+        if required not in upstream_result:
+            raise SystemExit(f"verify-docs: upstream result evidence is missing {required!r}")
+    testing = (ROOT / "docs/TESTING.md").read_text()
+    if re.search(r"\b[\d,]+-test result\b", testing):
+        raise SystemExit("verify-docs: immutable upstream test count is duplicated outside its result artifact")
+
+
+def main() -> None:
+    for name in REQUIRED:
+        path = ROOT / "docs" / name
+        if not path.is_file() or not path.read_text().strip():
+            raise SystemExit(f"verify-docs: missing or empty docs/{name}")
+    paths = maintained_paths()
+    for path in paths:
+        verify_markdown(path)
+    verify_inventory(paths)
+    verify_local_references(paths)
+    target_count = verify_build_targets(paths)
+    result_dependencies = verify_aggregate_result_graph()
+    test_modules = verify_test_module_ownership()
+    phase_results, fixture_manifests = verify_result_artifacts()
+    verify_policy_and_facts(paths)
+    print(
+        f"verify-docs: {len(paths)} purpose-owned documents, {target_count} documented build targets, "
+        f"{result_dependencies} aggregate dependencies, {test_modules} test/oracle modules, "
+        f"{phase_results} historical results, and {fixture_manifests} fixture manifests OK"
+    )
 
 
 if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
     main()

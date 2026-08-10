@@ -1,4 +1,4 @@
-# ADR-0041: Atomic source-fidelity gates and prototype freeze
+# ADR-0041: Atomic source-assurance gates and prototype freeze
 
 ## Status
 
@@ -16,18 +16,16 @@ The project target requires SQLite's internal architecture, algorithms, states, 
 
 - `docs/ENGINEERING_PROCESS.md` is the authoritative engineering workflow below the charter, scope, pinned source/profile, and this ADR.
 - Work proceeds in dependency-closed atomic source units with behavioral-block, caller/callee, ownership, allocation, result, lock, callback, I/O, and test dossiers.
-- Evidence states distinguish scaffold, source translation, internal trace equivalence, subsystem integration, assurance, and independent fidelity review.
+- Evidence states distinguish scaffold, source translation, internal trace equivalence, subsystem integration, and assurance.
 - Entity/declaration/layout counts, parser hook contracts, opcode-name mappings, C-only test counts, and historical ABI coverage are non-progress accounting.
 - The handwritten frontend/VDBE, reconstructed B-tree mutation, reduced pager/WAL models, and parallel manual bytecode programs are frozen substitutes. Their fixtures may be reused, but feature expansion cannot turn them into the final architecture.
 - C and Zig adapters use a neutral symbolic operation specification where possible. Numeric control-flow duplication is prohibited when labels/fixups can be generated.
 - Every child worker must have enforced time, output, memory, file, process, and descriptor limits before its evidence is trusted as contained.
 - Integrated source translations atomically replace and retire duplicate production owners.
-- Independent fidelity review is required before final promotion.
+- Assurance is the current final promotion state. Independent fidelity review is deferred and is not a current objective or gate.
 
 ## Consequences
 
-The current 348 parser action contracts and 98 bounded opcode-name mappings remain useful scaffolding but are not implementation completion. Existing source mappings and focused differentials remain evidence at their recorded scope and must be reevaluated when coupled dependencies are integrated.
+Parser-action and opcode-name ledgers remain useful scaffolding, not implementation completion. Existing mappings and focused differentials retain only their recorded scope and require reevaluation when coupled dependencies integrate.
 
-The worker audit and 25,930-block active-profile behavioral inventory are now complete through executable gates. Feature expansion remains blocked by scaffold reclassification, assignment into dependency-closed atomic-unit dossiers, and source VDBE builder sequencing.
-
-Progress reports prioritize integrated atomic units and native final-path tests. Historical metrics remain available for inventory and regression planning only.
+Progress reports prioritize integrated atomic units and native final-path tests. Mutable inventory and scaffold counts live in machine-owned status artifacts, not this decision record.

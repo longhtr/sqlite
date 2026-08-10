@@ -1100,6 +1100,13 @@ pub fn rcStrUnref(manager: *memory.Manager, text: [*]u8) void {
     }
 }
 
+/// Destructor-shaped entry point used by `Mem.xDel`, matching
+/// `sqlite3RCStrUnref()` when an RCStr is stored in a dynamic Mem value.
+pub fn rcStrUnrefOpaque(pointer: ?*anyopaque) callconv(.c) void {
+    const text: [*]u8 = @ptrCast(pointer orelse return);
+    rcStrUnref(memory.processManager(), text);
+}
+
 /// Upstream: sqlite3RCStrResize(). Failed realloc consumes the old string.
 pub fn rcStrResize(manager: *memory.Manager, text: [*]u8, capacity: u64) ?[*]u8 {
     const header = rcHeader(text);

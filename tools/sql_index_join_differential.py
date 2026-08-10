@@ -11,4 +11,8 @@ def main():
  oracle,native=map(run,sys.argv[1:])
  if oracle!=native:raise SystemExit(f'index/join mismatch\noracle={oracle[:8]!r}\nnative={native[:8]!r}')
  print(f'sql-index-join-differential: {len(native)} index/join observations match')
-if __name__=='__main__':main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

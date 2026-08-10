@@ -75,7 +75,7 @@ static void clearMachine(sqlite3 *db, Parse *pParse, Vdbe *v){
   if( detachedOperations ) vdbeFreeOpArray(db,detachedOperations,detachedOperationCount);
   detachedOperations=0; detachedOperationCount=0;
   if( db->mallocFailed ) sqlite3OomClear(db);
-  sqlite3DbFree(db,v->aOp);
+  vdbeFreeOpArray(db,v->aOp,v->nOp);
   sqlite3DbFree(db,v->zErrMsg);
   sqlite3DbFree(db,pParse->aLabel);
   db->xProgress=0; db->pProgressArg=0; db->nProgressOps=0;
@@ -335,6 +335,50 @@ int main(int argc, char **argv){
       sqlite3ExpirePreparedStatements(db,1); machineA->prepFlags=37; machineA->rc=SQLITE_INTERRUPT; sqlite3VdbeResetStepResult(machineA);
       printf("%s\t%d\tMETADATA\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",zCase,seq++,(long long)db->nChange,(long long)(db->nTotalChange-totalBefore),machineA->changeCntOn,a,b,machineA->expired,machineB->expired,sqlite3VdbeDb(machineA)==db,sqlite3VdbePrepareFlags(machineA),machineA->rc); continue;
     }
+    if( strcmp(command,"APICOLUMNS")==0 ){
+      Mem row[2]; const unsigned char *text; const void *blob; const void *text16; sqlite3_value *value; int countNull,countLive,dataNull,dataLive,integer,bytes,textType,bytes16,invalid,invalidCode;
+      memset(row,0,sizeof(row)); sqlite3VdbeMemInit(&row[0],db,MEM_Null); sqlite3VdbeMemInit(&row[1],db,MEM_Null); sqlite3VdbeMemSetInt64(&row[0],42); sqlite3VdbeMemSetStr(&row[1],"text",4,SQLITE_UTF8,SQLITE_STATIC);
+      v.pResultRow=row; v.nResColumn=2; countNull=sqlite3_column_count(0); countLive=sqlite3_column_count((sqlite3_stmt*)&v); dataNull=sqlite3_data_count(0); dataLive=sqlite3_data_count((sqlite3_stmt*)&v);
+      integer=sqlite3_column_int((sqlite3_stmt*)&v,0); value=sqlite3_column_value((sqlite3_stmt*)&v,0); textType=sqlite3_column_type((sqlite3_stmt*)&v,1); text=sqlite3_column_text((sqlite3_stmt*)&v,1); bytes=sqlite3_column_bytes((sqlite3_stmt*)&v,1); blob=sqlite3_column_blob((sqlite3_stmt*)&v,1); text16=sqlite3_column_text16((sqlite3_stmt*)&v,1); bytes16=sqlite3_column_bytes16((sqlite3_stmt*)&v,1); invalid=sqlite3_column_int((sqlite3_stmt*)&v,9); invalidCode=db->errCode;
+      printf("%s\t%d\tAPICOLUMNS\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",zCase,seq++,countNull,countLive,dataNull,dataLive,integer,value==&row[0],textType,text&&memcmp(text,"text",4)==0,bytes,blob!=0,text16!=0,bytes16,invalid,invalidCode);
+      sqlite3VdbeMemRelease(&row[0]); sqlite3VdbeMemRelease(&row[1]); v.pResultRow=0; v.nResColumn=0; continue;
+    }
+    if( strcmp(command,"APIVLIST")==0 ){
+      VList *list=0; const char *firstName; int firstIndex,secondIndex,missing;
+      list=sqlite3VListAdd(db,list,":alpha",6,1); list=sqlite3VListAdd(db,list,"@beta",5,2); v.pVList=list; v.nVar=2;
+      firstName=sqlite3_bind_parameter_name((sqlite3_stmt*)&v,1); firstIndex=sqlite3_bind_parameter_index((sqlite3_stmt*)&v,":alpha"); secondIndex=sqlite3VdbeParameterIndex(&v,"@beta",5); missing=sqlite3VdbeParameterIndex(&v,"$missing",8);
+      printf("%s\t%d\tAPIVLIST\t%d\t%d\t%d\t%d\t%d\t%d\n",zCase,seq++,sqlite3_bind_parameter_count((sqlite3_stmt*)&v),firstName&&strcmp(firstName,":alpha")==0,firstIndex,secondIndex,missing,list!=0);
+      sqlite3DbFree(db,list); v.pVList=0; v.nVar=0; continue;
+    }
+    if( strcmp(command,"APIVLISTOOM")==0 ){
+      VList *list=0,*before; int retained,missing,oomState;
+      db->lookaside.bDisable=1; db->lookaside.sz=0; list=sqlite3VListAdd(db,list,"alpha",5,1); list=sqlite3VListAdd(db,list,"beta",4,2); before=list; failNextAllocation=1; list=sqlite3VListAdd(db,list,"01234567890123456789",20,3);
+      retained=list==before; missing=sqlite3VListNameToNum(list,"01234567890123456789",20); oomState=db->mallocFailed; if(db->mallocFailed)sqlite3OomClear(db); failNextAllocation=0;
+      printf("%s\t%d\tAPIVLISTOOM\t%d\t%d\t%d\n",zCase,seq++,retained,missing,oomState); sqlite3DbFree(db,list); db->lookaside.bDisable=0; db->lookaside.sz=db->lookaside.szTrue; continue;
+    }
+    if( strcmp(command,"APIBINDINGS")==0 ){
+      Vdbe from,to; Mem fromValues[2],toValues[2]; int directResult,deprecatedResult,clearResult;
+      memset(&from,0,sizeof(from)); memset(&to,0,sizeof(to)); memset(fromValues,0,sizeof(fromValues)); memset(toValues,0,sizeof(toValues)); from.db=db; to.db=db; from.nVar=2; to.nVar=2; from.aVar=fromValues; to.aVar=toValues; from.prepFlags=SQLITE_PREPARE_SAVESQL; to.prepFlags=SQLITE_PREPARE_SAVESQL;
+      sqlite3VdbeMemInit(&fromValues[0],db,MEM_Null); sqlite3VdbeMemInit(&fromValues[1],db,MEM_Null); sqlite3VdbeMemInit(&toValues[0],db,MEM_Null); sqlite3VdbeMemInit(&toValues[1],db,MEM_Null); sqlite3VdbeMemSetInt64(&fromValues[0],11); sqlite3VdbeMemSetInt64(&fromValues[1],22);
+      directResult=sqlite3TransferBindings((sqlite3_stmt*)&from,(sqlite3_stmt*)&to); sqlite3VdbeMemSetInt64(&fromValues[0],33); sqlite3VdbeMemSetInt64(&fromValues[1],44); from.expmask=1; to.expmask=1; deprecatedResult=sqlite3_transfer_bindings((sqlite3_stmt*)&from,(sqlite3_stmt*)&to); clearResult=sqlite3_clear_bindings((sqlite3_stmt*)&to);
+      printf("%s\t%d\tAPIBINDINGS\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",zCase,seq++,directResult,deprecatedResult,clearResult,from.expired,to.expired,fromValues[0].flags,toValues[0].flags,toValues[1].flags,to.expmask); continue;
+    }
+    if( strcmp(command,"APIMETA")==0 ){
+      Vdbe second,finalized; const char *sqlText; int counterBefore,counterAfter;
+      memset(&second,0,sizeof(second)); memset(&finalized,0,sizeof(finalized)); second.db=db; v.pVNext=&second; db->pVdbe=&v; v.readOnly=1; v.explain=2; v.eVdbeState=VDBE_RUN_STATE; v.expired=2; v.zSql="select 1"; v.aCounter[3]=17;
+      counterBefore=sqlite3_stmt_status((sqlite3_stmt*)&v,3,1); counterAfter=sqlite3_stmt_status((sqlite3_stmt*)&v,3,0); sqlText=sqlite3_sql((sqlite3_stmt*)&v);
+      printf("%s\t%d\tAPIMETA\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",zCase,seq++,sqlite3_expired((sqlite3_stmt*)&v),sqlite3_db_handle((sqlite3_stmt*)&v)==db,sqlite3_stmt_readonly((sqlite3_stmt*)&v),sqlite3_stmt_isexplain((sqlite3_stmt*)&v),sqlite3_stmt_busy((sqlite3_stmt*)&v),sqlite3_next_stmt(db,0)==&v,sqlite3_next_stmt(db,(sqlite3_stmt*)&v)==(sqlite3_stmt*)&second,counterBefore,counterAfter,sqlText&&strcmp(sqlText,"select 1")==0,vdbeSafety(&v),vdbeSafety(&finalized),vdbeSafetyNotNull(0));
+      db->pVdbe=0; v.pVNext=0; v.readOnly=0; v.explain=0; v.expired=0; v.eVdbeState=VDBE_INIT_STATE; v.zSql=0; continue;
+    }
+    if( strcmp(command,"APIMEMUSED")==0 ){
+      Parse ownerParse; Vdbe *owned; int measured,stillLinked;
+      memset(&ownerParse,0,sizeof(ownerParse)); ownerParse.db=db; owned=sqlite3VdbeCreate(&ownerParse); sqlite3VdbeAddOp0(owned,OP_Noop); measured=sqlite3_stmt_status((sqlite3_stmt*)owned,SQLITE_STMTSTATUS_MEMUSED,0); stillLinked=db->pVdbe==owned&&owned->db==db;
+      printf("%s\t%d\tAPIMEMUSED\t%d\t%d\n",zCase,seq++,measured>0,stillLinked); sqlite3VdbeDelete(owned); continue;
+    }
+    if( strcmp(command,"APIEXIT")==0 ){
+      int masked,oomResult,oomState,errorCode; db->errMask=0xff; masked=sqlite3ApiExit(db,0x1234); sqlite3OomFault(db); oomResult=sqlite3ApiExit(db,0); oomState=db->mallocFailed; errorCode=db->errCode;
+      printf("%s\t%d\tAPIEXIT\t%d\t%d\t%d\t%d\n",zCase,seq++,masked,oomResult,oomState,errorCode); continue;
+    }
     if( strcmp(command,"SETSQLNULL")==0 ){
       sqlite3VdbeSetSql(0,"ignored",7,3); printf("%s\t%d\tSETSQLNULL\n",zCase,seq++); continue;
     }
@@ -412,6 +456,31 @@ int main(int argc, char **argv){
     if( strcmp(command,"P4NOOP")==0 ){
       void *owner=sqlite3DbMallocRawNN(db,32); int address=sqlite3VdbeAddOp0(&v,OP_Noop); v.aOp[address].p4type=P4_DYNAMIC; v.aOp[address].p4.p=owner;
       a=sqlite3VdbeChangeToNoop(&v,address); printf("%s\t%d\tP4NOOP\t%d\t%d\t%d\t%d\n",zCase,seq++,a,lookasideContains(db,owner),v.aOp[address].opcode,v.aOp[address].p4type); continue;
+    }
+    if( strcmp(command,"P4CHANGE")==0 ){
+      static char staticText[]="stable"; void *dynamicOwner; void *oomOwner; int address; int oomAddress; int staticIdentity; int intValue; int dynamicType; int dynamicText; int dynamicDistinct; int dynamicFreed; int oomOwnerFreed; int oomOperationType; int oomState;
+      address=sqlite3VdbeAddOp0(&v,OP_Noop); sqlite3VdbeChangeP4(&v,address,staticText,P4_STATIC); staticIdentity=v.aOp[address].p4.z==staticText;
+      sqlite3VdbeChangeP4(&v,address,SQLITE_INT_TO_PTR(123456),P4_INT32); intValue=v.aOp[address].p4.i;
+      sqlite3VdbeChangeP4(&v,-1,"alphabet",5); dynamicOwner=v.aOp[address].p4.p; dynamicType=v.aOp[address].p4type; dynamicText=strcmp(v.aOp[address].p4.z,"alpha")==0; dynamicDistinct=v.aOp[address].p4.z!=staticText;
+      sqlite3VdbeChangeToNoop(&v,address); dynamicFreed=lookasideContains(db,dynamicOwner);
+      oomAddress=sqlite3VdbeAddOp0(&v,OP_Noop); oomOwner=sqlite3DbMallocRawNN(db,32); sqlite3OomFault(db); sqlite3VdbeChangeP4(&v,oomAddress,oomOwner,P4_DYNAMIC);
+      oomOwnerFreed=lookasideContains(db,oomOwner); oomOperationType=v.aOp[oomAddress].p4type; oomState=db->mallocFailed; sqlite3OomClear(db);
+      printf("%s\t%d\tP4CHANGE\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",zCase,seq++,staticIdentity,intValue,dynamicType,dynamicText,dynamicDistinct,dynamicFreed,oomOwnerFreed,oomOperationType,oomState); continue;
+    }
+    if( strcmp(command,"P4CHANGEVTAB")==0 ){
+      VTable table; int address; int afterLock; int pointerIdentity; int ownerType; int afterRelease;
+      memset(&table,0,sizeof(table)); table.db=db; table.nRef=1; address=sqlite3VdbeAddOp0(&v,OP_Noop);
+      sqlite3VdbeChangeP4(&v,address,(char*)&table,P4_VTAB); afterLock=table.nRef; pointerIdentity=v.aOp[address].p4.p==&table; ownerType=v.aOp[address].p4type;
+      sqlite3VdbeChangeToNoop(&v,address); afterRelease=table.nRef;
+      printf("%s\t%d\tP4CHANGEVTAB\t%d\t%d\t%d\t%d\n",zCase,seq++,afterLock,pointerIdentity,ownerType,afterRelease); continue;
+    }
+    if( strcmp(command,"P4APPEND")==0 ){
+      void *normalOwner; void *oomOwner; int address; int oomAddress; int pointerIdentity; int ownerType; int normalFreed; int oomFreed; int oomOperationType; int oomState;
+      address=sqlite3VdbeAddOp0(&v,OP_Noop); normalOwner=sqlite3DbMallocRawNN(db,32); sqlite3VdbeAppendP4(&v,normalOwner,P4_DYNAMIC);
+      pointerIdentity=v.aOp[address].p4.p==normalOwner; ownerType=v.aOp[address].p4type; sqlite3VdbeChangeToNoop(&v,address); normalFreed=lookasideContains(db,normalOwner);
+      oomAddress=sqlite3VdbeAddOp0(&v,OP_Noop); oomOwner=sqlite3DbMallocRawNN(db,32); sqlite3OomFault(db); sqlite3VdbeAppendP4(&v,oomOwner,P4_DYNAMIC);
+      oomFreed=lookasideContains(db,oomOwner); oomOperationType=v.aOp[oomAddress].p4type; oomState=db->mallocFailed; sqlite3OomClear(db);
+      printf("%s\t%d\tP4APPEND\t%d\t%d\t%d\t%d\t%d\t%d\n",zCase,seq++,pointerIdentity,ownerType,normalFreed,oomFreed,oomOperationType,oomState); continue;
     }
     if( strcmp(command,"P4FREEOPS")==0 ){
       Op *operations=sqlite3DbMallocZero(db,2*sizeof(Op)); void *first=sqlite3DbMallocRawNN(db,32); void *second=sqlite3DbMallocRawNN(db,32);

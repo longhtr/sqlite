@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "pcache-process-lifecycle-and-static-buffer",
   "title": "Default/configured PCache lifecycle and pcache1 static buffer setup",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the process PCache method owner, active pcache1 lifecycle/static-buffer state, default selection, init/shutdown, and post-OS buffer setup executed by sqlite3_initialize/shutdown.",
@@ -309,9 +309,9 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
-    "subsystem_integrated": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
     "oom": "Lifecycle allocates no heap. Per-page and custom callback OOM remain outside scope.",
     "io_crash_concurrency": "No I/O. Global serialization and static mutex mode are tested; per-cache contention remains outside scope.",
     "malformed_input": "Null storage, zero count, sub-valid manager settings, and size rounding are tested.",
@@ -337,5 +337,35 @@
   "known_blockers": [
     "Static slots and signed nInitPage bulk-local allocation policy are consumed by production Cache; custom PCache methods remain separate.",
     "Application-defined PCache methods and independent review remain open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/sqliteInt.h:4298-4312 was reviewed for pcache2 and static page configuration adjacency",
+      "upstream/sqlite/src/pcache.c:270-318 was reviewed completely for default-method selection and process xInit/xShutdown dispatch",
+      "upstream/sqlite/src/pcache1.c:190-301 was reviewed for PgFreeslot, complete PCacheGlobal state, WSD alias, mutex policy, and static-buffer free-list construction",
+      "upstream/sqlite/src/pcache1.c:680-760 and 1185-1226 were reviewed for pcache1 init/shutdown, default table, header-size query, and status mutex; page_cache.zig Lifecycle/FreeSlot/Cache targets are AST-hashed"
+    ],
+    "callers": [
+      "sqlite3_initialize starts PCache before OS/memdb and configures the static buffer only after OS success; sqlite3_shutdown stops PCache after OS",
+      "sqlite3_config PAGECACHE/PCACHE2 writes the selected process owner; status.c obtains sqlite3Pcache1Mutex for page-cache counters",
+      "Per-cache creation/allocation consumes mode, initial pages, static free slots, reserve/pressure, and mutex state in follow-on units"
+    ],
+    "callees": [
+      "sqlite3PcacheInitialize installs default methods when xInit is null then invokes xInit(pArg); shutdown conditionally invokes xShutdown",
+      "pcache1Init clears state, selects separate/unified mode from profile/core/static configuration, borrows STATIC_LRU/STATIC_PMEM, sets nInitPage/mxPinned/isInit",
+      "sqlite3PCacheBufferSetup requires initialized state, normalizes null/zero inputs, rounds slot size down to eight, computes reserve, clears pressure, and prepends exactly n intrusive slots",
+      "pcache1Shutdown zeroes all state; default method table binds the full pcache1 callback family"
+    ],
+    "assertions_branches_cleanup": [
+      "Sixteen behavior IDs cover lifecycle selection/results, setup guards/normalization/loop, mode/mutex/initial-page branches, shutdown assertions, and query returns",
+      "Static storage remains caller-owned; free-list links mutate borrowed slots and no process lifecycle heap allocation occurs",
+      "Late OS failure retains initialized PCache for retry; top-level shutdown later clears it",
+      "Custom methods and per-page OOM are excluded rather than credited"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/pcache.test, pcache2.test, pcache3.test, and pcache4.test exercise lifecycle, configuration, static slots, pressure, and cache behavior",
+      "upstream/sqlite/test/memsubsys1.test and memsubsys2.test observe page-cache status and static storage",
+      "Project page_cache/global tests and infrastructure differential cover mode, rounding, reserve, free-list topology, late failure/retry, and shutdown; receipts remain later"
+    ]
+  }
 }

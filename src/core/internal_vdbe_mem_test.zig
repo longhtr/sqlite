@@ -3,7 +3,11 @@ pub const vdbe_mem = @import("internal/vdbe_mem.zig");
 pub const db_allocator = @import("internal/db_allocator.zig");
 pub const btree_aux = @import("internal/btree_aux.zig");
 pub const vdbe_aux = @import("internal/vdbe_aux.zig");
+pub const vdbe_api = @import("internal/vdbe_api.zig");
 pub const vdbe_record = @import("internal/vdbe_record.zig");
+pub const walker = @import("internal/walker.zig");
+pub const collation = @import("internal/collation.zig");
+pub const builtin_functions = @import("internal/builtin_functions.zig");
 pub const memory = @import("memory.zig");
 pub const public_api = @import("public_api.zig");
 
@@ -16,11 +20,23 @@ test "analyze all active internal VDBE memory declarations" {
         for (std.meta.declarations(vdbe_aux)) |declaration| {
             _ = @field(vdbe_aux, declaration.name);
         }
+        for (std.meta.declarations(vdbe_api)) |declaration| {
+            _ = @field(vdbe_api, declaration.name);
+        }
         for (std.meta.declarations(btree_aux)) |declaration| {
             _ = @field(btree_aux, declaration.name);
         }
         for (std.meta.declarations(vdbe_record)) |declaration| {
             _ = @field(vdbe_record, declaration.name);
+        }
+        for (std.meta.declarations(walker)) |declaration| {
+            _ = @field(walker, declaration.name);
+        }
+        for (std.meta.declarations(collation)) |declaration| {
+            _ = @field(collation, declaration.name);
+        }
+        for (std.meta.declarations(builtin_functions)) |declaration| {
+            _ = @field(builtin_functions, declaration.name);
         }
     }
 }

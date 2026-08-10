@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "os-unix-process-lifecycle-and-default-vfs",
   "title": "Unix OS lifecycle, default Unix VFS, and memdb VFS registration",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These functions are the active OS layer called by sqlite3_initialize: wrapper dispatch, the four-variant Linux Unix VFS table, shutdown, and memdb registration. Production owns concrete Unix locking-mode and memory adapters in one shared ABI registry.",
@@ -129,9 +129,9 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
-    "subsystem_integrated": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
     "oom": "Lifecycle registration uses process-static owners and is allocation-free. Per-open Unix/memdb ownership failures have native cleanup coverage.",
     "io_crash_concurrency": "Lifecycle performs no I/O. Posix has OFD cross-process and process-death evidence; no-lock, dotfile, and exclusive modes have method-tail and contention tests. Memdb source concurrency remains open.",
     "malformed_input": "Not input-driven at lifecycle level.",
@@ -158,5 +158,35 @@
   "known_blockers": [
     "Exact C/Zig registry event differential and independent review remain open.",
     "Memdb file methods are trace-equivalent and serialize/deserialize have a separate scaffolded atomic unit; their remaining blockers are tracked there."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/os.c:330-351 was reviewed completely for sqlite3OsInit allocation-fault wrapper and platform dispatch",
+      "upstream/sqlite/src/os_unix.c:8420-8590 was reviewed completely for active Linux UNIXVFS table construction, registration order/default, static VFS mutex, WAL lock assertions, temp-dir initialization, and shutdown",
+      "upstream/sqlite/src/memdb.c:900-939 was reviewed for lower/default VFS selection, adapter sizing, and non-default registration",
+      "src/core/global.zig process adapters/initializeProcessOs/shutdownProcessOs and vfs.zig process registry are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "sqlite3_initialize calls sqlite3OsInit after PCache success and sqlite3MemdbInit immediately after OS success; sqlite3_shutdown calls sqlite3_os_end before PCache shutdown",
+      "sqlite3_os_init registers unix, unix-none, unix-dotfile, and unix-excl in profile order with unix default, then obtains STATIC_VFS1",
+      "sqlite3MemdbInit borrows the current default VFS and registers memdb non-default; public VFS APIs consume the same process registry"
+    ],
+    "callees": [
+      "sqlite3OsInit performs a ten-byte allocation/free fault probe before platform initialization",
+      "Active Linux sqlite3_os_init registers four static v3 VFS objects, validates syscall/WAL constants, initializes temp-file directory state, and returns OK",
+      "sqlite3_os_end clears unixBigLock and returns OK; static VFS registrations persist",
+      "sqlite3MemdbInit finds default VFS, sets lower adapter and max file storage size, and delegates registration result"
+    ],
+    "assertions_branches_cleanup": [
+      "Fourteen behavior IDs cover wrapper OOM, lower-VFS impossibility, adapter size, registration result, active table loop/assertions, and Unix shutdown result",
+      "Apple, VxWorks, KV, Windows, optional locking-style variants, and omitted WAL/deserialization branches are inactive",
+      "Lifecycle itself performs no file I/O; wrapper OOM leaves OS uninitialized and later retry is valid",
+      "Process-static adapter identity and registry links survive shutdown/reinitialize"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/oserror.test and malloc fault tests exercise sqlite3OsInit failure propagation",
+      "upstream/sqlite/test/vfs.test, vfs1.test, unixexcl.test, lock tests, and memdb tests observe registration/default and selected locking behavior",
+      "Project global/unix VFS tests exercise variant table, no-lock/dotfile/exclusive semantics, OFD contention/death, registry continuation, and memdb lookup; exact registry differential remains a blocker"
+    ]
+  }
 }

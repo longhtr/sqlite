@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-operation-access-mutation-and-jump-patching",
   "title": "VDBE operation access, operand mutation, and jump patching",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "These accessors and mutators form the source builder patching interface: current/last/addressed operation access, OOM dummy fallback, exact operand changes, typeof flagging, and jump-here/pop optimization. They share one INIT-state and dummy-continuation contract.",
     "source_files": [
@@ -161,7 +161,7 @@
     "Inactive debug/coverage branches are excluded by the pinned profile."
   ],
   "oracle": {
-    "protocol": "The shared builder appends and mutates operations, reads current/addressed/last state, applies P5 and typeof flags, patches and removes jumps, then forces sticky OOM and reads an out-of-range address through the dummy. All are compared in a 363-observation trace.",
+    "protocol": "The shared builder appends and mutates operations, reads current/addressed/last state, applies P5 and typeof flags, patches and removes jumps, then forces sticky OOM and reads an out-of-range address through the dummy. All are compared in a 366-observation trace.",
     "internal_observations": [
       "current address and real pointer selection",
       "all opcode/P1/P2/P3/P5 fields",
@@ -173,9 +173,9 @@
     "normalization": "Pointer values normalize to real-array identity versus dummy. All operation fields/counts are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Sticky OOM dummy retrieval with invalid address is reached; it returns exact zero fields without touching aOp.",
     "io_crash_concurrency": "No I/O/callback. Production compiler mutex remains integration obligation.",
@@ -200,6 +200,7 @@
     "notes": "Requires compiler integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port P4 replacement/ownership and operation destruction.",
     "Migrate production compiler to source VDBE patching interface.",
     "Independent fidelity review remains open."

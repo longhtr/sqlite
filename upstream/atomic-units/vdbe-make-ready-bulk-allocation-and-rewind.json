@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-make-ready-bulk-allocation-and-rewind",
   "title": "VDBE MakeReady bulk allocation, Parse transfer, and rewind",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "MakeReady is the one-way packaging boundary from Parse-owned builder metadata to execution-ready Vdbe arrays. ReusableSpace/allocSpace, Mem initialization, rewind, transferred VList, array/count fields, and execution defaults form one inseparable ownership unit.",
     "source_files": [
@@ -322,9 +322,9 @@
     "normalization": "Pointer addresses are normalized to presence, owner transfer, and db identity. Counts, flags, Mem headers, state and OOM results are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Normal tail-only packaging and forced pFree allocation failure are reached; failed packaging publishes zero executable array counts and remains destructible.",
     "io_crash_concurrency": "No I/O/callback. Production mutex and runtime cursor lifecycle remain integration obligations.",
@@ -349,6 +349,7 @@
     "notes": "Requires teardown/runtime integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port P4 ownership and VDBE operation/object destruction.",
     "Switch compiler/runtime ownership from handwritten Program to source VDBE and retire duplicate representations.",
     "Independent fidelity review remains open."

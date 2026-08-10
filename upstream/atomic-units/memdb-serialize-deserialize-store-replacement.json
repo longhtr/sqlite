@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "memdb-serialize-deserialize-store-replacement",
   "title": "Memdb serialization, deserialization, and store replacement",
-  "status": "scaffolded",
+  "status": "inventoried",
   "admission_ready": false,
   "scope": {
     "rationale": "These three source functions resolve a schema to a private memdb store, expose copied or borrowed database images, and replace a schema store with caller-provided bytes and ownership/resize/read-only flags. Native public APIs preserve main-schema copy/NOCOPY sizing and directly adopt replacement buffers with source-shaped capacity, resize, ownership, and read-only flags; attached-schema closure and complete differential assurance remain open.",
@@ -141,10 +141,10 @@
     "normalization": "Database image bytes, sizes, result codes and within-worker pointer identity are exact. Absolute C/Zig addresses are not compared."
   },
   "assurance": {
-    "source_context_reviewed": true,
+    "source_context_reviewed": false,
     "source_translated": false,
     "internal_trace_equivalent": false,
-    "subsystem_integrated": true,
+    "subsystem_integrated": false,
     "oom": "Copy allocation is exercised through integration tests; direct FREEONCLOSE close, borrowed storage, read-only storage, and successful resize behavior are covered. The complete transferred-buffer failure/OOM/free matrix remains open.",
     "io_crash_concurrency": "Unix serialization reads a stable file in the serialized connection path. Exact connection/store lock ordering and concurrent API misuse traces remain open.",
     "malformed_input": "Negative size/capacity, null data and unknown schema have native guards; full source API-armor matrix remains open.",
@@ -169,6 +169,7 @@
     "notes": "Requires external-buffer adoption, full flags/schema/OOM differential, assurance, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Complete the transferred-buffer failure/OOM/free differential, including resize failure and configured memdb maximum.",
     "Support eligible attached schemas and source reopen path.",
     "Add pinned C/Zig flags, OOM, ownership and continuation differential.",

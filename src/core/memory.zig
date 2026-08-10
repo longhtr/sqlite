@@ -102,23 +102,30 @@ fn writeStoredSize(raw: [*]u8, size: usize) void {
     const header: *align(1) u64 = @ptrCast(raw);
     header.* = @intCast(size);
 }
+/// Source `sqlite3MemMalloc()`: retain the rounded request in the pinned
+/// profile's eight-byte prefix so xSize can recover it without libc support.
 fn systemMalloc(_: *anyopaque, size: usize) ?*anyopaque {
-    const raw_pointer = std.c.malloc(size + size_header_bytes) orelse return null;
+    const allocation_size = std.math.add(usize, size, size_header_bytes) catch return null;
+    const raw_pointer = std.c.malloc(allocation_size) orelse return null;
     const raw: [*]u8 = @ptrCast(raw_pointer);
     writeStoredSize(raw, size);
     return @ptrCast(raw + size_header_bytes);
 }
+/// Source `sqlite3MemFree()`.
 fn systemFree(_: *anyopaque, pointer: ?*anyopaque) void {
     const payload = pointer orelse return;
     std.c.free(@ptrCast(rawFromPayload(payload)));
 }
+/// Source `sqlite3MemRealloc()`: preserve the old allocation on failure.
 fn systemRealloc(_: *anyopaque, pointer: ?*anyopaque, size: usize) ?*anyopaque {
     const payload = pointer orelse return systemMalloc(&system_context, size);
-    const resized = std.c.realloc(@ptrCast(rawFromPayload(payload)), size + size_header_bytes) orelse return null;
+    const allocation_size = std.math.add(usize, size, size_header_bytes) catch return null;
+    const resized = std.c.realloc(@ptrCast(rawFromPayload(payload)), allocation_size) orelse return null;
     const raw: [*]u8 = @ptrCast(resized);
     writeStoredSize(raw, size);
     return @ptrCast(raw + size_header_bytes);
 }
+/// Source `sqlite3MemSize()`.
 fn systemSize(_: *anyopaque, pointer: *anyopaque) usize {
     const header: *align(1) const u64 = @ptrCast(rawFromPayload(pointer));
     return @intCast(header.*);
@@ -126,11 +133,13 @@ fn systemSize(_: *anyopaque, pointer: *anyopaque) usize {
 fn systemRoundup(_: *anyopaque, size: usize) usize {
     return (size + 7) & ~@as(usize, 7);
 }
+/// Source `sqlite3MemInit()` for the emitted non-Apple system allocator.
 fn systemInit(_: *anyopaque) c_int {
     return ok;
 }
 fn systemShutdown(_: *anyopaque) void {}
 
+/// Source `sqlite3MemSetDefault()`: install the complete mem1 method table.
 pub fn systemBackend() Backend {
     return .{
         .context = &system_context,
@@ -275,6 +284,7 @@ pub const Manager = struct {
         return self.startWithMutex(.{ .native = mutex.processStatic(.static_mem) });
     }
 
+    /// Source `sqlite3MallocInit()`.
     pub fn startWithMutex(self: *Manager, allocator_mutex: ?mutex.Handle) c_int {
         if (self.started) return ok;
         self.lock = allocator_mutex;
@@ -327,6 +337,7 @@ pub const Manager = struct {
         return self.now_value[@intFromEnum(operation)];
     }
 
+    /// Source `sqlite3StatusUp()`; callers hold the operation's owner mutex.
     pub fn statusUp(self: *Manager, operation: Status, amount: i64) void {
         const index = @intFromEnum(operation);
         self.now_value[index] += amount;
@@ -338,6 +349,7 @@ pub const Manager = struct {
         self.now_value[@intFromEnum(operation)] -= amount;
     }
 
+    /// Source `sqlite3StatusHighwater()`.
     pub fn statusHighwater(self: *Manager, operation: Status, value: i64) void {
         std.debug.assert(value >= 0);
         std.debug.assert(operation == .malloc_size or operation == .pagecache_size or operation == .parser_stack);
@@ -356,13 +368,8 @@ pub const Manager = struct {
         return pointer;
     }
 
-    pub fn alloc(self: *Manager, requested: u64) ?*anyopaque {
-        std.debug.assert(self.started);
-        if (requested == 0 or requested > max_allocation_size) return null;
-        if (!self.memory_status) return self.backend.mallocFn(self.backend.context, @intCast(requested));
-        self.enter();
-        defer self.leave();
-        const request: usize = @intCast(requested);
+    /// Source `mallocWithAlarm()`. The allocator mutex is held on entry.
+    fn allocateWithAlarm(self: *Manager, request: usize) ?*anyopaque {
         const full = self.backend.roundupFn(self.backend.context, request);
         self.statusHighwater(.malloc_size, @intCast(request));
         if (self.soft_limit > 0 and self.statusValue(.memory_used) >= self.soft_limit - @as(i64, @intCast(full))) {
@@ -374,6 +381,17 @@ pub const Manager = struct {
         }
         const pointer = self.backend.mallocFn(self.backend.context, full) orelse return null;
         self.updateAllocation(self.backend.sizeFn(self.backend.context, pointer));
+        return pointer;
+    }
+
+    /// Source `sqlite3Malloc()`.
+    pub fn alloc(self: *Manager, requested: u64) ?*anyopaque {
+        std.debug.assert(self.started);
+        if (requested == 0 or requested > max_allocation_size) return null;
+        if (!self.memory_status) return self.backend.mallocFn(self.backend.context, @intCast(requested));
+        self.enter();
+        defer self.leave();
+        const pointer = self.allocateWithAlarm(@intCast(requested)) orelse return null;
         std.debug.assert(@intFromPtr(pointer) & 7 == 0);
         return pointer;
     }
@@ -382,6 +400,7 @@ pub const Manager = struct {
         return self.backend.sizeFn(self.backend.context, pointer);
     }
 
+    /// Source `sqlite3_free()` after public auto-initialization.
     pub fn free(self: *Manager, pointer: ?*anyopaque) void {
         const value = pointer orelse return;
         std.debug.assert(self.started);
@@ -396,6 +415,7 @@ pub const Manager = struct {
         self.backend.freeFn(self.backend.context, value);
     }
 
+    /// Source `sqlite3Realloc()`.
     pub fn realloc(self: *Manager, old: ?*anyopaque, requested: u64) ?*anyopaque {
         std.debug.assert(self.started);
         const pointer = old orelse return self.alloc(requested);
@@ -424,6 +444,7 @@ pub const Manager = struct {
         return result;
     }
 
+    /// Source `sqlite3_status64()` core query and reset operation.
     pub fn status(self: *Manager, operation: Status, reset: bool) StatusValue {
         self.statusEnter(operation);
         defer self.statusLeave(operation);
@@ -439,18 +460,27 @@ pub const Manager = struct {
         return self.nearly_full;
     }
 
+    /// Source `sqlite3_soft_heap_limit64()`. Release is deliberately invoked
+    /// after dropping the allocator mutex because cache release may allocate.
     pub fn setSoftLimit(self: *Manager, value: i64) i64 {
         self.enter();
-        defer self.leave();
         const previous = self.soft_limit;
-        if (value < 0) return previous;
+        if (value < 0) {
+            self.leave();
+            return previous;
+        }
         var next = value;
         if (self.hard_limit > 0 and (next == 0 or next > self.hard_limit)) next = self.hard_limit;
         self.soft_limit = next;
-        self.nearly_full = next > 0 and next <= self.statusValue(.memory_used);
+        const used = self.statusValue(.memory_used);
+        self.nearly_full = next > 0 and next <= used;
+        self.leave();
+        const excess = used - next;
+        if (excess > 0) _ = releaseMemory(@intCast(@as(u64, @bitCast(excess)) & 0x7fff_ffff));
         return previous;
     }
 
+    /// Source `sqlite3_hard_heap_limit64()`.
     pub fn setHardLimit(self: *Manager, value: i64) i64 {
         self.enter();
         defer self.leave();

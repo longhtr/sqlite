@@ -165,11 +165,19 @@ pub fn deleteTable(db: *runtime.Sqlite3, table_optional: ?*schema.Table) void {
         .virtual => clearVirtualTable(db, table),
         .view => deleteSelect(db, if (table.owner.view.query) |query| @ptrCast(@alignCast(query)) else null),
     }
-    deleteColumns(db, table);
+    deleteColumnNames(db, table);
     free(db, table.name);
     free(db, table.column_affinities);
     deleteExpressionList(db, if (table.checks) |checks| @ptrCast(@alignCast(checks)) else null);
     db_allocator.freeNN(db, @ptrCast(table));
+}
+
+pub fn deleteIndex(db: *runtime.Sqlite3, index: *schema.Index) void {
+    deleteExpression(db, if (index.partial_predicate) |expression| @ptrCast(@alignCast(expression)) else null);
+    deleteExpressionList(db, if (index.column_expressions) |expressions| @ptrCast(@alignCast(expressions)) else null);
+    free(db, index.column_affinities);
+    if (index.isResized()) free(db, index.collations);
+    db_allocator.freeNN(db, @ptrCast(index));
 }
 
 fn deleteIndexes(db: *runtime.Sqlite3, table: *schema.Table) void {
@@ -180,11 +188,7 @@ fn deleteIndexes(db: *runtime.Sqlite3, table: *schema.Table) void {
             const owner = index.schema.?;
             _ = owner.index_hash.insert(memory.processAllocator(), index.name.?, null);
         }
-        deleteExpression(db, if (index.partial_predicate) |expression| @ptrCast(@alignCast(expression)) else null);
-        deleteExpressionList(db, if (index.column_expressions) |expressions| @ptrCast(@alignCast(expressions)) else null);
-        free(db, index.column_affinities);
-        if (index.isResized()) free(db, index.collations);
-        db_allocator.freeNN(db, @ptrCast(index));
+        deleteIndex(db, index);
         current = next;
     }
 }
@@ -244,7 +248,7 @@ fn clearVirtualTable(db: *runtime.Sqlite3, table: *schema.Table) void {
     }
 }
 
-fn deleteColumns(db: *runtime.Sqlite3, table: *schema.Table) void {
+pub fn deleteColumnNames(db: *runtime.Sqlite3, table: *schema.Table) void {
     if (table.columns) |columns| {
         for (columns[0..@intCast(table.column_count)]) |column| free(db, column.name_and_metadata);
         db_allocator.freeNN(db, @ptrCast(columns));

@@ -17,3 +17,6 @@ zig-out/
 *.dylib
 __pycache__/
 *.py[cod]
+
+# transient workspace (see AGENTS.md rule 12)
+tmp/

@@ -25,6 +25,7 @@ ACTIVE_REVIEW_STATES = {
     "fidelity-reviewed",
     "architecture-irrelevant-reviewed",
 }
+PLANNING_STATES = {"inventoried"}
 LEGACY_STATES = {
     "legacy-candidate-target-resolved",
     "legacy-candidate-unresolved",
@@ -41,7 +42,7 @@ def main() -> None:
     zig_manifest = json.loads((ROOT / "upstream/zig-declaration-inventory.json").read_text())
     ledger = json.loads((ROOT / "upstream/symbol-map.json").read_text())
 
-    if ledger.get("schema_version") != 2 or ledger.get("status") != "initial-classification":
+    if ledger.get("schema_version") != 3 or ledger.get("status") != "working-classification":
         fail("unexpected ledger schema or status")
     if ledger.get("completion_claim") is not False:
         fail("incomplete ledger must not claim completion")
@@ -72,6 +73,7 @@ def main() -> None:
     counts: collections.Counter[str] = collections.Counter()
     target_count = 0
     unresolved_count = 0
+    planning_count = 0
     reviewed_count = 0
     for entry in entries:
         source = sources.get(entry["id"])
@@ -83,7 +85,7 @@ def main() -> None:
         classification = entry.get("classification")
         counts[classification] += 1
         active = entry["id"] in active_ids
-        if active and classification not in LEGACY_STATES | ACTIVE_REVIEW_STATES:
+        if active and classification not in PLANNING_STATES | LEGACY_STATES | ACTIVE_REVIEW_STATES:
             fail(f"invalid active classification for {entry['id']}: {classification}")
         if not active and classification not in INACTIVE_STATES:
             fail(f"invalid inactive classification for {entry['id']}: {classification}")
@@ -108,6 +110,10 @@ def main() -> None:
         if classification == "legacy-candidate-target-resolved" and unresolved:
             fail(f"resolved candidate contains unresolved targets: {entry['id']}")
 
+        if classification in PLANNING_STATES:
+            planning_count += 1
+            if not targets or not entry.get("obligations"):
+                fail(f"inventoried mapping lacks targets or obligations: {entry['id']}")
         if classification in ACTIVE_REVIEW_STATES:
             reviewed_count += 1
             if classification != "architecture-irrelevant-reviewed" and not targets:
@@ -130,7 +136,7 @@ def main() -> None:
         identity: overrides.get(identity, sources[identity]["ledger_status"])
         for identity in active_ids
     }
-    allowed_active = {"unmapped"} | LEGACY_STATES | ACTIVE_REVIEW_STATES
+    allowed_active = {"unmapped"} | PLANNING_STATES | LEGACY_STATES | ACTIVE_REVIEW_STATES
     invalid = {identity: state for identity, state in effective.items() if state not in allowed_active}
     if invalid or len(effective) != len(active_ids):
         fail("not every active source entity has a valid initial classification")
@@ -138,11 +144,14 @@ def main() -> None:
     print(
         "verify-source-ledger: "
         f"{len(active_ids)} active entities classified; "
-        f"{reviewed_count} reviewed mappings; "
+        f"{planning_count} inventoried and {reviewed_count} reviewed mappings; "
         f"{target_count} AST-resolved targets; "
         f"{unresolved_count} unresolved legacy targets"
     )
 
 
 if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
     main()

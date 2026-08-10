@@ -89,7 +89,9 @@ pub fn dequoteToken(token: anytype) void {
     const length: usize = @intCast(token.n);
     const bytes = token.z.?;
     if (!isQuote(bytes[0])) return;
-    for (bytes[1 .. length - 1]) |byte| if (isQuote(byte)) return;
+    for (bytes[1 .. length - 1]) |byte| {
+        if (isQuote(byte)) return;
+    }
     token.z = bytes + 1;
     token.n -= 2;
 }

@@ -34,8 +34,8 @@ def main() -> None:
     difference = mismatch(oracle, native)
     if difference is not None:
         raise SystemExit(f"vdbe-builder-differential: mismatch at {difference}")
-    if len(oracle) != 363:
-        raise SystemExit(f"vdbe-builder-differential: expected 363 observations, got {len(oracle)}")
+    if len(oracle) != 373:
+        raise SystemExit(f"vdbe-builder-differential: expected 373 observations, got {len(oracle)}")
 
     mutated = native.copy()
     fields = mutated[0].split("\t")
@@ -44,11 +44,14 @@ def main() -> None:
     if mismatch(oracle, mutated) is None:
         raise SystemExit("vdbe-builder-differential: capacity mutation escaped comparison")
     print(
-        "vdbe-builder-differential: 363 unpacked-record allocation/decode/OOM, record serial decode/length, foreign-key guards/OOM, Btree usage/lock-mask, control-flow wrapper, virtual-table error import/OOM, bound-value/varmask/OOM, result-column ownership/OOM, connection/statement-metadata, SQL-save/reprepare-swap, subprogram-link, P4-VTab/P4-leaf-owner, KeyInfo-reference, creation/linking/OOM, MakeReady/tail-reuse/OOM, compact-list/transfer, access/mutation, append, growth, operand, capacity, label/fixup, "
+        "vdbe-builder-differential: 373 statement metadata/column/binding/VList/OOM, unpacked-record allocation/decode/OOM, record serial decode/length, foreign-key guards/OOM, Btree usage/lock-mask, control-flow wrapper, virtual-table error import/OOM, bound-value/varmask/OOM, result-column ownership/OOM, connection/statement-metadata, SQL-save/reprepare-swap, subprogram-link, P4 attachment/replacement/VTab/leaf-owner, KeyInfo-reference, creation/linking/OOM, MakeReady/tail-reuse/OOM, compact-list/transfer, access/mutation, append, growth, operand, capacity, label/fixup, "
         "reader/write, virtual-table argument, progress/interrupt, reusable, reached-limit/one-shot/sticky-OOM, "
         "continuation, and mutation-guard observations match"
     )
 
 
 if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
     main()

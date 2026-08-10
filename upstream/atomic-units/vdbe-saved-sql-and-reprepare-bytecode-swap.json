@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-saved-sql-and-reprepare-bytecode-swap",
   "title": "VDBE saved SQL ownership and reprepare bytecode swap",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "sqlite3VdbeSetSql owns the saved SQL copy and preparation metadata; sqlite3VdbeSwap exchanges a recompiled VDBE body while deliberately restoring handle list links and saved SQL identity, then propagating preparation/counter state to the persistent statement. These are one reprepare ownership boundary.",
     "source_files": [
@@ -111,7 +111,7 @@
     "Pinned profile omits zNormSql swap because SQLITE_ENABLE_NORMALIZE is disabled."
   ],
   "oracle": {
-    "protocol": "The shared worker exercises null SetSql, forced SQL-duplicate OOM, normal distinct SQL owners, operation bodies, expmask/prepFlags/counters, and a two-node connection list before Swap. C and Zig compare all post-swap body/handle/link/Parse relationships in a 363-observation trace.",
+    "protocol": "The shared worker exercises null SetSql, forced SQL-duplicate OOM, normal distinct SQL owners, operation bodies, expmask/prepFlags/counters, and a two-node connection list before Swap. C and Zig compare all post-swap body/handle/link/Parse relationships in a 366-observation trace.",
     "internal_observations": [
       "null SetSql no-op",
       "OOM metadata and null zSql",
@@ -125,9 +125,9 @@
     "normalization": "SQL contents, fields, counters and link/owner relationships are exact; allocation addresses are ignored."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Deterministic SQL duplicate allocation failure preserves metadata and null ownership; later cases clean all saved SQL exactly once.",
     "io_crash_concurrency": "No I/O/callback; caller mutex remains orchestration obligation.",
@@ -151,6 +151,7 @@
     "notes": "Requires production reprepare integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Connect production schema-reprepare orchestration to source VDBE owners.",
     "Port P4-aware destruction for both swapped bodies.",
     "Independent fidelity review remains open."

@@ -25,6 +25,9 @@ def main() -> None:
     zig_inventory = json.loads((ROOT / "upstream/zig-declaration-inventory.json").read_text())
     dependencies = json.loads((ROOT / "upstream/source-dependencies.json").read_text())
     behavioral = json.loads((ROOT / "upstream/behavioral-inventory.json").read_text())
+    active_batch = json.loads((ROOT / "upstream/active-port-batch.json").read_text())
+    historical_claim_ledger = json.loads((ROOT / active_batch["historical_claim_ledger"]).read_text())
+    checkpoints = json.loads((ROOT / "upstream/port-checkpoints.json").read_text())
     atomic_index = json.loads((ROOT / "upstream/atomic-units/index.json").read_text())
     atomic_dossiers = [
         json.loads((ROOT / item["path"]).read_text()) for item in atomic_index["units"]
@@ -44,22 +47,23 @@ def main() -> None:
         for item in inventory["entities"]
         if item.get("activity", "").startswith("active-profile")
     }
+    mapping_by_id = {item["id"]: item for item in mappings}
     active_mappings = [item for item in mappings if item["id"] in active]
+    planning_states = {"inventoried"}
     reviewed_states = {
         "context-reviewed", "fidelity-ported", "generated",
         "targeted-differential-passed", "source-context-reviewed", "scaffolded",
         "source-translated", "internal-trace-equivalent", "subsystem-integrated",
-        "assurance-passed", "independently-fidelity-reviewed",
-        "subsystem-integration-passed", "fidelity-reviewed",
+        "assurance-passed", "subsystem-integration-passed",
         "architecture-irrelevant-reviewed",
+    }
+    inventoried_active = {
+        item["id"] for item in active_mappings
+        if item["classification"] in planning_states
     }
     reviewed_active = {
         item["id"] for item in active_mappings
         if item["classification"] in reviewed_states
-    }
-    fidelity_reviewed = {
-        item["id"] for item in active_mappings
-        if item["classification"] == "fidelity-reviewed"
     }
     legacy_candidates = {
         item["id"] for item in active_mappings
@@ -76,6 +80,45 @@ def main() -> None:
     unresolved_target_references = sum(
         len(item.get("unresolved_legacy_targets", [])) for item in active_mappings
     )
+    explicitly_classified_active = {
+        item["id"] for item in active_mappings
+        if item["classification"] in planning_states | reviewed_states
+        or item["classification"].startswith("legacy-candidate-")
+    }
+    unmapped_active = set(active) - explicitly_classified_active
+
+    historical_claims = historical_claim_ledger["entries"]
+    historical_ids = {item["source_entity_id"] for item in historical_claims}
+    declarations = {item["id"]: item for item in zig_inventory["declarations"]}
+    historical_no_canonical_target = 0
+    historical_matching_canonical_target = 0
+    historical_conflicting_canonical_target = 0
+    historical_classifications: dict[str, int] = {}
+    for claim in historical_claims:
+        identity = claim["source_entity_id"]
+        mapping = mapping_by_id.get(identity)
+        classification = mapping["classification"] if mapping else active[identity]["ledger_status"]
+        historical_classifications[classification] = historical_classifications.get(classification, 0) + 1
+        targets = mapping.get("zig", []) if mapping else []
+        if not targets:
+            historical_no_canonical_target += 1
+            continue
+        matches = any(
+            (declaration := declarations.get(target["declaration_id"])) is not None
+            and declaration["file"] == claim["zig_path"]
+            and declaration["kind"] == "function"
+            and declaration["name"] == claim["zig_function"]
+            for target in targets
+        )
+        if matches:
+            historical_matching_canonical_target += 1
+        else:
+            historical_conflicting_canonical_target += 1
+    atomic_source_ids = {
+        identity
+        for dossier in atomic_dossiers
+        for identity in dossier["scope"]["source_entity_ids"]
+    }
 
     opcode_summary = opcode_coverage["summary"]
     parser_action_summary = parser_action_coverage["summary"]
@@ -85,19 +128,18 @@ def main() -> None:
         for state in (
             "inventoried", "source-context-reviewed", "scaffolded", "source-translated",
             "internal-trace-equivalent", "subsystem-integrated", "assurance-passed",
-            "independently-fidelity-reviewed",
         )
     }
     translated_or_later = sum(
         dossier["status"] in {
             "source-translated", "internal-trace-equivalent", "subsystem-integrated",
-            "assurance-passed", "independently-fidelity-reviewed",
+            "assurance-passed",
         }
         for dossier in atomic_dossiers
     )
     integrated_or_later = sum(
         dossier["status"] in {
-            "subsystem-integrated", "assurance-passed", "independently-fidelity-reviewed",
+            "subsystem-integrated", "assurance-passed",
         }
         for dossier in atomic_dossiers
     )
@@ -108,15 +150,14 @@ def main() -> None:
             "active": 0,
             "legacy_candidates": 0,
             "reviewed": 0,
-            "fidelity_reviewed": 0,
         })
         status["active"] += 1
+        status["inventoried"] = status.get("inventoried", 0) + (entity["id"] in inventoried_active)
         status["legacy_candidates"] += entity["id"] in legacy_candidates
         status["reviewed"] += entity["id"] in reviewed_active
-        status["fidelity_reviewed"] += entity["id"] in fidelity_reviewed
 
     report = {
-        "schema_version": 2,
+        "schema_version": 3,
         "goal": "complete source-faithful SQLite core port with a Zig-native API and zero C in production artifacts",
         "overall_status": "incomplete-control-revalidation-and-source-port",
         "baseline_checkin": inventory["sqlite_checkin"],
@@ -124,39 +165,56 @@ def main() -> None:
             "inventory_total": inventory["counts"]["total"],
             "active_profile_entities": len(active),
             "active_entities_initially_classified": len(active),
-            "active_entities_unmapped": len(active) - len(legacy_candidates) - len(reviewed_active),
+            "active_entities_unmapped": len(unmapped_active),
+            "active_entities_inventoried": len(inventoried_active),
             "active_entities_with_legacy_candidates": len(legacy_candidates),
             "active_entities_context_reviewed_or_later": len(reviewed_active),
-            "active_entities_fidelity_reviewed": len(fidelity_reviewed),
             "reviewed_coverage_percent": round(100 * len(reviewed_active) / len(active), 2),
-            "strict_objective_completion_percent": round(100 * len(fidelity_reviewed) / len(active), 2),
-            "strict_objective_completion_basis": "independently fidelity-reviewed active source responsibilities divided by all active source responsibilities; 100% additionally requires every charter completion gate",
             "by_kind": by_kind,
-            "mapping_status": "legacy-entity-classification-ast-target-validated-pending-atomic-unit-schema-migration",
+            "mapping_status": "working-classification-with-inventoried-unpromoted-atomic-units",
             "reviewed_coverage_is_completion_metric": False,
-            "legacy_fidelity_labels_require_independent_revalidation": bool(fidelity_reviewed),
             "ast_resolved_reviewed_target_references": reviewed_target_references,
             "ast_resolved_legacy_target_references": resolved_legacy_target_references,
             "unresolved_legacy_target_references": unresolved_target_references,
-            "mapping_warning": "AST resolution proves declaration identity only. Legacy candidates are not semantic mappings or fidelity evidence.",
+            "mapping_warning": "Inventoried mappings, AST resolution, and legacy candidates are planning facts only, not semantic review, promotion, or fidelity evidence.",
             "active_source_files": dependencies["counts"]["active_files"],
             "source_dependency_file_units": dependencies["counts"]["source_file_units"],
             "atomic_unit_dossiers_total": len(atomic_dossiers),
             "atomic_unit_dossiers_admission_ready": sum(dossier["admission_ready"] for dossier in atomic_dossiers),
             "atomic_units_source_translated_or_later": translated_or_later,
             "atomic_units_subsystem_integrated_or_later": integrated_or_later,
-            "atomic_units_assurance_passed": atomic_state_counts["assurance-passed"] + atomic_state_counts["independently-fidelity-reviewed"],
-            "atomic_units_independently_fidelity_reviewed": atomic_state_counts["independently-fidelity-reviewed"],
+            "atomic_units_assurance_passed": atomic_state_counts["assurance-passed"],
             "behavioral_blocks_inventoried": behavioral["counts"]["blocks"],
             "behavioral_functions_inventoried": behavioral["counts"]["functions_with_blocks"],
             "behavioral_blocks_assigned_to_atomic_units": behavioral["counts"]["assigned_to_atomic_units"],
             "cross_file_dependency_edges": dependencies["counts"]["cross_file_edges"],
             "zig_declaration_inventory": zig_inventory["counts"]["declarations"],
         },
+        "translation_tracking": {
+            "active_batch_schema": active_batch["schema_version"],
+            "active_batch_status": active_batch["status"],
+            "historical_claim_ledger": active_batch["historical_claim_ledger"],
+            "checkpoint_ledger": "upstream/port-checkpoints.json",
+            "active_batch_entries": len(active_batch["entries"]),
+            "active_batch_short_functions": sum(item["class"] == "short" for item in active_batch["entries"]),
+            "active_batch_substantive_functions": sum(item["class"] == "substantive" for item in active_batch["entries"]),
+            "durable_checkpoints": len(checkpoints["checkpoints"]),
+            "historical_mechanical_claims": len(historical_claims),
+            "historical_mechanical_short_functions": historical_claim_ledger["short_functions"],
+            "historical_mechanical_substantive_functions": historical_claim_ledger["substantive_functions"],
+            "historical_claims_without_canonical_target": historical_no_canonical_target,
+            "historical_claims_matching_canonical_target": historical_matching_canonical_target,
+            "historical_claims_conflicting_with_canonical_target": historical_conflicting_canonical_target,
+            "historical_claims_assigned_to_atomic_units": len(historical_ids & atomic_source_ids),
+            "historical_claim_classifications": dict(sorted(historical_classifications.items())),
+            "completion_credit": 0,
+            "reconciled": False,
+            "warning": historical_claim_ledger["warning"],
+        },
         "engineering_process": {
             "authoritative_process": "docs/ENGINEERING_PROCESS.md",
-            "current_gate": "semantic revalidation of existing atomic claims, historical-label migration, and dependency-closed source ownership are blocking before feature expansion; worker containment and behavioral inventory are complete",
-            "headline_progress_basis": "dependency-closed atomic units at source-translated, trace-equivalent, integrated, assured, or independently fidelity-reviewed states",
+            "current_gate": "all atomic units were downgraded to inventoried pending structured context; historical mechanical function claims have no completion credit; exact active-batch promotion and durable checkpoint controls are installed",
+            "headline_progress_basis": "dependency-closed atomic units at source-translated, trace-equivalent, integrated, or assurance-passed states",
             "non_progress_accounting": [
                 "reviewed entity percentage",
                 "Zig declaration count",
@@ -375,8 +433,8 @@ def main() -> None:
             "release_compatibility_claim": False,
         },
         "release_blockers": [
-            "complete the remaining process-correction gate: reclassify residual scaffolding and assign remaining source entities and behavioral blocks to dependency-closed atomic-unit dossiers (worker containment and behavioral inventory complete)",
-            "resolve legacy candidates and context/fidelity-review every active source and behavioral responsibility",
+            "record structured source context and durable evidence before promoting any inventoried atomic unit, then reconcile or retire all historical mechanical function claims",
+            "assign remaining source and behavioral responsibilities to dependency-closed atomic units, resolve legacy candidates, and context-review every active responsibility",
             "port VDBE builder/labels/fixups, connect concrete Lemon action owners, and complete the SQL resolver, compiler, planner, and generated opcode system",
             "port SQLite Mem/VDBE semantics and all active opcodes",
             "replace bounded B-tree reconstruction, pager, WAL, and VFS subsets with source-faithful implementations",
@@ -395,9 +453,12 @@ def main() -> None:
     print(
         "port-audit: incomplete port; "
         f"{len(active)} active entities classified, "
-        f"{len(reviewed_active)} reviewed, {len(fidelity_reviewed)} fidelity-reviewed"
+        f"{len(reviewed_active)} reviewed"
     )
 
 
 if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
     main()

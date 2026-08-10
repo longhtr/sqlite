@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-operation-append-core",
   "title": "VDBE operation-array growth and fixed-operand append core",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "These eight mutually coupled vdbeaux.c routines implement the smallest operation-array append state machine: geometric growth, allocator-reported capacity, fixed P1/P2/P3 initialization, and P4_INT32 insertion.",
     "source_files": [
@@ -161,9 +161,9 @@
     "normalization": "Pointer addresses are replaced only by stable allocation identities; capacities, operation bytes, results, and event order are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Native and differential traces cover initial growth-limit OOM, reached one-shot and sticky growth allocation failures, sticky persistence across machine reset, preservation of the existing operation array, and continuation after explicit fault/OOM clear.",
     "io_crash_concurrency": "No I/O; connection mutex is a caller obligation.",
@@ -171,7 +171,7 @@
     "continuation": "Oracle traces prove the old array and operation count remain intact after growth failure and appends resume after OOM clear.",
     "performance": "Geometric growth and allocator-sized capacity are preserved; no benchmark credit yet.",
     "commands": [
-      "zig test src/core/internal_vdbe_mem_test.zig -lc",
+      "zig build vdbe-mem-differential -j1",
       "zig build vdbe-builder-differential",
       "zig build internal-vdbe-layout-test",
       "zig build opcodes-test"
@@ -186,9 +186,10 @@
     "status": "pending",
     "reviewer": null,
     "review_commit": null,
-    "notes": "The combined 363-observation builder trace preserves the append/growth/OOM observations; broader builder closure, production ownership, assurance, and independent review remain."
+    "notes": "The combined 366-observation builder trace preserves the append/growth/OOM observations; broader builder closure, production ownership, assurance, and independent review remain."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "P4 pointer ownership, labels/fixups, VDBE creation, operation-list transfer, readiness, and deletion remain separate prerequisite/follow-on units.",
     "The source-corresponding builder is not yet the production compiler owner; handwritten Program construction must be retired before integration.",
     "Independent fidelity review remains open."

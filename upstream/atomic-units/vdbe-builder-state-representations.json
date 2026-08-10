@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-builder-state-representations",
   "title": "VDBE builder operation and owner-state representations",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "The append builder requires these exact active-profile operation, P4, Vdbe, Parse, and connection state identities as one representation boundary. Only fields read or written by the fixed-operand append core are assigned.",
@@ -320,8 +320,8 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Not applicable to representation-only unit.",
     "io_crash_concurrency": "Not applicable.",
@@ -348,5 +348,37 @@
   },
   "known_blockers": [
     "Subsystem integration waits for the source builder/compiler path to replace handwritten Program construction."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbe.h was reviewed in full; selected lines 27 and 55-130 cover Vdbe/VdbeOp/P4 storage and NOTUSED/INT32 ownership classes under the active feature profile",
+      "upstream/sqlite/src/vdbeInt.h:458-538 was reviewed through the complete Vdbe structure and state constants; selected builder fields are db/pParse/aOp/nOp/nOpAlloc/eVdbeState",
+      "upstream/sqlite/src/sqliteInt.h:1350-1370, 1660-1710, and 3870-3930 were reviewed for Parse/sqlite3 identities and db/mallocFailed/aLimit/szOpAlloc fields",
+      "src/core/internal/vdbe_types.zig and parse_types.zig exact AST declarations are checked against generated/internal VDBE and Parse layout manifests"
+    ],
+    "callers": [
+      "vdbeaux.c:22-48 sqlite3VdbeCreate relies on zeroing from aOp onward, db/pParse linkage, INIT state, nOpAlloc, and Parse.szOpAlloc",
+      "vdbeaux.c:154-200 growOpArray reads/writes pParse, db.aLimit[SQLITE_LIMIT_VDBE_OP], aOp, nOpAlloc, and szOpAlloc while preserving the old array on OOM",
+      "vdbeaux.c:224-351 growOp3, addOp4IntSlow, sqlite3VdbeAddOp3, and sqlite3VdbeAddOp4Int consume every selected VdbeOp field plus P4_NOTUSED/P4_INT32 and mallocFailed",
+      "The same layouts are consumed throughout VDBE execution/destruction, but fields outside fixed-operand append are explicitly excluded and owned by follow-on atomic units",
+      "The native source-corresponding vdbe_aux builder imports these exact extern representations; the handwritten Program/Instruction path remains a frozen competing architecture and receives no integration credit"
+    ],
+    "callees": [
+      "Representation declarations have no runtime callees; VdbeOp union overlay and field widths are consumed directly by builder code",
+      "Generated opcode identity supplies u8 opcode values, and generated layout probes supply size/alignment/offset facts; those artifacts are external immutable inputs",
+      "P4_NOTUSED and P4_INT32 are non-owning classes, so this unit introduces no destructor or allocation responsibility"
+    ],
+    "assertions_branches_cleanup": [
+      "The unit has no behavioral blocks because it is representation-only; active feature predicates omit explain comments, cursor hints, scanstatus/profile counters, coverage fields, normalize fields, and debug-only state",
+      "Critical invariants are opcode:u8, p4type:signed byte, p5:u16, p1/p2/p3:int, P4 union overlay, VDBE_INIT_STATE=0, P4_NOTUSED=0, and P4_INT32=-3",
+      "sqlite3 mallocFailed is u8, aLimit is SQLITE_N_LIMIT signed ints, and Parse.szOpAlloc plus Vdbe.nOp/nOpAlloc are signed ints used in overflow/OOM paths",
+      "No runtime allocation, branch, lock, callback, I/O, cleanup, or continuation occurs inside declarations; those obligations belong to builder/allocation/destruction units"
+    ],
+    "upstream_tests": [
+      "Upstream VDBE tests consume these layouts indirectly through every prepared statement; vdbe*.test and opcode-related suites exercise operation encoding and state transitions",
+      "Upstream malloc/mallocA fault suites exercise builder growth and mallocFailed continuation that depend on these fields without making representation itself a runtime owner",
+      "generated/internal/vdbe-layout.json and parse-layout.json are exact C layout probe results for the pinned target; internal-vdbe-layout-test and internal-parse-layout-test compare Zig declarations",
+      "vdbe-builder-differential compares emitted operation bytes; it remains separate behavioral evidence and is not a durable receipt for this context-only promotion"
+    ]
+  }
 }

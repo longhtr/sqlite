@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "sqlite_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+  "completion_claim": false,
+  "warning": "A checkpoint grants translation-batch credit only after exact canonical mappings, promoted atomic units, threshold validation, synchronized status, and durable evidence. No checkpoint has passed those gates.",
+  "checkpoints": []
+}

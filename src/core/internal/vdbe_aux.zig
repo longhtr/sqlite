@@ -132,6 +132,164 @@ pub fn addGoto(machine: *types.Vdbe, destination: c_int) c_int {
     return addOperation3(machine, .Goto, 0, destination, 0);
 }
 
+/// Source `sqlite3VdbeAddOp4()` with explicit pointer ownership.
+pub fn addOperation4(
+    machine: *types.Vdbe,
+    opcode: canonical_opcode.Opcode,
+    p1: c_int,
+    p2: c_int,
+    p3: c_int,
+    payload: ?*anyopaque,
+    payload_type: i8,
+) c_int {
+    const address = addOperation3(machine, opcode, p1, p2, p3);
+    if (payload_type == types.p4.transient) {
+        if (payload) |text| {
+            changeP4String(machine, address, @ptrCast(text), 0);
+        } else if (machine.db.?.mallocFailed == 0) {
+            const operation = operationForP4Change(machine, address);
+            clearReplaceableP4(operation);
+            operation.p4.z = null;
+            operation.p4type = types.p4.dynamic;
+        }
+    } else {
+        std.debug.assert(payload_type != types.p4.int32);
+        changeP4(machine, address, payload, payload_type);
+    }
+    return address;
+}
+
+/// Source `sqlite3VdbeLoadString()`.
+pub fn loadString(machine: *types.Vdbe, destination: c_int, text: [*:0]const u8) c_int {
+    return addOperation4(machine, .String8, 0, destination, 0, @ptrCast(@constCast(text)), types.p4.transient);
+}
+
+pub const MultiLoadValue = union(enum) {
+    string: ?[*:0]const u8,
+    integer: c_int,
+    stop,
+};
+
+/// Typed source-faithful replacement for `sqlite3VdbeMultiLoad()` varargs.
+pub fn multiLoad(machine: *types.Vdbe, first_destination: c_int, values: []const MultiLoadValue) void {
+    var result_count: c_int = 0;
+    for (values, 0..) |value, offset| {
+        const destination = first_destination + @as(c_int, @intCast(offset));
+        switch (value) {
+            .string => |text_optional| {
+                if (text_optional) |text| {
+                    _ = addOperation4(machine, .String8, 0, destination, 0, @ptrCast(@constCast(text)), types.p4.transient);
+                } else {
+                    _ = addOperation4(machine, .Null, 0, destination, 0, null, types.p4.transient);
+                }
+            },
+            .integer => |integer| _ = addOperation2(machine, .Integer, integer, destination),
+            .stop => return,
+        }
+        result_count += 1;
+    }
+    _ = addOperation2(machine, .ResultRow, first_destination, result_count);
+}
+
+/// Source `sqlite3MultiWrite()`.
+pub fn markMultiWrite(parse: *types.Parse) void {
+    const top_level = parse.pToplevel orelse parse;
+    top_level.isMultiWrite = 1;
+}
+
+/// Source `sqlite3MayAbort()`.
+pub fn markMayAbort(parse: *types.Parse) void {
+    const top_level = parse.pToplevel orelse parse;
+    top_level.flags0 |= 0x02;
+}
+
+/// Source `sqlite3VdbeAddFunctionCall()`.
+pub fn addFunctionCall(
+    parse: *types.Parse,
+    constant_argument_mask: c_int,
+    first_argument_register: c_int,
+    result_register: c_int,
+    argument_count: c_int,
+    function: *const types.FuncDef,
+    call_context: c_int,
+) c_int {
+    const machine: *types.Vdbe = @ptrCast(@alignCast(parse.pVdbe.?));
+    const raw = db_allocator.mallocRawNN(parseDatabase(parse), types.contextSize(@intCast(argument_count))) orelse {
+        freeEphemeralFunction(parseDatabase(parse), @ptrCast(@constCast(function)));
+        return 0;
+    };
+    const context: *types.Context = @ptrCast(@alignCast(raw));
+    context.pOut = null;
+    context.pFunc = @ptrCast(@constCast(function));
+    context.pVdbe = null;
+    context.isError = 0;
+    context.argc = @intCast(argument_count);
+    context.iOp = currentAddress(machine);
+    const address = addOperation4(
+        machine,
+        if (call_context != 0) .PureFunc else .Function,
+        constant_argument_mask,
+        first_argument_register,
+        result_register,
+        context,
+        types.p4.funcctx,
+    );
+    changeP5(machine, @intCast(call_context & 0x2e));
+    markMayAbort(parse);
+    return address;
+}
+
+/// Source `sqlite3VdbeAddOp4Dup8()`.
+pub fn addOperation4Duplicate8(
+    machine: *types.Vdbe,
+    opcode: canonical_opcode.Opcode,
+    p1: c_int,
+    p2: c_int,
+    p3: c_int,
+    payload: *const [8]u8,
+    payload_type: i8,
+) c_int {
+    std.debug.assert(payload_type == types.p4.int64 or payload_type == types.p4.real);
+    const copy = db_allocator.mallocRawNN(machine.db.?, 8);
+    if (copy) |allocation| @memcpy(@as([*]u8, @ptrCast(allocation))[0..8], payload);
+    return addOperation4(machine, opcode, p1, p2, p3, copy, payload_type);
+}
+
+/// Preformatted-message form of source `sqlite3VdbeExplain()`.
+pub fn addExplain(parse: *types.Parse, push: bool, message: [*:0]const u8) c_int {
+    const db = parseDatabase(parse);
+    if (parse.explain != 2 and db.flags & types.connection_flag.statement_scan_status == 0) return 0;
+    const machine: *types.Vdbe = @ptrCast(@alignCast(parse.pVdbe.?));
+    const owned_message = db_allocator.stringDuplicate(db, message);
+    const this_address = machine.nOp;
+    const address = addOperation4(machine, .Explain, this_address, parse.addrExplain, 0, if (owned_message) |owned| @ptrCast(owned) else null, types.p4.dynamic);
+    if (push) parse.addrExplain = this_address;
+    return address;
+}
+
+/// Source `sqlite3VdbeAddParseSchemaOp()`.
+pub fn addParseSchemaOperation(machine: *types.Vdbe, database_index: c_int, where_clause: ?[*:0]u8, p5: u16) void {
+    _ = addOperation4(machine, .ParseSchema, database_index, 0, 0, if (where_clause) |text| @ptrCast(text) else null, types.p4.dynamic);
+    changeP5(machine, p5);
+    var index: c_int = 0;
+    while (index < machine.db.?.nDb) : (index += 1) usesBtree(machine, index);
+    markMayAbort(machine.pParse.?);
+}
+
+/// Source `sqlite3VdbeEndCoroutine()`.
+pub fn endCoroutine(machine: *types.Vdbe, yield_register: c_int) void {
+    _ = addOperation1(machine, .EndCoroutine, yield_register);
+    machine.pParse.?.nTempReg = 0;
+    machine.pParse.?.nRangeReg = 0;
+}
+
+/// Preformatted-message form of source `sqlite3VdbeError()`.
+pub fn setErrorMessage(machine: *types.Vdbe, message: [*:0]const u8) void {
+    const db = machine.db.?;
+    db_allocator.free(db, if (machine.zErrMsg) |previous| @ptrCast(previous) else null);
+    machine.zErrMsg = db_allocator.stringDuplicate(db, message);
+}
+
 /// Source EXPLAIN parent lookup and stack pop helpers.
 pub fn explainParent(parse: *types.Parse) c_int {
     if (parse.addrExplain == 0) return 0;
@@ -620,6 +778,75 @@ pub fn freeOperationArray(db: *types.Sqlite3, operations: ?[*]types.VdbeOp, oper
         if (operation.p4type <= types.p4.free_if_le) freeP4(db, operation.p4type, operation.p4.p);
     }
     db_allocator.freeNN(db, @ptrCast(owned));
+}
+
+fn operationForP4Change(machine: *types.Vdbe, address_argument: c_int) *types.VdbeOp {
+    std.debug.assert(machine.nOp > 0 and address_argument < machine.nOp);
+    const address = if (address_argument < 0) machine.nOp - 1 else address_argument;
+    return &machine.aOp.?[@intCast(address)];
+}
+
+fn clearReplaceableP4(operation: *types.VdbeOp) void {
+    if (operation.p4type == types.p4.not_used) return;
+    std.debug.assert(operation.p4type > types.p4.free_if_le);
+    operation.p4type = types.p4.not_used;
+    operation.p4.p = null;
+}
+
+pub fn changeP4(machine: *types.Vdbe, address_argument: c_int, owner: ?*anyopaque, owner_type: i8) void {
+    const db = machine.db.?;
+    std.debug.assert(machine.eVdbeState == types.vdbe_state.init);
+    std.debug.assert(machine.aOp != null or db.mallocFailed != 0);
+    std.debug.assert(owner_type < 0 and owner_type != types.p4.int32);
+    if (db.mallocFailed != 0) {
+        if (owner_type != types.p4.vtab) freeP4(db, owner_type, owner);
+        return;
+    }
+    const operation = operationForP4Change(machine, address_argument);
+    clearReplaceableP4(operation);
+    if (owner) |value| {
+        operation.p4.p = value;
+        operation.p4type = owner_type;
+        if (owner_type == types.p4.vtab) vtabLock(@ptrCast(@alignCast(value)));
+    }
+}
+
+pub fn changeP4Int32(machine: *types.Vdbe, address_argument: c_int, value: c_int) void {
+    const db = machine.db.?;
+    std.debug.assert(machine.eVdbeState == types.vdbe_state.init);
+    std.debug.assert(machine.aOp != null or db.mallocFailed != 0);
+    if (db.mallocFailed != 0) return;
+    const operation = operationForP4Change(machine, address_argument);
+    clearReplaceableP4(operation);
+    operation.p4.i = value;
+    operation.p4type = types.p4.int32;
+}
+
+pub fn changeP4String(machine: *types.Vdbe, address_argument: c_int, source: [*]const u8, length_argument: c_int) void {
+    const db = machine.db.?;
+    std.debug.assert(machine.eVdbeState == types.vdbe_state.init);
+    std.debug.assert(machine.aOp != null or db.mallocFailed != 0);
+    std.debug.assert(length_argument >= 0);
+    if (db.mallocFailed != 0) return;
+    const operation = operationForP4Change(machine, address_argument);
+    clearReplaceableP4(operation);
+    const length: usize = if (length_argument == 0) std.mem.len(@as([*:0]const u8, @ptrCast(source))) else @intCast(length_argument);
+    operation.p4.z = db_allocator.stringNDuplicate(db, source, length);
+    operation.p4type = types.p4.dynamic;
+}
+
+pub fn appendP4(machine: *types.Vdbe, owner: ?*anyopaque, owner_type: i8) void {
+    std.debug.assert(owner_type != types.p4.int32 and owner_type != types.p4.vtab and owner_type <= 0);
+    if (machine.db.?.mallocFailed != 0) {
+        freeP4(machine.db.?, owner_type, owner);
+        return;
+    }
+    std.debug.assert(owner != null or owner_type == types.p4.dynamic);
+    std.debug.assert(machine.nOp > 0);
+    const operation = &machine.aOp.?[@intCast(machine.nOp - 1)];
+    std.debug.assert(operation.p4type == types.p4.not_used);
+    operation.p4type = owner_type;
+    operation.p4.p = owner;
 }
 
 pub fn changeToNoop(machine: *types.Vdbe, address: c_int) c_int {

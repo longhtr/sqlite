@@ -95,6 +95,7 @@
       "c_transport_disposition": "c-symbol-and-calling-convention-not-product-required",
       "behavior_disposition": "must-remain-in-zig-product",
       "current_zig_candidates": [
+        "src/core/internal/builtin_functions.zig::function::sqlite3_compileoption_used",
         "src/core/public_api.zig::function::sqlite3_compileoption_used"
       ],
       "non_variadic_behavior_targets": [],
@@ -112,6 +113,7 @@
       "c_transport_disposition": "c-symbol-and-calling-convention-not-product-required",
       "behavior_disposition": "must-remain-in-zig-product",
       "current_zig_candidates": [
+        "src/core/internal/builtin_functions.zig::function::sqlite3_compileoption_get",
         "src/core/public_api.zig::function::sqlite3_compileoption_get"
       ],
       "non_variadic_behavior_targets": [],
@@ -779,6 +781,7 @@
       "c_transport_disposition": "c-symbol-and-calling-convention-not-product-required",
       "behavior_disposition": "must-remain-in-zig-product",
       "current_zig_candidates": [
+        "src/core/internal/builtin_functions.zig::function::sqlite3_randomness",
         "src/core/public_api.zig::function::sqlite3_randomness"
       ],
       "non_variadic_behavior_targets": [],
@@ -3557,7 +3560,7 @@
       "c_transport_disposition": "c-symbol-and-calling-convention-not-product-required",
       "behavior_disposition": "must-remain-in-zig-product",
       "current_zig_candidates": [
-        "src/core/public_api.zig::function::sqlite3_db_release_memory"
+        "src/core/sql_frontend.zig::function::sqlite3_db_release_memory"
       ],
       "non_variadic_behavior_targets": [],
       "implementation_status": "provisional-bounded-transitional-c-shaped",

@@ -3,21 +3,20 @@
   "engineering_process": {
     "atomic_unit_dossiers_complete": false,
     "atomic_unit_state_counts": {
-      "assurance-passed": 1,
-      "independently-fidelity-reviewed": 0,
-      "internal-trace-equivalent": 39,
-      "inventoried": 0,
-      "scaffolded": 3,
-      "source-context-reviewed": 0,
-      "source-translated": 1,
+      "assurance-passed": 0,
+      "internal-trace-equivalent": 0,
+      "inventoried": 29,
+      "scaffolded": 0,
+      "source-context-reviewed": 17,
+      "source-translated": 0,
       "subsystem-integrated": 0
     },
     "authoritative_process": "docs/ENGINEERING_PROCESS.md",
     "behavioral_block_inventory_complete": true,
     "bounded_build_commands_and_artifacts": true,
     "containment_mutation_tested": true,
-    "current_gate": "semantic revalidation of existing atomic claims, historical-label migration, and dependency-closed source ownership are blocking before feature expansion; worker containment and behavioral inventory are complete",
-    "headline_progress_basis": "dependency-closed atomic units at source-translated, trace-equivalent, integrated, assured, or independently fidelity-reviewed states",
+    "current_gate": "all atomic units were downgraded to inventoried pending structured context; historical mechanical function claims have no completion credit; exact active-batch promotion and durable checkpoint controls are installed",
+    "headline_progress_basis": "dependency-closed atomic units at source-translated, trace-equivalent, integrated, or assurance-passed states",
     "non_progress_accounting": [
       "reviewed entity percentage",
       "Zig declaration count",
@@ -28,7 +27,7 @@
       "historical C ABI/export coverage"
     ],
     "prototype_policy": "bounded frontend, handwritten VDBE, reconstructed B-tree, and reduced pager/WAL are frozen substitutes; retain fixtures but replace production ownership by source unit",
-    "purposeful_python_tool_scripts": 107,
+    "purposeful_python_tool_scripts": 109,
     "shell_tool_entrypoints": 0,
     "worker_containment_audit_complete": true
   },
@@ -43,10 +42,10 @@
     "benign_fault_active_entities_differentially_checked": 10,
     "bitvec_active_entities_differentially_checked": 29,
     "bitvec_active_entities_reviewed": 29,
-    "bounded_vdbe_runtime_opcodes": 102,
+    "bounded_vdbe_runtime_opcodes": 111,
     "btree_mutation": "whole-tree reconstruction; not a fidelity port of upstream balancing",
-    "canonical_vdbe_execution_cases_with_bounded_runtime_mapping": 98,
-    "canonical_vdbe_execution_cases_without_bounded_runtime_mapping": 92,
+    "canonical_vdbe_execution_cases_with_bounded_runtime_mapping": 107,
+    "canonical_vdbe_execution_cases_without_bounded_runtime_mapping": 83,
     "checked_math_entities_differentially_checked": 6,
     "complete_active_entities_differentially_checked": 10,
     "default_mem1_entities_differentially_checked": 10,
@@ -94,8 +93,8 @@
     "upstream_vdbe_opcode_cases": 190,
     "utf_active_entities_differentially_checked": 13,
     "vdbe_opcode_coverage_warning": "A mapped case proves name-level runtime presence only, not complete SQLite semantics or fidelity.",
-    "vlist_entities_differentially_checked": 3,
-    "zig_source_lines": 47034
+    "vlist_entities_differentially_checked": 0,
+    "zig_source_lines": 82862
   },
   "overall_status": "incomplete-control-revalidation-and-source-port",
   "public_api": {
@@ -124,89 +123,113 @@
     "zig_native_api_status": "declaration-level responsibilities accounted; coherent Zig surface and complete behavior remain open"
   },
   "release_blockers": [
-    "complete the remaining process-correction gate: reclassify residual scaffolding and assign remaining source entities and behavioral blocks to dependency-closed atomic-unit dossiers (worker containment and behavioral inventory complete)",
-    "resolve legacy candidates and context/fidelity-review every active source and behavioral responsibility",
+    "record structured source context and durable evidence before promoting any inventoried atomic unit, then reconcile or retire all historical mechanical function claims",
+    "assign remaining source and behavioral responsibilities to dependency-closed atomic units, resolve legacy candidates, and context-review every active responsibility",
     "port VDBE builder/labels/fixups, connect concrete Lemon action owners, and complete the SQL resolver, compiler, planner, and generated opcode system",
     "port SQLite Mem/VDBE semantics and all active opcodes",
     "replace bounded B-tree reconstruction, pager, WAL, and VFS subsets with source-faithful implementations",
     "define and complete the Zig-native public API responsibility map and port the complete SQLite formatter",
     "run adapted upstream, SQL, Zig-API, fault, fuzz, concurrency, durability, and performance suites against the native engine"
   ],
-  "schema_version": 2,
+  "schema_version": 3,
   "source": {
-    "active_entities_context_reviewed_or_later": 2070,
-    "active_entities_fidelity_reviewed": 0,
+    "active_entities_context_reviewed_or_later": 1707,
     "active_entities_initially_classified": 6752,
-    "active_entities_unmapped": 3892,
-    "active_entities_with_legacy_candidates": 790,
+    "active_entities_inventoried": 404,
+    "active_entities_unmapped": 3877,
+    "active_entities_with_legacy_candidates": 764,
     "active_profile_entities": 6752,
     "active_source_files": 85,
-    "ast_resolved_legacy_target_references": 476,
-    "ast_resolved_reviewed_target_references": 1842,
-    "atomic_unit_dossiers_admission_ready": 41,
-    "atomic_unit_dossiers_total": 44,
-    "atomic_units_assurance_passed": 1,
-    "atomic_units_independently_fidelity_reviewed": 0,
-    "atomic_units_source_translated_or_later": 41,
-    "atomic_units_subsystem_integrated_or_later": 1,
-    "behavioral_blocks_assigned_to_atomic_units": 830,
+    "ast_resolved_legacy_target_references": 451,
+    "ast_resolved_reviewed_target_references": 1448,
+    "atomic_unit_dossiers_admission_ready": 17,
+    "atomic_unit_dossiers_total": 46,
+    "atomic_units_assurance_passed": 0,
+    "atomic_units_source_translated_or_later": 0,
+    "atomic_units_subsystem_integrated_or_later": 0,
+    "behavioral_blocks_assigned_to_atomic_units": 1003,
     "behavioral_blocks_inventoried": 25930,
     "behavioral_functions_inventoried": 2457,
     "by_kind": {
       "function": {
         "active": 2588,
-        "fidelity_reviewed": 0,
-        "legacy_candidates": 608,
-        "reviewed": 458
+        "inventoried": 177,
+        "legacy_candidates": 582,
+        "reviewed": 322
       },
       "macro": {
         "active": 1484,
-        "fidelity_reviewed": 0,
+        "inventoried": 46,
         "legacy_candidates": 112,
-        "reviewed": 383
+        "reviewed": 337
       },
       "member": {
         "active": 2195,
-        "fidelity_reviewed": 0,
+        "inventoried": 145,
         "legacy_candidates": 50,
-        "reviewed": 1070
+        "reviewed": 925
       },
       "struct": {
         "active": 203,
-        "fidelity_reviewed": 0,
+        "inventoried": 15,
         "legacy_candidates": 6,
-        "reviewed": 74
+        "reviewed": 59
       },
       "typedef": {
         "active": 201,
-        "fidelity_reviewed": 0,
+        "inventoried": 16,
         "legacy_candidates": 7,
-        "reviewed": 63
+        "reviewed": 47
       },
       "union": {
         "active": 2,
-        "fidelity_reviewed": 0,
+        "inventoried": 0,
         "legacy_candidates": 0,
         "reviewed": 2
       },
       "variable": {
         "active": 79,
-        "fidelity_reviewed": 0,
+        "inventoried": 5,
         "legacy_candidates": 7,
-        "reviewed": 20
+        "reviewed": 15
       }
     },
     "cross_file_dependency_edges": 654,
     "inventory_total": 9074,
-    "legacy_fidelity_labels_require_independent_revalidation": false,
-    "mapping_status": "legacy-entity-classification-ast-target-validated-pending-atomic-unit-schema-migration",
-    "mapping_warning": "AST resolution proves declaration identity only. Legacy candidates are not semantic mappings or fidelity evidence.",
+    "mapping_status": "working-classification-with-inventoried-unpromoted-atomic-units",
+    "mapping_warning": "Inventoried mappings, AST resolution, and legacy candidates are planning facts only, not semantic review, promotion, or fidelity evidence.",
     "reviewed_coverage_is_completion_metric": false,
-    "reviewed_coverage_percent": 30.66,
+    "reviewed_coverage_percent": 25.28,
     "source_dependency_file_units": 85,
-    "strict_objective_completion_basis": "independently fidelity-reviewed active source responsibilities divided by all active source responsibilities; 100% additionally requires every charter completion gate",
-    "strict_objective_completion_percent": 0.0,
     "unresolved_legacy_target_references": 402,
-    "zig_declaration_inventory": 7954
+    "zig_declaration_inventory": 12863
+  },
+  "translation_tracking": {
+    "active_batch_entries": 0,
+    "active_batch_schema": 2,
+    "active_batch_short_functions": 0,
+    "active_batch_status": "idle",
+    "active_batch_substantive_functions": 0,
+    "checkpoint_ledger": "upstream/port-checkpoints.json",
+    "completion_credit": 0,
+    "durable_checkpoints": 0,
+    "historical_claim_classifications": {
+      "inventoried": 77,
+      "legacy-candidate-target-resolved": 208,
+      "legacy-candidate-unresolved": 162,
+      "source-context-reviewed": 27,
+      "targeted-differential-passed": 76,
+      "unmapped": 1188
+    },
+    "historical_claim_ledger": "upstream/historical-port-claims.json",
+    "historical_claims_assigned_to_atomic_units": 104,
+    "historical_claims_conflicting_with_canonical_target": 269,
+    "historical_claims_matching_canonical_target": 136,
+    "historical_claims_without_canonical_target": 1333,
+    "historical_mechanical_claims": 1738,
+    "historical_mechanical_short_functions": 172,
+    "historical_mechanical_substantive_functions": 1566,
+    "reconciled": false,
+    "warning": "These cumulative claims passed the retired file/name quantity gate but are not canonical mappings, atomic-unit promotions, durable checkpoints, or completion evidence."
   }
 }

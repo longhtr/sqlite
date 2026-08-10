@@ -9,6 +9,7 @@
 const std = @import("std");
 const OneShotFailAllocator = @import("testing_one_shot_allocator.zig").OneShotFailAllocator;
 const pager_module = @import("pager.zig");
+const record_compare = @import("internal/record_compare.zig");
 const Pager = pager_module.Pager;
 const ResultCode = @import("result_code.zig").ResultCode;
 pub const vfs = pager_module.vfs;
@@ -116,14 +117,26 @@ pub const SeekOutcome = struct {
     found: bool = false,
 };
 
+const SavedCursorPosition = union(TreeKind) {
+    table: i64,
+    index: []u8,
+};
+
 pub const Cursor = struct {
     allocator: std.mem.Allocator,
     kind: TreeKind,
     entries: std.ArrayList(Entry) = .empty,
     position: ?usize = null,
+    saved_position: ?SavedCursorPosition = null,
 
     pub fn deinit(self: *Cursor) void {
-        for (self.entries.items) |entry| self.allocator.free(entry.payload);
+        if (self.saved_position) |saved| switch (saved) {
+            .table => {},
+            .index => |payload| self.allocator.free(payload),
+        };
+        for (self.entries.items) |entry| {
+            self.allocator.free(entry.payload);
+        }
         self.entries.deinit(self.allocator);
         self.position = null;
     }
@@ -132,25 +145,28 @@ pub const Cursor = struct {
         return self.entries.items.len;
     }
 
-    pub fn first(self: *Cursor) bool {
+    /// Source `moveToRoot()`: position on the first or last logical entry in
+    /// the materialized cursor view.
+    pub fn moveToRoot(self: *Cursor, toward_last: bool) bool {
         if (self.entries.items.len == 0) {
             self.position = null;
             return false;
         }
-        self.position = 0;
+        self.position = if (toward_last) self.entries.items.len - 1 else 0;
         return true;
+    }
+
+    pub fn first(self: *Cursor) bool {
+        return self.moveToRoot(false);
     }
 
     pub fn last(self: *Cursor) bool {
-        if (self.entries.items.len == 0) {
-            self.position = null;
-            return false;
-        }
-        self.position = self.entries.items.len - 1;
-        return true;
+        return self.moveToRoot(true);
     }
 
-    pub fn next(self: *Cursor) bool {
+    /// Source `btreeNext()`: advance one ordered entry and invalidate the
+    /// cursor after the logical end.
+    fn btreeNext(self: *Cursor) bool {
         const position = self.position orelse return false;
         if (position + 1 >= self.entries.items.len) {
             self.position = null;
@@ -160,7 +176,13 @@ pub const Cursor = struct {
         return true;
     }
 
-    pub fn previous(self: *Cursor) bool {
+    pub fn next(self: *Cursor) bool {
+        return self.btreeNext();
+    }
+
+    /// Source `btreePrevious()`: move one ordered entry backward and
+    /// invalidate the cursor before the logical beginning.
+    fn btreePrevious(self: *Cursor) bool {
         const position = self.position orelse return false;
         if (position == 0) {
             self.position = null;
@@ -170,9 +192,79 @@ pub const Cursor = struct {
         return true;
     }
 
+    pub fn previous(self: *Cursor) bool {
+        return self.btreePrevious();
+    }
+
+    /// Source `moveToChild()`: select a validated logical child position in
+    /// the materialized ordered view.
+    pub fn moveToChild(self: *Cursor, position: usize) bool {
+        if (position >= self.entries.items.len) {
+            self.position = null;
+            return false;
+        }
+        self.position = position;
+        return true;
+    }
+
     pub fn current(self: *const Cursor) ?*const Entry {
         const position = self.position orelse return null;
         return &self.entries.items[position];
+    }
+
+    /// Source `accessPayload()`: copy a bounded range from the current cell
+    /// payload and reject overflow or an unpositioned cursor.
+    pub fn accessPayload(self: *const Cursor, offset: usize, output: []u8) ResultCode {
+        const entry = self.current() orelse return .misuse;
+        const end = std.math.add(usize, offset, output.len) catch return .corrupt;
+        if (end > entry.payload.len) return .corrupt;
+        @memcpy(output, entry.payload[offset..end]);
+        return .ok;
+    }
+
+    /// Source `saveCursorPosition()`: retain the logical table rowid or an
+    /// owned encoded index key across cursor reconstruction.
+    pub fn saveCursorPosition(self: *Cursor) ResultCode {
+        if (self.saved_position) |saved| switch (saved) {
+            .table => {},
+            .index => |payload| self.allocator.free(payload),
+        };
+        self.saved_position = null;
+        const entry = self.current() orelse return .misuse;
+        self.saved_position = switch (self.kind) {
+            .table => .{ .table = entry.rowid orelse return .corrupt },
+            .index => .{ .index = self.allocator.dupe(u8, entry.payload) catch return .no_memory },
+        };
+        return .ok;
+    }
+
+    /// Source `btreeRestoreCursorPosition()`: seek the saved logical key after
+    /// entries have been rebuilt, then release saved-key ownership.
+    pub fn restoreCursorPosition(self: *Cursor) ResultCode {
+        const saved = self.saved_position orelse return .ok;
+        self.saved_position = null;
+        switch (saved) {
+            .table => |rowid| {
+                _ = self.seekTable(rowid);
+            },
+            .index => |payload| {
+                defer self.allocator.free(payload);
+                var lower: usize = 0;
+                var upper = self.entries.items.len;
+                while (lower < upper) {
+                    const middle = lower + (upper - lower) / 2;
+                    const compared = compareRecordPayloads(self.allocator, self.entries.items[middle].payload, payload);
+                    if (compared.result != .ok) return compared.result;
+                    if (compared.order == .lt) {
+                        lower = middle + 1;
+                    } else {
+                        upper = middle;
+                    }
+                }
+                self.position = if (lower < self.entries.items.len) lower else null;
+            },
+        }
+        return .ok;
     }
 
     /// Equivalent bounded behavior to sqlite3BtreeTableMoveto(): position at
@@ -204,28 +296,17 @@ pub const Cursor = struct {
             self.position = null;
             return .{ .result = .misuse };
         }
-        var lower: usize = 0;
-        var upper = self.entries.items.len;
-        while (lower < upper) {
-            const middle = lower + (upper - lower) / 2;
-            const compared = compareRecordToKey(self.allocator, self.entries.items[middle].payload, key);
-            if (compared.result != .ok) {
-                self.position = null;
-                return .{ .result = compared.result };
-            }
-            if (compared.order == .lt) lower = middle + 1 else upper = middle;
-        }
-        if (lower == self.entries.items.len) {
+        const key_context = RecordKeyContext{ .values = key };
+        const search = record_compare.findIndexKey(self.entries.items.len, self, cursorRecordPayload, key.len, &key_context, recordKeyValue) catch {
+            self.position = null;
+            return .{ .result = .corrupt };
+        };
+        if (search.position == self.entries.items.len) {
             self.position = null;
             return .{ .result = .ok };
         }
-        self.position = lower;
-        const compared = compareRecordToKey(self.allocator, self.entries.items[lower].payload, key);
-        if (compared.result != .ok) {
-            self.position = null;
-            return .{ .result = compared.result };
-        }
-        return .{ .result = .ok, .found = compared.order == .eq };
+        self.position = search.position;
+        return .{ .result = .ok, .found = search.found };
     }
 
     pub fn record(self: *const Cursor) RecordOutcome {
@@ -283,6 +364,8 @@ pub const Database = struct {
     usable_size: u32,
     declared_pages: u32,
     writable: bool = false,
+    mutation_batch_depth: usize = 0,
+    mutation_batch_pages: u32 = 0,
 
     pub fn open(
         allocator: std.mem.Allocator,
@@ -365,7 +448,23 @@ pub const Database = struct {
     }
 
     pub fn close(self: *Database) ResultCode {
+        if (self.mutation_batch_depth != 0) {
+            const rc = self.rollbackMutationBatch();
+            if (rc != .ok) return rc;
+        }
         return self.pager.close();
+    }
+
+    pub fn schemaVersion(self: *Database) struct { result: ResultCode, value: u32 = 0 } {
+        const fetched = self.pager.getPage(1, false);
+        if (fetched.result != .ok) return .{ .result = fetched.result };
+        const page = fetched.page.?;
+        const value = readU32(page.data, 40) orelse {
+            _ = self.pager.release(page);
+            return .{ .result = .corrupt };
+        };
+        const rc = self.pager.release(page);
+        return .{ .result = rc, .value = value };
     }
 
     pub fn userVersion(self: *Database) struct { result: ResultCode, value: u32 = 0 } {
@@ -535,17 +634,25 @@ pub const Database = struct {
         }
         const index = found orelse return if (if_exists) .ok else .error_;
         if (root_page <= 1 or root_page > self.declared_pages) return .corrupt;
-        var rc = self.pager.beginWrite();
-        if (rc != .ok) return rc;
+        const owns_transaction = self.mutation_batch_depth == 0;
+        var rc: ResultCode = .ok;
+        if (owns_transaction) {
+            rc = self.pager.beginWrite();
+            if (rc != .ok) return rc;
+        }
         const planned = RebuildPlanner.init(self, 1, .table);
         if (planned.result != .ok) {
-            _ = self.pager.rollback();
+            if (owns_transaction) {
+                _ = self.pager.rollback();
+            }
             return planned.result;
         }
         var planner = planned.planner.?;
         defer planner.deinit();
         if (planner.auto_vacuum) {
-            _ = self.pager.rollback();
+            if (owns_transaction) {
+                _ = self.pager.rollback();
+            }
             return .error_;
         }
         rc = planner.collectTree(root_page, 0);
@@ -556,9 +663,13 @@ pub const Database = struct {
         }
         if (rc == .ok) rc = bumpSchemaCookie(&planner);
         if (rc == .ok) rc = planner.finishFreelist();
-        if (rc == .ok) rc = self.pager.commit();
+        if (rc == .ok and owns_transaction) {
+            rc = self.pager.commit();
+        }
         if (rc != .ok) {
-            _ = self.pager.rollback();
+            if (owns_transaction) {
+                _ = self.pager.rollback();
+            }
             return rc;
         }
         self.declared_pages = planner.next_page;
@@ -726,6 +837,38 @@ pub const Database = struct {
         return payload;
     }
 
+    pub fn beginMutationBatch(self: *Database) ResultCode {
+        if (self.mutation_batch_depth == 0) {
+            const rc = self.pager.beginWrite();
+            if (rc != .ok) return rc;
+            self.mutation_batch_pages = self.declared_pages;
+        }
+        self.mutation_batch_depth += 1;
+        return .ok;
+    }
+
+    pub fn commitMutationBatch(self: *Database) ResultCode {
+        if (self.mutation_batch_depth == 0) return .misuse;
+        self.mutation_batch_depth -= 1;
+        if (self.mutation_batch_depth != 0) return .ok;
+        const rc = self.pager.commit();
+        if (rc != .ok) {
+            if (self.pager.state != .reader) {
+                _ = self.pager.rollback();
+            }
+            self.declared_pages = self.mutation_batch_pages;
+        }
+        return rc;
+    }
+
+    pub fn rollbackMutationBatch(self: *Database) ResultCode {
+        if (self.mutation_batch_depth == 0) return .ok;
+        self.mutation_batch_depth = 0;
+        const rc = self.pager.rollback();
+        self.declared_pages = self.mutation_batch_pages;
+        return rc;
+    }
+
     pub fn nextTableRowid(self: *Database, root_page: u32) struct { result: ResultCode, rowid: i64 = 0 } {
         const opened = self.openCursor(root_page, .table);
         if (opened.result != .ok) return .{ .result = opened.result };
@@ -833,9 +976,13 @@ fn encodeSchemaRecord(allocator: std.mem.Allocator, name: []const u8, root_page:
     const fields = [_][]const u8{ "table", name, name, sql };
     const serials = [_]u64{ 13 + 2 * fields[0].len, 13 + 2 * fields[1].len, 13 + 2 * fields[2].len, 6, 13 + 2 * fields[3].len };
     var header_body: usize = 0;
-    for (serials) |serial| header_body += varintLength(serial);
+    for (serials) |serial| {
+        header_body += varintLength(serial);
+    }
     var header_size = header_body + 1;
-    while (varintLength(header_size) + header_body != header_size) header_size = varintLength(header_size) + header_body;
+    while (varintLength(header_size) + header_body != header_size) {
+        header_size = varintLength(header_size) + header_body;
+    }
     const payload_size = fields[0].len + fields[1].len + fields[2].len + 8 + fields[3].len;
     if (header_size + payload_size > maximum_payload) return error.TooBig;
     const output = try allocator.alloc(u8, header_size + payload_size);
@@ -1099,7 +1246,9 @@ const RebuildPlanner = struct {
             const page = fetched.page.?;
             writeU32(page.data, 0, next_trunk);
             writeU32(page.data, 4, @intCast(leaf_count));
-            for (0..leaf_count) |index| writeU32(page.data, 8 + index * 4, self.available.items[cursor + index]);
+            for (0..leaf_count) |index| {
+                writeU32(page.data, 8 + index * 4, self.available.items[cursor + index]);
+            }
             const rc = self.database.pager.release(page);
             if (rc != .ok) return rc;
             cursor = next_index;
@@ -1295,11 +1444,17 @@ fn writeTableInterior(planner: *RebuildPlanner, page_number: u32, children: []co
 
 fn rebuildTable(database: *Database, root_page: u32, entries: []const Entry) ResultCode {
     if (root_page == 1) return .misuse;
-    var rc = database.pager.beginWrite();
-    if (rc != .ok) return rc;
+    const owns_transaction = database.mutation_batch_depth == 0;
+    var rc: ResultCode = .ok;
+    if (owns_transaction) {
+        rc = database.pager.beginWrite();
+        if (rc != .ok) return rc;
+    }
     const planned = RebuildPlanner.init(database, root_page, .table);
     if (planned.result != .ok) {
-        _ = database.pager.rollback();
+        if (owns_transaction) {
+            _ = database.pager.rollback();
+        }
         return planned.result;
     }
     var planner = planned.planner.?;
@@ -1353,8 +1508,9 @@ fn rebuildTable(database: *Database, root_page: u32, entries: []const Entry) Res
                     break;
                 }
                 var child_end = child_start + 2;
-                while (child_end <= level.items.len and interiorFits(database, level.items[child_start..child_end], 0))
+                while (child_end <= level.items.len and interiorFits(database, level.items[child_start..child_end], 0)) {
                     child_end += 1;
+                }
                 child_end -= 1;
                 if (level.items.len - child_end == 1 and child_end - child_start > 2) child_end -= 1;
                 const allocated = planner.allocate();
@@ -1383,9 +1539,13 @@ fn rebuildTable(database: *Database, root_page: u32, entries: []const Entry) Res
         if (rc == .ok) rc = writeTableInterior(&planner, root_page, level.items);
     }
     if (rc == .ok) rc = planner.finishFreelist();
-    if (rc == .ok) rc = database.pager.commit();
+    if (rc == .ok and owns_transaction) {
+        rc = database.pager.commit();
+    }
     if (rc != .ok) {
-        if (database.pager.state != .reader) _ = database.pager.rollback();
+        if (owns_transaction and database.pager.state != .reader) {
+            _ = database.pager.rollback();
+        }
         return rc;
     }
     database.declared_pages = planner.next_page;
@@ -1744,34 +1904,33 @@ fn compareValues(left: Value, right: Value) std.math.Order {
     };
 }
 
-fn compareRecordPayloads(allocator: std.mem.Allocator, left_payload: []const u8, right_payload: []const u8) CompareOutcome {
-    const left_outcome = decodeRecord(allocator, left_payload);
-    if (left_outcome.result != .ok) return .{ .result = left_outcome.result };
-    var left = left_outcome.record.?;
-    defer left.deinit();
-    const right_outcome = decodeRecord(allocator, right_payload);
-    if (right_outcome.result != .ok) return .{ .result = right_outcome.result };
-    var right = right_outcome.record.?;
-    defer right.deinit();
-    const count = @min(left.values.len, right.values.len);
-    for (0..count) |index| {
-        const order = compareValues(left.values[index], right.values[index]);
-        if (order != .eq) return .{ .result = .ok, .order = order };
-    }
-    return .{ .result = .ok, .order = std.math.order(left.values.len, right.values.len) };
+fn compareRecordPayloads(_: std.mem.Allocator, left_payload: []const u8, right_payload: []const u8) CompareOutcome {
+    const order = record_compare.compareRecords(left_payload, right_payload) catch return .{ .result = .corrupt };
+    return .{ .result = .ok, .order = order };
 }
 
-fn compareRecordToKey(allocator: std.mem.Allocator, payload: []const u8, key: []const Value) CompareOutcome {
-    const decoded = decodeRecord(allocator, payload);
-    if (decoded.result != .ok) return .{ .result = decoded.result };
-    var record = decoded.record.?;
-    defer record.deinit();
-    for (key, 0..) |key_value, index| {
-        if (index >= record.values.len) return .{ .result = .ok, .order = .lt };
-        const order = compareValues(record.values[index], key_value);
-        if (order != .eq) return .{ .result = .ok, .order = order };
-    }
-    return .{ .result = .ok };
+const RecordKeyContext = struct { values: []const Value };
+
+fn cursorRecordPayload(context: ?*const anyopaque, index: usize) []const u8 {
+    const cursor: *const Cursor = @ptrCast(@alignCast(context.?));
+    return cursor.entries.items[index].payload;
+}
+
+fn recordKeyValue(context: ?*const anyopaque, index: usize) record_compare.Value {
+    const key: *const RecordKeyContext = @ptrCast(@alignCast(context.?));
+    return switch (key.values[index]) {
+        .null_ => .null_,
+        .integer => |value| .{ .integer = value },
+        .real => |value| .{ .real = value },
+        .text => |value| .{ .text = value },
+        .blob => |value| .{ .blob = value },
+    };
+}
+
+fn compareRecordToKey(_: std.mem.Allocator, payload: []const u8, key: []const Value) CompareOutcome {
+    const context = RecordKeyContext{ .values = key };
+    const order = record_compare.indexKeyCompare(payload, key.len, &context, recordKeyValue) catch return .{ .result = .corrupt };
+    return .{ .result = .ok, .order = order };
 }
 
 pub fn textToUtf8(

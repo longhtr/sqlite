@@ -2,73 +2,62 @@
 
 ## Purpose
 
-Tests establish source fidelity for one named scope. They do not replace porting and do not turn scaffolding into implementation.
+Tests establish evidence for one named scope. They do not replace source porting or turn scaffolding into implementation. This document owns test interpretation, result ownership, and oracle boundaries.
 
 ## Evidence classes
 
 | Class | Meaning |
 |---|---|
 | control | Inputs, generation, ledgers, docs, containment, or artifact purity. |
-| atomic | Unit/invariant/differential evidence for one dossier. |
+| atomic | Unit/invariant/differential evidence for one source unit. |
 | bounded-scaffold | Regression through a frozen substitute. |
 | integrated-native | Final source-corresponding owners are reached. |
 | oracle-only | C baseline health; no Zig credit. |
 | release-assurance | Integrated path plus applicable failure/platform gates. |
 
-## Efficient cadence
+## Result ownership
 
-### Inner loop
+Test output is ephemeral unless a named maintained artifact owns it. Do not copy broad pass logs or volatile counts into ADRs or status prose.
 
-Run only what can falsify the active translation:
+| Scope | Invocation | Result owner and purpose |
+|---|---|---|
+| Aggregate regression | `zig build test -j1` | `build.zig` composes bounded native, differential, oracle, durability, and control modules; stdout is not a maintained artifact. |
+| Targeted control diagnosis | `zig build port-batch-audit port-batch-gate-test atomic-unit-audit source-ledger port-audit verify-config docs-test tooling-audit -j1` | JSON ledgers and verifier exit status; these are aggregate dependencies and are run directly only to isolate/repair a control failure. |
+| Translation checkpoint promotion | `zig build port-batch-checkpoint -j1` | `upstream/active-port-batch.json` and `upstream/port-checkpoints.json`; promotion fails below threshold or without exact canonical ownership and durable evidence. |
+| Utility differentials | `zig build bitvec-differential hash-differential varint-differential byteorder-differential string-differential utf-differential random-differential random-process-differential numeric-differential infrastructure-differential -j1` | Matching `tools/*_differential.py`, native worker under `tests/differential/`, and oracle worker under `reference/c_oracle/`; results are scoped observations. |
+| Durability models | `zig build durability-spike rollback-differential -j1` | `tools/durability_probe.zig` and `tools/rollback_differential.py`; bounded model evidence only. |
+| Upstream C baseline | `zig build test-upstream` | `tools/test_upstream.py`; the immutable dated result is `reference/c_oracle/UPSTREAM_TEST_EVIDENCE.md` and grants oracle-only evidence. |
+| Current machine status | `zig build port-audit` | `upstream/port-status.json`; generated accounting, not a test transcript or completion metric. |
+| Compatibility summary | `zig build compatibility-report` | `zig-out/compatibility-report.json`; disposable digest-backed output emitted only after the aggregate and export audit, not maintained evidence. |
 
-1. compile analysis and source invariants;
-2. focused Zig test;
-3. neutral C/Zig differential;
-4. reached OOM/I/O/crash/concurrency cases that apply.
+`tools/verify_docs.py` checks that documented build targets and result-owner paths exist. `tools/verify_tooling.py` checks every Python entrypoint has a current owner, bounded child execution, and no orphan manual exception.
 
-### Promotion loop
+## Checkpoint cadence
 
-Once per actual state transition, invalidation closure, or requested report:
+Checkpoint promotion is batch-gated by `upstream/active-port-batch.json`, `upstream/port-checkpoints.json`, and `zig build port-batch-checkpoint`. Ordinary builds and read-only controls are never disabled by an incomplete batch.
 
-```sh
-zig build test -j1
-zig build atomic-unit-audit source-ledger port-audit verify-config docs-test tooling-audit -j1
-```
+During translation run only focused compile/invariant, unit, neutral differential, and reached fault checks. Once per state transition, invalidation closure, or requested handoff, run the aggregate regression. Its control dependencies must not be rerun unchanged as a second promotion command; invoke them separately only for targeted diagnosis. Never retry a deterministic mismatch into a pass. A durable promotion receipt identifies the exact source and Zig trees, command, and result owner; command prose alone is not evidence.
 
-An unchanged repeated broad run adds no evidence. Testing and documentation must not consume the majority of engineering time.
+## Differential and worker rules
 
-## Differential rules
-
-- C and Zig use isolated state and one symbolic operation specification.
-- Compare branches, PCs, state, flags, aliases, allocations, callbacks, destructors, locks, VFS events, files, results, and continuation where applicable.
+- Isolate C and Zig state; share a symbolic operation specification where possible.
+- Compare relevant branches, PCs, state, flags, aliases, allocations, callbacks, destructors, locks, VFS events, files, results, and continuation.
 - Keep normalizers narrow and mutation-tested.
-- Record source/profile/toolchain hashes, target, filesystem, seed, command, limits, and artifact.
-- Never retry a deterministic mismatch into a pass.
+- Record source/profile/toolchain hashes, target, filesystem, seed, command, limits, and bounded artifact when evidence is promoted.
+- Route all children through `tools/bounded_subprocess.py`; timeout, signal, limit, host OOM, or filesystem-integrity warnings invalidate the run.
 
-## Worker containment
+## Oracle and migration boundaries
 
-All child workers use `tools/bounded_subprocess.py` limits for wall time, process-group memory/address space, output, files, CPU, processes, descriptors, arguments, and input. A timeout, signal, limit event, host OOM, or filesystem-integrity warning invalidates the run until investigated and rerun cleanly.
+C is test/migration infrastructure only. It runs in a separate process by default, never owns production behavior, and never shares private SQLite state with Zig. Approved seams are public byte formats, database/journal/WAL files, neutral typed/text protocols, independent VFS traces/crash models, and narrow test-only callback/opaque-handle bridges. Equivalent adapters may not duplicate numeric control flow when symbolic labels/fixups are available. Every report labels evidence oracle, transitional, bounded-scaffold, or integrated-native.
 
-## Assurance matrix
+Installed production artifacts must contain zero C objects. Historical C ABI and hybrid probes remain bounded regressions until their observations move to native Zig API tests.
 
-Apply only relevant dimensions to each unit; all apply before release:
+## Release assurance
 
-- adapted upstream tests against final Zig owners;
-- SQL Logic Test, metamorphic, and SQLancer campaigns;
-- tokenizer/parser/VDBE/record/page/file/API/module fuzzing;
-- reached allocation and VFS fault injection;
-- durability simulation and physical process kills;
-- threading modes, races, contention, and callback reentrancy;
-- bidirectional database/journal/WAL continuation;
-- AArch64/Btrfs and x86_64/ext4;
-- pinned performance, memory, allocation, and I/O budgets.
+Apply relevant dimensions per unit and all dimensions before release: adapted upstream tests against final Zig owners; SQL Logic Test, metamorphic, and SQLancer; parser/VDBE/record/page/file/API fuzzing; reached allocation and VFS faults; durability simulation and physical kills; threading/race/contention/reentrancy; bidirectional database/journal/WAL continuation; AArch64/Btrfs and x86_64/ext4; and pinned performance, memory, allocation, and I/O budgets.
 
-The current 329,824-test upstream partition is oracle-only. Native upstream adaptation remains a release blocker.
+The dated upstream result is C-oracle-only. Native upstream adaptation remains a release blocker.
 
-## Solo fidelity-closure review
+## Incident handling
 
-After assurance, freeze the implementation snapshot. In a fresh pass, re-read source, challenge dependency closure and every representation difference, rerun mutation/trace evidence, and record the review artifact and snapshot identity. This separation—not another person—satisfies the final review boundary for this solo project.
-
-## Incident gate
-
-Preserve the reproducer and artifacts; identify implementation, oracle, adapter, normalizer, containment, or environment cause; add a regression when project-controlled; invalidate affected evidence; then rerun cleanly. No unexplained defect may remain at release.
+Preserve bounded reproducer/artifacts, classify implementation/oracle/adapter/normalizer/containment/environment cause, add a regression for project defects, invalidate affected evidence, and rerun cleanly. No unexplained defect may remain at release.

@@ -103,6 +103,7 @@ pub const Coordinator = struct {
         try self.memory_manager.configureBackend(backend);
     }
 
+    /// Source `sqlite3_initialize()` process state machine.
     pub fn initialize(self: *Coordinator) c_int {
         const id = threadId();
         var mutex_attempted = false;
@@ -184,6 +185,7 @@ pub const Coordinator = struct {
         return result;
     }
 
+    /// Source `sqlite3_shutdown()` reverse-order owner teardown.
     pub fn shutdown(self: *Coordinator) c_int {
         self.lock();
         if (self.state == .initializing) {
@@ -256,6 +258,12 @@ fn shutdownProcessPcache(_: *anyopaque) void {
     process_pcache.shutdown();
 }
 fn initializeProcessOs(_: *anyopaque) c_int {
+    return initializeOs();
+}
+
+/// Source `sqlite3_os_init()`: register every emitted Unix locking style in
+/// source order, make POSIX Unix the default, and then register memdb.
+pub fn initializeOs() c_int {
     if (process_os_initialized) return memory.ok;
     process_mem_vfs.vfs_name_manager = &memory.process_manager;
     vfs.registerProcessVfs(&process_unix_adapter.abi, true);
@@ -266,7 +274,12 @@ fn initializeProcessOs(_: *anyopaque) c_int {
     process_os_initialized = true;
     return memory.ok;
 }
+
 fn shutdownProcessOs(_: *anyopaque) void {
+    shutdownOs();
+}
+
+pub fn shutdownOs() void {
     process_os_initialized = false;
     auto_extension.reset();
 }

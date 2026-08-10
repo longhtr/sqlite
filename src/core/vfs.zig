@@ -21,29 +21,47 @@ const LocalMutex = struct {
 };
 
 pub const OK: c_int = 0;
+pub const OK_SYMLINK: c_int = OK | (2 << 8);
 pub const ERROR: c_int = 1;
+pub const PERM: c_int = 3;
 pub const READONLY: c_int = 8;
 pub const CORRUPT: c_int = 11;
 pub const FULL: c_int = 13;
+pub const MISUSE: c_int = 21;
 pub const BUSY: c_int = 5;
 pub const NOMEM: c_int = 7;
 pub const CANTOPEN: c_int = 14;
 pub const NOTFOUND: c_int = 12;
+pub const WARNING: c_int = 28;
 pub const IOERR: c_int = 10;
+pub const IOERR_READ: c_int = IOERR | (1 << 8);
 pub const IOERR_SHORT_READ: c_int = IOERR | (2 << 8);
 pub const IOERR_WRITE: c_int = IOERR | (3 << 8);
 pub const IOERR_FSYNC: c_int = IOERR | (4 << 8);
+pub const IOERR_DIR_FSYNC: c_int = IOERR | (5 << 8);
 pub const IOERR_TRUNCATE: c_int = IOERR | (6 << 8);
+pub const IOERR_FSTAT: c_int = IOERR | (7 << 8);
+pub const IOERR_UNLOCK: c_int = IOERR | (8 << 8);
+pub const IOERR_RDLOCK: c_int = IOERR | (9 << 8);
 pub const IOERR_DELETE: c_int = IOERR | (10 << 8);
 pub const IOERR_ACCESS: c_int = IOERR | (13 << 8);
+pub const IOERR_CHECKRESERVEDLOCK: c_int = IOERR | (14 << 8);
+pub const IOERR_LOCK: c_int = IOERR | (15 << 8);
+pub const IOERR_CLOSE: c_int = IOERR | (16 << 8);
+pub const IOERR_SHMOPEN: c_int = IOERR | (18 << 8);
 pub const IOERR_SHMMAP: c_int = IOERR | (21 << 8);
 pub const IOERR_SHMLOCK: c_int = IOERR | (20 << 8);
+pub const IOERR_GETTEMPPATH: c_int = IOERR | (25 << 8);
+pub const IOERR_DELETE_NOENT: c_int = IOERR | (23 << 8);
+pub const IOERR_CORRUPTFS: c_int = IOERR | (33 << 8);
 pub const IOERR_NOMEM: c_int = IOERR | (12 << 8);
 
 pub const OPEN_READONLY: c_int = 0x00000001;
 pub const OPEN_READWRITE: c_int = 0x00000002;
 pub const OPEN_CREATE: c_int = 0x00000004;
 pub const OPEN_DELETEONCLOSE: c_int = 0x00000008;
+pub const OPEN_EXCLUSIVE: c_int = 0x00000010;
+pub const OPEN_URI: c_int = 0x00000040;
 pub const OPEN_MEMORY: c_int = 0x00000080;
 pub const DESERIALIZE_FREEONCLOSE: c_uint = 0x001;
 pub const DESERIALIZE_RESIZEABLE: c_uint = 0x002;
@@ -69,8 +87,19 @@ pub const SHM_LOCK: c_int = 2;
 pub const SHM_SHARED: c_int = 4;
 pub const SHM_EXCLUSIVE: c_int = 8;
 pub const SHM_REGION_SIZE: usize = 32_768;
+pub const FCNTL_LOCKSTATE: c_int = 1;
+pub const FCNTL_LAST_ERRNO: c_int = 4;
+pub const FCNTL_SIZE_HINT: c_int = 5;
+pub const FCNTL_CHUNK_SIZE: c_int = 6;
+pub const FCNTL_PERSIST_WAL: c_int = 10;
 pub const FCNTL_VFSNAME: c_int = 12;
+pub const FCNTL_POWERSAFE_OVERWRITE: c_int = 13;
+pub const FCNTL_TEMPFILENAME: c_int = 16;
+pub const FCNTL_MMAP_SIZE: c_int = 18;
+pub const FCNTL_HAS_MOVED: c_int = 20;
 pub const FCNTL_SIZE_LIMIT: c_int = 36;
+pub const FCNTL_EXTERNAL_READER: c_int = 40;
+pub const FCNTL_NULL_IO: c_int = 43;
 
 pub const FileKind = enum { database, journal, wal, temporary, other };
 pub const Method = enum {
@@ -776,14 +805,116 @@ pub const sqlite3_vfs = extern struct {
     xCurrentTime: ?*const fn (*sqlite3_vfs, *f64) callconv(.c) c_int,
     xGetLastError: ?*const fn (*sqlite3_vfs, c_int, [*]u8) callconv(.c) c_int,
     xCurrentTimeInt64: ?*const fn (*sqlite3_vfs, *i64) callconv(.c) c_int,
-    xSetSystemCall: ?*const fn (*sqlite3_vfs, [*:0]const u8, ?*const fn () callconv(.c) void) callconv(.c) c_int,
+    xSetSystemCall: ?*const fn (*sqlite3_vfs, ?[*:0]const u8, ?*const fn () callconv(.c) void) callconv(.c) c_int,
     xGetSystemCall: ?*const fn (*sqlite3_vfs, [*:0]const u8) callconv(.c) ?*const fn () callconv(.c) void,
     xNextSystemCall: ?*const fn (*sqlite3_vfs, ?[*:0]const u8) callconv(.c) ?[*:0]const u8,
 };
 
-pub var process_vfs_head: ?*sqlite3_vfs = null;
+/// Source `sqlite3OsFileControl()`.
+pub fn osFileControl(file: *sqlite3_file, operation: c_int, argument: ?*anyopaque) c_int {
+    const methods = file.pMethods orelse return NOTFOUND;
+    const control = methods.xFileControl orelse return NOTFOUND;
+    return control(file, operation, argument);
+}
 
+/// Source `sqlite3OsShmMap()`.
+pub fn osShmMap(file: *sqlite3_file, page: c_int, page_size: c_int, extend: c_int, output: *?*volatile anyopaque) c_int {
+    const methods = file.pMethods orelse return IOERR_SHMMAP;
+    const map = methods.xShmMap orelse return IOERR_SHMMAP;
+    return map(file, page, page_size, extend, output);
+}
+
+/// Source `sqlite3OsOpen()`: mask connection-only flags before dispatching to
+/// the VFS and require failed opens to leave no live method table.
+pub fn osOpen(filesystem: *sqlite3_vfs, path: ?[*:0]const u8, file: *sqlite3_file, flags: c_int, output_flags: ?*c_int) c_int {
+    const open = filesystem.xOpen orelse return CANTOPEN;
+    const rc = open(filesystem, path, file, flags & 0x1087f7f, output_flags);
+    std.debug.assert(rc == OK or file.pMethods == null);
+    return rc;
+}
+
+pub const AlignedFileStorage = []align(@alignOf(sqlite3_file)) u8;
+pub const AllocatedOpenResult = struct {
+    result: c_int,
+    file: ?*sqlite3_file = null,
+    storage: ?AlignedFileStorage = null,
+};
+
+/// Source `sqlite3OsOpenMalloc()`: allocate zeroed VFS file storage and free it
+/// atomically when xOpen fails.
+pub fn osOpenAllocated(allocator: std.mem.Allocator, filesystem: *sqlite3_vfs, path: ?[*:0]const u8, flags: c_int, output_flags: ?*c_int) AllocatedOpenResult {
+    if (filesystem.szOsFile < @sizeOf(sqlite3_file)) return .{ .result = CANTOPEN };
+    const storage = allocator.alignedAlloc(u8, .of(sqlite3_file), @intCast(filesystem.szOsFile)) catch return .{ .result = NOMEM };
+    @memset(storage, 0);
+    const file: *sqlite3_file = @ptrCast(storage.ptr);
+    const rc = osOpen(filesystem, path, file, flags, output_flags);
+    if (rc != OK) {
+        allocator.free(storage);
+        return .{ .result = rc };
+    }
+    return .{ .result = OK, .file = file, .storage = storage };
+}
+
+/// Source `sqlite3OsFullPathname()`.
+pub fn osFullPathname(filesystem: *sqlite3_vfs, path: [*:0]const u8, output: []u8) c_int {
+    if (output.len == 0 or output.len > std.math.maxInt(c_int)) return CANTOPEN;
+    output[0] = 0;
+    const full_path = filesystem.xFullPathname orelse return CANTOPEN;
+    return full_path(filesystem, path, @intCast(output.len), output.ptr);
+}
+
+/// Source `sqlite3OsRandomness()`.
+pub fn osRandomness(filesystem: *sqlite3_vfs, output: []u8) c_int {
+    if (output.len > std.math.maxInt(c_int)) return IOERR;
+    const randomness = filesystem.xRandomness orelse return 0;
+    return randomness(filesystem, @intCast(output.len), output.ptr);
+}
+
+/// Source `sqlite3OsCurrentTimeInt64()`: prefer the version-2 integer method
+/// and otherwise convert Julian days from xCurrentTime to milliseconds.
+pub fn osCurrentTimeInt64(filesystem: *sqlite3_vfs, output: *i64) c_int {
+    if (filesystem.iVersion >= 2) {
+        if (filesystem.xCurrentTimeInt64) |current_time| return current_time(filesystem, output);
+    }
+    const current_time = filesystem.xCurrentTime orelse return ERROR;
+    var julian_days: f64 = 0;
+    const rc = current_time(filesystem, &julian_days);
+    const milliseconds = julian_days * 86_400_000.0;
+    output.* = if (milliseconds >= @as(f64, @floatFromInt(std.math.maxInt(i64))))
+        std.math.maxInt(i64)
+    else if (milliseconds <= @as(f64, @floatFromInt(std.math.minInt(i64))))
+        std.math.minInt(i64)
+    else
+        @intFromFloat(milliseconds);
+    return rc;
+}
+
+pub var process_vfs_head: ?*sqlite3_vfs = null;
+var process_vfs_mutex: LocalMutex = .{};
+
+/// Source `vfsUnlink()`: remove one exact VFS object from the process list
+/// without disturbing registrations that merely share its name.
+fn vfsUnlink(value: *sqlite3_vfs) void {
+    var previous: ?*sqlite3_vfs = null;
+    var current = process_vfs_head;
+    while (current) |entry| : (current = entry.pNext) {
+        if (entry == value) {
+            if (previous) |before| {
+                before.pNext = entry.pNext;
+            } else {
+                process_vfs_head = entry.pNext;
+            }
+            entry.pNext = null;
+            return;
+        }
+        previous = entry;
+    }
+}
+
+/// Source `sqlite3_vfs_find()` registry lookup under the process mutex.
 pub fn findProcessVfs(name: ?[]const u8) ?*sqlite3_vfs {
+    process_vfs_mutex.lock();
+    defer process_vfs_mutex.unlock();
     if (name == null) return process_vfs_head;
     var current = process_vfs_head;
     while (current) |item| : (current = item.pNext) {
@@ -792,30 +923,26 @@ pub fn findProcessVfs(name: ?[]const u8) ?*sqlite3_vfs {
     return null;
 }
 
+/// Source `sqlite3_vfs_unregister()` after public auto-initialization.
 pub fn unregisterProcessVfs(value: *sqlite3_vfs) void {
-    var previous: ?*sqlite3_vfs = null;
-    var current = process_vfs_head;
-    while (current) |entry| : (current = entry.pNext) {
-        if (entry == value) {
-            if (previous) |before| before.pNext = entry.pNext else process_vfs_head = entry.pNext;
-            entry.pNext = null;
-            return;
-        }
-        previous = entry;
-    }
+    process_vfs_mutex.lock();
+    defer process_vfs_mutex.unlock();
+    vfsUnlink(value);
 }
 
+/// Source `sqlite3_vfs_register()`; non-default registrations are placed
+/// immediately after the current default just like the pinned list owner.
 pub fn registerProcessVfs(value: *sqlite3_vfs, make_default: bool) void {
-    unregisterProcessVfs(value);
+    process_vfs_mutex.lock();
+    defer process_vfs_mutex.unlock();
+    vfsUnlink(value);
     if (make_default or process_vfs_head == null) {
         value.pNext = process_vfs_head;
         process_vfs_head = value;
-        return;
+    } else {
+        value.pNext = process_vfs_head.?.pNext;
+        process_vfs_head.?.pNext = value;
     }
-    var tail = process_vfs_head.?;
-    while (tail.pNext) |next| tail = next;
-    tail.pNext = value;
-    value.pNext = null;
 }
 
 const AbiFile = extern struct { base: sqlite3_file, native: ?*MemoryFile, owner: ?*MemoryVfs };
@@ -1027,7 +1154,7 @@ fn avTime64(v: *sqlite3_vfs, out: *i64) callconv(.c) c_int {
     out.* = 210866760000000;
     return OK;
 }
-fn avSet(_: *sqlite3_vfs, _: [*:0]const u8, _: ?*const fn () callconv(.c) void) callconv(.c) c_int {
+fn avSet(_: *sqlite3_vfs, _: ?[*:0]const u8, _: ?*const fn () callconv(.c) void) callconv(.c) c_int {
     return NOTFOUND;
 }
 fn avGet(_: *sqlite3_vfs, _: [*:0]const u8) callconv(.c) ?*const fn () callconv(.c) void {

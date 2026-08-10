@@ -20,4 +20,4 @@ ADR-0040 later clarified that the target is a pure-Zig product and Zig-native AP
 
 ## Consequences
 
-Legacy exports, canonical-header tests, hybrid paths, hook contracts, layouts, and opcode-name mappings remain transitional/scaffold evidence. Progress is measured by atomic source translation, internal trace equivalence, native integration, assurance, independent review, and production purity.
+Legacy exports, canonical-header tests, hybrid paths, hook contracts, layouts, and opcode-name mappings remain transitional/scaffold evidence. Progress is measured by atomic source translation, internal trace equivalence, native integration, assurance, and production purity. Independent fidelity review is deferred.

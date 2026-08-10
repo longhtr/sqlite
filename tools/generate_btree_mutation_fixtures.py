@@ -38,4 +38,8 @@ def main():
     manifest={'schema_version':1,'phase':'phase-9-btree-mutation','profile':'sqlite-3.53.4-table-index-freelist-autovacuum','generator':'tools/generate_btree_mutation_fixtures.py','seed':0x9B7EE,'fixtures':fixtures,'roundtrip_fixture':roundtrip}
     (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print(f'generate-btree-mutation-fixtures: wrote {len(fixtures)+1} fixtures')
-if __name__=='__main__':main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

@@ -24,8 +24,8 @@ The Zig port preserves this decomposition, algorithms, state machines, and proto
 Frozen substitutes remain useful only as migration evidence:
 
 - `sql_frontend.zig` is a bounded handwritten frontend;
-- generated Lemon tables and 348 action contracts lack concrete final owners;
-- `vdbe.zig` is a handwritten runtime with only 98/190 bounded opcode-name mappings;
+- generated Lemon tables/action contracts lack concrete final owners;
+- `vdbe.zig` is a handwritten runtime with only a bounded subset of opcode-name mappings;
 - B-tree mutation reconstructs whole trees;
 - pager/WAL models cover selected slices;
 - the root API remains transitional and C-shaped.

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-connection-change-expiration-and-access-metadata",
   "title": "VDBE connection changes, statement expiration, and metadata access",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "These source helpers are the small connection/statement metadata boundary: publish connection changes, opt a statement into change counting, expire all linked statements with immediate/advisory strength, expose db/preparation flags, and reset the step result. They operate on the same exact linked Vdbe state.",
     "source_files": [
@@ -104,7 +104,7 @@
     "Vdbe bitfields are exact packed Zig fields; all counters/results retain C integer widths."
   ],
   "oracle": {
-    "protocol": "The shared worker creates two linked VDBEs, publishes seven changes, enables change counting, applies immediate then advisory expiration to both nodes, checks database/preparation accessors, and resets SQLITE_INTERRUPT to OK in a 363-observation trace.",
+    "protocol": "The shared worker creates two linked VDBEs, publishes seven changes, enables change counting, applies immediate then advisory expiration to both nodes, checks database/preparation accessors, and resets SQLITE_INTERRUPT to OK in a 366-observation trace.",
     "internal_observations": [
       "current and total-change delta",
       "changeCntOn bit",
@@ -116,9 +116,9 @@
     "normalization": "All counters, flags and results are exact; database pointer normalizes only to owner identity."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation or OOM behavior.",
     "io_crash_concurrency": "No I/O/callback; mutex remains caller obligation.",
@@ -142,6 +142,7 @@
     "notes": "Requires production caller integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate public changes, reset, and expiration callers.",
     "Complete P4-aware reset/destruction lifecycle.",
     "Independent fidelity review remains open."

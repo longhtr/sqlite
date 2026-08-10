@@ -16,4 +16,8 @@ def main():
  expected=['journal-write','journal-sync','journal-write','journal-sync','database-write','database-sync','journal-delete']
  if native!=expected:raise SystemExit(f'unexpected normalized durability trace: {native}')
  print('vfs-trace-differential: normalized DELETE/FULL trace matches')
-if __name__=='__main__':main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

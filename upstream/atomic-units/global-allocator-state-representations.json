@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-allocator-state-representations",
   "title": "Global allocator configuration, limits, mutex, and method-table state representations",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the complete private mem0 identities and the Sqlite3Config identities directly read by the admitted global allocation core. They consolidate into the process-lifetime Manager owner.",
@@ -202,8 +202,8 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No representation allocation; backend initialization failure leaves started false.",
     "io_crash_concurrency": "No I/O. Manager mutex protects allocator/status state, but source mutex subsystem integration remains open.",
@@ -229,5 +229,35 @@
   "known_blockers": [
     "Configuration/init/shutdown behavior is not part of this representation unit.",
     "Final mutex subsystem ownership and independent review remain open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/malloc.c:36-57 was reviewed for SQLITE_MAX_MEMORY, complete Mem0Global storage, process initializer, and WSD alias",
+      "upstream/sqlite/src/sqliteInt.h:1290-1312 and 4280-4315 were reviewed for direct sqlite3GlobalConfig selection and the complete allocator/page-cache-relevant Sqlite3Config field neighborhood",
+      "upstream/sqlite/src/global.c:230-300 was reviewed through the sqlite3Config singleton initializer and selected default values",
+      "src/core/memory.zig Manager/process_manager fields are the canonical AST-hashed consolidated representation; global-status-primitives owns the embedded ten-slot status dependency"
+    ],
+    "callers": [
+      "malloc.c:63/95-222 consumes mem0 mutex, soft/hard limits, nearlyFull, allocator init/end, and static page-cache validation",
+      "malloc.c:246-305 mallocWithAlarm/sqlite3Malloc, 344-402 size/free, and 503-552 realloc consume bMemstat, backend methods, limits, mutex, and status state",
+      "main.c:301-302 passes pPage/szPage/nPage to PCache setup; main.c:500-531 configures allocator methods, memstatus, and static page cache before initialization",
+      "global-allocator-core-for-connection-growth owns the six allocation functions; configuration/init/shutdown and public heap-limit functions are separate behavior units"
+    ],
+    "callees": [
+      "Representation fields have no callees; sqlite3_mem_methods callbacks and context are configurator-owned and invoked by allocator behavior units",
+      "Direct WSD macros select sqlite3Config/mem0 because SQLITE_OMIT_WSD is absent; SQLITE_MAX_MEMORY defaults to zero",
+      "Manager consolidates mem0 and the allocator subset of Sqlite3Config while preserving callback values and process lifetime rather than C aggregate layout"
+    ],
+    "assertions_branches_cleanup": [
+      "No behavioral blocks belong to representation declarations; selected defaults are bMemstat=true, soft/hard limits zero, nearlyFull=false, allocator callbacks zero before initialization, pPage=null, szPage=0, and profile nPage default",
+      "Static page-cache validity branches and backend initialization rollback are behavior owned by global allocator init/shutdown, not credited here",
+      "No representation allocation, lock action, callback, I/O, cleanup, or failure transition occurs until a behavior owner consumes the state"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/memsubsys1.test and memsubsys2.test observe memstatus, allocator statistics, and page-cache configuration consequences",
+      "upstream/sqlite/test/malloc.test, malloc2.test, malloc3.test, and malloc5.test exercise configured/default allocator state, limits, OOM, and continuation",
+      "upstream/sqlite/test/pcache2.test observes static page-cache status consumers; configuration misuse timing is covered by config tests",
+      "Project memory.zig state/default tests and infrastructure differential inspect consolidated state but are not durable promotion receipts"
+    ]
+  }
 }

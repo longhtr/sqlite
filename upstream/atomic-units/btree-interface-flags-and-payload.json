@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "btree-interface-flags-and-payload",
   "title": "B-tree interface flags, opaque handles, and insertion payload",
-  "status": "source-translated",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "The active btree.h entities are representation contracts rather than function bodies: opaque handle aliases, exact BtreePayload fields, open/table/meta/hint/cursor/mutation flags, active defaults/header identity, and the non-debug seek-count expansion. The native module translates each declaration and compile-time checks payload layout against C.",
     "source_files": [
@@ -414,8 +414,8 @@
     "normalization": "Integer constants and layout facts are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation.",
@@ -440,6 +440,7 @@
     "notes": "Requires B-tree consumer integration, broader target ABI validation, assurance, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Use BtreePayload in source-shaped insertion path.",
     "Translate cursor/open/meta API behavior and all B-tree ownership.",
     "Validate release targets and independently review."

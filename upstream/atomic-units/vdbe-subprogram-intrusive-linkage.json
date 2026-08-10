@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-subprogram-intrusive-linkage",
   "title": "VDBE trigger SubProgram intrusive linkage and presence",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "sqlite3VdbeLinkSubProgram and sqlite3VdbeHasSubProgram establish and query the Vdbe-owned intrusive list used to retain transferred trigger programs until statement destruction. SubProgram/pNext and Vdbe.pProgram are the complete linkage representation.",
     "source_files": [
@@ -109,7 +109,7 @@
     "No semantic difference; nullable extern pointers retain C intrusive-list identity directly."
   ],
   "oracle": {
-    "protocol": "The shared worker observes an empty Vdbe, allocates two exact SubPrograms, links them in order, and compares presence, head identity, second-to-first pNext, and null tail as part of a 363-observation trace.",
+    "protocol": "The shared worker observes an empty Vdbe, allocates two exact SubPrograms, links them in order, and compares presence, head identity, second-to-first pNext, and null tail as part of a 366-observation trace.",
     "internal_observations": [
       "empty presence predicate",
       "new head identity",
@@ -120,9 +120,9 @@
     "normalization": "Addresses normalize to exact node/head relationships. Boolean results are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation in assigned functions; test allocations are explicitly retired after observation.",
     "io_crash_concurrency": "No I/O/callback; caller mutex remains integration obligation.",
@@ -146,6 +146,7 @@
     "notes": "Requires trigger compiler/destruction integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate SubProgram construction from transferred operation arrays.",
     "Port P4-aware SubProgram and VDBE destruction.",
     "Independent fidelity review remains open."

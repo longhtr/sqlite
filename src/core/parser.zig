@@ -9,6 +9,7 @@ const std = @import("std");
 const tokenizer = @import("tokenizer.zig");
 pub const tables = @import("generated/parser_tables.zig");
 pub const parse_types = @import("internal/parse_types.zig");
+pub const walker = @import("internal/walker.zig");
 pub const SemanticValue = parse_types.SemanticValue;
 
 const StackEntry = struct {
@@ -4133,7 +4134,9 @@ test "canonical Lemon tables recognize representative grammar" {
         "WITH c(x) AS (SELECT 1) SELECT x FROM c;",
         "BEGIN; SAVEPOINT s; RELEASE s; COMMIT;",
     };
-    for (valid) |sql| try std.testing.expectEqual(Result.accepted, recognize(std.testing.allocator, sql));
+    for (valid) |sql| {
+        try std.testing.expectEqual(Result.accepted, recognize(std.testing.allocator, sql));
+    }
 
     const invalid = [_][]const u8{
         "SELEC 1;",

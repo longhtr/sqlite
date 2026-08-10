@@ -299,7 +299,9 @@ pub fn parse(input: [*:0]const u8) Result {
     var state: u4 = 0;
     var digit: u32 = 0;
 
-    while (isSpace(input[position])) position += 1;
+    while (isSpace(input[position])) {
+        position += 1;
+    }
     digit = @as(u32, input[position]) -% '0';
     if (digit >= 10) {
         if (input[position] == '-') {
@@ -382,7 +384,9 @@ pub fn parse(input: [*:0]const u8) Result {
 
     if (input[position] == 0) return .{ .value = value, .code = state };
     if (isSpace(input[position])) {
-        while (isSpace(input[position])) position += 1;
+        while (isSpace(input[position])) {
+            position += 1;
+        }
         if (input[position] == 0) return .{ .value = value, .code = state };
     }
     const invalid: u32 = 0xffff_fff0 | @as(u32, state);

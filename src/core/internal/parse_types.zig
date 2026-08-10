@@ -10,17 +10,79 @@ pub const schema_types = @import("schema_types.zig");
 
 pub const Sqlite3 = opaque {};
 pub const Vdbe = opaque {};
-pub const AggInfo = opaque {};
+pub const AggInfoColumn = extern struct {
+    table: ?*Table,
+    expression: ?*Expr,
+    table_cursor: c_int,
+    column: c_int,
+    sorter_column: c_int,
+};
+
+pub const AggInfoFunction = extern struct {
+    expression: ?*Expr,
+    function: ?*FuncDef,
+    distinct_cursor: c_int,
+    distinct_address: c_int,
+    order_cursor: c_int,
+    order_payload: u8,
+    order_unique: u8,
+    use_subtype: u8,
+    _padding: u8 = 0,
+};
+
+pub const AggInfo = extern struct {
+    direct_mode: u8,
+    use_sorting_index: u8,
+    _padding0: u16 = 0,
+    sorting_column_count: u32,
+    sorting_cursor: c_int,
+    sorting_pseudo_cursor: c_int,
+    first_register: c_int,
+    group_by: ?*ExprList,
+    columns: ?[*]AggInfoColumn,
+    column_count: c_int,
+    accumulator_count: c_int,
+    functions: ?[*]AggInfoFunction,
+    function_count: c_int,
+    select_id: u32,
+};
 pub const Table = schema_types.Table;
 pub const Index = schema_types.Index;
-pub const CteUse = opaque {};
-pub const IndexedExpr = opaque {};
-pub const TableLock = opaque {};
+pub const CteUse = extern struct {
+    use_count: c_int,
+    materialize_address: c_int,
+    return_register: c_int,
+    cursor: c_int,
+    row_estimate: i16,
+    materialization: u8,
+    _padding: u8 = 0,
+};
+pub const IndexedExpr = extern struct {
+    expression: ?*Expr,
+    data_cursor: c_int,
+    index_cursor: c_int,
+    index_column: c_int,
+    maybe_null_row: u8,
+    affinity: u8,
+    _padding: [6]u8 = .{0} ** 6,
+    next: ?*IndexedExpr,
+};
+pub const TableLock = extern struct {
+    database_index: c_int,
+    root_page: u32,
+    write_lock: u8,
+    _padding: [7]u8 = [_]u8{0} ** 7,
+    name: ?[*:0]const u8,
+};
 pub const AutoincInfo = opaque {};
 pub const TriggerPrg = opaque {};
 pub const Returning = opaque {};
 pub const VList = opaque {};
-pub const RenameToken = opaque {};
+pub const RenameToken = extern struct {
+    pointer: ?*const anyopaque,
+    token: Token,
+    next: ?*RenameToken,
+};
 pub const FuncDef = opaque {};
 
 pub const table_flag = struct {
@@ -53,6 +115,7 @@ pub const foreign_action = struct {
 };
 
 pub const select_flag = struct {
+    pub const correlated: u32 = 0x2000_0000;
     pub const distinct: c_int = facts.constants.SF_Distinct;
     pub const all: c_int = facts.constants.SF_All;
     pub const values: u32 = facts.constants.SF_Values;
@@ -107,6 +170,8 @@ pub const expr_flag = struct {
     pub const leaf: u32 = @intCast(facts.constants.EP_Leaf);
     pub const win_func: u32 = @intCast(facts.constants.EP_WinFunc);
     pub const static: u32 = @intCast(facts.constants.EP_Static);
+    pub const from_ddl: u32 = 0x4000_0000;
+    pub const variable_select: u32 = 0x0000_0040;
 };
 
 pub const expression_opcode = struct {
@@ -268,6 +333,22 @@ pub const Select = extern struct {
     pWith: ?*With,
     pWin: ?*Window,
     pWinDefn: ?*Window,
+};
+
+pub const WalkerExtra = extern union {
+    pointer: ?*anyopaque,
+    counter: c_int,
+};
+
+pub const Walker = extern struct {
+    pParse: ?*Parse,
+    xExprCallback: ?*const fn (*Walker, *Expr) callconv(.c) c_int,
+    xSelectCallback: ?*const fn (*Walker, *Select) callconv(.c) c_int,
+    xSelectCallback2: ?*const fn (*Walker, *Select) callconv(.c) void,
+    walkerDepth: c_int,
+    eCode: u16,
+    mWFlags: u16,
+    u: WalkerExtra,
 };
 
 pub const IdListItem = extern struct {

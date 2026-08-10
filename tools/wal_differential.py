@@ -31,4 +31,8 @@ def main():
   if x!='wal-native\t555':raise SystemExit(x)
   obs+=2
  print(f'wal-differential: {obs} recovery/write/checkpoint/index observations match')
-if __name__=='__main__':main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

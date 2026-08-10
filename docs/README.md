@@ -4,20 +4,20 @@
 
 This is the single documentation entry point and the complete inventory of maintained project Markdown. It assigns one non-overlapping purpose to each file so stale phase narratives, duplicate authority, and orphan documentation are detectable. `tools/verify_docs.py` verifies this inventory against the repository.
 
-Vendored files under `upstream/sqlite/`, build outputs, generated data files, and failure artifacts are not project documentation. Small README files beside generated or test artifacts are maintained because they explain provenance and evidence boundaries.
+Vendored files under `upstream/sqlite/`, build outputs, generated data files, and failure artifacts are not project documentation. `AGENTS.md` is live agent operational memory rather than contributor documentation; it points to this registry. Small README files beside generated or test artifacts are maintained because they explain provenance and evidence boundaries.
 
 ## Reading order
 
 New contributors should read:
 
-1. `README.md` for the public warning, goal, current accounting, and core commands.
+1. `README.md` for the public warning, goal, state pointers, and core commands.
 2. `docs/PORTING_CHARTER.md` for the mission, authority, and completion definition.
 3. `docs/SCOPE.md` for the pinned target and explicit exclusions.
 4. `docs/ENGINEERING_PROCESS.md` for the mandatory atomic-unit workflow and evidence gates.
 5. `docs/CURRENT_STATE.md` and `upstream/port-status.json` for current facts and blockers.
 6. `docs/EXECUTION_PLAN.md` for dependency order and subsystem exit gates.
 7. `docs/TESTING.md` before constructing or interpreting evidence.
-8. `CONTRIBUTING.md` and `docs/PORTING_RULES.md` before submitting a patch.
+8. `CONTRIBUTING.md` before submitting a patch.
 
 When documents conflict, use the authority order in `docs/PORTING_CHARTER.md`.
 
@@ -34,7 +34,7 @@ When documents conflict, use the authority order in `docs/PORTING_CHARTER.md`.
 | `upstream/atomic-units/` | Dependency-closed source-unit dossiers and evidence states. |
 | `reference/` | C oracle, historical hybrid probe, and external worker protocol; never production engine behavior. |
 | `tests/` | Native, differential, fault, crash, concurrency, file-format, fuzz, toolchain, and historical migration evidence. |
-| `tools/` | Bounded generators, auditors, differential runners, and CI orchestration. |
+| `tools/` | Bounded, batch-gated generators, auditors, differential runners, and CI orchestration; every entrypoint has a build or importing owner. |
 | `docs/` | Maintained policy, architecture, status, plans, risks, specialized controls, and ADRs. |
 
 `.zig-cache/`, `zig-out/`, `.reference-build/`, and `.test-artifacts/` are ignored build/evidence outputs, not source or maintained documentation.
@@ -43,7 +43,7 @@ When documents conflict, use the authority order in `docs/PORTING_CHARTER.md`.
 
 | Document | Distinct purpose |
 |---|---|
-| `README.md` | Brief public project warning, goal, synchronized accounting, starting links, and core commands. |
+| `README.md` | Brief public project warning, goal, authoritative state pointers, starting links, and core commands. |
 | `CONTRIBUTING.md` | Minimal contributor prerequisites and patch expectations. |
 | `docs/README.md` | Documentation entry point, complete inventory, and anti-duplication policy. |
 
@@ -53,18 +53,16 @@ When documents conflict, use the authority order in `docs/PORTING_CHARTER.md`.
 |---|---|
 | `docs/PORTING_CHARTER.md` | Highest-level mission, authority order, fidelity principles, and final completion gate. |
 | `docs/SCOPE.md` | Pinned source/profile, included behavior, target platforms, and explicit deferrals. |
-| `docs/ENGINEERING_PROCESS.md` | Enforceable atomic-unit workflow, evidence promotions, containment, retirement, reporting, and incident gates. |
-| `docs/PORTING_RULES.md` | Concise patch-review checklist derived from the charter and engineering process. |
-| `docs/TESTING.md` | Evidence ladder, worker requirements, test interpretation, and release assurance matrix. |
+| `docs/ENGINEERING_PROCESS.md` | Sole enforceable atomic-unit workflow: batching, promotion, containment, integration, incidents, and reporting. |
+| `docs/TESTING.md` | Evidence classes, result ownership, worker/oracle boundaries, cadence, and release assurance. |
 
 ## Architecture, status, and planning
 
 | Document | Distinct purpose |
 |---|---|
 | `docs/ARCHITECTURE.md` | Target SQLite pipeline, product/test boundaries, and current architecture deviations. |
-| `docs/CURRENT_STATE.md` | Detailed present-tense audit, strict completion percentage, reusable work, blockers, and immediate corrections. |
-| `docs/COMPATIBILITY.md` | Compact area-level fidelity/reachability matrix; not a promotion ledger. |
-| `docs/EXECUTION_PLAN.md` | Comprehensive dependency graph, atomic work packages, current critical queue, subsystem exit gates, and final release path. |
+| `docs/CURRENT_STATE.md` | Verification-checked machine summary, subsystem matrix, reusable work, and immediate blockers. |
+| `docs/EXECUTION_PLAN.md` | Dependency graph, work packages, subsystem exit gates, and final release path. |
 | `docs/RISK_REGISTER.md` | Live risks, required mitigations, and blocking/active status. |
 
 ## Specialized controls
@@ -72,7 +70,6 @@ When documents conflict, use the authority order in `docs/PORTING_CHARTER.md`.
 | Document | Distinct purpose |
 |---|---|
 | `docs/DURABILITY_MODEL.md` | Bounded rollback/WAL durability evidence and required final mode matrix. |
-| `docs/HYBRID_BOUNDARIES.md` | Rules for C-oracle, test bridge, fixture, and production ownership boundaries. |
 | `docs/THREAT_MODEL.md` | Security, corruption, hostile-input, extension, and test-infrastructure threats. |
 | `docs/UPSTREAM_SYNC.md` | Procedure for importing a future SQLite baseline and invalidating affected evidence. |
 
@@ -98,7 +95,7 @@ When documents conflict, use the authority order in `docs/PORTING_CHARTER.md`.
 | `docs/decisions/ADR-0016-mutex-and-initialization-fidelity.md` | Record mutex modes and initialization ordering. |
 | `docs/decisions/ADR-0039-rebaseline-complete-port.md` | Withdraw bounded-phase completion claims and require whole-port rebaseline. |
 | `docs/decisions/ADR-0040-pure-zig-product.md` | Define the zero-C product and Zig-native API boundary. |
-| `docs/decisions/ADR-0041-source-faithful-gates.md` | Require atomic units, internal traces, prototype freeze, containment, and independent review. |
+| `docs/decisions/ADR-0041-source-faithful-gates.md` | Require atomic units, internal traces, prototype freeze, containment, and assurance. |
 
 ## Artifact-local documentation
 
@@ -115,6 +112,7 @@ When documents conflict, use the authority order in `docs/PORTING_CHARTER.md`.
 ## Maintenance rules
 
 - Mutable status facts live in `upstream/port-status.json`; synchronized prose summaries are verification-checked.
+- `AGENTS.md` references this complete registry rather than duplicating every path; `tools/verify_docs.py` makes that reference transitive and exact.
 - A new maintained Markdown file requires a unique purpose in this inventory.
 - If a document's purpose becomes a subset of another, merge its unique content and remove it rather than retaining a second authority.
 - ADRs are retained when superseded; their status and superseding decision must be explicit.

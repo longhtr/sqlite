@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-goto-and-explain-parent-stack-wrappers",
   "title": "VDBE unconditional goto and EXPLAIN parent-stack wrappers",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "These source-shaped code-generation wrappers preserve unconditional jump operands and the addrExplain parent chain used to nest and pop EXPLAIN QUERY PLAN nodes.",
     "source_files": [
@@ -77,7 +77,7 @@
     "The Parse pVdbe opaque pointer is aligned-cast to the exact source-layout Vdbe only after the zero-parent short circuit."
   ],
   "oracle": {
-    "protocol": "The shared symbolic worker appends a Goto, verifies exact operands/address, exercises the zero-parent short circuit, then reads and pops a nonzero parent through an operation P2. C and Zig compare the results in a 363-observation trace.",
+    "protocol": "The shared symbolic worker appends a Goto, verifies exact operands/address, exercises the zero-parent short circuit, then reads and pops a nonzero parent through an operation P2. C and Zig compare the results in a 366-observation trace.",
     "internal_observations": [
       "Goto opcode/address/P1/P2/P3/P4/P5",
       "zero-parent result without Vdbe ownership",
@@ -87,9 +87,9 @@
     "normalization": "Opcode and every integer field are exact; no pointer values are compared."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Goto dependency coverage exercises sticky and one-shot append OOM; parent/pop allocate nothing.",
     "io_crash_concurrency": "No I/O or callbacks.",
@@ -113,6 +113,7 @@
     "notes": "Requires parser integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate source parser code generation with these wrappers.",
     "Complete formatted OP_Explain ownership.",
     "Independent fidelity review remains open."

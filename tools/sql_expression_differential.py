@@ -11,4 +11,8 @@ def main():
  oracle,native=map(run,sys.argv[1:])
  if oracle!=native:raise SystemExit(f'SQL expression mismatch\noracle={oracle!r}\nnative={native!r}')
  print(f'sql-expression-differential: {len(native)} row/name/tail observations match')
-if __name__=='__main__':main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

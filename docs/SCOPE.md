@@ -10,7 +10,7 @@
 - Bidirectional database, rollback-journal, and WAL continuation.
 - Declared durability matrix on AArch64/Btrfs and x86_64/ext4.
 
-`upstream/source-scope.json`, the active source inventory, generated inputs, and behavioral inventory define the accountable work. The current declaration inventory has 6,752 active entities; branches, cases, labels, assertions, and generated bodies are additional responsibilities.
+`upstream/source-scope.json`, the active source inventory, generated inputs, and behavioral inventory define the accountable work; branches, cases, labels, assertions, and generated bodies remain additional responsibilities.
 
 ## Product exclusions
 

@@ -6,14 +6,8 @@ Accepted for the initial profile.
 
 ## Decision
 
-The native four-byte helpers read and write SQLite's big-endian on-disk integer representation with explicit byte shifts. They do not depend on host endianness, pointer alignment, or native integer loads. The B-tree and pager aliases resolve to the same implementation.
-
-## Evidence
-
-- `zig build test` covers boundary values, known byte sequences, round trips, and unaligned input.
-- `zig build byteorder-differential` compares 24 boundary and seeded cases against the pinned C implementation and verifies adjacent canary bytes.
-- Both implementation functions and all three in-profile aliases are mapped in `upstream/symbol-map.json`.
+Read and write SQLite big-endian on-disk integers with explicit byte shifts, independent of host endianness, alignment, and native loads. B-tree and pager aliases share the implementation.
 
 ## Consequences
 
-The explicit implementation is portable across the declared rollout targets. Additional fixed-width on-disk codecs should follow this pattern and require their own mapping and differential corpus.
+Additional on-disk codecs follow this pattern and require boundary, unaligned, canary, and differential evidence under `docs/TESTING.md`.

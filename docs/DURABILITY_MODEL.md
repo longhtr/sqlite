@@ -17,13 +17,13 @@ Modeled sequence:
 7. Journal deletion is the modeled commit point.
 8. Success is returned only after deletion succeeds.
 
-Before deletion, durable hot-journal recovery restores the old transaction; at and after deletion the new transaction survives. Current tests cover named crash prefixes, six write positions, short writes, three sync positions, two truncate positions, journal open/lock/delete faults, recovery faults, and selected immediate-crash combinations.
+Before deletion, durable hot-journal recovery restores the old transaction; at and after deletion the new transaction survives. `upstream/phase8-manifest.json` owns the exact bounded crash, write, short-I/O, sync, truncate, lock, deletion, recovery, and allocation-fault matrix.
 
 `zig build rollback-differential` checks oracle/Zig commit, hot recovery, integrity, logical contents, continuation, acknowledged commit, and auxiliary cleanup. This does not cover unnamed filesystems, page/sector combinations, atomic devices, or other journal/synchronous modes.
 
 ## WAL FULL profile
 
-The current bounded WAL model names header write/sync, frame header/page writes, WAL sync, index publication, checkpoint database write/sync, and WAL reset. WAL sync is the modeled commit point. Recovery accepts checksum-valid frames only through the last commit mark. Lost index publication is rebuilt from durable WAL. Checkpoint retains authoritative WAL until database pages are durable before reset.
+The bounded WAL model names header write/sync, frame header/page writes, WAL sync, index publication, checkpoint database write/sync, and WAL reset. WAL sync is the modeled commit point. Recovery accepts checksum-valid frames only through the last commit mark. Lost index publication is rebuilt from durable WAL. Checkpoint retains authoritative WAL until database pages are durable before reset. `upstream/phase10-manifest.json` owns the exact historical bounded matrix.
 
 WAL NORMAL/OFF, all page sizes, reader combinations, and the complete WAL-index protocol remain open.
 

@@ -123,4 +123,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
     main()

@@ -2,84 +2,61 @@
 
 ## Verdict
 
-Incomplete and unsafe for production data. The repository contains reusable source-fidelity work, but no complete native SQLite pipeline.
+Incomplete and unsafe for production data. Reusable source-corresponding slices exist, but no complete native SQLite pipeline or Zig-native API exists. Mutable machine accounting is owned by `upstream/port-status.json`; this file contains only verification-checked summary facts and engineering blockers.
 
-## Atomic state
+## Machine summary
 
-| State | Units |
-|---|---:|
-| Scaffolded | 3 |
-| Source-translated | 1 |
-| Internal-trace-equivalent | 39 |
-| Subsystem-integrated | 0 |
-| Assurance-passed | 1 |
-| Independently-fidelity-reviewed | 0 |
-
-| Dossier accounting | Current value |
-|---|---:|
-| Atomic-unit dossiers total | 44 |
-| Admission-ready dossiers | 41 |
-| Assigned source responsibilities | 570 |
-| Assigned behavioral blocks | 830 of 25,930 |
-
-These states still require semantic revalidation under work package 0.
-
-## Source and scaffold facts
-
-| Fact | Value |
+| Fact | Current value |
 |---|---:|
 | Active source entities | 6,752 active |
-| Historical reviewed-or-later classifications | 2,070 |
-| Unmapped entities | 3,892 |
-| Legacy candidates | 790 |
-| Unresolved legacy targets | 402 active / 416 total |
+| Historical reviewed-or-later classifications | 1,707 |
+| Inventoried, unpromoted entities | 404 |
+| Unmapped entities | 3,877 |
 | Behavioral inventory | 25,930 blocks in 2,457 functions |
-| Purposeful tools | 107 purposeful Python scripts |
+| Atomic-unit dossiers total | 46 |
+| Admission-ready dossiers | 17 |
+| Historical mechanical function claims | 1,738; 0 completion credit |
+| Active batch and durable checkpoints | 0 entries; 0 checkpoints |
 | Exact internal layouts | 69 |
-| Generated opcode identities | 192 |
-| Bounded runtime mappings | 98/190; 0 integrated cases |
-| Lemon action contracts | 348/348; 0 integrated actions |
-| Active public responsibilities | 286 across 18 domains; 0 complete |
+| Purposeful tools | 109 purposeful Python scripts |
+| Bounded opcode mappings | 107/190; 0 integrated |
+| Lemon action contracts | 348/348; 0 integrated |
 | Production C objects | 0 |
 
-These are planning/control facts, not progress.
+These are controls and planning facts, not completion percentages.
+
+## Subsystem status
+
+| Area | State | Blocking fact |
+|---|---|---|
+| Runtime/utilities | partial | Focused traces exist; complete ownership and assurance remain. |
+| Parser/compiler/planner | scaffold/missing | Generated tables/contracts do not execute final concrete owners. |
+| VDBE/`Mem` | partial | Value conversion, exact numeric rendering, bounded string/blob ownership, bindings, results, and builder/record/P4 lifecycle execute production paths; complete upstream VDBE ownership remains open. |
+| Schema/AST | partial | Exact roots exist; recursive ownership/destruction remains incomplete. |
+| PCache/VFS/memdb | partial | Focused source traces exist; final coupled ownership remains incomplete. |
+| Pager/WAL | scaffold | Rollback-journal transaction/playback and WAL open/checkpoint slices exist, but they do not own the existing SQL storage path. |
+| B-tree | partial/scaffold | Reads exist; mutation still reconstructs whole trees. |
+| SQL and Zig API | missing | Handwritten bounded frontend remains; active public responsibilities are not complete. |
+| Native upstream/assurance | missing | Large upstream partition executes C only; release matrices are absent. |
 
 ## Reusable work
 
-- pinned source/profile/toolchain, inventories, generated Lemon/opcode artifacts, and external C oracle;
-- bounded worker and fault/crash/file-interchange infrastructure;
-- source-corresponding utility, allocator, mutex, status, PCache, VFS, memdb, memory-journal, VDBE-builder, record, and internal-layout slices;
-- exact `Mem` and selected connection/parser/schema/VDBE state.
+Pinned source/profile/toolchain, inventories, generated Lemon/opcode artifacts, the external C oracle, bounded worker/fault/crash/file-interchange infrastructure, exact internal layouts, and selected source-corresponding utility/runtime/storage/VDBE/JSON slices are reusable only through final source owners. The production statement path now snapshots bound values, normalizes native UTF-16 text bindings, rejects oversized `Mem` growth safely, preserves RCStr termination ownership, and destroys rejected API inputs.
 
-Reuse is valid only through final source-corresponding owners.
+## Immediate blockers
 
-## Critical gaps
+1. Add structured source-context evidence to the remaining 29 inventoried dossiers, advance the 17 reviewed dependency-closed units only with durable evidence, and keep the 1,738 retired historical mechanical claims quarantined with zero credit.
+2. Complete global/runtime and recursive AST/schema/VDBE ownership.
+3. Connect concrete Lemon/compiler/planner owners and retire the handwritten frontend.
+4. Replace reconstructed B-tree mutation and bounded pager/WAL ownership with source algorithms.
+5. Complete the Zig-native API and native upstream/assurance matrices.
 
-- Existing dossier claims need semantic revalidation.
-- Schema/AST deep destruction and `P4_TABLEREF` are incomplete.
-- No complete P4 dispatch, VDBE deletion, sorter, or set of 190 opcode cases exists.
-- Generated parser actions do not execute concrete compiler/planner owners.
-- B-tree mutation, pager, and WAL remain substitute or bounded implementations.
-- No complete Zig-native API responsibility exists.
-- The broad upstream suite does not execute the Zig engine.
-- Whole-port OOM/I/O/crash/fuzz/concurrency/platform/performance assurance is absent.
-
-## Active queue
-
-1. Revalidate current dossiers and run the first isolated closure review.
-2. Finish top-level initialization/refcount evidence.
-3. Port the Table/Index/FKey/Expr/Select/Window/Trigger destruction graph.
-4. Complete P4 and VDBE destruction.
-5. Consolidate the VDBE builder and connect concrete Lemon owners.
-6. Complete PCache topology before extending pager/storage.
+Dependency order and exit criteria live in `docs/EXECUTION_PLAN.md`; active deltas, quarantined historical claims, and accepted checkpoints live in `upstream/active-port-batch.json`, `upstream/historical-port-claims.json`, and `upstream/port-checkpoints.json`, with their sole prose summary generated through `upstream/port-status.json`.
 
 ## Validation
 
 ```sh
 zig build test -j1
-zig build atomic-unit-audit source-ledger behavioral-inventory-test port-audit verify-config docs-test tooling-audit -j1
 ```
 
-Latest full run: 232 root tests and all enabled bounded controls passed at **2026-08-03T01:39:31Z**. Log SHA-256: `152a66894b74492dafb0136e85ec690c828cbe7aabf87da60f1c0fe896396235`.
-
-This is mixed control, atomic, bounded-scaffold, and oracle evidence. It is not subsystem completion.
+This aggregate already owns the control graph; rerunning its constituent targets unchanged is redundant. Passing it is mixed control, atomic, bounded-scaffold, and oracle evidence—not subsystem completion.

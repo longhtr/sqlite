@@ -538,10 +538,12 @@ pub const function_flag = struct {
     pub const run_only: u32 = 0x8000;
     pub const window: u32 = 0x0001_0000;
     pub const internal: u32 = 0x0004_0000;
+    pub const subtype_argument: u32 = 0x0010_0000;
     pub const direct: u32 = 0x0008_0000;
     pub const unsafe: u32 = 0x0020_0000;
     pub const inline_: u32 = 0x0040_0000;
     pub const builtin: u32 = 0x0080_0000;
+    pub const result_subtype: u32 = 0x0100_0000;
     pub const any_order: u32 = 0x0800_0000;
 };
 

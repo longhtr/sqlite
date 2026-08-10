@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "btree-sharability-and-vdbe-usage-lock-masks",
   "title": "Btree sharability and VDBE database-usage/shared-cache lock masks",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "sqlite3BtreeSharable and sqlite3VdbeUsesBtree establish the prepared-statement database-use mask and the shared-cache lock subset. Exact Btree/BtLock layout is required because sharability is a source field rather than a delegated API property.",
     "source_files": [
@@ -208,7 +208,7 @@
     "C DbMaskSet expands to the equivalent typed u32 shift/or in Zig."
   ],
   "oracle": {
-    "protocol": "The shared worker packages three Db/Btree slots, marks main and TEMP sharable and a third database private, then calls the direct accessor and cumulative Vdbe usage function. Exact layouts are independently probed and C/Zig compare 363 observations.",
+    "protocol": "The shared worker packages three Db/Btree slots, marks main and TEMP sharable and a third database private, then calls the direct accessor and cumulative Vdbe usage function. Exact layouts are independently probed and C/Zig compare 366 observations.",
     "internal_observations": [
       "direct sharable byte result",
       "cumulative btreeMask",
@@ -219,9 +219,9 @@
     "normalization": "All index, sharable, and mask values are exact; pointers are not compared."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation and no OOM branch.",
     "io_crash_concurrency": "No I/O/callback; lock acquisition and mutex behavior remain integration work.",
@@ -246,6 +246,7 @@
     "notes": "Requires shared-cache call-path integration, assurance closure, and independent review."
   },
   "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Connect source compiler database-use call sites.",
     "Integrate shared-cache lock acquisition/release.",
     "Independent fidelity review remains open."

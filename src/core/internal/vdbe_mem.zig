@@ -4,6 +4,7 @@
 const std = @import("std");
 const numeric = @import("../numeric.zig");
 const sqlite_float = @import("../float.zig");
+const formatter = @import("../formatter.zig");
 const utf = @import("../utf.zig");
 const varint = @import("../varint.zig");
 const memory = @import("../memory.zig");
@@ -832,6 +833,8 @@ pub fn handleBom(mem: *types.Mem) c_int {
 }
 
 fn renderNumber(buffer: []u8, mem: *types.Mem) void {
+    std.debug.assert(buffer.len > 22);
+    std.debug.assert(mem.flags & (types.mem_flag.integer | types.mem_flag.real | types.mem_flag.integer_real) != 0);
     if (mem.flags & (types.mem_flag.integer | types.mem_flag.integer_real) != 0) {
         const text = std.fmt.bufPrint(buffer, "{d}", .{mem.u.i}) catch unreachable;
         mem.n = @intCast(text.len);
@@ -843,31 +846,9 @@ fn renderNumber(buffer: []u8, mem: *types.Mem) void {
         } else buffer[text.len] = 0;
         return;
     }
-    const magnitude = @abs(mem.u.r);
-    const text = if (magnitude >= 1.0e15 or (magnitude != 0 and magnitude < 1.0e-4))
-        std.fmt.bufPrint(buffer, "{e}", .{mem.u.r}) catch unreachable
-    else
-        std.fmt.bufPrint(buffer, "{d}", .{mem.u.r}) catch unreachable;
-    var length = text.len;
-    if (std.mem.indexOfScalar(u8, buffer[0..length], '.') == null) {
-        if (std.mem.indexOfAny(u8, buffer[0..length], "eE")) |position| {
-            std.mem.copyBackwards(u8, buffer[position + 2 .. length + 2], buffer[position..length]);
-            buffer[position] = '.';
-            buffer[position + 1] = '0';
-            length += 2;
-        } else {
-            buffer[length] = '.';
-            buffer[length + 1] = '0';
-            length += 2;
-        }
-    }
-    if (std.mem.indexOfAny(u8, buffer[0..length], "eE")) |position| {
-        if (buffer[position + 1] != '+' and buffer[position + 1] != '-') {
-            std.mem.copyBackwards(u8, buffer[position + 2 .. length + 1], buffer[position + 1 .. length]);
-            buffer[position + 1] = '+';
-            length += 1;
-        }
-    }
+    const precision: i64 = if (mem.db) |db| db.nFpDigit else 17;
+    const arguments = [_]formatter.FormatArgument{ .{ .signed = precision }, .{ .float = mem.u.r } };
+    const length = formatter.fixedFormat(memory.processManager(), buffer, "%!.*g", &arguments);
     buffer[length] = 0;
     mem.n = @intCast(length);
 }
@@ -887,6 +868,12 @@ pub fn stringify(mem: *types.Mem, desired_encoding: u8, force: bool) c_int {
 
 pub fn grow(mem: *types.Mem, requested: c_int, preserve: bool) c_int {
     std.debug.assert(!preserve or mem.flags & (types.mem_flag.blob | types.mem_flag.string) != 0);
+    if (requested <= 0 or @as(u64, @intCast(requested)) > memory.max_allocation_size) {
+        setNull(mem);
+        mem.z = null;
+        mem.szMalloc = 0;
+        return 7;
+    }
     var keep = preserve;
     if (mem.szMalloc > 0 and keep and mem.z == mem.zMalloc) {
         const old = mem.z.?;
@@ -933,10 +920,14 @@ pub fn clearAndResize(mem: *types.Mem, requested: c_int) c_int {
 pub fn zeroTerminateIfAble(mem: *types.Mem) bool {
     if (mem.flags & (types.mem_flag.string | types.mem_flag.terminated | types.mem_flag.ephemeral | types.mem_flag.static) != types.mem_flag.string)
         return false;
-    if (mem.enc != 1) return false;
+    if (mem.enc != 1 or mem.z == null or mem.n < 0) return false;
     if (mem.flags & types.mem_flag.dynamic != 0) {
-        if (mem.xDel == public_api.sqlite3_free and public_api.sqlite3_msize(if (mem.z) |value| @ptrCast(value) else null) >= @as(u64, @intCast(mem.n + 1))) {
+        if (mem.xDel == public_api.sqlite3_free and public_api.sqlite3_msize(@ptrCast(mem.z.?)) >= @as(u64, @intCast(mem.n + 1))) {
             mem.z.?[@intCast(mem.n)] = 0;
+            mem.flags |= types.mem_flag.terminated;
+            return true;
+        }
+        if (mem.xDel == formatter.rcStrUnrefOpaque) {
             mem.flags |= types.mem_flag.terminated;
             return true;
         }
@@ -959,10 +950,16 @@ fn addTerminator(mem: *types.Mem) c_int {
 }
 
 pub fn expandBlob(mem: *types.Mem) c_int {
-    var bytes = mem.n + mem.u.nZero;
-    if (bytes <= 0) {
+    const expanded_length = @as(i64, mem.n) + mem.u.nZero;
+    var bytes: c_int = undefined;
+    if (expanded_length <= 0) {
         if (mem.flags & types.mem_flag.blob == 0) return 0;
         bytes = 1;
+    } else if (expanded_length > std.math.maxInt(c_int)) {
+        setNull(mem);
+        return 7;
+    } else {
+        bytes = @intCast(expanded_length);
     }
     if (grow(mem, bytes, true) != 0) return 7;
     @memset(mem.z.?[@intCast(mem.n)..@intCast(mem.n + mem.u.nZero)], 0);
@@ -1136,8 +1133,8 @@ pub fn rowSet(mem: *types.Mem) ?*rowset.RowSet {
 
 pub fn tooBig(mem: *const types.Mem) bool {
     if (mem.flags & (types.mem_flag.string | types.mem_flag.blob) == 0) return false;
-    var length: i64 = mem.n;
-    if (mem.flags & types.mem_flag.zero != 0) length += mem.u.nZero;
+    var length: i64 = @max(mem.n, 0);
+    if (mem.flags & types.mem_flag.zero != 0) length += @max(mem.u.nZero, 0);
     const limit: i64 = if (mem.db) |db| db.aLimit[0] else 1_000_000_000;
     return length > limit;
 }
@@ -1183,14 +1180,15 @@ fn disposeInput(mem: *types.Mem, source: [*]const u8, ownership: StringOwnership
 
 fn valueToText(value: *types.Mem, encoding_argument: u8) ?[*]const u8 {
     const encoding = encoding_argument & ~@as(u8, 8);
+    std.debug.assert(encoding >= 1 and encoding <= 3);
     if (value.flags & (types.mem_flag.blob | types.mem_flag.string) != 0) {
         if (value.flags & types.mem_flag.zero != 0 and expandBlob(value) != 0) return null;
         value.flags |= types.mem_flag.string;
-        if (value.enc != encoding) _ = changeEncoding(value, encoding);
+        if (value.enc != encoding and changeEncoding(value, encoding) != 0) return null;
         if (encoding_argument & 8 != 0 and @intFromPtr(value.z.?) & 1 != 0) {
             if (makeWriteable(value) != 0) return null;
         }
-        _ = nulTerminate(value);
+        if (nulTerminate(value) != 0) return null;
     } else {
         if (stringify(value, encoding, false) != 0) return null;
     }
@@ -1415,6 +1413,11 @@ pub fn resultErrorTooBig(context: *types.Context) void {
     _ = setStr(context.pOut.?, "string or blob too big", -1, 1, .static);
 }
 
+/// Source `sqlite3VdbeValueListFree()`.
+pub fn valueListFree(pointer: ?*anyopaque) callconv(.c) void {
+    if (pointer) |value| memory.processManager().free(value);
+}
+
 pub fn resultErrorNoMem(context: *types.Context) void {
     setNull(context.pOut.?);
     context.isError = 7;
@@ -1618,10 +1621,12 @@ fn valueBytesSlow(value: *types.Mem, encoding: u8) c_int {
 }
 
 pub fn valueBytes(value: *types.Mem, encoding: u8) c_int {
-    if (value.flags & types.mem_flag.string != 0 and value.enc == encoding) return value.n;
+    std.debug.assert(encoding >= 1 and encoding <= 3);
+    if (value.flags & types.mem_flag.string != 0 and value.enc == encoding) return @max(value.n, 0);
     if (value.flags & types.mem_flag.string != 0 and encoding != 1 and value.enc != 1) return value.n;
     if (value.flags & types.mem_flag.blob != 0) {
-        return value.n + if (value.flags & types.mem_flag.zero != 0) value.u.nZero else 0;
+        const length = @as(i64, @max(value.n, 0)) + if (value.flags & types.mem_flag.zero != 0) @max(value.u.nZero, 0) else 0;
+        return @intCast(@min(length, std.math.maxInt(c_int)));
     }
     if (value.flags & types.mem_flag.null_ != 0) return 0;
     return valueBytesSlow(value, encoding);
@@ -1638,6 +1643,7 @@ pub fn setStr(
         setNull(mem);
         return 0;
     };
+    std.debug.assert(encoding_argument != 0 or length_argument >= 0);
     const limit: i64 = if (mem.db) |db| db.aLimit[0] else 1_000_000_000;
     var encoding = encoding_argument;
     var length = length_argument;
@@ -1666,6 +1672,7 @@ pub fn setStr(
         .transient => {
             var allocation = length;
             if (flags & types.mem_flag.terminated != 0) allocation += if (encoding == 1) 1 else 2;
+            if (allocation > std.math.maxInt(c_int)) return 7;
             if (clearAndResize(mem, @intCast(@max(allocation, 32))) != 0) return 7;
             const byte_length: usize = @intCast(allocation);
             @memcpy(mem.z.?[0..byte_length], source[0..byte_length]);
@@ -1719,6 +1726,7 @@ pub fn setText(mem: *types.Mem, source_optional: ?[*]const u8, length_argument: 
     }
     switch (ownership) {
         .transient => {
+            if (length >= std.math.maxInt(c_int)) return 7;
             const allocation: c_int = @intCast(@max(length + 1, 32));
             if (clearAndResize(mem, allocation) != 0) return 7;
             const byte_length: usize = @intCast(length);
@@ -1753,6 +1761,8 @@ pub fn setText(mem: *types.Mem, source_optional: ?[*]const u8, length_argument: 
 }
 
 pub fn copy(to: *types.Mem, from: *const types.Mem) c_int {
+    if (to == from) return 0;
+    std.debug.assert(!isRowSet(from));
     if (types.memIsDynamic(to)) clearExternalAndSetNull(to);
     copyCellPrefix(to, from);
     to.flags &= ~types.mem_flag.dynamic;
@@ -1766,6 +1776,8 @@ pub fn copy(to: *types.Mem, from: *const types.Mem) c_int {
 }
 
 pub fn move(to: *types.Mem, from: *types.Mem) void {
+    if (to == from) return;
+    std.debug.assert(from.db == null or to.db == null or from.db == to.db);
     release(to);
     to.* = from.*;
     from.flags = types.mem_flag.null_;
@@ -1820,6 +1832,33 @@ test "Mem ownership release and setters" {
     try std.testing.expectEqual(@as(i64, -42), mem.u.i);
     setDouble(&mem, std.math.nan(f64));
     try std.testing.expectEqual(types.mem_flag.null_, mem.flags);
+}
+
+test "source Mem overflow and RCStr terminator paths are bounded" {
+    var overflow = std.mem.zeroes(types.Mem);
+    init(&overflow, null, types.mem_flag.blob | types.mem_flag.zero);
+    overflow.n = std.math.maxInt(c_int);
+    overflow.u.nZero = 1;
+    try std.testing.expectEqual(@as(c_int, 7), expandBlob(&overflow));
+    try std.testing.expectEqual(types.mem_flag.null_, overflow.flags);
+
+    overflow.flags = types.mem_flag.blob | types.mem_flag.zero;
+    overflow.n = std.math.maxInt(c_int);
+    overflow.u.nZero = std.math.maxInt(c_int);
+    try std.testing.expectEqual(std.math.maxInt(c_int), valueBytes(&overflow, 1));
+
+    const text = formatter.rcStrNew(memory.processManager(), 4).?;
+    @memcpy(text[0..4], "rcs\x00");
+    var counted = std.mem.zeroes(types.Mem);
+    init(&counted, null, types.mem_flag.string);
+    counted.flags |= types.mem_flag.dynamic;
+    counted.z = text;
+    counted.n = 3;
+    counted.enc = 1;
+    counted.xDel = formatter.rcStrUnrefOpaque;
+    try std.testing.expect(zeroTerminateIfAble(&counted));
+    try std.testing.expect(counted.flags & types.mem_flag.terminated != 0);
+    release(&counted);
 }
 
 test "real/integer boundaries and Mem minimum initialization" {

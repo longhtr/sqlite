@@ -1,0 +1,238 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-p4-attachment-dispatch-and-object-destruction",
+  "title": "VDBE P4 attachment, dispatch, operation-array, and object destruction",
+  "status": "inventoried",
+  "admission_ready": false,
+  "scope": {
+    "rationale": "These seven coupled routines own the complete active-profile P4 attach/replace/release path and recursively retire operation arrays, subprograms, and VDBE objects. Keeping them together closes every owner transition from attachment through statement deletion.",
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::freeP4::line-1377",
+      "src/vdbeaux.c::function::vdbeFreeOpArray::line-1435",
+      "src/vdbeaux.c::function::vdbeChangeP4Full::line-1547",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::line-1566",
+      "src/vdbeaux.c::function::sqlite3VdbeAppendP4::line-1609",
+      "src/vdbeaux.c::function::sqlite3VdbeClearObject::line-3734",
+      "src/vdbeaux.c::function::sqlite3VdbeDelete::line-3778"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::freeP4::behavior::assert::line-1378-column-3::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::switch::line-1379-column-3::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::case::line-1380-column-5::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::break::line-1382-column-7::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::case::line-1384-column-5::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::case::line-1385-column-5::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::case::line-1386-column-5::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::case::line-1387-column-5::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::if::line-1388-column-7::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::break::line-1389-column-7::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::case::line-1391-column-5::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::if::line-1392-column-7::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::break::line-1393-column-7::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::case::line-1401-column-5::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::break::line-1403-column-7::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::case::line-1405-column-5::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::if::line-1406-column-7::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::break::line-1411-column-7::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::case::line-1413-column-5::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::if::line-1414-column-7::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::break::line-1415-column-7::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::case::line-1417-column-5::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::if::line-1418-column-7::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::break::line-1419-column-7::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::case::line-1421-column-5::ordinal-0",
+      "src/vdbeaux.c::function::freeP4::behavior::break::line-1425-column-7::ordinal-0",
+      "src/vdbeaux.c::function::vdbeFreeOpArray::behavior::assert::line-1436-column-3::ordinal-0",
+      "src/vdbeaux.c::function::vdbeFreeOpArray::behavior::assert::line-1437-column-3::ordinal-0",
+      "src/vdbeaux.c::function::vdbeFreeOpArray::behavior::if::line-1438-column-3::ordinal-0",
+      "src/vdbeaux.c::function::vdbeFreeOpArray::behavior::while::line-1440-column-5::ordinal-0",
+      "src/vdbeaux.c::function::vdbeFreeOpArray::behavior::if::line-1441-column-7::ordinal-0",
+      "src/vdbeaux.c::function::vdbeFreeOpArray::behavior::if::line-1445-column-7::ordinal-0",
+      "src/vdbeaux.c::function::vdbeFreeOpArray::behavior::break::line-1445-column-22::ordinal-0",
+      "src/vdbeaux.c::function::vdbeChangeP4Full::behavior::if::line-1553-column-3::ordinal-0",
+      "src/vdbeaux.c::function::vdbeChangeP4Full::behavior::assert::line-1554-column-5::ordinal-0",
+      "src/vdbeaux.c::function::vdbeChangeP4Full::behavior::if::line-1558-column-3::ordinal-0",
+      "src/vdbeaux.c::function::vdbeChangeP4Full::behavior::if::line-1561-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::assert::line-1569-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::assert::line-1571-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::assert::line-1572-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::if::line-1573-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::if::line-1574-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::return::line-1575-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::assert::line-1577-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::assert::line-1578-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::if::line-1579-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::if::line-1583-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::return::line-1585-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::if::line-1587-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::if::line-1592-column-9::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::assert::line-1593-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeChangeP4::behavior::if::line-1596-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAppendP4::behavior::assert::line-1611-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAppendP4::behavior::assert::line-1612-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAppendP4::behavior::if::line-1613-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAppendP4::behavior::assert::line-1616-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAppendP4::behavior::assert::line-1617-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeAppendP4::behavior::assert::line-1619-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeClearObject::behavior::assert::line-3736-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeClearObject::behavior::assert::line-3737-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeClearObject::behavior::if::line-3738-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeClearObject::behavior::for::line-3742-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeClearObject::behavior::if::line-3747-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeClearObject::behavior::if::line-3749-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeClearObject::behavior::if::line-3750-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeClearObject::behavior::if::line-3753-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeDelete::behavior::assert::line-3781-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeDelete::behavior::assert::line-3783-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeDelete::behavior::assert::line-3784-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeDelete::behavior::if::line-3786-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeDelete::behavior::assert::line-3787-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeDelete::behavior::if::line-3789-column-5::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "P4 leaf destructors and VTable/KeyInfo/Table ownership internals assigned to dependency units",
+      "VDBE reset/finalize/halt before object deletion",
+      "Inactive normalize, explain-comment, and statement-scan-status branches"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "connection-allocation-for-vdbe-growth",
+      "key-info-reference-ownership",
+      "vdbe-p4-leaf-payload-ownership-release",
+      "virtual-table-and-module-reference-ownership",
+      "vdbe-subprogram-intrusive-linkage",
+      "vdbe-result-column-metadata-ownership"
+    ],
+    "external_source_responsibilities": [
+      "Compiler callers provide P4 values paired with the exact P4 type and connection owner"
+    ],
+    "caller_closure": "The active-profile attach, replace, dispatch, recursive operation/subprogram cleanup, list unlink, and VDBE free functions are all assigned; reset/finalize caller sequencing remains separate."
+  },
+  "contracts": {
+    "inputs": [
+      "INIT-state VDBE and valid operation address or latest-operation sentinel",
+      "P4 pointer/integer/string paired with exact ownership type",
+      "VDBE object linked into its connection list for final deletion"
+    ],
+    "outputs": [
+      "Attached static, integer, copied-string, VTable, or owned P4 payload",
+      "Reverse-order owned-P4 release and operation-array free",
+      "Recursive subprogram/body release, connection-list unlink, and VDBE free"
+    ],
+    "ownership": "P4_DYNAMIC and other owning types transfer to the operation; replacement is permitted only for non-owning/inline P4 values. OOM consumes incoming owned P4 except P4_VTAB. Final deletion recursively consumes every operation-owned payload and allocation.",
+    "state_and_results": "P4 change preserves INIT state and resolves negative addresses to the latest operation. Deletion unlinks only outside byte-count accounting mode, exactly matching the source ownership walk.",
+    "locks_callbacks_io": "Caller holds the connection mutex. P4_VTAB release may synchronously invoke virtual-table/module callbacks. No direct I/O.",
+    "failure_and_continuation": "Sticky OOM prevents attachment, consumes eligible incoming owners, and leaves the operation unchanged. Cleanup performs no allocation and remains valid during OOM or byte-count accounting."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::freeP4::line-1377",
+      "relation": "source-p4-and-vdbe-destruction-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::freeP4"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::vdbeFreeOpArray::line-1435",
+      "relation": "source-p4-and-vdbe-destruction-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::freeOperationArray"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::vdbeChangeP4Full::line-1547",
+      "relation": "source-p4-and-vdbe-destruction-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::clearReplaceableP4",
+        "src/core/internal/vdbe_aux.zig::function::changeP4String"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeChangeP4::line-1566",
+      "relation": "source-p4-and-vdbe-destruction-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::operationForP4Change",
+        "src/core/internal/vdbe_aux.zig::function::changeP4",
+        "src/core/internal/vdbe_aux.zig::function::changeP4Int32",
+        "src/core/internal/vdbe_aux.zig::function::changeP4String"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeAppendP4::line-1609",
+      "relation": "source-p4-and-vdbe-destruction-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::appendP4"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeClearObject::line-3734",
+      "relation": "source-p4-and-vdbe-destruction-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::clearVdbeObject"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeDelete::line-3778",
+      "relation": "source-p4-and-vdbe-destruction-to-native-trace-equivalent",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_aux.zig::function::deleteVdbe"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The pointer-overloaded C ChangeP4 API is split into pointer, int32, and string Zig entry points so invalid pointer/integer reinterpretation is unrepresentable.",
+    "The source recursive P4 and VDBE owner graph is preserved with typed Zig pointers; only boundary casts to opaque allocator storage remain.",
+    "Inactive-profile explain comments, normalization owners, and scan-status owners are compile-time absent rather than runtime branches."
+  ],
+  "oracle": {
+    "protocol": "The shared symbolic worker attaches static, int32, copied-string, VTable, and dynamic P4 values; replaces eligible values; forces ChangeP4 and AppendP4 OOM; releases owned payloads in operation arrays; and deletes linked VDBEs. C and Zig compare 366 observations.",
+    "internal_observations": [
+      "negative-address resolution and exact P4 type/value",
+      "static-to-int32-to-dynamic replacement and copied-string identity",
+      "VTable lock/unlock reference transition",
+      "normal and OOM ownership transfer/consumption",
+      "reverse operation-owner release and complete linked-VDBE retirement"
+    ],
+    "normalization": "Pointers normalize only to identity relations and membership in connection lookaside free lists. P4 types, values, counts, OOM state, callback effects, and list state are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Differential cases force ChangeP4 and AppendP4 OOM and verify incoming dynamic owners are consumed while operation state remains unused; all cleanup runs under connection ownership.",
+    "io_crash_concurrency": "No direct I/O; VTable callback behavior is covered by its dependency unit and production mutex sequencing remains integration work.",
+    "malformed_input": "Typed APIs and assertions enforce INIT state, operation bounds, replaceable P4 classes, and valid owner/type pairings.",
+    "continuation": "OOM is explicitly cleared by the worker and subsequent case cleanup retires all operations without leaks or double frees.",
+    "performance": "Latest-operation lookup and append remain constant time; operation destruction preserves the source reverse linear ownership walk.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build internal-vdbe-layout-test",
+      "python3 tools/verify_atomic_units.py"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding VDBE/P4 lifecycle",
+    "native_call_path": "The native symbolic builder now creates, attaches, replaces, releases, and deletes exact source-layout VDBE operations and objects.",
+    "bounded_owner_retired": "No. Compiler execution/reset/finalize integration must switch to this lifecycle before the handwritten scaffold can be removed."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires reset/finalize integration, broad assurance, and independent fidelity review."
+  },
+  "known_blockers": [
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
+    "Port and integrate VDBE halt/reset/finalize sequencing around this destruction path.",
+    "Switch compiler production ownership to the source-layout VDBE builder.",
+    "Independent fidelity review remains open."
+  ]
+}

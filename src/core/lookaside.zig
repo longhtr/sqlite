@@ -58,6 +58,7 @@ pub const Lookaside = struct {
         return slot;
     }
 
+    /// Source `setupLookaside()`.
     pub fn configure(
         self: *Lookaside,
         external: ?[]align(8) u8,
@@ -251,7 +252,9 @@ test "default profile partitions 1200x40 into big and small slots" {
     var big: usize = 0;
     var small: usize = 0;
     var p = lookaside.big_init;
-    while (p) |slot| : (p = slot.next) big += 1;
+    while (p) |slot| : (p = slot.next) {
+        big += 1;
+    }
     p = lookaside.small_init;
     while (p) |slot| : (p = slot.next) small += 1;
     try std.testing.expect(big >= 30);

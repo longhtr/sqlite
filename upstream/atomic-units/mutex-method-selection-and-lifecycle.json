@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "mutex-method-selection-and-lifecycle",
   "title": "Configured/default/no-op mutex method selection and lifecycle",
-  "status": "internal-trace-equivalent",
+  "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
     "rationale": "These functions select configured, pthread, or no-op mutex methods, publish allocation last across a memory barrier, invoke xMutexInit/xMutexEnd, and expose the profile concrete method tables.",
@@ -155,8 +155,8 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation by lifecycle itself; configured callback failure and dynamic mutex OOM are covered in dependencies.",
     "io_crash_concurrency": "No I/O. Publication uses seq_cst ordering and concurrent initialization is tested; formal weak-memory review remains open.",
@@ -183,5 +183,37 @@
   "known_blockers": [
     "A typed process configuration function is exposed; consolidation into the final coherent configuration API domain remains open.",
     "Independent weak-memory/concurrency review is pending."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/mutex.c:1-284 was reviewed through profile selection, configured/default table publication, sqlite3MutexInit, and sqlite3MutexEnd; THREAD_MISUSE_WARNINGS is inactive",
+      "upstream/sqlite/src/mutex_unix.c:91-103 and 373-393 were reviewed for the selected GCC barrier, pthread init/end no-ops, and complete default method table",
+      "upstream/sqlite/src/mutex_noop.c:1-69 was reviewed for the non-debug no-op init/end/table selected when bCoreMutex is false",
+      "src/core/mutex.zig memoryBarrier, Subsystem.startLifecycle/stopLifecycle, pthread/noop methods, and copied MethodsAdapter are the canonical AST-hashed targets"
+    ],
+    "callers": [
+      "main.c:215/227/311 calls memory barrier and sqlite3MutexInit during recursive-safe process initialization; main.c:410 calls sqlite3MutexEnd after allocator/PCache/OS shutdown",
+      "mutex.c:293 may call sqlite3MutexInit before static mutex allocation when auto-initialization is active",
+      "sqlite3MutexInit alone selects sqlite3DefaultMutex or sqlite3NoopMutex and invokes their xMutexInit; sqlite3MutexEnd conditionally invokes the selected xMutexEnd",
+      "The native global process coordinator owns startLifecycle/stopLifecycle ordering; top-level initialize/shutdown rollback remains a dependent atomic unit"
+    ],
+    "callees": [
+      "sqlite3MutexInit uses configured sqlite3GlobalConfig.mutex when xMutexAlloc is already set; otherwise it copies default/no-op callbacks, publishes xMutexAlloc last across sqlite3MemoryBarrier, invokes xMutexInit, and returns its result",
+      "sqlite3MutexEnd invokes xMutexEnd only when non-null and returns SQLITE_OK otherwise; debug mutexIsInit bookkeeping is inactive in the production profile",
+      "sqlite3DefaultMutex returns the static complete pthread method table; sqlite3NoopMutex returns the static non-debug no-op table; their init/end methods return SQLITE_OK",
+      "Selected sqlite3MemoryBarrier uses GCC __sync_synchronize; Zig uses a sequentially consistent atomic operation as the explicit representation difference"
+    ],
+    "assertions_branches_cleanup": [
+      "The 12 behavior IDs cover configured/default selection, core/no-op choice, callback presence, callback return, optional end, and concrete table returns",
+      "Configured methods take precedence and are copied before initialization; failed xMutexInit propagates while allowing the top-level initialization owner to retry",
+      "No allocation, user I/O, or mutex acquisition occurs in lifecycle selection itself; callback-owned resources are initialized/ended by the selected methods",
+      "SQLITE_THREAD_MISUSE_WARNINGS, SQLITE_DEBUG no-op checks, Windows methods, and SQLITE_MUTEX_OMIT are inactive or explicitly excluded"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/mutex1.test verifies configuration timing, initialization call counts, and single/multi/serialized method usage",
+      "upstream/sqlite/test/mutex2.test forces mutex initialization failures and verifies retry/shutdown behavior",
+      "upstream/sqlite/test/thread001.test through thread005.test exercise concurrent process/connection use after default method selection",
+      "Project global/mutex tests and infrastructure differential cover configured-table copying, callback results, 100 lifecycle cycles, and concurrent initialization; durable receipts remain a later gate"
+    ]
+  }
 }

@@ -16,6 +16,7 @@ pub fn memoryBarrier() void {
     _ = barrier_token.fetchAdd(0, .seq_cst);
 }
 
+/// Source `pthreadMutexInit()`.
 pub fn pthreadInit() callconv(.c) c_int {
     return 0;
 }
@@ -123,6 +124,7 @@ pub const Mutex = struct {
         return @intCast(std.Thread.getCurrentId());
     }
 
+    /// Source `pthreadMutexEnter()`.
     pub fn enter(self: *Mutex) void {
         const id = threadId();
         if (self.kind == .recursive and self.owner.load(.acquire) == id) {
@@ -135,6 +137,7 @@ pub const Mutex = struct {
         self.owner.store(id, .release);
     }
 
+    /// Source `pthreadMutexTry()`.
     pub fn tryEnter(self: *Mutex) bool {
         const id = threadId();
         if (self.kind == .recursive and self.owner.load(.acquire) == id) {
@@ -148,6 +151,7 @@ pub const Mutex = struct {
         return true;
     }
 
+    /// Source `pthreadMutexLeave()`.
     pub fn leave(self: *Mutex) void {
         std.debug.assert(self.held());
         self.depth -= 1;
@@ -245,6 +249,7 @@ pub const Subsystem = struct {
     /// One sqlite3MutexInit() attempt. Upstream invokes xMutexInit on every
     /// non-final sqlite3_initialize() attempt, including retries after a later
     /// allocator, PCache, or OS failure, while retaining isMutexInit ownership.
+    /// Source `sqlite3MutexInit()`.
     pub fn startLifecycle(self: *Subsystem) c_int {
         if (self.configured_methods) |*adapter| {
             const result = adapter.start();
@@ -264,6 +269,7 @@ pub const Subsystem = struct {
         self.initialized = false;
     }
 
+    /// Source `sqlite3MutexEnd()`.
     pub fn stopLifecycle(self: *Subsystem) c_int {
         if (!self.initialized) return 0;
         self.stop();
@@ -280,6 +286,7 @@ pub const Subsystem = struct {
     }
 
     /// Internal SQLite allocation semantics. Null means mutex operations are no-ops.
+    /// Source `pthreadMutexAlloc()`.
     pub fn alloc(self: *Subsystem, kind: Kind) error{OutOfMemory}!?*Mutex {
         std.debug.assert(self.initialized);
         if (!self.coreMutexEnabled()) return null;
@@ -356,6 +363,7 @@ pub const Subsystem = struct {
         return notHeld(value);
     }
 
+    /// Source `pthreadMutexFree()`.
     pub fn free(self: *Subsystem, value_or_null: ?*Mutex) void {
         const value = value_or_null orelse return;
         std.debug.assert(value.depth == 0);
@@ -365,6 +373,65 @@ pub const Subsystem = struct {
         }
     }
 };
+
+fn defaultAlloc(kind_value: c_int) callconv(.c) ?*anyopaque {
+    if (kind_value < @intFromEnum(Kind.fast) or kind_value > @intFromEnum(Kind.static_vfs3)) return null;
+    const kind: Kind = @enumFromInt(kind_value);
+    if (kind.isStatic()) return @ptrCast(processStatic(kind));
+    const value = std.heap.c_allocator.create(Mutex) catch return null;
+    value.* = .{ .kind = kind, .dynamic = true };
+    return @ptrCast(value);
+}
+
+fn defaultFree(pointer: ?*anyopaque) callconv(.c) void {
+    const value: *Mutex = @ptrCast(@alignCast(pointer orelse return));
+    if (!value.dynamic) return;
+    std.debug.assert(value.depth == 0);
+    std.debug.assert(std.c.pthread_mutex_destroy(&value.native) == .SUCCESS);
+    std.heap.c_allocator.destroy(value);
+}
+
+fn defaultEnter(pointer: ?*anyopaque) callconv(.c) void {
+    const value: *Mutex = @ptrCast(@alignCast(pointer orelse return));
+    value.enter();
+}
+
+fn defaultTry(pointer: ?*anyopaque) callconv(.c) c_int {
+    const value: *Mutex = @ptrCast(@alignCast(pointer orelse return 0));
+    return if (value.tryEnter()) 0 else 5;
+}
+
+fn defaultLeave(pointer: ?*anyopaque) callconv(.c) void {
+    const value: *Mutex = @ptrCast(@alignCast(pointer orelse return));
+    value.leave();
+}
+
+fn defaultHeld(pointer: ?*anyopaque) callconv(.c) c_int {
+    const value: *const Mutex = @ptrCast(@alignCast(pointer orelse return 1));
+    return @intFromBool(value.held());
+}
+
+fn defaultNotHeld(pointer: ?*anyopaque) callconv(.c) c_int {
+    const value: *const Mutex = @ptrCast(@alignCast(pointer orelse return 1));
+    return @intFromBool(value.notHeld());
+}
+
+pub const default_methods = MutexMethods{
+    .xMutexInit = pthreadInit,
+    .xMutexEnd = pthreadEnd,
+    .xMutexAlloc = defaultAlloc,
+    .xMutexFree = defaultFree,
+    .xMutexEnter = defaultEnter,
+    .xMutexTry = defaultTry,
+    .xMutexLeave = defaultLeave,
+    .xMutexHeld = defaultHeld,
+    .xMutexNotheld = defaultNotHeld,
+};
+
+/// Source `sqlite3DefaultMutex()`.
+pub fn defaultMethods() *const MutexMethods {
+    return &default_methods;
+}
 
 pub fn enter(mutex: ?*Mutex) void {
     if (mutex) |value| value.enter();
@@ -380,6 +447,22 @@ pub fn held(mutex: ?*const Mutex) bool {
 }
 pub fn notHeld(mutex: ?*const Mutex) bool {
     return if (mutex) |value| value.notHeld() else true;
+}
+
+test "default pthread method table preserves dynamic and static identities" {
+    const methods = defaultMethods();
+    try std.testing.expectEqual(@as(c_int, 0), methods.xMutexInit.?());
+    const recursive = methods.xMutexAlloc.?(@intFromEnum(Kind.recursive)).?;
+    methods.xMutexEnter.?(recursive);
+    try std.testing.expectEqual(@as(c_int, 0), methods.xMutexTry.?(recursive));
+    try std.testing.expectEqual(@as(c_int, 1), methods.xMutexHeld.?(recursive));
+    methods.xMutexLeave.?(recursive);
+    methods.xMutexLeave.?(recursive);
+    methods.xMutexFree.?(recursive);
+    const first = methods.xMutexAlloc.?(@intFromEnum(Kind.static_main));
+    const second = methods.xMutexAlloc.?(@intFromEnum(Kind.static_main));
+    try std.testing.expect(first == second);
+    try std.testing.expectEqual(@as(c_int, 0), methods.xMutexEnd.?());
 }
 
 test "no-op method table returns stable sentinel and successful operations" {

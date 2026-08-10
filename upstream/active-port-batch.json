@@ -1,0 +1,10 @@
+{
+  "schema_version": 2,
+  "status": "idle",
+  "completion_claim": false,
+  "base_checkpoint_id": null,
+  "historical_claim_ledger": "upstream/historical-port-claims.json",
+  "minimum_short_functions": 200,
+  "minimum_substantive_functions": 50,
+  "entries": []
+}

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "virtual-table-and-module-reference-ownership",
   "title": "Virtual-table and module reference ownership",
-  "status": "internal-trace-equivalent",
-  "admission_ready": true,
+  "status": "inventoried",
+  "admission_ready": false,
   "scope": {
     "rationale": "sqlite3VtabLock/Unlock and sqlite3VtabModuleUnref are the complete nested reference lifecycle consumed by P4_VTAB: VTable references protect disconnection, final unlock invokes xDisconnect, consumes a Module reference, runs optional module destructor, and releases both internal wrappers.",
     "source_files": [
@@ -171,7 +171,7 @@
     "C ignores xDisconnect return; Zig explicitly discards it."
   ],
   "oracle": {
-    "protocol": "The shared worker allocates exact Module/VTable wrappers across absent/present public-vtab, absent/present module-destructor, and final/nonfinal Module-reference cases; it locks VTable 1->2, unlocks 2->1, then final-unlocks 1->0. C and Zig compare intermediate counts, conditional callback ordering/counts, and both internal wrappers returned to connection lookaside in a 363-observation trace.",
+    "protocol": "The shared worker allocates exact Module/VTable wrappers across absent/present public-vtab, absent/present module-destructor, and final/nonfinal Module-reference cases; it locks VTable 1->2, unlocks 2->1, then final-unlocks 1->0. C and Zig compare intermediate counts, conditional callback ordering/counts, and both internal wrappers returned to connection lookaside in a 366-observation trace.",
     "internal_observations": [
       "lock and nonfinal unlock counts",
       "no early disconnect",
@@ -182,9 +182,9 @@
     "normalization": "Addresses normalize to owning lookaside free-list membership. Counts and callback totals are exact."
   },
   "assurance": {
-    "source_context_reviewed": true,
-    "source_translated": true,
-    "internal_trace_equivalent": true,
+    "source_context_reviewed": false,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation in assigned lifecycle; all test owners are returned exactly once.",
     "io_crash_concurrency": "Synchronous callbacks are reached; production mutex/deferred-disconnect concurrency remains integration work.",
@@ -198,8 +198,8 @@
   },
   "integration": {
     "production_owner": "src/core/internal/vdbe_aux.zig source-corresponding virtual-table/P4 lifecycle closure",
-    "native_call_path": "Symbolic worker reaches exact wrapper owners and public callbacks. P4_VTAB dispatch and production virtual-table registry are pending.",
-    "bounded_owner_retired": "No. Connect P4 and production vtab owners first."
+    "native_call_path": "Symbolic worker reaches exact wrapper owners and public callbacks, including P4_VTAB attachment and release through the dependent VDBE destruction unit. The production virtual-table registry is pending.",
+    "bounded_owner_retired": "No. Connect the production virtual-table registry and compiler lifecycle owners."
   },
   "independent_review": {
     "status": "pending",
@@ -208,8 +208,8 @@
     "notes": "Requires P4/registry integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Connect P4_VTAB lock/unlock dispatch.",
-    "Port remaining P4 TableRef/SubrtnSig dispatch and operation destruction.",
+    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
+    "Connect production virtual-table registry owners to the completed P4/VDBE lifecycle.",
     "Independent fidelity review remains open."
   ]
 }

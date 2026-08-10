@@ -16,4 +16,8 @@ def main():
   raise SystemExit(f'planner length mismatch: oracle={len(oracle)} native={len(native)}')
  if native_s>2.0:raise SystemExit(f'native planner corpus exceeded 2s budget: {native_s:.3f}s')
  print(f'sql-planner-differential: {len(native)} predicate/order/limit observations match; native {native_s:.3f}s')
-if __name__=='__main__':main()
+if __name__ == "__main__":
+    from port_batch_gate import require_ready
+
+    require_ready()
+    main()

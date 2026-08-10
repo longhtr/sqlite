@@ -6,12 +6,8 @@ Accepted as bounded simulator/oracle evidence for the DELETE/FULL model; ADR-004
 
 ## Decision
 
-Validate source-translated rollback and WAL protocols against an independent durable/volatile store model, named I/O events, crash exploration, mutation tests, and physical-system profiles. Claims are limited to explicit journal/synchronous/device/filesystem combinations. Reduced models provide tests and protocol evidence only; they do not receive subsystem integration credit.
+Validate source-translated rollback and WAL protocols against an independent durable/volatile model, named I/O events, crash exploration, mutation tests, and physical-system profiles. Claims are limited to explicit journal/synchronous/device/filesystem combinations. Reduced models receive no subsystem-integration credit.
 
-## Evidence
+## Consequences
 
-`zig build rollback-differential` captures and validates the pinned oracle's journal-write → journal-sync → database-write → database-sync → journal-delete ordering. `zig build durability-spike` explores every bounded crash prefix and detects curated ordering mutants.
-
-## Stop condition
-
-Storage porting is blocked if the simulator cannot reproduce selected upstream traces or curated ordering mutants survive.
+Storage porting stops if the model cannot reproduce selected source traces or detect curated ordering mutants. `docs/DURABILITY_MODEL.md` owns the modeled protocol and open matrix; `docs/TESTING.md` owns commands and result modules.
