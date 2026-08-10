@@ -16,6 +16,8 @@ const numeric = @import("numeric.zig");
 pub const sqlite3_str = opaque {};
 const LogCallback = logging.Callback;
 
+var configured_memory_methods: memory.MethodsBackend = undefined;
+
 pub export fn zig_sqlite3_set_extension_api(pointer: ?*const anyopaque) callconv(.c) void {
     auto_extension.setApi(pointer);
 }
@@ -86,6 +88,11 @@ pub export fn zig_sqlite3_config_no_args(operation: c_int) callconv(.c) c_int {
 }
 pub export fn zig_sqlite3_config_memstatus(enabled: c_int) callconv(.c) c_int {
     global.process_coordinator.configureMemoryStatus(enabled != 0) catch return 21;
+    return 0;
+}
+pub export fn zig_sqlite3_config_malloc(methods: ?*const memory.MemMethods) callconv(.c) c_int {
+    configured_memory_methods = memory.MethodsBackend.init(if (methods) |value| value.* else return 21);
+    global.process_coordinator.configureBackend(configured_memory_methods.backend()) catch return 21;
     return 0;
 }
 pub export fn zig_sqlite3_config_log(callback: ?LogCallback, context: ?*anyopaque) callconv(.c) c_int {

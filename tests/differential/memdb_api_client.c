@@ -1,6 +1,36 @@
 #include "sqlite3.h"
+#include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+static int fail_next_allocation = 0;
+typedef union AllocationHeader { size_t size; max_align_t alignment; } AllocationHeader;
+static void *fault_malloc(int amount){
+  if(fail_next_allocation){ fail_next_allocation=0; return 0; }
+  AllocationHeader *allocation = malloc(sizeof(*allocation)+(size_t)amount);
+  if(!allocation) return 0;
+  allocation->size=(size_t)amount;
+  return allocation+1;
+}
+static void fault_free(void *pointer){ if(pointer) free(((AllocationHeader*)pointer)-1); }
+static void *fault_realloc(void *pointer,int amount){
+  if(!pointer) return fault_malloc(amount);
+  if(fail_next_allocation){ fail_next_allocation=0; return 0; }
+  AllocationHeader *allocation=((AllocationHeader*)pointer)-1;
+  allocation=realloc(allocation,sizeof(*allocation)+(size_t)amount);
+  if(!allocation) return 0;
+  allocation->size=(size_t)amount;
+  return allocation+1;
+}
+static int fault_size(void *pointer){ return (int)(((AllocationHeader*)pointer)-1)->size; }
+static int fault_roundup(int amount){ return (amount+7)&~7; }
+static int fault_init(void *context){ (void)context; return SQLITE_OK; }
+static void fault_shutdown(void *context){ (void)context; }
+static sqlite3_mem_methods fault_methods={fault_malloc,fault_free,fault_realloc,fault_size,fault_roundup,fault_init,fault_shutdown,0};
+#ifdef NATIVE_ENGINE
+extern int zig_sqlite3_config_malloc(const sqlite3_mem_methods*);
+#endif
 
 static int query_value(sqlite3 *db, const char *sql, sqlite3_int64 *value){
   sqlite3_stmt *statement = 0;
@@ -14,13 +44,30 @@ static int query_value(sqlite3 *db, const char *sql, sqlite3_int64 *value){
 }
 
 int main(void){
+#ifdef NATIVE_ENGINE
+  int config_rc=zig_sqlite3_config_malloc(&fault_methods);
+#else
+  int config_rc=sqlite3_config(SQLITE_CONFIG_MALLOC,&fault_methods);
+#endif
+  if(config_rc!=SQLITE_OK) return config_rc;
   sqlite3 *source=0, *clone=0, *readonly=0, *malformed=0;
   sqlite3_int64 size=-1, borrowed_size=-1, value=-1;
   int rc = sqlite3_open(":memory:", &source);
   if(rc!=SQLITE_OK) return rc;
   rc = sqlite3_exec(source, "CREATE TABLE t(x); INSERT INTO t VALUES(42)", 0, 0, 0);
   if(rc!=SQLITE_OK) return rc;
+  unsigned char *seed = sqlite3_serialize(source, "main", &size, 0);
+  sqlite3 *normalized=0;
+  sqlite3_open(":memory:", &normalized);
+  rc=sqlite3_deserialize(normalized,"main",seed,size,size,SQLITE_DESERIALIZE_FREEONCLOSE|SQLITE_DESERIALIZE_RESIZEABLE);
+  if(rc!=SQLITE_OK) return rc;
+  sqlite3_close(source);
+  source=normalized;
+  size=-1;
 
+  fail_next_allocation=1;
+  unsigned char *failed_image = sqlite3_serialize(source, "main", &size, 0);
+  printf("copy-oom\t%d\t%lld\n", failed_image==0, (long long)size);
   unsigned char *image = sqlite3_serialize(source, "main", &size, 0);
   printf("copy\t%d\t%lld\t%d\n", image!=0, (long long)size, image!=0 && memcmp(image,"SQLite format 3",15)==0);
   sqlite3_open(":memory:", &clone);

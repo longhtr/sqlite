@@ -2602,7 +2602,10 @@ pub export fn sqlite3_serialize(pointer: ?*sqlite3, schema: ?[*:0]const u8, size
     const schema_name = if (schema) |name| std.mem.span(name) else null;
     if (schema_name) |name| if (!std.ascii.eqlIgnoreCase(name, "main")) return null;
     if (memdb.fromSchema(if (connection.memory_backend) |*memory| memory else null, connection.shared_memdb, schema_name)) |store| {
-        const serialization_optional = memdb.serialize(connection.allocator, store, if (store.allow_no_copy) "main" else "/main", flags & 1 != 0) catch return null;
+        const store_name = if (store.allow_no_copy) "main" else "/main";
+        const image = store.backend.borrowVolatile(store_name) orelse return null;
+        if (size_output) |output| output.* = @intCast(image.len);
+        const serialization_optional = memdb.serialize(connection.allocator, store, store_name, flags & 1 != 0) catch return null;
         const serialization = serialization_optional orelse return null;
         switch (serialization) {
             .borrowed => |bytes| {
