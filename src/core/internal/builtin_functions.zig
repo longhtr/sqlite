@@ -760,6 +760,11 @@ pub fn floorValue(value: f64) callconv(.c) f64 {
     return @floor(value);
 }
 
+/// Active-profile C99 `trunc()` callback used by the source math registrar.
+pub fn truncateValue(value: f64) callconv(.c) f64 {
+    return @trunc(value);
+}
+
 pub fn exponentialValue(value: f64) callconv(.c) f64 {
     return @exp(value);
 }

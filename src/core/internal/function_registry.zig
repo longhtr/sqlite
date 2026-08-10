@@ -43,13 +43,13 @@ fn scalarWithUserData(name: [*:0]const u8, argument_count: i16, callback: Scalar
     return definition;
 }
 
-fn inlineFunction(name: [*:0]const u8, argument_count: i16, function_id: usize) types.FuncDef {
+fn inlineFunction(name: [*:0]const u8, argument_count: i16, function_id: usize, flags: u32) types.FuncDef {
     return .{
         .nArg = argument_count,
-        .funcFlags = base_scalar_flags | types.function_flag.inline_,
+        .funcFlags = base_scalar_flags | types.function_flag.inline_ | flags,
         .pUserData = @ptrFromInt(function_id),
         .pNext = null,
-        .xSFunc = null,
+        .xSFunc = functions.version,
         .xFinalize = null,
         .xValue = null,
         .xInverse = null,
@@ -71,6 +71,23 @@ fn aggregateWithUserData(
     var definition = aggregate(name, argument_count, step, final, value, inverse, flags);
     definition.pUserData = if (user_data == 0) null else @ptrFromInt(user_data);
     return definition;
+}
+
+fn jsonScalar(
+    name: [*:0]const u8,
+    argument_count: i16,
+    callback: Scalar,
+    use_cache: bool,
+    writes_subtype: bool,
+    reads_subtype: bool,
+    jsonb: bool,
+    user_data: usize,
+) types.FuncDef {
+    var flags = base_scalar_flags;
+    if (use_cache) flags |= types.function_flag.run_only;
+    if (writes_subtype) flags |= types.function_flag.result_subtype;
+    if (reads_subtype) flags |= types.function_flag.subtype_argument;
+    return scalarWithUserData(name, argument_count, callback, flags, user_data | if (jsonb) 0x10 else 0);
 }
 
 fn aggregate(
@@ -97,8 +114,17 @@ fn aggregate(
 }
 
 var ported_definitions = [_]types.FuncDef{
-    inlineFunction("iif", -4, types.inline_function.iif),
-    inlineFunction("if", -4, types.inline_function.iif),
+    inlineFunction("implies_nonnull_row", 2, types.inline_function.implies_nonnull_row, types.function_flag.internal | types.function_flag.test_only),
+    inlineFunction("expr_compare", 2, types.inline_function.expression_compare, types.function_flag.internal | types.function_flag.test_only),
+    inlineFunction("expr_implies_expr", 2, types.inline_function.expression_implies_expression, types.function_flag.internal | types.function_flag.test_only),
+    inlineFunction("affinity", 1, types.inline_function.affinity, types.function_flag.internal | types.function_flag.test_only),
+    inlineFunction("unlikely", 1, types.inline_function.unlikely, types.function_flag.unlikely),
+    inlineFunction("likelihood", 2, types.inline_function.unlikely, types.function_flag.unlikely),
+    inlineFunction("likely", 1, types.inline_function.unlikely, types.function_flag.unlikely),
+    inlineFunction("ifnull", 2, types.inline_function.coalesce, 0),
+    inlineFunction("coalesce", -4, types.inline_function.coalesce, 0),
+    inlineFunction("iif", -4, types.inline_function.iif, 0),
+    inlineFunction("if", -4, types.inline_function.iif, 0),
     scalarWithUserData("ltrim", 1, functions.trim, base_scalar_flags, 1),
     scalarWithUserData("ltrim", 2, functions.trim, base_scalar_flags, 1),
     scalarWithUserData("rtrim", 1, functions.trim, base_scalar_flags, 2),
@@ -154,6 +180,7 @@ var ported_definitions = [_]types.FuncDef{
     scalarWithPointer("ceil", 1, functions.ceiling, base_scalar_flags, @ptrCast(&functions.ceilingValue)),
     scalarWithPointer("ceiling", 1, functions.ceiling, base_scalar_flags, @ptrCast(&functions.ceilingValue)),
     scalarWithPointer("floor", 1, functions.ceiling, base_scalar_flags, @ptrCast(&functions.floorValue)),
+    scalarWithPointer("trunc", 1, functions.ceiling, base_scalar_flags, @ptrCast(&functions.truncateValue)),
     scalarWithUserData("ln", 1, functions.logarithm, base_scalar_flags, 0),
     scalarWithUserData("log", 1, functions.logarithm, base_scalar_flags, 1),
     scalarWithUserData("log10", 1, functions.logarithm, base_scalar_flags, 1),
@@ -191,26 +218,42 @@ var ported_definitions = [_]types.FuncDef{
     scalar("current_time", 0, dates.currentTime, types.function_flag.builtin | types.function_flag.slow_change | 1),
     scalar("current_date", 0, dates.currentDate, types.function_flag.builtin | types.function_flag.slow_change | 1),
     scalar("current_timestamp", 0, dates.currentTimestamp, types.function_flag.builtin | types.function_flag.slow_change | 1),
-    scalar("json", 1, json.removeFunction, base_scalar_flags),
-    scalar("json_array", -1, json.arrayFunction, base_scalar_flags | types.function_flag.subtype_argument),
-    scalar("json_array_length", 1, json.arrayLengthFunction, base_scalar_flags),
-    scalar("json_array_length", 2, json.arrayLengthFunction, base_scalar_flags),
-    scalar("json_error_position", 1, json.errorPositionFunction, base_scalar_flags),
-    scalar("json_extract", -1, json.extractFunction, base_scalar_flags),
-    scalar("json_object", -1, json.objectFunction, base_scalar_flags | types.function_flag.subtype_argument),
-    scalar("json_patch", 2, json.patchFunction, base_scalar_flags),
-    scalar("json_pretty", 1, json.prettyFunction, base_scalar_flags),
-    scalar("json_pretty", 2, json.prettyFunction, base_scalar_flags),
-    scalar("json_quote", 1, json.quoteFunction, base_scalar_flags | types.function_flag.subtype_argument),
-    scalar("json_remove", -1, json.removeFunction, base_scalar_flags),
-    scalar("json_replace", -1, json.replaceFunction, base_scalar_flags | types.function_flag.subtype_argument),
-    scalar("json_set", -1, json.setFunction, base_scalar_flags | types.function_flag.subtype_argument),
-    scalar("json_type", 1, json.typeFunction, base_scalar_flags),
-    scalar("json_type", 2, json.typeFunction, base_scalar_flags),
-    scalar("json_valid", 1, json.validFunction, base_scalar_flags),
-    scalar("json_valid", 2, json.validFunction, base_scalar_flags),
-    aggregate("json_group_array", 1, json.arrayAggregateStep, json.arrayAggregateFinal, json.arrayAggregateValue, json.groupInverse, types.function_flag.subtype_argument),
-    aggregate("json_group_object", 2, json.objectAggregateStep, json.objectAggregateFinal, json.objectAggregateValue, json.groupInverse, types.function_flag.subtype_argument),
+    jsonScalar("json", 1, json.removeFunction, true, true, false, false, 0),
+    jsonScalar("jsonb", 1, json.removeFunction, true, false, false, true, 0),
+    jsonScalar("json_array", -1, json.arrayFunction, false, true, true, false, 0),
+    jsonScalar("jsonb_array", -1, json.arrayFunction, false, true, true, true, 0),
+    jsonScalar("json_array_insert", -1, json.setFunction, true, true, true, false, 0x08),
+    jsonScalar("jsonb_array_insert", -1, json.setFunction, true, false, true, true, 0x08),
+    jsonScalar("json_array_length", 1, json.arrayLengthFunction, true, false, false, false, 0),
+    jsonScalar("json_array_length", 2, json.arrayLengthFunction, true, false, false, false, 0),
+    jsonScalar("json_error_position", 1, json.errorPositionFunction, true, false, false, false, 0),
+    jsonScalar("json_extract", -1, json.extractFunction, true, true, false, false, 0),
+    jsonScalar("jsonb_extract", -1, json.extractFunction, true, false, false, true, 0),
+    jsonScalar("->", 2, json.extractFunction, true, true, false, false, 0x01),
+    jsonScalar("->>", 2, json.extractFunction, true, false, false, false, 0x02),
+    jsonScalar("json_insert", -1, json.setFunction, true, true, true, false, 0),
+    jsonScalar("jsonb_insert", -1, json.setFunction, true, false, true, true, 0),
+    jsonScalar("json_object", -1, json.objectFunction, false, true, true, false, 0),
+    jsonScalar("jsonb_object", -1, json.objectFunction, false, true, true, true, 0),
+    jsonScalar("json_patch", 2, json.patchFunction, true, true, false, false, 0),
+    jsonScalar("jsonb_patch", 2, json.patchFunction, true, false, false, true, 0),
+    jsonScalar("json_pretty", 1, json.prettyFunction, true, false, false, false, 0),
+    jsonScalar("json_pretty", 2, json.prettyFunction, true, false, false, false, 0),
+    jsonScalar("json_quote", 1, json.quoteFunction, false, true, true, false, 0),
+    jsonScalar("json_remove", -1, json.removeFunction, true, true, false, false, 0),
+    jsonScalar("jsonb_remove", -1, json.removeFunction, true, false, false, true, 0),
+    jsonScalar("json_replace", -1, json.replaceFunction, true, true, true, false, 0),
+    jsonScalar("jsonb_replace", -1, json.replaceFunction, true, false, true, true, 0),
+    jsonScalar("json_set", -1, json.setFunction, true, true, true, false, 0x04),
+    jsonScalar("jsonb_set", -1, json.setFunction, true, false, true, true, 0x04),
+    jsonScalar("json_type", 1, json.typeFunction, true, false, false, false, 0),
+    jsonScalar("json_type", 2, json.typeFunction, true, false, false, false, 0),
+    jsonScalar("json_valid", 1, json.validFunction, true, false, false, false, 0),
+    jsonScalar("json_valid", 2, json.validFunction, true, false, false, false, 0),
+    aggregateWithUserData("json_group_array", 1, json.arrayAggregateStep, json.arrayAggregateFinal, json.arrayAggregateValue, json.groupInverse, types.function_flag.constant | types.function_flag.subtype_argument | types.function_flag.result_subtype, 0),
+    aggregateWithUserData("jsonb_group_array", 1, json.arrayAggregateStep, json.arrayAggregateFinal, json.arrayAggregateValue, json.groupInverse, types.function_flag.constant | types.function_flag.subtype_argument | types.function_flag.result_subtype, 0x10),
+    aggregateWithUserData("json_group_object", 2, json.objectAggregateStep, json.objectAggregateFinal, json.objectAggregateValue, json.groupInverse, types.function_flag.constant | types.function_flag.subtype_argument | types.function_flag.result_subtype, 0),
+    aggregateWithUserData("jsonb_group_object", 2, json.objectAggregateStep, json.objectAggregateFinal, json.objectAggregateValue, json.groupInverse, types.function_flag.constant | types.function_flag.subtype_argument | types.function_flag.result_subtype, 0x10),
     aggregate("sum", 1, functions.sumStep, functions.sumFinalize, functions.sumFinalize, functions.sumInverse, 0),
     aggregate("total", 1, functions.sumStep, functions.totalFinalize, functions.totalFinalize, functions.sumInverse, 0),
     aggregate("avg", 1, functions.sumStep, functions.averageFinalize, functions.averageFinalize, functions.sumInverse, 0),
@@ -219,10 +262,10 @@ var ported_definitions = [_]types.FuncDef{
     aggregate("group_concat", 1, functions.groupConcatStep, functions.groupConcatFinalize, functions.groupConcatValue, functions.groupConcatInverse, 0),
     aggregate("group_concat", 2, functions.groupConcatStep, functions.groupConcatFinalize, functions.groupConcatValue, functions.groupConcatInverse, 0),
     aggregate("string_agg", 2, functions.groupConcatStep, functions.groupConcatFinalize, functions.groupConcatValue, functions.groupConcatInverse, 0),
-    aggregateWithUserData("median", 1, functions.percentileStep, functions.percentileFinal, functions.percentileValue, functions.percentileInverse, 0, 0),
-    aggregateWithUserData("percentile", 2, functions.percentileStep, functions.percentileFinal, functions.percentileValue, functions.percentileInverse, 0, 2),
-    aggregateWithUserData("percentile_cont", 2, functions.percentileStep, functions.percentileFinal, functions.percentileValue, functions.percentileInverse, 0, 0),
-    aggregateWithUserData("percentile_disc", 2, functions.percentileStep, functions.percentileFinal, functions.percentileValue, functions.percentileInverse, 0, 1),
+    aggregateWithUserData("median", 1, functions.percentileStep, functions.percentileFinal, functions.percentileValue, functions.percentileInverse, types.function_flag.innocuous | types.function_flag.self_order1, 0),
+    aggregateWithUserData("percentile", 2, functions.percentileStep, functions.percentileFinal, functions.percentileValue, functions.percentileInverse, types.function_flag.innocuous | types.function_flag.self_order1, 2),
+    aggregateWithUserData("percentile_cont", 2, functions.percentileStep, functions.percentileFinal, functions.percentileValue, functions.percentileInverse, types.function_flag.innocuous | types.function_flag.self_order1, 0),
+    aggregateWithUserData("percentile_disc", 2, functions.percentileStep, functions.percentileFinal, functions.percentileValue, functions.percentileInverse, types.function_flag.innocuous | types.function_flag.self_order1, 1),
     aggregate("row_number", 0, windows.rowNumberStep, windows.rowNumberValue, windows.rowNumberValue, windows.noOpStep, types.function_flag.window),
     aggregate("dense_rank", 0, windows.denseRankStep, windows.denseRankValue, windows.denseRankValue, windows.noOpStep, types.function_flag.window),
     aggregate("nth_value", 2, windows.nthValueStep, windows.nthValueFinalize, windows.noOpValue, windows.noOpStep, types.function_flag.window),
@@ -232,6 +275,12 @@ var ported_definitions = [_]types.FuncDef{
     aggregate("cume_dist", 0, windows.cumulativeDistributionStep, windows.cumulativeDistributionValue, windows.cumulativeDistributionValue, windows.cumulativeDistributionInverse, types.function_flag.window),
     aggregate("ntile", 1, windows.ntileStep, windows.ntileValue, windows.ntileValue, windows.ntileInverse, types.function_flag.window),
     aggregate("last_value", 1, windows.lastValueStep, windows.lastValueFinalize, windows.lastValueValue, windows.lastValueInverse, types.function_flag.window),
+    aggregate("lead", 1, windows.noOpStep, windows.noOpValue, windows.noOpValue, windows.noOpStep, types.function_flag.window),
+    aggregate("lead", 2, windows.noOpStep, windows.noOpValue, windows.noOpValue, windows.noOpStep, types.function_flag.window),
+    aggregate("lead", 3, windows.noOpStep, windows.noOpValue, windows.noOpValue, windows.noOpStep, types.function_flag.window),
+    aggregate("lag", 1, windows.noOpStep, windows.noOpValue, windows.noOpValue, windows.noOpStep, types.function_flag.window),
+    aggregate("lag", 2, windows.noOpStep, windows.noOpValue, windows.noOpValue, windows.noOpStep, types.function_flag.window),
+    aggregate("lag", 3, windows.noOpStep, windows.noOpValue, windows.noOpValue, windows.noOpStep, types.function_flag.window),
 };
 
 /// Source `matchQuality()`.
@@ -368,4 +417,32 @@ test "built-in registry reset rebuilds finite hash chains" {
         resetAndRegisterPortedBuiltinFunctions();
     }
     try std.testing.expect(functionSearch(types.functionHash('a', 3), "abs") != null);
+    try std.testing.expectEqual(@as(usize, 167), ported_definitions.len);
+    const checks = [_]struct {
+        name: [*:0]const u8,
+        argument_count: i16,
+        flags: u32,
+        user_data: usize,
+    }{
+        .{ .name = "implies_nonnull_row", .argument_count = 2, .flags = 0x00c4_4801, .user_data = 1 },
+        .{ .name = "unlikely", .argument_count = 1, .flags = 0x00c0_0c01, .user_data = 99 },
+        .{ .name = "trunc", .argument_count = 1, .flags = 0x0080_0801, .user_data = @intFromPtr(&functions.truncateValue) },
+        .{ .name = "jsonb_set", .argument_count = -1, .flags = 0x0090_8801, .user_data = 20 },
+        .{ .name = "jsonb_group_array", .argument_count = 1, .flags = 0x0190_0801, .user_data = 16 },
+        .{ .name = "lead", .argument_count = 3, .flags = 0x0081_0001, .user_data = 0 },
+    };
+    for (checks) |check| {
+        const name_length = std.mem.len(check.name);
+        var definition = functionSearch(types.functionHash(check.name[0], name_length), check.name);
+        var matched: ?*types.FuncDef = null;
+        while (definition) |present| : (definition = present.pNext) {
+            if (present.nArg == check.argument_count) {
+                matched = present;
+                break;
+            }
+        }
+        const present = matched orelse return error.TestUnexpectedResult;
+        try std.testing.expectEqual(check.flags, present.funcFlags);
+        try std.testing.expectEqual(check.user_data, if (present.pUserData) |pointer| @intFromPtr(pointer) else 0);
+    }
 }

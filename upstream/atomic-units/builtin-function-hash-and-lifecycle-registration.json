@@ -5,7 +5,7 @@
   "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
-    "rationale": "These entities own the process-global built-in function hash, overload insertion, and the registration entry invoked by sqlite3_initialize before PCache and OS initialization. Production initialization now resets and rebuilds the ported subset under the coordinator's recursive initialization lock.",
+    "rationale": "These entities own the process-global built-in function hash, overload insertion, and the registration entry invoked by sqlite3_initialize before PCache and OS initialization. Production initialization now resets and rebuilds 167 of the 178 active-profile definitions under the coordinator's recursive initialization lock, with no extra name/arity pairs; only two load-extension and nine ALTER TABLE internal definitions remain absent.",
     "source_files": [
       {
         "path": "src/global.c",
@@ -42,8 +42,8 @@
       "global-initialization-state-representations"
     ],
     "external_source_responsibilities": [
-      "Complete active-profile built-in definition table and registration families",
-      "Date/time, JSON, window, ALTER TABLE, LIKE, math, and inline function registrars"
+      "The two load-extension definitions and nine ALTER TABLE internal definitions",
+      "Exact source registrar ordering and full hash/overload topology"
     ],
     "caller_closure": "The public and auto-initializing production paths install one initializer callback before entering the process coordinator. The outer lifecycle attempt invokes it before PCache and OS initialization; recursive and already-initialized calls do not rebuild the table."
   },
@@ -86,11 +86,11 @@
   ],
   "representation_differences": [
     "The C global is an uninitialized static FuncDefHash cleared with memset; Zig assigns the typed zero-valued initial_builtin_functions constant.",
-    "C constructs the full active-profile table inside sqlite3RegisterBuiltinFunctions. Zig keeps a module-level mutable ported_definitions array, which remains an incomplete subset and blocks translation promotion.",
+    "C inserts ALTER TABLE, window, date/time, JSON, then core arrays. Zig keeps one mutable ported_definitions array containing all callback-backed window, date/time, JSON/JSONB, inline, LIKE, math, percentile, aggregate, and core definitions; the remaining 11 definitions and exact registrar ordering block promotion.",
     "The coordinator receives the registry initializer as a typed function pointer so the foundational global module does not import the full VDBE/function implementation graph."
   ],
   "oracle": {
-    "protocol": "Native tests reset and rebuild the process table repeatedly, traverse every hash and overload chain with a strict definition-count bound, and verify lookup after reconstruction. The broad suite exercises repeated initialization, shutdown, retry, prepared built-ins, and internal function lookup.",
+    "protocol": "Native tests reset and rebuild the process table repeatedly, traverse all 167 installed definitions with a strict count bound, verify lookup after reconstruction, and check source-exact flags/user data for representative internal-inline, likelihood, C99 math, JSONB scalar/aggregate, and lead overload definitions. A pinned source probe establishes 178 active name/arity definitions and the remaining 11-name gap. The broad suite exercises repeated initialization, shutdown, retry, prepared built-ins, and internal function lookup.",
     "internal_observations": [
       "finite hash and overload chains",
       "one occurrence for every ported definition",
@@ -98,7 +98,7 @@
       "outer initialization ordering",
       "repeat initialization and shutdown continuation"
     ],
-    "normalization": "Static addresses and exact missing-definition coverage are not normalized. Hash membership, overload count, callback order, and continuation are exact for the ported subset."
+    "normalization": "Function/data pointer addresses are normalized. Name, arity, flags, integer user data, installed-definition count, overload finiteness, lookup, lifecycle ordering, and continuation are exact for the 167-definition subset; full hash-head ordering remains open."
   },
   "assurance": {
     "source_context_reviewed": true,
@@ -125,10 +125,10 @@
     "status": "pending",
     "reviewer": null,
     "review_commit": null,
-    "notes": "Requires complete active-profile definition coverage, exact registration-family ordering, trace evidence, and independent review."
+    "notes": "Requires the 11 load-extension/ALTER definitions, exact registration-family and hash-head ordering, full topology differential, and independent review."
   },
   "known_blockers": [
-    "Complete the active-profile inline unlikely/likelihood/likely, ifnull/coalesce, load-extension, ALTER TABLE, date/time, JSON, window, LIKE, math, and remaining registration-family definitions in the canonical process table.",
+    "Port the two load-extension and nine ALTER TABLE internal definitions; the canonical table now has the other 167 of 178 active name/arity definitions with no extras.",
     "Compare exact full-table hash and overload topology with the pinned C oracle.",
     "Independent fidelity review remains open."
   ],
@@ -147,7 +147,7 @@
     "callees": [
       "Registration invokes ALTER TABLE, window, date/time, and JSON registrars before inserting the core array",
       "sqlite3InsertBuiltinFuncs hashes folded first byte plus bounded name length, finds a same-name head, links overloads through pNext, or prepends a new hash-chain head",
-      "The Zig reset owner clears typed hash heads and rebuilds the ported static records; full registrar coverage remains explicit"
+      "The Zig reset owner clears typed hash heads and rebuilds 167 static records, including all active inline/test-inline, C99 math, JSON/JSONB, date/time, window/lead/lag, LIKE, percentile, aggregate, and ordinary callback-backed definitions; load-extension and ALTER callbacks remain explicit gaps"
     ],
     "assertions_branches_cleanup": [
       "All four insertion behavior IDs cover the definition loop, built-in assertion, same-name branch, and duplicate-link assertion",
@@ -157,7 +157,7 @@
     ],
     "upstream_tests": [
       "upstream func.test, func4.test, window tests, date tests, json tests, load-extension tests, and initialization/fault suites exercise registration and lookup",
-      "Project function-registry, global lifecycle, SQL frontend, VDBE builder differential, and broad tests exercise the ported subset and lifecycle placement"
+      "Project function-registry tests enforce a 167-definition finite rebuild and source-exact representative flags/user data; global lifecycle, SQL frontend, VDBE builder differential, and broad tests exercise the subset and lifecycle placement"
     ]
   }
 }
