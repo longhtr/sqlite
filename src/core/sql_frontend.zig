@@ -1430,10 +1430,14 @@ fn ensureAttachmentCatalog(connection: *Connection) attachment_runtime.Error!*at
     return &connection.attachments.?;
 }
 
+fn schemaSliceMatches(connection: *const Connection, requested: ?[]const u8) bool {
+    const name = requested orelse return true;
+    const expected = if (connection.main_schema_name) |main_name| main_name else "main";
+    return std.ascii.eqlIgnoreCase(name, expected) or std.ascii.eqlIgnoreCase(name, "main");
+}
+
 fn schemaNameMatches(connection: *const Connection, database_name: ?[*:0]const u8) bool {
-    const requested = if (database_name) |name| std.mem.span(name) else return true;
-    const expected = if (connection.main_schema_name) |name| name else "main";
-    return std.ascii.eqlIgnoreCase(requested, expected) or std.ascii.eqlIgnoreCase(requested, "main");
+    return schemaSliceMatches(connection, if (database_name) |name| std.mem.span(name) else null);
 }
 
 fn attachedDatabaseByName(connection: *Connection, database_name: ?[*:0]const u8) ?*AttachedDatabase {
@@ -6590,7 +6594,7 @@ const LocatedDatabaseOutcome = struct {
 };
 
 fn locateDatabase(connection: *Connection, database_name: ?[]const u8) LocatedDatabaseOutcome {
-    if (database_name == null or std.ascii.eqlIgnoreCase(database_name.?, "main")) {
+    if (schemaSliceMatches(connection, database_name)) {
         if (connection.pending_deserialize_readonly != null) {
             const opened = openPendingDeserializedDatabase(connection);
             if (opened != .ok) return .{ .result = opened };

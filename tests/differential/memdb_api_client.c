@@ -31,6 +31,7 @@ static sqlite3_mem_methods fault_methods={fault_malloc,fault_free,fault_realloc,
 #ifdef NATIVE_ENGINE
 extern int zig_sqlite3_config_malloc(const sqlite3_mem_methods*);
 extern int zig_sqlite3_db_config_flag(sqlite3*,int,int,int*);
+extern int zig_sqlite3_db_config_main_name(sqlite3*,const char*);
 #endif
 
 static int query_value(sqlite3 *db, const char *sql, sqlite3_int64 *value){
@@ -216,6 +217,18 @@ int main(void){
   int attached_release_rc=sqlite3_db_release_memory(attached);
   int attached_flush_rc=sqlite3_db_cacheflush(attached);
   printf("attached-control\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",attached_metadata_rc,attached_type&&strcmp(attached_type,"INTEGER")==0,attached_collation&&strcmp(attached_collation,"BINARY")==0,attached_not_null,attached_primary_key,attached_autoincrement,missing_metadata_rc,missing_type==0,missing_collation==0,missing_not_null,missing_primary_key,missing_autoincrement,attached_reserve_rc,attached_reserve,attached_release_rc,attached_flush_rc);
+
+#ifdef NATIVE_ENGINE
+  int main_name_rc=zig_sqlite3_db_config_main_name(source,"primary");
+#else
+  int main_name_rc=sqlite3_db_config(source,SQLITE_DBCONFIG_MAINDBNAME,"primary");
+#endif
+  sqlite3_int64 renamed_value=-1,main_alias_value=-1;
+  int renamed_query_rc=query_value(source,"SELECT x FROM primary.t",&renamed_value);
+  int main_alias_query_rc=query_value(source,"SELECT x FROM main.t",&main_alias_value);
+  int renamed_txn_state=sqlite3_txn_state(source,"primary");
+  const char *renamed_db_name=sqlite3_db_name(source,0);
+  printf("main-name\t%d\t%d\t%lld\t%d\t%lld\t%d\t%d\n",main_name_rc,renamed_query_rc,(long long)renamed_value,main_alias_query_rc,(long long)main_alias_value,renamed_txn_state,renamed_db_name&&strcmp(renamed_db_name,"primary")==0);
   sqlite3_free(attached_replacement);
 
   int close_clone = sqlite3_close(clone);
