@@ -252,6 +252,7 @@ pub const Connection = struct {
     statement_head: ?*statement.Statement = null,
     active_blobs: usize = 0,
     active_backups: usize = 0,
+    active_source_backups: usize = 0,
     deferred_close: bool = false,
     error_mask: c_int = 0xff,
     last_insert_rowid: i64 = 0,
@@ -2841,10 +2842,13 @@ pub export fn sqlite3_deserialize(pointer: ?*sqlite3, schema: ?[*:0]const u8, da
     if (connection.active_statements != 0) return ResultCode.misuse.toC();
     const attached: ?*AttachedDatabase = if (schemaNameMatches(connection, schema)) null else attachedDatabaseByName(connection, schema) orelse return ResultCode.error_.toC();
     if (attached) |target| {
+        if (target.active_blobs != 0 or target.active_backups != 0) return ResultCode.busy.toC();
         if (target.pending_deserialize_readonly != null) {
             const pending_result = openPendingAttachedDatabase(target);
             if (pending_result != .ok) return pending_result.toC();
         }
+    } else if (connection.active_blobs != 0 or connection.active_source_backups != 0) {
+        return ResultCode.busy.toC();
     } else if (connection.pending_deserialize_readonly != null) {
         const pending_result = openPendingDeserializedDatabase(connection);
         if (pending_result != .ok) return pending_result.toC();
@@ -3126,11 +3130,12 @@ pub export fn sqlite3_blob_write(pointer: ?*sqlite3_blob, input: ?*const anyopaq
 const Backup = struct {
     destination: *Connection,
     source: *Connection,
+    source_database: *btree.Database,
     destination_name: [:0]u8,
     source_name: [:0]u8,
     source_attached: ?*AttachedDatabase,
     source_page_size: u32,
-    source_changes: i64 = 0,
+    source_writes: u64 = 0,
     image: ?[*]u8 = null,
     image_size: i64 = 0,
     image_capacity: i64 = 0,
@@ -3175,16 +3180,17 @@ pub export fn sqlite3_backup_init(destination_pointer: ?*sqlite3, destination_na
         destination.last_result = .error_;
         return null;
     };
-    backup.* = .{ .destination = destination, .source = source, .destination_name = destination_copy, .source_name = source_copy, .source_attached = source_attached, .source_page_size = located_source.database.?.pager.page_size };
+    backup.* = .{ .destination = destination, .source = source, .source_database = located_source.database.?, .destination_name = destination_copy, .source_name = source_copy, .source_attached = source_attached, .source_page_size = located_source.database.?.pager.page_size };
     destination.active_backups += 1;
     source.active_backups += 1;
+    source.active_source_backups += 1;
     if (source_attached) |owner| owner.active_backups += 1;
     return @ptrCast(backup);
 }
 pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callconv(.c) c_int {
     const backup: *Backup = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
     if (backup.result != .ok) return backup.result.toC();
-    if (backup.image != null and backup.source.total_changes != backup.source_changes) {
+    if (backup.image != null and backup.source_database.pager.stats.database_writes != backup.source_writes) {
         public_api.sqlite3_free(backup.image.?);
         backup.image = null;
         backup.remaining = 0;
@@ -3197,7 +3203,7 @@ pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callc
             return backup.result.toC();
         };
         backup.image = bytes;
-        backup.source_changes = backup.source.total_changes;
+        backup.source_writes = backup.source_database.pager.stats.database_writes;
         backup.image_size = size;
         backup.image_capacity = @intCast(public_api.sqlite3_msize(bytes));
         const page_size: i64 = @intCast(backup.source_page_size);
@@ -3241,9 +3247,10 @@ pub export fn sqlite3_backup_finish(pointer: ?*sqlite3_backup) callconv(.c) c_in
     destination.allocator.free(backup.destination_name);
     destination.allocator.free(backup.source_name);
     destination.allocator.destroy(backup);
-    std.debug.assert(destination.active_backups > 0 and source.active_backups > 0);
+    std.debug.assert(destination.active_backups > 0 and source.active_backups > 0 and source.active_source_backups > 0);
     destination.active_backups -= 1;
     source.active_backups -= 1;
+    source.active_source_backups -= 1;
     const close_destination = !connectionIsBusy(destination) and destination.deferred_close;
     const close_source = !connectionIsBusy(source) and source.deferred_close;
     if (close_destination) {
