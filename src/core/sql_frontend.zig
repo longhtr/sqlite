@@ -2536,6 +2536,48 @@ fn statementMemoryUsed(connection: *const Connection) i64 {
     return @intCast(@min(total, @as(usize, std.math.maxInt(i64))));
 }
 
+fn addDatabaseStatus(current: *i64, database: *btree.Database, operation: c_int, reset: bool) void {
+    const value: u64 = switch (operation) {
+        1, 11 => value: {
+            const per_page = @as(usize, database.pager.page_size) + @sizeOf(page_cache.Page);
+            const bytes = std.math.mul(usize, database.pager.cache.pageCount(), per_page) catch std.math.maxInt(usize);
+            break :value @intCast(bytes);
+        },
+        7 => database.pager.stats.cache_hits,
+        8 => database.pager.stats.cache_misses,
+        9 => database.pager.stats.database_writes,
+        12 => database.pager.stats.cache_spills,
+        else => unreachable,
+    };
+    const bounded: i64 = @intCast(@min(value, @as(u64, std.math.maxInt(i64))));
+    current.* = std.math.add(i64, current.*, bounded) catch std.math.maxInt(i64);
+    if (reset) {
+        switch (operation) {
+            7 => database.pager.stats.cache_hits = 0,
+            8 => database.pager.stats.cache_misses = 0,
+            9 => database.pager.stats.database_writes = 0,
+            12 => database.pager.stats.cache_spills = 0,
+            1, 11 => {},
+            else => unreachable,
+        }
+    }
+}
+
+fn addAllDatabaseStatus(connection: *Connection, operation: c_int, reset: bool, current: *i64) void {
+    if (connection.database) |database| {
+        addDatabaseStatus(current, database, operation, reset);
+    }
+    if (connection.attachments) |*attachments| {
+        for (attachments.databases.items[2..]) |entry| {
+            const native = entry.native_context orelse continue;
+            const attached: *AttachedDatabase = @ptrCast(@alignCast(native));
+            if (attached.database) |*database| {
+                addDatabaseStatus(current, database, operation, reset);
+            }
+        }
+    }
+}
+
 /// Source `sqlite3_db_status64()`: report connection-local lookaside, pager
 /// cache, schema, statement, cache-hit/miss, spill, and deferred-FK status,
 /// resetting cumulative pager values only when requested.
@@ -2544,47 +2586,11 @@ fn databaseStatus64(connection: *Connection, operation: c_int, current: *i64, hi
     highwater.* = 0;
     switch (operation) {
         0 => current.* = lookasideUsed(connection, highwater, reset),
-        1, 11 => {
-            if (connection.database) |database| {
-                const bytes = database.pager.cache.pageCount() * (@as(usize, database.pager.page_size) + @sizeOf(page_cache.Page));
-                current.* = @intCast(@min(bytes, @as(usize, std.math.maxInt(i64))));
-            }
-        },
+        1, 11 => addAllDatabaseStatus(connection, operation, false, current),
         2 => current.* = schemaMemoryUsed(connection),
         3 => current.* = statementMemoryUsed(connection),
         4, 5, 6 => {}, // Lookaside hit/miss counters remain zero without lookaside.
-        7 => {
-            if (connection.database) |database| {
-                current.* = @intCast(@min(database.pager.stats.cache_hits, @as(u64, std.math.maxInt(i64))));
-                if (reset) {
-                    database.pager.stats.cache_hits = 0;
-                }
-            }
-        },
-        8 => {
-            if (connection.database) |database| {
-                current.* = @intCast(@min(database.pager.stats.cache_misses, @as(u64, std.math.maxInt(i64))));
-                if (reset) {
-                    database.pager.stats.cache_misses = 0;
-                }
-            }
-        },
-        9 => {
-            if (connection.database) |database| {
-                current.* = @intCast(@min(database.pager.stats.database_writes, @as(u64, std.math.maxInt(i64))));
-                if (reset) {
-                    database.pager.stats.database_writes = 0;
-                }
-            }
-        },
-        12 => {
-            if (connection.database) |database| {
-                current.* = @intCast(@min(database.pager.stats.cache_spills, @as(u64, std.math.maxInt(i64))));
-                if (reset) {
-                    database.pager.stats.cache_spills = 0;
-                }
-            }
-        },
+        7, 8, 9, 12 => addAllDatabaseStatus(connection, operation, reset, current),
         13 => {}, // Temporary buffers are not separately metered.
         10 => {}, // Foreign-key enforcement has no unresolved deferred set.
         else => return ResultCode.error_.toC(),

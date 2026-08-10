@@ -217,6 +217,13 @@ int main(void){
   int attached_release_rc=sqlite3_db_release_memory(attached);
   int attached_flush_rc=sqlite3_db_cacheflush(attached);
   printf("attached-control\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",attached_metadata_rc,attached_type&&strcmp(attached_type,"INTEGER")==0,attached_collation&&strcmp(attached_collation,"BINARY")==0,attached_not_null,attached_primary_key,attached_autoincrement,missing_metadata_rc,missing_type==0,missing_collation==0,missing_not_null,missing_primary_key,missing_autoincrement,attached_reserve_rc,attached_reserve,attached_release_rc,attached_flush_rc);
+  sqlite3_int64 attached_cache_used=0,attached_cache_high=9;
+  int attached_cache_status_rc=sqlite3_db_status64(attached,SQLITE_DBSTATUS_CACHE_USED,&attached_cache_used,&attached_cache_high,0);
+  sqlite3_int64 attached_hits=0,attached_hits_high=9;
+  int attached_hits_rc=sqlite3_db_status64(attached,SQLITE_DBSTATUS_CACHE_HIT,&attached_hits,&attached_hits_high,1);
+  sqlite3_int64 attached_hits_after=9,attached_hits_after_high=9;
+  int attached_hits_after_rc=sqlite3_db_status64(attached,SQLITE_DBSTATUS_CACHE_HIT,&attached_hits_after,&attached_hits_after_high,0);
+  printf("attached-status\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",attached_cache_status_rc,attached_cache_used>=0,attached_cache_high==0,attached_hits_rc,attached_hits>0,attached_hits_high==0,attached_hits_after_rc,attached_hits_after==0);
 
 #ifdef NATIVE_ENGINE
   int main_name_rc=zig_sqlite3_db_config_main_name(source,"primary");

@@ -25,6 +25,7 @@ comptime {
     _ = &frontend.sqlite3_file_control;
     _ = &frontend.sqlite3_db_release_memory;
     _ = &frontend.sqlite3_db_cacheflush;
+    _ = &frontend.sqlite3_db_status64;
     _ = &frontend.zig_sqlite3_db_config_flag;
     _ = &frontend.zig_sqlite3_db_config_main_name;
     _ = &frontend.sqlite3_prepare_v2;
