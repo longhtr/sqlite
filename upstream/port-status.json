@@ -94,7 +94,7 @@
     "utf_active_entities_differentially_checked": 13,
     "vdbe_opcode_coverage_warning": "A mapped case proves name-level runtime presence only, not complete SQLite semantics or fidelity.",
     "vlist_entities_differentially_checked": 0,
-    "zig_source_lines": 83164
+    "zig_source_lines": 83226
   },
   "overall_status": "incomplete-control-revalidation-and-source-port",
   "public_api": {
@@ -141,7 +141,7 @@
     "active_profile_entities": 6752,
     "active_source_files": 85,
     "ast_resolved_legacy_target_references": 451,
-    "ast_resolved_reviewed_target_references": 1896,
+    "ast_resolved_reviewed_target_references": 1897,
     "atomic_unit_dossiers_admission_ready": 47,
     "atomic_unit_dossiers_total": 47,
     "atomic_units_assurance_passed": 0,
@@ -232,8 +232,8 @@
       "unique": 1737
     },
     "historical_claims_assigned_to_atomic_units": 106,
-    "historical_claims_conflicting_with_canonical_target": 270,
-    "historical_claims_matching_canonical_target": 137,
+    "historical_claims_conflicting_with_canonical_target": 269,
+    "historical_claims_matching_canonical_target": 138,
     "historical_claims_without_canonical_target": 1331,
     "historical_mechanical_claims": 1738,
     "historical_mechanical_short_functions": 172,

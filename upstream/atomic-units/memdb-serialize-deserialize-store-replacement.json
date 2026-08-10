@@ -5,7 +5,7 @@
   "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
-    "rationale": "These three source functions resolve a schema to a private memdb store, expose copied or borrowed database images, and replace a schema store with caller-provided bytes and ownership/resize/read-only flags. Native public APIs preserve main-schema copy/NOCOPY sizing and directly adopt replacement buffers with source-shaped capacity, resize, ownership, and read-only flags; attached-schema closure and complete differential assurance remain open.",
+    "rationale": "These three source functions resolve a schema to a private memdb store, expose copied or borrowed database images, and replace a schema store with caller-provided bytes and ownership/resize/read-only flags. Native public APIs preserve main-schema copy/NOCOPY sizing and stage replacement buffers with source-shaped capacity, configured maximum, resize, ownership, and read-only flags before retiring the existing database; attached-schema closure and complete differential assurance remain open.",
     "source_files": [
       {
         "path": "src/memdb.c",
@@ -90,7 +90,7 @@
     "ownership": "Copy serialization returns process-manager memory to caller. NOCOPY borrows store bytes. Deserialization transfers or borrows pData according to FREEONCLOSE and publishes no partial replacement on failure.",
     "state_and_results": "Size output begins at -1, successful schema resolution reports image size, NOCOPY succeeds only for private memdb, and deserialize sets size/capacity/max/flags before reopening schema.",
     "locks_callbacks_io": "Source holds connection then MemStore mutexes. Native serialized connection path uses MemoryVfs registry/store mutexes and may read Unix file bytes; no callbacks.",
-    "failure_and_continuation": "Invalid connection/sizes return misuse, missing schema returns null/error, OOM returns null/NOMEM, and failed replacement must preserve a closable connection and honor FREEONCLOSE exactly."
+    "failure_and_continuation": "Invalid connection/sizes return misuse, missing schema returns null/error, OOM returns null/NOMEM. Failure before replacement publication preserves the existing usable database, and every failure honors FREEONCLOSE exactly without double-free."
   },
   "mappings": [
     {
@@ -115,6 +115,7 @@
       "source_entity_id": "src/memdb.c::function::sqlite3_deserialize::line-841",
       "relation": "source-deserialize-api-to-native-connection-candidate",
       "zig_declaration_ids": [
+        "src/core/memdb.zig::function::deserialize",
         "src/core/sql_frontend.zig::function::sqlite3_deserialize",
         "src/core/vfs.zig::function::MemoryVfs.adoptVolatileBuffer"
       ]
@@ -123,11 +124,11 @@
   "representation_differences": [
     "Private main-memory database lookup uses Connection.memory_backend instead of sqlite3_file_control plus memdb_io_methods identity.",
     "NOCOPY now borrows the exact native main-store byte pointer and copied output uses the process memory manager.",
-    "Deserialize adopts pData directly as native store bytes, preserves szDb/szBuf, doubles process-manager reallocations up to the memdb maximum, and keeps post-replacement NOCOPY pointer identity.",
+    "Deserialize stages pData directly as native store bytes, preserves szDb/szBuf, applies max(szBuf, configured process memdb maximum), doubles process-manager reallocations up to that bound, and keeps post-replacement NOCOPY pointer identity.",
     "Only main schema is supported; source can replace eligible attached schemas."
   ],
   "oracle": {
-    "protocol": "Native SQL frontend and C ABI integration create a database image, copy serialize with nullable size, NOCOPY borrow with exact native pointer/size, reject missing schema with size -1, deserialize a clone, enforce read-only opening, and validate negative-capacity armor. A pinned C/Zig flag/ownership differential remains open.",
+    "protocol": "Native SQL frontend and C ABI integration create a database image, copy serialize with nullable size, NOCOPY borrow with exact native pointer/size, reject missing schema with size -1, deserialize a clone, enforce read-only opening, validate negative-capacity armor, preserve the old database on pre-publication allocation failure, release FREEONCLOSE input, and enforce the configured maximum. A pinned C/Zig flag/ownership differential remains open.",
     "internal_observations": [
       "size output initialization and success",
       "copied image allocator ownership",
@@ -145,10 +146,10 @@
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
-    "oom": "Copy allocation is exercised through integration tests; direct FREEONCLOSE close, borrowed storage, read-only storage, and successful resize behavior are covered. The complete transferred-buffer failure/OOM/free matrix remains open.",
+    "oom": "Copy allocation, direct FREEONCLOSE close, borrowed storage, read-only storage, successful resize, configured maximum, pre-publication backend OOM, exact NOMEM, old-database continuation, and input release are covered. Injected process-manager realloc failure and the complete flag matrix remain open.",
     "io_crash_concurrency": "Unix serialization reads a stable file in the serialized connection path. Exact connection/store lock ordering and concurrent API misuse traces remain open.",
     "malformed_input": "Negative size/capacity, null data and unknown schema have native guards; full source API-armor matrix remains open.",
-    "continuation": "Successful clone and subsequent SQL pass; failure continuation and FREEONCLOSE ownership matrix remain open.",
+    "continuation": "Successful clone and subsequent SQL pass. Pre-publication allocation failure preserves queryable old content and releases FREEONCLOSE input; post-publication malformed/reopen continuation remains open.",
     "performance": "NOCOPY is constant time. Copy serialization is linear; disk path reads one image rather than source page iteration.",
     "commands": [
       "zig test src/core/sql_frontend.zig -lc",
@@ -169,7 +170,7 @@
     "notes": "Requires external-buffer adoption, full flags/schema/OOM differential, assurance, and independent review."
   },
   "known_blockers": [
-    "Complete the transferred-buffer failure/OOM/free differential, including resize failure and configured memdb maximum.",
+    "Complete the transferred-buffer flag/OOM/free differential, including injected process-manager resize failure; configured maximum and pre-publication backend OOM are covered.",
     "Support eligible attached schemas and source reopen path.",
     "Add pinned C/Zig flags, OOM, ownership and continuation differential.",
     "Independent fidelity review remains open."
@@ -195,7 +196,7 @@
     "assertions_branches_cleanup": [
       "All 44 behavior IDs cover schema resolution, size initialization, private/shared/ordinary branches, NOCOPY, empty database materialization, allocation/page loop cleanup, deserialize armor/schema/reopen, transfer and failure FREEONCLOSE",
       "Copy results are caller-owned sqlite3_malloc memory; NOCOPY is borrowed and only available for private stores; adopted bytes are borrowed or owned according to FREEONCLOSE and must not be double-freed",
-      "Native main-schema copy/NOCOPY/adoption/readonly/resizable paths are reachable and tested, but attached-schema reopen, exact Btree page-by-page fallback equivalence, and complete failure/OOM/free matrix remain blockers",
+      "Native main-schema copy/NOCOPY/adoption/readonly/resizable paths, configured maximum, and pre-publication OOM continuation are reachable and tested, but attached-schema reopen, exact Btree page-by-page fallback equivalence, process-manager realloc failure, and the complete flag matrix remain blockers",
       "Failure before transfer honors FREEONCLOSE; failure after successful transfer leaves the replacement backend as owner and connection closable, though complete source continuation traces remain open"
     ],
     "upstream_tests": [

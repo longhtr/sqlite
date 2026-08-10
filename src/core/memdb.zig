@@ -225,14 +225,36 @@ pub fn serialize(allocator: std.mem.Allocator, store: SchemaStore, name: []const
 
 /// Source `sqlite3_deserialize()`: create a private memdb, transfer the caller
 /// buffer into its main file, and preserve resize and readonly ownership flags.
-pub fn deserialize(allocator: std.mem.Allocator, data: [*]u8, size: usize, capacity: usize, flags: c_uint) !vfs.MemoryVfs {
+pub fn deserialize(
+    allocator: std.mem.Allocator,
+    data: [*]u8,
+    size: usize,
+    capacity: usize,
+    flags: c_uint,
+    maximum: i64,
+) error{ InvalidSize, OutOfMemory, OpenFailed }!vfs.MemoryVfs {
     if (size > capacity) return error.InvalidSize;
     var backend = vfs.MemoryVfs.init(allocator);
+    backend.memdb_max_size = maximum;
     errdefer backend.deinit();
     const opened = backend.open("main", vfs.OPEN_READWRITE | vfs.OPEN_CREATE | vfs.OPEN_MAIN_DB);
+    if (opened.rc == vfs.NOMEM) return error.OutOfMemory;
     if (opened.rc != vfs.OK) return error.OpenFailed;
     const file = opened.file.?;
     backend.adoptVolatileBuffer(file, data, size, capacity, flags);
     _ = backend.closeAndDestroy(file);
     return backend;
+}
+
+test "deserialize preserves the configured memdb maximum" {
+    const data = try std.testing.allocator.alloc(u8, 16);
+    defer std.testing.allocator.free(data);
+    @memset(data, 0);
+    var backend = try deserialize(std.testing.allocator, data.ptr, data.len, data.len, vfs.DESERIALIZE_RESIZEABLE, 16);
+    defer backend.deinit();
+    const opened = backend.open("main", vfs.OPEN_READWRITE | vfs.OPEN_MAIN_DB);
+    try std.testing.expectEqual(vfs.OK, opened.rc);
+    const file = opened.file.?;
+    try std.testing.expectEqual(vfs.FULL, file.write(&.{1}, data.len));
+    try std.testing.expectEqual(vfs.OK, backend.closeAndDestroy(file));
 }
