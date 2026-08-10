@@ -18,6 +18,12 @@ comptime {
     _ = &frontend.sqlite3_backup_finish;
     _ = &frontend.sqlite3_backup_remaining;
     _ = &frontend.sqlite3_backup_pagecount;
+    _ = &frontend.sqlite3_txn_state;
+    _ = &frontend.sqlite3_wal_checkpoint_v2;
+    _ = &frontend.sqlite3_table_column_metadata;
+    _ = &frontend.sqlite3_file_control;
+    _ = &frontend.sqlite3_db_release_memory;
+    _ = &frontend.sqlite3_db_cacheflush;
     _ = &frontend.zig_sqlite3_db_config_flag;
     _ = &frontend.sqlite3_prepare_v2;
     _ = &statement.sqlite3_step;

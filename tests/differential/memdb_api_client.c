@@ -195,6 +195,27 @@ int main(void){
   int attached_backup_target_detach_rc=sqlite3_exec(backup_target,"DETACH auxcopy",0,0,0);
   int attached_backup_target_close_rc=sqlite3_close(backup_target);
   printf("attached-backup\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",backup_target_open_rc,backup_target_attach_rc,attached_backup_init_ok,attached_backup_detach_rc,attached_backup_step_rc,attached_backup_remaining,attached_backup_pages,attached_backup_finish_rc,attached_backup_query_rc,(long long)attached_backup_value,attached_backup_target_detach_rc,attached_backup_target_close_rc);
+
+  int attached_txn_state=sqlite3_txn_state(attached,"aux");
+  int attached_txn_all=sqlite3_txn_state(attached,0);
+  int attached_txn_missing=sqlite3_txn_state(attached,"missing");
+  int attached_wal_log=77,attached_wal_checkpointed=88;
+  int attached_wal_rc=sqlite3_wal_checkpoint_v2(attached,"aux",SQLITE_CHECKPOINT_PASSIVE,&attached_wal_log,&attached_wal_checkpointed);
+  int missing_wal_log=77,missing_wal_checkpointed=88;
+  int missing_wal_rc=sqlite3_wal_checkpoint_v2(attached,"missing",SQLITE_CHECKPOINT_PASSIVE,&missing_wal_log,&missing_wal_checkpointed);
+  printf("attached-state\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",attached_txn_state,attached_txn_all,attached_txn_missing,attached_wal_rc,attached_wal_log,attached_wal_checkpointed,missing_wal_rc,missing_wal_log,missing_wal_checkpointed);
+
+  const char *attached_type=(const char*)1,*attached_collation=(const char*)1;
+  int attached_not_null=9,attached_primary_key=9,attached_autoincrement=9;
+  int attached_metadata_rc=sqlite3_table_column_metadata(attached,"aux","t","id",&attached_type,&attached_collation,&attached_not_null,&attached_primary_key,&attached_autoincrement);
+  const char *missing_type=(const char*)1,*missing_collation=(const char*)1;
+  int missing_not_null=9,missing_primary_key=9,missing_autoincrement=9;
+  int missing_metadata_rc=sqlite3_table_column_metadata(attached,"aux","t","missing",&missing_type,&missing_collation,&missing_not_null,&missing_primary_key,&missing_autoincrement);
+  int attached_reserve=-1;
+  int attached_reserve_rc=sqlite3_file_control(attached,"aux",SQLITE_FCNTL_RESERVE_BYTES,&attached_reserve);
+  int attached_release_rc=sqlite3_db_release_memory(attached);
+  int attached_flush_rc=sqlite3_db_cacheflush(attached);
+  printf("attached-control\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",attached_metadata_rc,attached_type&&strcmp(attached_type,"INTEGER")==0,attached_collation&&strcmp(attached_collation,"BINARY")==0,attached_not_null,attached_primary_key,attached_autoincrement,missing_metadata_rc,missing_type==0,missing_collation==0,missing_not_null,missing_primary_key,missing_autoincrement,attached_reserve_rc,attached_reserve,attached_release_rc,attached_flush_rc);
   sqlite3_free(attached_replacement);
 
   int close_clone = sqlite3_close(clone);

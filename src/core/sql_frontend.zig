@@ -2435,23 +2435,33 @@ fn hasAutoincrement(token_list: []const Token) bool {
 /// Source `sqlite3_table_column_metadata()`: resolve a table column under the
 /// connection mutex and return declared type, collation, constraints, and
 /// autoincrement metadata from its stored CREATE TABLE statement.
-fn tableColumnMetadata(connection: *Connection, database_name: ?[*:0]const u8, table_name: [*:0]const u8, column_name: [*:0]const u8, type_output: ?*?[*:0]const u8, collation_output: ?*?[*:0]const u8, not_null_output: ?*c_int, primary_key_output: ?*c_int, autoincrement_output: ?*c_int) c_int {
+fn tableColumnMetadata(connection: *Connection, database_name: ?[*:0]const u8, table_name: [*:0]const u8, column_name: ?[*:0]const u8, type_output: ?*?[*:0]const u8, collation_output: ?*?[*:0]const u8, not_null_output: ?*c_int, primary_key_output: ?*c_int, autoincrement_output: ?*c_int) c_int {
     connection.connection_mutex.enter();
     defer connection.connection_mutex.leave();
-    if (!schemaNameMatches(connection, database_name)) return ResultCode.error_.toC();
-    const database = connection.database orelse return ResultCode.misuse.toC();
-    const schema_outcome = database.schemaTable(std.mem.span(table_name));
+    if (type_output) |output| output.* = null;
+    if (collation_output) |output| output.* = null;
+    if (not_null_output) |output| output.* = 0;
+    if (primary_key_output) |output| output.* = 0;
+    if (autoincrement_output) |output| output.* = 0;
+    const requested_database = if (database_name) |name| std.mem.span(name) else "main";
+    const located = locateDatabase(connection, if (schemaNameMatches(connection, database_name)) null else requested_database);
+    if (located.result != .ok) return (if (located.result == .not_found) ResultCode.error_ else located.result).toC();
+    const schema_outcome = located.database.?.schemaTable(std.mem.span(table_name));
     if (schema_outcome.result != .ok) return schema_outcome.result.toC();
     var schema = schema_outcome.table.?;
     defer schema.deinit();
+    if (column_name == null) return ResultCode.ok.toC();
     const resolved = resolveColumns(connection.allocator, schema.sql) catch return ResultCode.no_memory.toC();
     defer {
         connection.allocator.free(resolved.columns);
         connection.allocator.free(resolved.tokens);
         connection.allocator.free(resolved.source);
     }
+    const requested_column = std.mem.span(column_name.?);
+    var rowid_alias = std.ascii.eqlIgnoreCase(requested_column, "rowid") or std.ascii.eqlIgnoreCase(requested_column, "oid") or std.ascii.eqlIgnoreCase(requested_column, "_rowid_");
     for (resolved.columns) |item| {
-        if (!std.ascii.eqlIgnoreCase(item.name, std.mem.span(column_name))) continue;
+        if (!std.ascii.eqlIgnoreCase(item.name, requested_column) and !(rowid_alias and item.integer_primary_key)) continue;
+        rowid_alias = false;
         if (type_output) |output| {
             const count = @min(item.declared_type.len, metadata_type_buffer.len - 1);
             @memcpy(metadata_type_buffer[0..count], item.declared_type[0..count]);
@@ -2465,8 +2475,14 @@ fn tableColumnMetadata(connection: *Connection, database_name: ?[*:0]const u8, t
             output.* = @ptrCast(&metadata_collation_buffer);
         }
         if (not_null_output) |output| output.* = @intFromBool(item.not_null);
-        if (primary_key_output) |output| output.* = @intFromBool(item.integer_primary_key);
+        if (primary_key_output) |output| output.* = @intFromBool(item.primary_key);
         if (autoincrement_output) |output| output.* = @intFromBool(item.integer_primary_key and hasAutoincrement(resolved.tokens));
+        return ResultCode.ok.toC();
+    }
+    if (rowid_alias) {
+        if (type_output) |output| output.* = "INTEGER";
+        if (collation_output) |output| output.* = "BINARY";
+        if (primary_key_output) |output| output.* = 1;
         return ResultCode.ok.toC();
     }
     return ResultCode.error_.toC();
@@ -2474,7 +2490,7 @@ fn tableColumnMetadata(connection: *Connection, database_name: ?[*:0]const u8, t
 
 pub export fn sqlite3_table_column_metadata(pointer: ?*sqlite3, database_name: ?[*:0]const u8, table_name: ?[*:0]const u8, column_name: ?[*:0]const u8, type_output: ?*?[*:0]const u8, collation_output: ?*?[*:0]const u8, not_null_output: ?*c_int, primary_key_output: ?*c_int, autoincrement_output: ?*c_int) callconv(.c) c_int {
     const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
-    return tableColumnMetadata(connection, database_name, table_name orelse return ResultCode.misuse.toC(), column_name orelse return ResultCode.misuse.toC(), type_output, collation_output, not_null_output, primary_key_output, autoincrement_output);
+    return tableColumnMetadata(connection, database_name, table_name orelse return ResultCode.misuse.toC(), column_name, type_output, collation_output, not_null_output, primary_key_output, autoincrement_output);
 }
 
 /// Source `sqlite3LookasideUsed()`: return outstanding lookaside slots and
@@ -2594,11 +2610,11 @@ pub export fn sqlite3_db_status(pointer: ?*sqlite3, operation: c_int, current: ?
 /// handle reserve/cache controls locally, and dispatch all other operations to
 /// the selected database file's xFileControl method.
 fn fileControl(connection: *Connection, database_name: ?[*:0]const u8, operation: c_int, argument: ?*anyopaque) c_int {
-    if (database_name) |name| {
-        const expected = if (connection.main_schema_name) |schema| schema else "main";
-        if (!std.ascii.eqlIgnoreCase(std.mem.span(name), expected)) return ResultCode.error_.toC();
-    }
-    const database = connection.database orelse return ResultCode.error_.toC();
+    const requested_database = if (database_name) |name| std.mem.span(name) else "main";
+    const main_database = schemaNameMatches(connection, database_name);
+    const located = locateDatabase(connection, if (main_database) null else requested_database);
+    if (located.result != .ok) return (if (located.result == .not_found) ResultCode.error_ else located.result).toC();
+    const database = located.database.?;
     const raw = argument orelse return ResultCode.misuse.toC();
     switch (operation) {
         7 => {
@@ -2623,7 +2639,12 @@ fn fileControl(connection: *Connection, database_name: ?[*:0]const u8, operation
         },
         36 => {
             const limit: *i64 = @ptrCast(@alignCast(raw));
-            const store = memdb.fromSchema(if (connection.memory_backend) |*memory| memory else null, connection.shared_memdb, "main") orelse return ResultCode.not_found.toC();
+            const store = (if (main_database)
+                memdb.fromSchema(if (connection.memory_backend) |*memory| memory else null, connection.shared_memdb, "main")
+            else attached: {
+                const owner = attachedDatabaseByName(connection, database_name) orelse return ResultCode.error_.toC();
+                break :attached memdb.fromSchema(&owner.memory_backend, null, "main");
+            }) orelse return ResultCode.not_found.toC();
             limit.* = memdb.fileControl(store.backend, if (store.allow_no_copy) "main" else "/main", limit.*);
             return ResultCode.ok.toC();
         },
@@ -2659,6 +2680,15 @@ fn releaseDatabaseMemory(connection: *Connection) c_int {
     if (connection.database) |database| {
         _ = database.pager.cache.shrink();
     }
+    if (connection.attachments) |*attachments| {
+        for (attachments.databases.items[2..]) |entry| {
+            const native = entry.native_context orelse continue;
+            const attached: *AttachedDatabase = @ptrCast(@alignCast(native));
+            if (attached.database) |*database| {
+                _ = database.pager.cache.shrink();
+            }
+        }
+    }
     return ResultCode.ok.toC();
 }
 
@@ -2673,8 +2703,24 @@ pub export fn sqlite3_db_release_memory(pointer: ?*sqlite3) callconv(.c) c_int {
 /// the connection pager while preserving BUSY if WAL or page references block
 /// a safe spill.
 fn flushDatabaseCache(connection: *Connection) c_int {
-    const database = connection.database orelse return ResultCode.ok.toC();
-    return database.pager.flushUnreferencedDirty().toC();
+    var result = if (connection.database) |database| database.pager.flushUnreferencedDirty() else ResultCode.ok;
+    var saw_busy = result == .busy;
+    if (saw_busy) result = .ok;
+    if (connection.attachments) |*attachments| {
+        for (attachments.databases.items[2..]) |entry| {
+            if (result != .ok) break;
+            const native = entry.native_context orelse continue;
+            const attached: *AttachedDatabase = @ptrCast(@alignCast(native));
+            const database = if (attached.database) |*database| database else continue;
+            const attached_result = database.pager.flushUnreferencedDirty();
+            if (attached_result == .busy) {
+                saw_busy = true;
+            } else if (attached_result != .ok) {
+                result = attached_result;
+            }
+        }
+    }
+    return (if (result == .ok and saw_busy) ResultCode.busy else result).toC();
 }
 
 pub export fn sqlite3_db_cacheflush(pointer: ?*sqlite3) callconv(.c) c_int {
@@ -3226,8 +3272,8 @@ pub export fn sqlite3_wal_autocheckpoint(pointer: ?*sqlite3, pages: c_int) callc
 
 /// Source `sqlite3Checkpoint()`: dispatch one validated checkpoint mode to
 /// the selected pager and preserve separate log and backfill counts.
-fn checkpoint(connection: *Connection, mode: wal.CheckpointMode, log_frames: ?*c_int, checkpointed_frames: ?*c_int) c_int {
-    const database = connection.database orelse return ResultCode.misuse.toC();
+fn checkpoint(database: *btree.Database, mode: wal.CheckpointMode, log_frames: ?*c_int, checkpointed_frames: ?*c_int) c_int {
+    if (!database.pager.isWalMode()) return ResultCode.ok.toC();
     const result = database.pager.checkpointWalMode(mode);
     if (log_frames) |value| {
         value.* = @intCast(result.frames);
@@ -3248,11 +3294,31 @@ fn checkpointConnection(connection: *Connection, schema: ?[*:0]const u8, mode: c
         value.* = -1;
     }
     if (mode < -1 or mode > 3) return ResultCode.misuse.toC();
-    if (schema) |name| {
-        if (!std.ascii.eqlIgnoreCase(std.mem.span(name), "main")) return ResultCode.error_.toC();
-    }
     const checkpoint_mode: wal.CheckpointMode = @enumFromInt(mode);
-    const result = checkpoint(connection, checkpoint_mode, log_frames, checkpointed_frames);
+    var result = ResultCode.ok.toC();
+    const schema_name = if (schema) |name| std.mem.span(name) else "";
+    if (schema_name.len != 0) {
+        const located = locateDatabase(connection, if (schemaNameMatches(connection, schema)) null else schema_name);
+        if (located.result != .ok) return (if (located.result == .not_found) ResultCode.error_ else located.result).toC();
+        result = checkpoint(located.database.?, checkpoint_mode, log_frames, checkpointed_frames);
+    } else {
+        const main_database = connection.database orelse return ResultCode.misuse.toC();
+        result = checkpoint(main_database, checkpoint_mode, log_frames, checkpointed_frames);
+        if (result == ResultCode.ok.toC()) {
+            if (connection.attachments) |*attachments| {
+                for (attachments.databases.items[2..]) |entry| {
+                    const native = entry.native_context orelse continue;
+                    const attached: *AttachedDatabase = @ptrCast(@alignCast(native));
+                    const database = if (attached.database) |*database| database else continue;
+                    const attached_result = checkpoint(database, checkpoint_mode, null, null);
+                    if (attached_result != ResultCode.ok.toC()) {
+                        result = attached_result;
+                        break;
+                    }
+                }
+            }
+        }
+    }
     if (connection.active_statements == 0) {
         connection.interrupted = false;
     }
@@ -3271,18 +3337,30 @@ pub export fn sqlite3_wal_checkpoint(pointer: ?*sqlite3, schema: ?[*:0]const u8)
 
 /// Source `sqlite3_txn_state()`: report NONE, READ, or WRITE from the native
 /// pager state for the selected schema.
-fn transactionState(connection: *Connection, schema: ?[*:0]const u8) c_int {
-    if (schema) |name| {
-        const expected = if (connection.main_schema_name) |main_name| main_name else "main";
-        if (!std.ascii.eqlIgnoreCase(std.mem.span(name), expected)) return -1;
-    }
-    const database = connection.database orelse return 0;
+fn databaseTransactionState(database: *const btree.Database) c_int {
     return switch (database.pager.state) {
-        .open => 0,
-        .reader => 1,
+        .open, .reader => 0,
         .writer_locked, .writer_cache_modified, .writer_database_modified, .writer_finished => 2,
         .error_, .closed => 0,
     };
+}
+
+fn transactionState(connection: *Connection, schema: ?[*:0]const u8) c_int {
+    if (schema) |name| {
+        if (schemaNameMatches(connection, schema)) return if (connection.database) |database| databaseTransactionState(database) else 0;
+        const attached = attachedDatabaseByName(connection, name) orelse return -1;
+        return if (attached.database) |*database| databaseTransactionState(database) else 0;
+    }
+    var result = if (connection.database) |database| databaseTransactionState(database) else 0;
+    if (connection.attachments) |*attachments| {
+        for (attachments.databases.items[2..]) |entry| {
+            const native = entry.native_context orelse continue;
+            const attached: *AttachedDatabase = @ptrCast(@alignCast(native));
+            const state = if (attached.database) |*database| databaseTransactionState(database) else 0;
+            result = @max(result, state);
+        }
+    }
+    return result;
 }
 
 pub export fn sqlite3_txn_state(pointer: ?*sqlite3, schema: ?[*:0]const u8) callconv(.c) c_int {
