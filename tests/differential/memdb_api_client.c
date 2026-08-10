@@ -51,7 +51,7 @@ int main(void){
   int config_rc=sqlite3_config(SQLITE_CONFIG_MALLOC,&fault_methods);
 #endif
   if(config_rc!=SQLITE_OK) return config_rc;
-  sqlite3 *source=0, *clone=0, *readonly=0, *malformed=0, *attached=0;
+  sqlite3 *source=0, *clone=0, *readonly=0, *malformed=0, *attached=0, *backup_target=0;
   sqlite3_int64 size=-1, borrowed_size=-1, value=-1;
   int rc = sqlite3_open(":memory:", &source);
   if(rc!=SQLITE_OK) return rc;
@@ -180,6 +180,21 @@ int main(void){
   int attached_blob_close_rc=sqlite3_blob_close(attached_blob);
   int attached_blob_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.blobs",0,0,0);
   printf("attached-blob\t%d\t%d\t%d\t%d\t%d\t%u\t%u\t%u\t%u\t%d\t%d\t%u\t%u\t%u\t%u\t%d\t%d\t%d\n",attached_blob_create_rc,attached_blob_insert_rc,attached_blob_open_rc,attached_blob_bytes,attached_blob_read_rc,attached_blob_before[0],attached_blob_before[1],attached_blob_before[2],attached_blob_before[3],attached_blob_write_rc,attached_blob_reread_rc,attached_blob_after[0],attached_blob_after[1],attached_blob_after[2],attached_blob_after[3],attached_blob_detach_rc,attached_blob_close_rc,attached_blob_drop_rc);
+
+  int backup_target_open_rc=sqlite3_open(":memory:",&backup_target);
+  int backup_target_attach_rc=sqlite3_exec(backup_target,"ATTACH ':memory:' AS auxcopy",0,0,0);
+  sqlite3_backup *attached_backup=sqlite3_backup_init(backup_target,"auxcopy",attached,"aux");
+  int attached_backup_init_ok=attached_backup!=0;
+  int attached_backup_detach_rc=sqlite3_exec(attached,"DETACH aux",0,0,0);
+  int attached_backup_step_rc=sqlite3_backup_step(attached_backup,-1);
+  int attached_backup_remaining=sqlite3_backup_remaining(attached_backup);
+  int attached_backup_pages=sqlite3_backup_pagecount(attached_backup);
+  int attached_backup_finish_rc=sqlite3_backup_finish(attached_backup);
+  sqlite3_int64 attached_backup_value=-1;
+  int attached_backup_query_rc=query_value(backup_target,"SELECT x FROM auxcopy.t WHERE id=2",&attached_backup_value);
+  int attached_backup_target_detach_rc=sqlite3_exec(backup_target,"DETACH auxcopy",0,0,0);
+  int attached_backup_target_close_rc=sqlite3_close(backup_target);
+  printf("attached-backup\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",backup_target_open_rc,backup_target_attach_rc,attached_backup_init_ok,attached_backup_detach_rc,attached_backup_step_rc,attached_backup_remaining,attached_backup_pages,attached_backup_finish_rc,attached_backup_query_rc,(long long)attached_backup_value,attached_backup_target_detach_rc,attached_backup_target_close_rc);
   sqlite3_free(attached_replacement);
 
   int close_clone = sqlite3_close(clone);

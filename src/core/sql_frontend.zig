@@ -201,6 +201,7 @@ const AttachedDatabase = struct {
     database: ?btree.Database = null,
     pending_deserialize_readonly: ?bool = null,
     active_blobs: usize = 0,
+    active_backups: usize = 0,
 
     fn createMemory(allocator: std.mem.Allocator) ?*AttachedDatabase {
         const attached = allocator.create(AttachedDatabase) catch return null;
@@ -3066,7 +3067,16 @@ pub export fn sqlite3_blob_write(pointer: ?*sqlite3_blob, input: ?*const anyopaq
     return blobReadWrite(blob, @constCast(input), amount, offset, true).toC();
 }
 
-const Backup = struct { destination: *Connection, source: *Connection, remaining: c_int = 1, pages: c_int = 1, result: ResultCode = .ok };
+const Backup = struct {
+    destination: *Connection,
+    source: *Connection,
+    destination_name: [:0]u8,
+    source_name: [:0]u8,
+    source_attached: ?*AttachedDatabase,
+    remaining: c_int = 1,
+    pages: c_int = 1,
+    result: ResultCode = .ok,
+};
 pub export fn sqlite3_backup_init(destination_pointer: ?*sqlite3, destination_name: ?[*:0]const u8, source_pointer: ?*sqlite3, source_name: ?[*:0]const u8) callconv(.c) ?*sqlite3_backup {
     const destination = asConnection(destination_pointer) orelse return null;
     const source = asConnection(source_pointer) orelse return null;
@@ -3074,15 +3084,40 @@ pub export fn sqlite3_backup_init(destination_pointer: ?*sqlite3, destination_na
         destination.last_result = .error_;
         return null;
     }
-    if (destination_name) |name| if (!std.ascii.eqlIgnoreCase(std.mem.span(name), "main")) return null;
-    if (source_name) |name| if (!std.ascii.eqlIgnoreCase(std.mem.span(name), "main")) return null;
-    const backup = destination.allocator.create(Backup) catch {
+    const destination_schema = if (destination_name) |name| std.mem.span(name) else "main";
+    const source_schema = if (source_name) |name| std.mem.span(name) else "main";
+    const located_destination = locateDatabase(destination, if (schemaNameMatches(destination, destination_name)) null else destination_schema);
+    const located_source = locateDatabase(source, if (schemaNameMatches(source, source_name)) null else source_schema);
+    if (located_destination.result != .ok or located_source.result != .ok) {
+        destination.last_result = .error_;
+        return null;
+    }
+    const destination_copy = destination.allocator.dupeZ(u8, destination_schema) catch {
         destination.last_result = .no_memory;
         return null;
     };
-    backup.* = .{ .destination = destination, .source = source };
+    const source_copy = destination.allocator.dupeZ(u8, source_schema) catch {
+        destination.allocator.free(destination_copy);
+        destination.last_result = .no_memory;
+        return null;
+    };
+    const backup = destination.allocator.create(Backup) catch {
+        destination.allocator.free(destination_copy);
+        destination.allocator.free(source_copy);
+        destination.last_result = .no_memory;
+        return null;
+    };
+    const source_attached = if (schemaNameMatches(source, source_name)) null else attachedDatabaseByName(source, source_name) orelse {
+        destination.allocator.destroy(backup);
+        destination.allocator.free(destination_copy);
+        destination.allocator.free(source_copy);
+        destination.last_result = .error_;
+        return null;
+    };
+    backup.* = .{ .destination = destination, .source = source, .destination_name = destination_copy, .source_name = source_copy, .source_attached = source_attached };
     destination.active_backups += 1;
     source.active_backups += 1;
+    if (source_attached) |owner| owner.active_backups += 1;
     return @ptrCast(backup);
 }
 pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callconv(.c) c_int {
@@ -3090,13 +3125,13 @@ pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callc
     const backup: *Backup = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
     if (backup.remaining == 0) return ResultCode.done.toC();
     var size: i64 = 0;
-    const bytes = sqlite3_serialize(toOpaque(backup.source), "main", &size, 0) orelse {
+    const bytes = sqlite3_serialize(toOpaque(backup.source), backup.source_name.ptr, &size, 0) orelse {
         backup.result = .error_;
         return backup.result.toC();
     };
     backup.pages = @intCast(@max(@divTrunc(size + 4095, 4096), 1));
     const capacity: i64 = @intCast(public_api.sqlite3_msize(bytes));
-    const rc = ResultCode.fromC(sqlite3_deserialize(toOpaque(backup.destination), "main", bytes, size, capacity, btree.vfs.DESERIALIZE_FREEONCLOSE));
+    const rc = ResultCode.fromC(sqlite3_deserialize(toOpaque(backup.destination), backup.destination_name.ptr, bytes, size, capacity, btree.vfs.DESERIALIZE_FREEONCLOSE));
     backup.result = rc;
     if (rc == .ok) {
         backup.remaining = 0;
@@ -3109,6 +3144,12 @@ pub export fn sqlite3_backup_finish(pointer: ?*sqlite3_backup) callconv(.c) c_in
     const rc = backup.result;
     const destination = backup.destination;
     const source = backup.source;
+    if (backup.source_attached) |owner| {
+        std.debug.assert(owner.active_backups > 0);
+        owner.active_backups -= 1;
+    }
+    destination.allocator.free(backup.destination_name);
+    destination.allocator.free(backup.source_name);
     destination.allocator.destroy(backup);
     std.debug.assert(destination.active_backups > 0 and source.active_backups > 0);
     destination.active_backups -= 1;
@@ -7115,7 +7156,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             if (attachment_runtime.findDatabase(attachments, action.name)) |entry| {
                 if (entry.native_context) |native| {
                     const attached: *AttachedDatabase = @ptrCast(@alignCast(native));
-                    if (attached.active_blobs != 0) break :blk .error_;
+                    if (attached.active_blobs != 0 or attached.active_backups != 0) break :blk .error_;
                 }
             }
             attachment_runtime.detachFunction(attachments, action.name) catch |failure| break :blk switch (failure) {
