@@ -370,8 +370,8 @@ pub const MemoryFile = struct {
         if (target <= self.lock_level) return OK;
         self.state.mutex.lock();
         defer self.state.mutex.unlock();
+        if (target > LOCK_SHARED and self.state.memdb_readonly) return READONLY;
         if (self.vfs.memdb_mode) {
-            if (target > LOCK_SHARED and self.state.memdb_readonly) return READONLY;
             switch (target) {
                 LOCK_SHARED => {
                     if (self.state.memdb_write_lock) return BUSY;

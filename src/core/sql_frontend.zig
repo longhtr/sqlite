@@ -553,10 +553,11 @@ fn asConnection(pointer: ?*sqlite3) ?*Connection {
     return safetyCheckSickOrOk(pointer);
 }
 
-fn emptyDatabaseHeader() [512]u8 {
-    var bytes = [_]u8{0} ** 512;
+fn emptyDatabaseHeader() [profile_limits.default_page_size]u8 {
+    var bytes = [_]u8{0} ** profile_limits.default_page_size;
     @memcpy(bytes[0..16], "SQLite format 3\x00");
-    bytes[16] = 0x02;
+    bytes[16] = @truncate(profile_limits.default_page_size >> 8);
+    bytes[17] = @truncate(profile_limits.default_page_size);
     bytes[18] = 1;
     bytes[19] = 1;
     bytes[20] = 0;
@@ -578,7 +579,8 @@ fn emptyDatabaseHeader() [512]u8 {
     bytes[98] = @truncate(version >> 8);
     bytes[99] = @truncate(version);
     bytes[100] = 0x0d;
-    bytes[105] = 0x02;
+    bytes[105] = @truncate(profile_limits.default_page_size >> 8);
+    bytes[106] = @truncate(profile_limits.default_page_size);
     return bytes;
 }
 
@@ -1393,7 +1395,7 @@ pub export fn sqlite3_db_name(pointer: ?*sqlite3, index: c_int) callconv(.c) ?[*
 fn databaseReadonly(connection: *Connection, database_name: ?[*:0]const u8) c_int {
     if (!schemaNameMatches(connection, database_name)) return -1;
     if (connection.database) |database| return @intFromBool(!database.writable);
-    if (connection.pending_deserialize_readonly) |readonly| return @intFromBool(readonly);
+    if (connection.pending_deserialize_readonly != null) return 0;
     return -1;
 }
 
@@ -2645,12 +2647,9 @@ pub export fn sqlite3_serialize(pointer: ?*sqlite3, schema: ?[*:0]const u8, size
 
 fn openPendingDeserializedDatabase(connection: *Connection) ResultCode {
     if (connection.database != null) return .ok;
-    const readonly = connection.pending_deserialize_readonly orelse return .misuse;
+    _ = connection.pending_deserialize_readonly orelse return .misuse;
     const adapter = if (connection.memory_adapter) |*memory_adapter| memory_adapter else return .misuse;
-    const opened = if (readonly)
-        btree.Database.open(connection.allocator, &adapter.abi, "main")
-    else
-        btree.Database.openWritable(connection.allocator, &adapter.abi, "main");
+    const opened = btree.Database.openWritable(connection.allocator, &adapter.abi, "main");
     if (opened.result != .ok) return opened.result;
     const database = connection.allocator.create(btree.Database) catch {
         var temporary = opened.database.?;
@@ -9428,7 +9427,7 @@ test "deserialize adopts caller storage and preserves resize ownership and reado
     var readonly: ?*sqlite3 = null;
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &readonly));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_deserialize(readonly, null, readonly_image, size, @intCast(public_api.sqlite3_msize(readonly_image)), btree.vfs.DESERIALIZE_FREEONCLOSE | btree.vfs.DESERIALIZE_READONLY));
-    try std.testing.expectEqual(@as(c_int, 1), sqlite3_db_readonly(readonly, "main"));
+    try std.testing.expectEqual(@as(c_int, 0), sqlite3_db_readonly(readonly, "main"));
     try std.testing.expectEqual(ResultCode.read_only.toC(), sqlite3_exec(readonly, "INSERT INTO t VALUES(99)", null, null, null));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_close(readonly));
 }

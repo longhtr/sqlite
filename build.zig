@@ -1866,6 +1866,30 @@ pub fn build(b: *std.Build) void {
     sql_schema_differential.addArtifactArg(sql_schema_oracle);
     sql_schema_differential.addArtifactArg(sql_schema_native);
     b.step("sql-schema-differential", "Compare the bounded schema/simple-DDL slice").dependOn(&sql_schema_differential.step);
+    const memdb_api_bridge_module = b.createModule(.{
+        .root_source_file = b.path("tests/differential/memdb_api_native_bridge.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .imports = &.{.{ .name = "frontend", .module = sql_frontend_module }},
+    });
+    const memdb_api_bridge = b.addObject(.{ .name = "sqlite3-memdb-api-bridge", .root_module = memdb_api_bridge_module });
+    const memdb_api_native_module = b.createModule(.{ .target = target, .optimize = optimize, .link_libc = true });
+    memdb_api_native_module.addIncludePath(b.path("include"));
+    memdb_api_native_module.addCSourceFile(.{ .file = b.path("tests/differential/memdb_api_client.c"), .flags = &.{ "-std=c11", "-DNATIVE_ENGINE=1" } });
+    memdb_api_native_module.addObject(memdb_api_bridge);
+    const memdb_api_native = b.addExecutable(.{ .name = "sqlite3-memdb-api-native", .root_module = memdb_api_native_module });
+    const memdb_api_oracle_module = b.createModule(.{ .target = target, .optimize = optimize, .link_libc = true });
+    memdb_api_oracle_module.addIncludePath(b.path("include"));
+    memdb_api_oracle_module.addCSourceFile(.{ .file = b.path("tests/differential/memdb_api_client.c"), .flags = &.{"-std=c11"} });
+    memdb_api_oracle_module.addCSourceFile(.{ .file = b.path("reference/c_oracle/sqlite3.c"), .flags = sqlite_c_flags });
+    if (target.result.os.tag != .windows) memdb_api_oracle_module.linkSystemLibrary("m", .{});
+    if (target.result.os.tag == .linux) memdb_api_oracle_module.linkSystemLibrary("dl", .{});
+    const memdb_api_oracle = b.addExecutable(.{ .name = "sqlite3-memdb-api-oracle", .root_module = memdb_api_oracle_module });
+    const memdb_api_differential = boundedSystemCommand(b, &.{ "python3", "tools/memdb_api_differential.py" });
+    memdb_api_differential.addArtifactArg(memdb_api_oracle);
+    memdb_api_differential.addArtifactArg(memdb_api_native);
+    b.step("memdb-api-differential", "Compare public memdb image flags, ownership, and continuation").dependOn(&memdb_api_differential.step);
     const sql_table_scan_native_module = b.createModule(.{ .target = target, .optimize = optimize, .link_libc = true });
     sql_table_scan_native_module.addIncludePath(b.path("include"));
     sql_table_scan_native_module.addCSourceFile(.{ .file = b.path("tests/differential/sql_table_scan_client.c"), .flags = &.{ "-std=c11", "-DNATIVE_ENGINE=1" } });
@@ -2544,6 +2568,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_phase17_connection_client.step);
     test_step.dependOn(&sql_expression_differential.step);
     test_step.dependOn(&sql_schema_differential.step);
+    test_step.dependOn(&memdb_api_differential.step);
     test_step.dependOn(&sql_table_scan_differential.step);
     test_step.dependOn(&sql_insert_differential.step);
     test_step.dependOn(&sql_update_delete_differential.step);

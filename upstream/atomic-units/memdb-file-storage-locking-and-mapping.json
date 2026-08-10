@@ -660,7 +660,7 @@
       "upstream memdb.test and memdb2.test exercise shared/private names, locks, readonly behavior, growth/limits, access, file controls, mapping constraints, close/reopen and VFS behavior; malloc/fault and multithread suites cover failures and contention",
       "Project memdb adapter tests compare VFS v2/I/O v3 tails, OPEN_MEMORY, shared bytes, lock upgrades/BUSY, fetch null, rollback truncate/sync, private isolation, surviving references and fresh last-close reopen",
       "Focused native tests cover exact doubled capacity, FULL and allocator OOM continuation, process-manager VFSNAME ownership, and eight-thread shared open/growth/content/close serialization",
-      "The 38-field C/Zig differential covers 24 operation orderings and normalizes only allocation addresses/VFSNAME pointer spelling; deserialize flag ownership is owned by the dependent dossier"
+      "The 38-field C/Zig storage differential covers 24 operation orderings and normalizes only allocation addresses/VFSNAME pointer spelling; the dependent public-API differential additionally verifies that deserialized READONLY storage rejects the write-lock upgrade with READONLY while remaining a writable-open B-tree"
     ]
   }
 }

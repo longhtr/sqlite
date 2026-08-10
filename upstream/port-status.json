@@ -27,7 +27,7 @@
       "historical C ABI/export coverage"
     ],
     "prototype_policy": "bounded frontend, handwritten VDBE, reconstructed B-tree, and reduced pager/WAL are frozen substitutes; retain fixtures but replace production ownership by source unit",
-    "purposeful_python_tool_scripts": 110,
+    "purposeful_python_tool_scripts": 111,
     "shell_tool_entrypoints": 0,
     "worker_containment_audit_complete": true
   },
@@ -94,7 +94,7 @@
     "utf_active_entities_differentially_checked": 13,
     "vdbe_opcode_coverage_warning": "A mapped case proves name-level runtime presence only, not complete SQLite semantics or fidelity.",
     "vlist_entities_differentially_checked": 0,
-    "zig_source_lines": 83487
+    "zig_source_lines": 83486
   },
   "overall_status": "incomplete-control-revalidation-and-source-port",
   "public_api": {

@@ -19,7 +19,7 @@ Incomplete and unsafe for production data. Reusable source-corresponding slices 
 | Historical mechanical function claims | 1,738; 0 completion credit |
 | Active batch and durable checkpoints | 0 entries; 0 checkpoints |
 | Exact internal layouts | 69 |
-| Purposeful tools | 110 purposeful Python scripts |
+| Purposeful tools | 111 purposeful Python scripts |
 | Bounded opcode mappings | 107/190; 0 integrated |
 | Lemon action contracts | 348/348; 0 integrated |
 | Production C objects | 0 |
@@ -34,7 +34,7 @@ These are controls and planning facts, not completion percentages.
 | Parser/compiler/planner | scaffold/missing | Generated tables/contracts do not execute final concrete owners. |
 | VDBE/`Mem` | partial | Value conversion, exact numeric rendering, bounded string/blob ownership, bindings, results, and builder/record/P4 lifecycle execute production paths; complete upstream VDBE ownership remains open. |
 | Schema/AST | partial | Exact roots exist; recursive ownership/destruction remains incomplete. |
-| Process/PCache/VFS/memdb | partial | Shared memdb stores use configured dynamic FAST mutex ownership; ordinary serialization copies the live Pager image page by page; main-schema deserialize stages replacement ownership, preserves old content on allocation failure, publishes transferred bytes before validation, defers malformed-image failure to first prepare with exact ownership continuation, and retains the external allocation domain across exact resize-OOM continuation. The process built-in hash has exact pinned-C topology for 167 of 178 active definitions; load-extension, ALTER registration, attached-schema replacement, and broader ownership remain incomplete. |
+| Process/PCache/VFS/memdb | partial | Shared memdb stores use configured dynamic FAST mutex ownership; new databases use the configured 4,096-byte default page image; ordinary serialization copies the live Pager image page by page; main-schema deserialize stages replacement ownership, preserves old content on allocation failure, publishes transferred bytes before validation, preserves upstream writable-open/READONLY-lock behavior, defers malformed-image failure to first prepare with exact ownership continuation, and retains the external allocation domain across exact resize-OOM continuation. A pinned public-API differential verifies image sizing, ownership flags, read-only behavior, malformed continuation, and close results. The process built-in hash has exact pinned-C topology for 167 of 178 active definitions; load-extension, ALTER registration, attached-schema replacement, and broader ownership remain incomplete. |
 | Pager/WAL | scaffold | Rollback-journal transaction/playback and WAL open/checkpoint slices exist, but they do not own the existing SQL storage path. |
 | B-tree | partial/scaffold | Reads exist; mutation still reconstructs whole trees. |
 | SQL and Zig API | missing | Handwritten bounded frontend remains; active public responsibilities are not complete. |
