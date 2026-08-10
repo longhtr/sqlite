@@ -75,7 +75,7 @@
       "global-allocator-core-for-connection-growth"
     ],
     "external_source_responsibilities": [
-      "Exact attached-schema resolution and reopen through sqlite3FindDbName/ATTACH"
+      "Route serialize/deserialize through the integrated memory ATTACH catalog and reopen the selected attached B-tree"
     ],
     "caller_closure": "Public sqlite3_serialize/sqlite3_deserialize and backup APIs route through production Connection memory or Unix backend. Main-schema copy, NOCOPY borrow, replacement reopen, read-only mode, and FREEONCLOSE cleanup are reachable."
   },
@@ -171,7 +171,7 @@
     "notes": "Requires attached-schema replacement, cross-schema OOM assurance, and independent review."
   },
   "known_blockers": [
-    "Support eligible attached schemas and the source reopen path, then extend the main-schema ownership/OOM matrix across schemas.",
+    "Route eligible attached catalog entries through serialize/deserialize and the source reopen path, then extend the ownership/OOM matrix across schemas.",
     "Extend the pinned C/Zig differential with cross-schema and remaining source-side allocation-failure observations.",
     "Independent fidelity review remains open."
   ],

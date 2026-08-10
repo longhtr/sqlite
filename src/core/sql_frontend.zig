@@ -31,6 +31,7 @@ const virtual_table_lifecycle = @import("internal/virtual_table_lifecycle.zig");
 const schema_program_runtime = @import("internal/schema_program_runtime.zig");
 const query_execution = @import("internal/query_execution.zig");
 const query_compiler = @import("internal/query_compiler.zig");
+const attachment_runtime = @import("internal/attachment_runtime.zig");
 const vdbe_explain = @import("internal/vdbe_explain.zig");
 const ResultCode = @import("result_code.zig").ResultCode;
 
@@ -193,6 +194,39 @@ fn defaultDatabaseConfiguration() [24]u8 {
     return result;
 }
 
+const AttachedDatabase = struct {
+    allocator: std.mem.Allocator,
+    memory_backend: btree.vfs.MemoryVfs,
+    memory_adapter: btree.vfs.AbiAdapter = undefined,
+    database: ?btree.Database = null,
+
+    fn createMemory(allocator: std.mem.Allocator) ?*AttachedDatabase {
+        const attached = allocator.create(AttachedDatabase) catch return null;
+        attached.* = .{ .allocator = allocator, .memory_backend = btree.vfs.MemoryVfs.init(allocator) };
+        const initialized = initializeEmptyMemory(&attached.memory_backend, "main");
+        if (initialized != .ok) {
+            attached.memory_backend.deinit();
+            allocator.destroy(attached);
+            return null;
+        }
+        attached.memory_adapter = btree.vfs.AbiAdapter.init("zig-attached-memory", &attached.memory_backend);
+        const opened = btree.Database.openWritable(allocator, &attached.memory_adapter.abi, "main");
+        if (opened.result != .ok) {
+            attached.memory_backend.deinit();
+            allocator.destroy(attached);
+            return null;
+        }
+        attached.database = opened.database.?;
+        return attached;
+    }
+
+    fn destroy(self: *AttachedDatabase) void {
+        if (self.database) |*database| _ = database.close();
+        self.memory_backend.deinit();
+        self.allocator.destroy(self);
+    }
+};
+
 pub const Connection = struct {
     magic: u64 = connection_magic,
     allocator: std.mem.Allocator,
@@ -207,6 +241,7 @@ pub const Connection = struct {
     memory_backend: ?btree.vfs.MemoryVfs = null,
     memory_adapter: ?btree.vfs.AbiAdapter = null,
     pending_deserialize_readonly: ?bool = null,
+    attachments: ?attachment_runtime.Connection = null,
     shared_memdb: ?*memdb.Shared = null,
     filename: ?[:0]u8 = null,
     main_schema_name: ?[:0]u8 = null,
@@ -298,6 +333,7 @@ pub const Connection = struct {
         if (self.autovacuum_destroy) |destroy_callback| destroy_callback(self.autovacuum_context);
         if (self.custom_error_message) |message| self.allocator.free(message);
         if (self.main_schema_name) |name| self.allocator.free(name);
+        if (self.attachments) |*attachments| attachments.deinit();
         for (self.scalar_functions.items) |definition| {
             if (definition.destroy) |destroy_callback| destroy_callback(definition.user_data);
             self.allocator.free(definition.name);
@@ -1361,6 +1397,33 @@ pub export fn sqlite3_db_mutex(pointer: ?*sqlite3) callconv(.c) ?*anyopaque {
     return &connection.connection_mutex;
 }
 
+fn openAttachedDatabase(context: ?*anyopaque, filename: []const u8, allow_create: bool, allow_write: bool) ?*anyopaque {
+    _ = allow_create;
+    _ = allow_write;
+    const connection: *Connection = @ptrCast(@alignCast(context orelse return null));
+    if (filename.len != 0 and !std.mem.eql(u8, filename, ":memory:")) return null;
+    return AttachedDatabase.createMemory(connection.allocator);
+}
+
+fn closeAttachedDatabase(_: ?*anyopaque, native: *anyopaque) void {
+    const attached: *AttachedDatabase = @ptrCast(@alignCast(native));
+    attached.destroy();
+}
+
+fn ensureAttachmentCatalog(connection: *Connection) attachment_runtime.Error!*attachment_runtime.Connection {
+    if (connection.attachments == null) {
+        connection.attachments = try attachment_runtime.initializeConnection(
+            connection.allocator,
+            if (connection.filename) |filename| filename else "",
+            connection,
+            openAttachedDatabase,
+            closeAttachedDatabase,
+        );
+        connection.attachments.?.maximum_attached = @intCast(@max(connection.limits[7], 0));
+    }
+    return &connection.attachments.?;
+}
+
 fn schemaNameMatches(connection: *const Connection, database_name: ?[*:0]const u8) bool {
     const requested = if (database_name) |name| std.mem.span(name) else return true;
     const expected = if (connection.main_schema_name) |name| name else "main";
@@ -1382,8 +1445,13 @@ pub export fn sqlite3_db_filename(pointer: ?*sqlite3, database_name: ?[*:0]const
 /// Source `sqlite3_db_name()`: return the configured name of the selected
 /// attached schema and reject out-of-range indexes.
 fn databaseName(connection: *Connection, index: c_int) ?[*:0]const u8 {
-    if (index != 0) return null;
-    return if (connection.main_schema_name) |name| name.ptr else "main";
+    if (index < 0) return null;
+    if (index == 0) return if (connection.main_schema_name) |name| name.ptr else "main";
+    if (index == 1) return "temp";
+    const attachments = if (connection.attachments) |*catalog| catalog else return null;
+    const position: usize = @intCast(index);
+    if (position >= attachments.databases.items.len) return null;
+    return @ptrCast(attachments.databases.items[position].name.ptr);
 }
 
 pub export fn sqlite3_db_name(pointer: ?*sqlite3, index: c_int) callconv(.c) ?[*:0]const u8 {
@@ -3225,6 +3293,8 @@ fn jsonVirtualRowid(pointer: ?*anyopaque, output: *i64) ResultCode {
 const json_virtual_source_template: vdbe.VirtualSource = .{ .context = null, .open = jsonVirtualOpen, .close = jsonVirtualClose, .filter = jsonVirtualFilter, .next = jsonVirtualNext, .eof = jsonVirtualEof, .column = jsonVirtualColumn, .rowid = jsonVirtualRowid };
 
 const ProgramAction = union(enum) {
+    attach_database: struct { connection: *Connection, filename: []const u8, name: []const u8 },
+    detach_database: struct { connection: *Connection, name: []const u8 },
     create: struct { connection: *Connection, name: []const u8, sql: []const u8, if_not_exists: bool },
     virtual_create: struct { connection: *Connection, name: []const u8, module_name: []const u8 },
     virtual_drop: struct { connection: *Connection, name: []const u8 },
@@ -6945,6 +7015,26 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
     const owner: *Owner = @ptrCast(@alignCast(context orelse return .misuse));
     vdbe.vdbe_mem.setNull(output);
     return switch (owner.action orelse return .misuse) {
+        .attach_database => |action| blk: {
+            const attachments = ensureAttachmentCatalog(action.connection) catch break :blk .no_memory;
+            attachment_runtime.attachFunction(attachments, action.filename, action.name) catch |failure| break :blk switch (failure) {
+                error.OutOfMemory => .no_memory,
+                error.TooMany => .error_,
+                error.Duplicate => .error_,
+                error.Open => .cannot_open,
+                else => .error_,
+            };
+            break :blk .ok;
+        },
+        .detach_database => |action| blk: {
+            const attachments = ensureAttachmentCatalog(action.connection) catch break :blk .no_memory;
+            attachment_runtime.detachFunction(attachments, action.name) catch |failure| break :blk switch (failure) {
+                error.OutOfMemory => .no_memory,
+                error.Locked => .busy,
+                else => .error_,
+            };
+            break :blk .ok;
+        },
         .virtual_create => |action| blk: {
             if (action.connection.virtual_table_state == null) {
                 const state = action.connection.allocator.create(virtual_table_lifecycle.State) catch break :blk .no_memory;
@@ -7741,6 +7831,97 @@ fn compileInsert(connection: *Connection, source: [:0]u8, token_list: []const To
     return .{ .result = .ok, .statement = prepared, .consumed = consumed };
 }
 
+fn decodeAttachmentToken(allocator: std.mem.Allocator, token: Token) error{ OutOfMemory, Syntax }![]u8 {
+    if (token.typ == tokens.tk_id) return allocator.dupe(u8, token.text) catch error.OutOfMemory;
+    if (token.typ != tokens.tk_string or token.text.len < 2) return error.Syntax;
+    var decoded = std.ArrayList(u8).empty;
+    defer decoded.deinit(allocator);
+    var index: usize = 1;
+    while (index + 1 < token.text.len) : (index += 1) {
+        if (token.text[index] == '\'' and index + 1 < token.text.len - 1 and token.text[index + 1] == '\'') index += 1;
+        decoded.append(allocator, token.text[index]) catch return error.OutOfMemory;
+    }
+    return decoded.toOwnedSlice(allocator) catch error.OutOfMemory;
+}
+
+fn compileAttachment(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
+    const allocator = connection.allocator;
+    const attaching = token_list[0].typ == tokens.tk_attach;
+    var position: usize = 1;
+    if (position < token_list.len and token_list[position].typ == tokens.tk_database) position += 1;
+    const filename_token: ?Token = if (attaching and position < token_list.len) token_list[position] else null;
+    if (attaching) position += 1;
+    if (attaching and (position >= token_list.len or token_list[position].typ != tokens.tk_as)) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    if (attaching) position += 1;
+    if (position >= token_list.len or position + 1 != token_list.len) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const name = decodeAttachmentToken(allocator, token_list[position]) catch |failure| {
+        allocator.free(source);
+        return .{ .result = if (failure == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+    };
+    var filename: ?[]u8 = null;
+    if (filename_token) |token| {
+        filename = decodeAttachmentToken(allocator, token) catch |failure| {
+            allocator.free(name);
+            allocator.free(source);
+            return .{ .result = if (failure == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+        };
+    }
+    const owner = allocator.create(Owner) catch {
+        if (filename) |value| allocator.free(value);
+        allocator.free(name);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const instructions = allocator.alloc(vdbe.Instruction, 2) catch {
+        allocator.destroy(owner);
+        if (filename) |value| allocator.free(value);
+        allocator.free(name);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const parameters = allocator.alloc(statement.ParameterMetadata, 0) catch unreachable;
+    const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
+    instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
+    instructions[1] = .{ .opcode = .halt };
+    owner.* = .{
+        .source = source,
+        .instructions = instructions,
+        .parameters = parameters,
+        .columns = columns,
+        .action = if (attaching)
+            .{ .attach_database = .{ .connection = connection, .filename = filename.?, .name = name } }
+        else
+            .{ .detach_database = .{ .connection = connection, .name = name } },
+        .program = .{ .instructions = instructions, .register_count = 1 },
+    };
+    owner.strings.append(allocator, name) catch {
+        if (filename) |value| allocator.free(value);
+        allocator.free(name);
+        Owner.destroy(allocator, owner);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    if (filename) |value| owner.strings.append(allocator, value) catch {
+        allocator.free(value);
+        Owner.destroy(allocator, owner);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
+    owner.program.functions = owner.functions[0..];
+    const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
+        Owner.destroy(allocator, owner);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    prepared.adoptOwner(owner, Owner.destroy);
+    prepared.markWritable();
+    return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+}
+
 fn compileAnalyze(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
     const allocator = connection.allocator;
     if (connection.database == null or token_list.len > 4 or
@@ -8062,6 +8243,8 @@ fn compile(connection: *Connection, source_bytes: []const u8) CompileOutcome {
         allocator.free(source);
         return .{ .result = schema_result, .consumed = tokenized.consumed };
     }
+    if (tokenized.tokens[0].typ == tokens.tk_attach or tokenized.tokens[0].typ == tokens.tk_detach)
+        return compileAttachment(connection, source, tokenized.tokens, tokenized.consumed);
     if (tokenized.tokens[0].typ == tokens.tk_analyze)
         return compileAnalyze(connection, source, tokenized.tokens, tokenized.consumed);
     if (tokenized.tokens[0].typ == tokens.tk_pragma or tokenized.tokens[0].typ == tokens.tk_vacuum or
@@ -9158,6 +9341,21 @@ test "INDEXED BY scan and primary-key self join generate native cursor programs"
     try std.testing.expectEqual(@as(usize, 300), rows);
     try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
     try std.testing.expectEqual(ResultCode.ok, database.close());
+}
+
+test "memory ATTACH and DETACH maintain the connection schema catalog" {
+    var database: ?*sqlite3 = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &database));
+    defer _ = sqlite3_close(database);
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(database, "ATTACH DATABASE ':memory:' AS aux", null, null, null));
+    try std.testing.expectEqualStrings("main", std.mem.span(sqlite3_db_name(database, 0).?));
+    try std.testing.expectEqualStrings("temp", std.mem.span(sqlite3_db_name(database, 1).?));
+    try std.testing.expectEqualStrings("aux", std.mem.span(sqlite3_db_name(database, 2).?));
+    try std.testing.expectEqual(null, sqlite3_db_name(database, 3));
+    try std.testing.expectEqual(ResultCode.error_.toC(), sqlite3_exec(database, "ATTACH ':memory:' AS aux", null, null, null));
+    try std.testing.expectEqual(ResultCode.error_.toC(), sqlite3_exec(database, "DETACH main", null, null, null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(database, "DETACH DATABASE aux", null, null, null));
+    try std.testing.expectEqual(null, sqlite3_db_name(database, 2));
 }
 
 test "scoped UPSERT window PRAGMA and VACUUM advanced families execute" {
