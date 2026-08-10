@@ -146,9 +146,10 @@ int main(void){
   printf("attached\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"),attached_query_rc,(long long)attached_value,attached_insert_rc,attached_update_rc,attached_delete_rc,attached_final_query_rc,(long long)attached_final_value,attached_create_rc,attached_created_insert_rc,attached_created_query_rc,(long long)attached_created_value,attached_drop_rc,attached_fk_config_rc,attached_parent_create_rc,attached_child_create_rc,attached_parent_insert_rc,attached_child_insert_rc,attached_invalid_child_rc,attached_parent_delete_rc,attached_child_count_rc,(long long)attached_child_count,attached_child_drop_rc,attached_parent_drop_rc);
 
   int actions_parent_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_parent(id INTEGER PRIMARY KEY)",0,0,0);
-  int actions_null_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_null(id INTEGER PRIMARY KEY,parent_id REFERENCES action_parent(id) ON DELETE SET NULL)",0,0,0);
-  int actions_default_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_default(id INTEGER PRIMARY KEY,parent_id DEFAULT 2 REFERENCES action_parent(id) ON DELETE SET DEFAULT)",0,0,0);
-  int actions_restrict_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_restrict(id INTEGER PRIMARY KEY,parent_id REFERENCES action_parent(id) ON DELETE RESTRICT)",0,0,0);
+  int actions_null_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_null(id INTEGER PRIMARY KEY,parent_id REFERENCES action_parent(id) ON DELETE SET NULL ON UPDATE SET NULL)",0,0,0);
+  int actions_default_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_default(id INTEGER PRIMARY KEY,parent_id DEFAULT 2 REFERENCES action_parent(id) ON DELETE SET DEFAULT ON UPDATE SET DEFAULT)",0,0,0);
+  int actions_restrict_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_restrict(id INTEGER PRIMARY KEY,parent_id REFERENCES action_parent(id) ON DELETE RESTRICT ON UPDATE RESTRICT)",0,0,0);
+  int actions_cascade_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_cascade(id INTEGER PRIMARY KEY,parent_id REFERENCES action_parent(id) ON UPDATE CASCADE)",0,0,0);
   int actions_parent_one_rc=sqlite3_exec(attached,"INSERT INTO aux.action_parent VALUES(1)",0,0,0);
   int actions_parent_two_rc=sqlite3_exec(attached,"INSERT INTO aux.action_parent VALUES(2)",0,0,0);
   int actions_null_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.action_null VALUES(1,1)",0,0,0);
@@ -160,10 +161,23 @@ int main(void){
   sqlite3_int64 actions_null_value=-1,actions_default_value=-1;
   int actions_null_query_rc=query_value(attached,"SELECT parent_id FROM aux.action_null",&actions_null_value);
   int actions_default_query_rc=query_value(attached,"SELECT parent_id FROM aux.action_default",&actions_default_value);
-  printf("attached-fk-actions\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%lld\n",actions_parent_create_rc,actions_null_create_rc,actions_default_create_rc,actions_restrict_create_rc,actions_parent_one_rc,actions_parent_two_rc,actions_null_insert_rc,actions_default_insert_rc,actions_restrict_insert_rc,actions_restricted_delete_rc,actions_restrict_clear_rc,actions_parent_delete_rc,actions_null_query_rc,(long long)actions_null_value,actions_default_query_rc,(long long)actions_default_value);
+  int actions_parent_three_rc=sqlite3_exec(attached,"INSERT INTO aux.action_parent VALUES(3)",0,0,0);
+  int actions_null_reset_rc=sqlite3_exec(attached,"UPDATE aux.action_null SET parent_id=3 WHERE id=1",0,0,0);
+  int actions_default_reset_rc=sqlite3_exec(attached,"UPDATE aux.action_default SET parent_id=3 WHERE id=1",0,0,0);
+  int actions_cascade_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.action_cascade VALUES(1,3)",0,0,0);
+  int actions_update_restrict_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.action_restrict VALUES(2,3)",0,0,0);
+  int actions_restricted_update_rc=sqlite3_exec(attached,"UPDATE aux.action_parent SET id=4 WHERE id=3",0,0,0);
+  int actions_update_restrict_clear_rc=sqlite3_exec(attached,"DELETE FROM aux.action_restrict WHERE id=2",0,0,0);
+  int actions_parent_update_rc=sqlite3_exec(attached,"UPDATE aux.action_parent SET id=4 WHERE id=3",0,0,0);
+  sqlite3_int64 actions_update_null_value=-1,actions_update_default_value=-1,actions_update_cascade_value=-1;
+  int actions_update_null_query_rc=query_value(attached,"SELECT parent_id FROM aux.action_null",&actions_update_null_value);
+  int actions_update_default_query_rc=query_value(attached,"SELECT parent_id FROM aux.action_default",&actions_update_default_value);
+  int actions_update_cascade_query_rc=query_value(attached,"SELECT parent_id FROM aux.action_cascade",&actions_update_cascade_value);
+  printf("attached-fk-actions\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%lld\t%d\t%lld\n",actions_parent_create_rc,actions_null_create_rc,actions_default_create_rc,actions_restrict_create_rc,actions_cascade_create_rc,actions_parent_one_rc,actions_parent_two_rc,actions_null_insert_rc,actions_default_insert_rc,actions_restrict_insert_rc,actions_restricted_delete_rc,actions_restrict_clear_rc,actions_parent_delete_rc,actions_null_query_rc,(long long)actions_null_value,actions_default_query_rc,(long long)actions_default_value,actions_parent_three_rc,actions_null_reset_rc,actions_default_reset_rc,actions_cascade_insert_rc,actions_update_restrict_insert_rc,actions_restricted_update_rc,actions_update_restrict_clear_rc,actions_parent_update_rc,actions_update_null_query_rc,(long long)actions_update_null_value,actions_update_default_query_rc,(long long)actions_update_default_value,actions_update_cascade_query_rc,(long long)actions_update_cascade_value);
   sqlite3_exec(attached,"DROP TABLE aux.action_null",0,0,0);
   sqlite3_exec(attached,"DROP TABLE aux.action_default",0,0,0);
   sqlite3_exec(attached,"DROP TABLE aux.action_restrict",0,0,0);
+  sqlite3_exec(attached,"DROP TABLE aux.action_cascade",0,0,0);
   sqlite3_exec(attached,"DROP TABLE aux.action_parent",0,0,0);
 
   int attached_blob_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.blobs(id INTEGER PRIMARY KEY,payload BLOB)",0,0,0);
@@ -190,15 +204,22 @@ int main(void){
   int attached_backup_first_step_rc=sqlite3_backup_step(attached_backup,1);
   int attached_backup_first_remaining=sqlite3_backup_remaining(attached_backup);
   int attached_backup_pages=sqlite3_backup_pagecount(attached_backup);
+  sqlite3_int64 attached_backup_replace_size=0;
+  unsigned char *attached_backup_replace_image=sqlite3_serialize(attached,"aux",&attached_backup_replace_size,0);
+  int attached_backup_source_replace_rc=sqlite3_deserialize(attached,"aux",attached_backup_replace_image,attached_backup_replace_size,attached_backup_replace_size,0);
+  sqlite3_free(attached_backup_replace_image);
   int attached_backup_source_update_rc=sqlite3_exec(attached,"UPDATE aux.t SET x=45 WHERE id=2",0,0,0);
+  int attached_backup_source_ddl_rc=sqlite3_exec(attached,"CREATE TABLE aux.after_backup(v)",0,0,0);
   int attached_backup_step_rc=sqlite3_backup_step(attached_backup,-1);
   int attached_backup_remaining=sqlite3_backup_remaining(attached_backup);
   int attached_backup_finish_rc=sqlite3_backup_finish(attached_backup);
   sqlite3_int64 attached_backup_value=-1;
   int attached_backup_query_rc=query_value(backup_target,"SELECT x FROM auxcopy.t WHERE id=2",&attached_backup_value);
+  sqlite3_int64 attached_backup_schema_count=-1;
+  int attached_backup_schema_rc=query_value(backup_target,"SELECT count(*) FROM auxcopy.after_backup",&attached_backup_schema_count);
   int attached_backup_target_detach_rc=sqlite3_exec(backup_target,"DETACH auxcopy",0,0,0);
   int attached_backup_target_close_rc=sqlite3_close(backup_target);
-  printf("attached-backup\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",backup_target_open_rc,backup_target_attach_rc,attached_backup_init_ok,attached_backup_detach_rc,attached_backup_first_step_rc,attached_backup_first_remaining,attached_backup_pages,attached_backup_source_update_rc,attached_backup_step_rc,attached_backup_remaining,attached_backup_finish_rc,attached_backup_query_rc,(long long)attached_backup_value,attached_backup_target_detach_rc,attached_backup_target_close_rc);
+  printf("attached-backup\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%lld\t%d\t%d\n",backup_target_open_rc,backup_target_attach_rc,attached_backup_init_ok,attached_backup_detach_rc,attached_backup_first_step_rc,attached_backup_first_remaining,attached_backup_pages,attached_backup_source_replace_rc,attached_backup_source_update_rc,attached_backup_source_ddl_rc,attached_backup_step_rc,attached_backup_remaining,attached_backup_finish_rc,attached_backup_query_rc,(long long)attached_backup_value,attached_backup_schema_rc,(long long)attached_backup_schema_count,attached_backup_target_detach_rc,attached_backup_target_close_rc);
 
   int attached_txn_state=sqlite3_txn_state(attached,"aux");
   int attached_txn_all=sqlite3_txn_state(attached,0);

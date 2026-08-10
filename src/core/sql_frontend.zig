@@ -3536,7 +3536,7 @@ const ProgramAction = union(enum) {
     virtual_drop: struct { connection: *Connection, name: []const u8 },
     drop: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
     insert: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, column_count: usize, integer_primary_key: ?usize, replace: bool, conflict_ignore: bool },
-    update: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, target_column: usize, foreign_key_old_mask: u32 },
+    update: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, target_column: usize, target_integer_primary_key: bool, foreign_key_old_mask: u32 },
     delete: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, foreign_key_old_mask: u32 },
     vacuum: struct { connection: *Connection },
     analyze: struct { connection: *Connection, table_name: ?[]const u8 },
@@ -5278,6 +5278,7 @@ fn foreignKeyActionTrigger(
     parent_indices: []const usize,
     parent_table_name: []const u8,
     parent_rowid: i64,
+    parent_new_rowid: i64,
     parent_new_values: ?[]btree.Value,
     child_rowid: i64,
     action: ForeignKeyAction,
@@ -5295,7 +5296,7 @@ fn foreignKeyActionTrigger(
     if (action == .cascade and parent_new_values == null) {
         const checked = checkForeignKeys(connection, database, schema_name, child_table_name, child_rowid, .{ .parent_delete = .{ .old_values = record.values } });
         if (checked != .ok) return checked;
-        const nested = applyForeignKeyActions(connection, database, schema_name, child_table_name, child_rowid, record.values, null, null);
+        const nested = applyForeignKeyActions(connection, database, schema_name, child_table_name, child_rowid, child_rowid, record.values, null, null);
         if (nested != .ok) return nested;
         const deleted = database.deleteTable(child_root_page, child_rowid);
         if (deleted == .not_found) return .ok;
@@ -5310,7 +5311,7 @@ fn foreignKeyActionTrigger(
     var new_rowid = child_rowid;
     for (mappings, parent_indices) |mapping, parent_index| {
         const value = switch (action) {
-            .cascade => proposedForeignKeyValue(parent_columns[parent_index], parent_rowid, parent_new_values.?) orelse return .corrupt,
+            .cascade => proposedForeignKeyValue(parent_columns[parent_index], parent_new_rowid, parent_new_values.?) orelse return .corrupt,
             .set_null => @as(btree.Value, .null_),
             .set_default => blk: {
                 const default = foreignKeyDefaultValue(connection.allocator, child_tokens, child_columns[mapping.child_column]);
@@ -5333,9 +5334,9 @@ fn foreignKeyActionTrigger(
         return .ok;
     }
 
-    const checked = checkForeignKeys(connection, database, schema_name, child_table_name, child_rowid, .{ .parent_update = .{ .old_values = record.values, .new_values = values } });
+    const checked = checkForeignKeys(connection, database, schema_name, child_table_name, child_rowid, .{ .parent_update = .{ .old_values = record.values, .new_rowid = new_rowid, .new_values = values } });
     if (checked != .ok) return checked;
-    const nested = applyForeignKeyActions(connection, database, schema_name, child_table_name, child_rowid, record.values, values, null);
+    const nested = applyForeignKeyActions(connection, database, schema_name, child_table_name, child_rowid, new_rowid, record.values, values, null);
     if (nested != .ok) return nested;
     const child_check = checkForeignKeys(connection, database, schema_name, child_table_name, new_rowid, .{ .child_insert = .{ .values = values } });
     if (child_check != .ok) return child_check;
@@ -5375,13 +5376,14 @@ fn schemaEntryRoot(value: btree.Value) ?u32 {
 fn parentKeyChanged(
     parent_columns: []const ResolvedColumn,
     parent_indices: []const usize,
-    rowid: i64,
+    old_rowid: i64,
+    new_rowid: i64,
     old_values: []const btree.Value,
     new_values: []const btree.Value,
 ) bool {
     for (parent_indices) |parent_index| {
-        const old = foreignKeyRowValue(parent_columns[parent_index], rowid, old_values) orelse return true;
-        const new = proposedForeignKeyValue(parent_columns[parent_index], rowid, new_values) orelse return true;
+        const old = foreignKeyRowValue(parent_columns[parent_index], old_rowid, old_values) orelse return true;
+        const new = proposedForeignKeyValue(parent_columns[parent_index], new_rowid, new_values) orelse return true;
         if (!foreignKeyColumnValueEqual(parent_columns[parent_index], old, new)) return true;
     }
     return false;
@@ -5395,6 +5397,7 @@ fn processParentForeignKeys(
     parent_columns: []const ResolvedColumn,
     parent_tokens: []const Token,
     parent_rowid: i64,
+    parent_new_rowid: i64,
     old_values: []const btree.Value,
     new_values: ?[]btree.Value,
     dropping_table: ?[]const u8,
@@ -5405,7 +5408,7 @@ fn processParentForeignKeys(
     connection.pending_foreign_key_parents.append(connection.allocator, .{
         .table_name = parent_table_name,
         .old_rowid = parent_rowid,
-        .new_rowid = parent_rowid,
+        .new_rowid = parent_new_rowid,
         .new_values = new_values,
     }) catch return .no_memory;
     defer {
@@ -5450,7 +5453,7 @@ fn processParentForeignKeys(
             const parent_indices = locateForeignKeyIndex(connection.allocator, parent_columns, parent_tokens, mappings) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
             defer connection.allocator.free(parent_indices);
             if (new_values) |new| {
-                if (!parentKeyChanged(parent_columns, parent_indices, parent_rowid, old_values, new)) continue;
+                if (!parentKeyChanged(parent_columns, parent_indices, parent_rowid, parent_new_rowid, old_values, new)) continue;
             }
             var rowids = std.ArrayList(i64).empty;
             defer rowids.deinit(connection.allocator);
@@ -5465,7 +5468,7 @@ fn processParentForeignKeys(
             }
             if (action == .no_action or action == .restrict) continue;
             for (rowids.items) |child_rowid| {
-                const mutated = foreignKeyActionTrigger(connection, database, schema_name, child_table_name, child_root_page, child_columns.columns, child_columns.tokens, mappings, parent_columns, parent_indices, parent_table_name, parent_rowid, new_values, child_rowid, action);
+                const mutated = foreignKeyActionTrigger(connection, database, schema_name, child_table_name, child_root_page, child_columns.columns, child_columns.tokens, mappings, parent_columns, parent_indices, parent_table_name, parent_rowid, parent_new_rowid, new_values, child_rowid, action);
                 if (mutated != .ok) return mutated;
             }
         }
@@ -5473,7 +5476,7 @@ fn processParentForeignKeys(
     return .ok;
 }
 
-fn processParentTableForeignKeys(connection: *Connection, database: *btree.Database, schema_name: []const u8, table_name: []const u8, rowid: i64, old_values: []const btree.Value, new_values: ?[]btree.Value, dropping_table: ?[]const u8, apply_actions: bool) ResultCode {
+fn processParentTableForeignKeys(connection: *Connection, database: *btree.Database, schema_name: []const u8, table_name: []const u8, rowid: i64, new_rowid: i64, old_values: []const btree.Value, new_values: ?[]btree.Value, dropping_table: ?[]const u8, apply_actions: bool) ResultCode {
     if (connection.database_configuration[2] == 0) return .ok;
     const schema_outcome = database.schemaTable(table_name);
     if (schema_outcome.result != .ok) return schema_outcome.result;
@@ -5485,7 +5488,7 @@ fn processParentTableForeignKeys(connection: *Connection, database: *btree.Datab
         connection.allocator.free(columns.tokens);
         connection.allocator.free(columns.source);
     }
-    return processParentForeignKeys(connection, database, schema_name, table_name, columns.columns, columns.tokens, rowid, old_values, new_values, dropping_table, apply_actions);
+    return processParentForeignKeys(connection, database, schema_name, table_name, columns.columns, columns.tokens, rowid, new_rowid, old_values, new_values, dropping_table, apply_actions);
 }
 
 const ForeignKeyOldMaskOutcome = struct { result: ResultCode, mask: u32 = 0 };
@@ -5550,21 +5553,21 @@ fn foreignKeyOldValuesAvailable(mask: u32, value_count: usize) bool {
 const ForeignKeyCheckOperation = union(enum) {
     child_insert: struct { values: []const btree.Value },
     parent_delete: struct { old_values: []const btree.Value, dropping_table: ?[]const u8 = null },
-    parent_update: struct { old_values: []const btree.Value, new_values: []btree.Value },
+    parent_update: struct { old_values: []const btree.Value, new_rowid: i64, new_values: []btree.Value },
 };
 
 /// Runtime counterpart of source `sqlite3FkCheck()`.
 fn checkForeignKeys(connection: *Connection, database: *btree.Database, schema_name: []const u8, table_name: []const u8, rowid: i64, operation: ForeignKeyCheckOperation) ResultCode {
     return switch (operation) {
         .child_insert => |insert| checkChildForeignKeyParents(connection, database, table_name, rowid, insert.values),
-        .parent_delete => |delete| processParentTableForeignKeys(connection, database, schema_name, table_name, rowid, delete.old_values, null, delete.dropping_table, false),
-        .parent_update => |update| processParentTableForeignKeys(connection, database, schema_name, table_name, rowid, update.old_values, update.new_values, null, false),
+        .parent_delete => |delete| processParentTableForeignKeys(connection, database, schema_name, table_name, rowid, rowid, delete.old_values, null, delete.dropping_table, false),
+        .parent_update => |update| processParentTableForeignKeys(connection, database, schema_name, table_name, rowid, update.new_rowid, update.old_values, update.new_values, null, false),
     };
 }
 
 /// Runtime counterpart of source `sqlite3FkActions()`.
-fn applyForeignKeyActions(connection: *Connection, database: *btree.Database, schema_name: []const u8, table_name: []const u8, rowid: i64, old_values: []const btree.Value, new_values: ?[]btree.Value, dropping_table: ?[]const u8) ResultCode {
-    return processParentTableForeignKeys(connection, database, schema_name, table_name, rowid, old_values, new_values, dropping_table, true);
+fn applyForeignKeyActions(connection: *Connection, database: *btree.Database, schema_name: []const u8, table_name: []const u8, rowid: i64, new_rowid: i64, old_values: []const btree.Value, new_values: ?[]btree.Value, dropping_table: ?[]const u8) ResultCode {
+    return processParentTableForeignKeys(connection, database, schema_name, table_name, rowid, new_rowid, old_values, new_values, dropping_table, true);
 }
 
 const ScanPlan = struct {
@@ -7183,7 +7186,7 @@ fn dropTableForeignKeyActions(connection: *Connection, database: *btree.Database
         defer record.deinit();
         const checked = checkForeignKeys(connection, database, schema_name, table_name, rowid, .{ .parent_delete = .{ .old_values = record.values, .dropping_table = table_name } });
         if (checked != .ok) return checked;
-        const actions = applyForeignKeyActions(connection, database, schema_name, table_name, rowid, record.values, null, table_name);
+        const actions = applyForeignKeyActions(connection, database, schema_name, table_name, rowid, rowid, record.values, null, table_name);
         if (actions != .ok) return actions;
         const deleted = database.deleteTable(table.root_page, rowid);
         if (deleted != .ok and deleted != .not_found) return deleted;
@@ -7483,16 +7486,33 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             }
             const values = allocator.dupe(btree.Value, record.values) catch break :blk .no_memory;
             defer allocator.free(values);
-            values[action.target_column] = memToBtreeValue(&arguments[0]) orelse break :blk .no_memory;
-            const parent_foreign_key_result = checkForeignKeys(action.connection, database, action.schema_name, action.table_name, rowid, .{ .parent_update = .{ .old_values = record.values, .new_values = values } });
+            var new_rowid = rowid;
+            if (action.target_integer_primary_key) {
+                if (vdbe.vdbe_mem.valueType(&arguments[0]) != 1) break :blk .mismatch;
+                new_rowid = vdbe.vdbe_mem.valueInt64(&arguments[0]);
+                if (new_rowid != rowid) {
+                    const destination = database.openCursor(action.root_page, .table);
+                    if (destination.result != .ok) break :blk destination.result;
+                    var destination_cursor = destination.cursor.?;
+                    defer destination_cursor.deinit();
+                    if (destination_cursor.seekTable(new_rowid)) break :blk .constraint;
+                }
+            } else {
+                values[action.target_column] = memToBtreeValue(&arguments[0]) orelse break :blk .no_memory;
+            }
+            const parent_foreign_key_result = checkForeignKeys(action.connection, database, action.schema_name, action.table_name, rowid, .{ .parent_update = .{ .old_values = record.values, .new_rowid = new_rowid, .new_values = values } });
             if (parent_foreign_key_result != .ok) break :blk parent_foreign_key_result;
-            const actions = applyForeignKeyActions(action.connection, database, action.schema_name, action.table_name, rowid, record.values, values, null);
+            const actions = applyForeignKeyActions(action.connection, database, action.schema_name, action.table_name, rowid, new_rowid, record.values, values, null);
             if (actions != .ok) break :blk actions;
-            const child_foreign_key_result = checkForeignKeys(action.connection, database, action.schema_name, action.table_name, rowid, .{ .child_insert = .{ .values = values } });
+            const child_foreign_key_result = checkForeignKeys(action.connection, database, action.schema_name, action.table_name, new_rowid, .{ .child_insert = .{ .values = values } });
             if (child_foreign_key_result != .ok) break :blk child_foreign_key_result;
             const payload = btree.encodeRecord(allocator, values) catch |err| break :blk if (err == error.OutOfMemory) .no_memory else .too_big;
             defer allocator.free(payload);
-            const rc = database.insertTable(action.root_page, rowid, payload, true);
+            if (new_rowid != rowid) {
+                const deleted = database.deleteTable(action.root_page, rowid);
+                if (deleted != .ok) break :blk deleted;
+            }
+            const rc = database.insertTable(action.root_page, new_rowid, payload, new_rowid == rowid);
             if (rc != .ok) break :blk rc;
             const committed = database.commitMutationBatch();
             batch_active = false;
@@ -7500,7 +7520,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 action.connection.changes = 1;
                 action.connection.total_changes += 1;
             }
-            break :blk action.connection.afterWrite(committed, 23, action.schema_name, action.table_name, rowid);
+            break :blk action.connection.afterWrite(committed, 23, action.schema_name, action.table_name, new_rowid);
         },
         .delete => |action| blk: {
             std.debug.assert(action.connection.foreign_key_action_allocations.items.len == 0);
@@ -7532,7 +7552,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             }
             const foreign_key_result = checkForeignKeys(action.connection, database, action.schema_name, action.table_name, rowid, .{ .parent_delete = .{ .old_values = record.values } });
             if (foreign_key_result != .ok) break :blk foreign_key_result;
-            const actions = applyForeignKeyActions(action.connection, database, action.schema_name, action.table_name, rowid, record.values, null, null);
+            const actions = applyForeignKeyActions(action.connection, database, action.schema_name, action.table_name, rowid, rowid, record.values, null, null);
             if (actions != .ok) break :blk actions;
             const rc = database.deleteTable(action.root_page, rowid);
             if (rc == .not_found) {
@@ -7597,7 +7617,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                     defer old_record.deinit();
                     const replaced = checkForeignKeys(action.connection, database, action.schema_name, action.table_name, rowid, .{ .parent_delete = .{ .old_values = old_record.values } });
                     if (replaced != .ok) break :blk replaced;
-                    const actions = applyForeignKeyActions(action.connection, database, action.schema_name, action.table_name, rowid, old_record.values, null, null);
+                    const actions = applyForeignKeyActions(action.connection, database, action.schema_name, action.table_name, rowid, rowid, old_record.values, null, null);
                     if (actions != .ok) break :blk actions;
                 } else {
                     existing_cursor.deinit();
@@ -8038,7 +8058,6 @@ fn buildRowMutation(connection: *Connection, source: [:0]u8, token_list: []const
             break;
         };
         target_column = found orelse return error.Syntax;
-        if (target_column == pk) return error.Syntax;
         position += 1;
         if (position >= token_list.len or token_list[position].typ != tokens.tk_eq) return error.Syntax;
         position += 1;
@@ -8103,7 +8122,7 @@ fn buildRowMutation(connection: *Connection, source: [:0]u8, token_list: []const
     parser.parameter_names = .empty;
     parser.named_parameters.deinit();
     parser.named_parameters = std.StringHashMap(u16).init(allocator);
-    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .strings = parser.strings, .names = parser.names, .action = if (updating) .{ .update = .{ .connection = connection, .database = database, .schema_name = schema_name, .root_page = schema.root_page, .table_name = table_name, .target_column = target_column, .foreign_key_old_mask = old_mask.mask } } else .{ .delete = .{ .connection = connection, .database = database, .schema_name = schema_name, .root_page = schema.root_page, .table_name = table_name, .foreign_key_old_mask = old_mask.mask } }, .program = .{ .instructions = instructions, .register_count = parser.next_register - 1 } };
+    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .strings = parser.strings, .names = parser.names, .action = if (updating) .{ .update = .{ .connection = connection, .database = database, .schema_name = schema_name, .root_page = schema.root_page, .table_name = table_name, .target_column = target_column, .target_integer_primary_key = resolved.columns[target_column].integer_primary_key, .foreign_key_old_mask = old_mask.mask } } else .{ .delete = .{ .connection = connection, .database = database, .schema_name = schema_name, .root_page = schema.root_page, .table_name = table_name, .foreign_key_old_mask = old_mask.mask } }, .program = .{ .instructions = instructions, .register_count = parser.next_register - 1 } };
     owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
     owner.program.functions = owner.functions[0..];
     const prepared = try statement.Statement.create(allocator, &owner.program, parameters, columns);
