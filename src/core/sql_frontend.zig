@@ -820,6 +820,7 @@ fn openConnection(filename: []const u8, flags_initial: c_int, vfs_name_initial: 
     const open_filename: []const u8 = parsed.path;
     const connection = allocator.create(Connection) catch return ResultCode.no_memory.toC();
     connection.* = .{ .allocator = allocator, .owned_database = true, .schema_model = schema_initialization.Schema.init(allocator, "main") };
+    connection.registerBuiltinFunctions();
     connection.filename = allocator.dupeZ(u8, open_filename) catch {
         allocator.destroy(connection);
         return ResultCode.no_memory.toC();
@@ -9695,8 +9696,9 @@ test "attached schema serialize and deserialize preserve image ownership" {
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(target, "INSERT INTO aux.child VALUES(1,1)", null, null, null));
     try std.testing.expectEqual(ResultCode.constraint.toC(), sqlite3_exec(target, "INSERT INTO aux.child VALUES(2,99)", null, null, null));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(target, "DELETE FROM aux.parent WHERE id=1", null, null, null));
-    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(target, "SELECT id FROM aux.child", -1, &statement_pointer, null));
-    try std.testing.expectEqual(ResultCode.done.toC(), statement.sqlite3_step(statement_pointer));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(target, "SELECT count(*) FROM aux.child", -1, &statement_pointer, null));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(statement_pointer));
+    try std.testing.expectEqual(@as(i64, 0), statement.sqlite3_column_int64(statement_pointer, 0));
     try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(statement_pointer));
     statement_pointer = null;
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(target, "DROP TABLE aux.child", null, null, null));

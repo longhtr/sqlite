@@ -139,7 +139,7 @@ int main(void){
   int attached_invalid_child_rc=sqlite3_exec(attached,"INSERT INTO aux.child VALUES(2,99)",0,0,0);
   int attached_parent_delete_rc=sqlite3_exec(attached,"DELETE FROM aux.parent WHERE id=1",0,0,0);
   sqlite3_int64 attached_child_count=-1;
-  int attached_child_count_rc=query_value(attached,"SELECT id FROM aux.child",&attached_child_count);
+  int attached_child_count_rc=query_value(attached,"SELECT count(*) FROM aux.child",&attached_child_count);
   int attached_child_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.child",0,0,0);
   int attached_parent_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.parent",0,0,0);
   printf("attached\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"),attached_query_rc,(long long)attached_value,attached_insert_rc,attached_update_rc,attached_delete_rc,attached_final_query_rc,(long long)attached_final_value,attached_create_rc,attached_created_insert_rc,attached_created_query_rc,(long long)attached_created_value,attached_drop_rc,attached_fk_config_rc,attached_parent_create_rc,attached_child_create_rc,attached_parent_insert_rc,attached_child_insert_rc,attached_invalid_child_rc,attached_parent_delete_rc,attached_child_count_rc,(long long)attached_child_count,attached_child_drop_rc,attached_parent_drop_rc);
