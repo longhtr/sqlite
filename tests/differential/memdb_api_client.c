@@ -105,6 +105,17 @@ int main(void){
   borrowed_size=-1;
   unsigned char *attached_borrowed=sqlite3_serialize(attached,"aux",&borrowed_size,SQLITE_SERIALIZE_NOCOPY);
   printf("attached\t%d\t%d\t%d\t%lld\t%d\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"));
+  borrowed_size=-1;
+  fail_next_allocation=1;
+  unsigned char *attached_failed=sqlite3_serialize(attached,"aux",&borrowed_size,0);
+  printf("attached-copy-oom\t%d\t%lld\n",attached_failed==0,(long long)borrowed_size);
+  unsigned char *attached_replacement=sqlite3_serialize(source,"main",&size,0);
+  fail_next_allocation=1;
+  int attached_oom_rc=sqlite3_deserialize(attached,"aux",attached_replacement,size,size,0);
+  borrowed_size=-1;
+  attached_borrowed=sqlite3_serialize(attached,"aux",&borrowed_size,SQLITE_SERIALIZE_NOCOPY);
+  printf("attached-deserialize-oom\t%d\t%d\t%lld\n",attached_oom_rc,attached_borrowed==attached_image,(long long)borrowed_size);
+  sqlite3_free(attached_replacement);
 
   int close_clone = sqlite3_close(clone);
   int close_readonly = sqlite3_close(readonly);

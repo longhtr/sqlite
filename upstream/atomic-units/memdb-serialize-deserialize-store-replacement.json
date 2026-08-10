@@ -5,7 +5,7 @@
   "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
-    "rationale": "These three source functions resolve a schema to a private memdb store, expose copied or borrowed database images, and replace a schema store with caller-provided bytes and ownership/resize/read-only flags. Native public APIs preserve main and attached private-schema copy/NOCOPY sizing, serialize ordinary databases from the live Pager page by page, and stage replacement buffers with source-shaped capacity, configured maximum, resize, ownership, and read-only flags before retiring the selected database; complete cross-schema allocation-failure assurance remains open.",
+    "rationale": "These three source functions resolve a schema to a private memdb store, expose copied or borrowed database images, and replace a schema store with caller-provided bytes and ownership/resize/read-only flags. Native public APIs preserve main and attached private-schema copy/NOCOPY sizing, serialize ordinary databases from the live Pager page by page, and stage replacement buffers with source-shaped capacity, configured maximum, resize, ownership, and read-only flags before retiring the selected database; remaining source-side allocation-failure assurance remains open.",
     "source_files": [
       {
         "path": "src/memdb.c",
@@ -144,7 +144,7 @@
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
-    "oom": "Pinned C/Zig evidence covers deterministic private-store copy OOM with exact size output; native fault injection also covers direct FREEONCLOSE close, borrowed storage, read-only storage, successful resize, configured maximum, pre-publication backend OOM, exact NOMEM, old-database continuation, input release, and allocator-manager realloc failure with unchanged pointer/content/size. Attached-schema transfer, borrow, and close ownership match the pinned differential; deterministic cross-schema OOM remains open.",
+    "oom": "Pinned C/Zig evidence covers deterministic private-store copy OOM with exact size output; native fault injection also covers direct FREEONCLOSE close, borrowed storage, read-only storage, successful resize, configured maximum, pre-publication backend OOM, exact NOMEM, old-database continuation, input release, and allocator-manager realloc failure with unchanged pointer/content/size. The pinned differential also verifies attached-schema copy OOM with exact size and deserialize OOM with preserved old pointer, size, and close continuation.",
     "io_crash_concurrency": "Serialize, deserialize, and prepare hold the recursive connection mutex; ordinary databases copy the live Pager snapshot page by page, and pending deserialized images open under that mutex on first non-empty prepare. Exact concurrent misuse traces and cross-schema store lock ordering remain open.",
     "malformed_input": "Negative size/capacity, null data and unknown schema have native guards; the pinned differential verifies malformed publication, exact borrow identity, deferred NOTADB and replacement rejection. The full source API-armor matrix remains open.",
     "continuation": "Successful clone and subsequent SQL pass. Pre-publication allocation failure preserves queryable old content and releases FREEONCLOSE input; post-publication malformed storage remains borrowable, rejects use/replacement with NOTADB, and closes with exact ownership cleanup.",
@@ -166,10 +166,10 @@
     "status": "pending",
     "reviewer": null,
     "review_commit": null,
-    "notes": "Requires cross-schema OOM assurance and independent review."
+    "notes": "Requires remaining source-side allocation-failure assurance and independent review."
   },
   "known_blockers": [
-    "Extend the pinned C/Zig differential with cross-schema and remaining source-side allocation-failure observations.",
+    "Extend the pinned C/Zig differential with remaining source-side allocation-failure observations.",
     "Independent fidelity review remains open."
   ],
   "context_review": {
@@ -193,14 +193,14 @@
     "assertions_branches_cleanup": [
       "All 44 behavior IDs cover schema resolution, size initialization, private/shared/ordinary branches, NOCOPY, empty database materialization, allocation/page loop cleanup, deserialize armor/schema/reopen, transfer and failure FREEONCLOSE",
       "Copy results are caller-owned sqlite3_malloc memory; NOCOPY is borrowed and only available for private stores; adopted bytes are borrowed or owned according to FREEONCLOSE and must not be double-freed",
-      "Native main/attached private-schema copy/NOCOPY/adoption paths, main readonly/resizable paths, ordinary Pager page-by-page copy, configured maximum, pre-publication OOM continuation, malformed post-publication ownership/error/close continuation, and exact realloc-failure pointer/content/size preservation are reachable and tested; cross-schema deterministic OOM remains open",
+      "Native main/attached private-schema copy/NOCOPY/adoption paths, main readonly/resizable paths, ordinary Pager page-by-page copy, configured maximum, pre-publication OOM continuation, malformed post-publication ownership/error/close continuation, and exact realloc-failure pointer/content/size preservation are reachable and tested; attached copy and deserialize OOM match pinned source result, size, pointer, and continuation observations",
       "Failure before transfer honors FREEONCLOSE; successful transfer leaves the replacement backend as owner before Pager validation, malformed storage remains NOCOPY-borrowable, first prepare and attempted replacement return NOTADB, and close releases the transferred image"
     ],
     "upstream_tests": [
       "upstream memdb1.test covers main/attached serialization, direct/readonly/maxsize/empty/malformed deserialize, misuse, replacement restrictions, reopen and continuation; memdb.test/memdb2.test and corruption/fuzz suites exercise consumed images",
       "Project SQL integration verifies nullable size, copy ownership, exact NOCOPY pointer/size, ordinary file Pager image size/header/NOCOPY rejection/deserialize query, missing schema size -1, negative-capacity armor, clone SQL, malformed publication success/exact pointer/deferred NOTADB/replacement rejection/ownership close, direct adopted-pointer identity, resizable growth, FREEONCLOSE, readonly reopen/write rejection and close; VFS injection verifies realloc OOM leaves the original manager allocation, content, and logical size unchanged",
       "Backup integration routes through the same public exports, establishing a production caller; focused memdb tests cover byte-store size/limit/growth owners",
-      "The maintained pinned C/Zig public-API differential covers private-copy OOM/size reporting, main and attached-schema flags, ownership, malformed input, and continuation; remaining source-side and cross-schema OOM sites remain explicit blockers rather than claimed assurance"
+      "The maintained pinned C/Zig public-API differential covers private-copy OOM/size reporting, main and attached-schema flags, ownership, malformed input, and continuation; remaining source-side OOM sites remain explicit blockers rather than claimed assurance"
     ]
   }
 }
