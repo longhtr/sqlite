@@ -3354,10 +3354,10 @@ const json_virtual_source_template: vdbe.VirtualSource = .{ .context = null, .op
 const ProgramAction = union(enum) {
     attach_database: struct { connection: *Connection, filename: []const u8, name: []const u8 },
     detach_database: struct { connection: *Connection, name: []const u8 },
-    create: struct { connection: *Connection, name: []const u8, sql: []const u8, if_not_exists: bool },
+    create: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, sql: []const u8, if_not_exists: bool },
     virtual_create: struct { connection: *Connection, name: []const u8, module_name: []const u8 },
     virtual_drop: struct { connection: *Connection, name: []const u8 },
-    drop: struct { connection: *Connection, name: []const u8, if_exists: bool },
+    drop: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
     insert: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, column_count: usize, integer_primary_key: ?usize, replace: bool, conflict_ignore: bool },
     update: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, target_column: usize, foreign_key_old_mask: u32 },
     delete: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, foreign_key_old_mask: u32 },
@@ -7237,15 +7237,15 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             break :blk .error_;
         },
         .create => |action| blk: {
-            const database = action.connection.database orelse break :blk .misuse;
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
-            break :blk action.connection.afterWrite(database.createSchemaTable(action.name, action.sql, action.if_not_exists), null, "main", action.name, 0);
+            break :blk action.connection.afterWrite(action.database.createSchemaTable(action.name, action.sql, action.if_not_exists), null, action.schema_name, action.name, 0);
         },
         .drop => |action| blk: {
             std.debug.assert(action.connection.foreign_key_action_allocations.items.len == 0);
             defer clearForeignKeyActionAllocations(action.connection);
-            const database = action.connection.database orelse break :blk .misuse;
+            const database = action.database;
+            if (database != action.connection.database and action.connection.database_configuration[2] != 0) break :blk .error_;
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
             const begin = database.beginMutationBatch();
@@ -7260,7 +7260,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             if (dropped != .ok) break :blk dropped;
             const committed = database.commitMutationBatch();
             batch_active = false;
-            break :blk action.connection.afterWrite(committed, null, "main", action.name, 0);
+            break :blk action.connection.afterWrite(committed, null, action.schema_name, action.name, 0);
         },
         .vacuum => |action| blk: {
             const database = action.connection.database orelse break :blk .misuse;
@@ -7521,10 +7521,6 @@ fn compileVirtualSchema(connection: *Connection, source: [:0]u8, token_list: []c
 
 fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
     const allocator = connection.allocator;
-    if (connection.database == null) {
-        allocator.free(source);
-        return .{ .result = .misuse, .consumed = consumed };
-    }
     if (token_list.len > 1 and token_list[0].typ == tokens.tk_create and token_list[1].typ == tokens.tk_virtual) return compileVirtualSchema(connection, source, token_list, consumed);
     if (token_list.len == 3 and token_list[0].typ == tokens.tk_drop and token_list[1].typ == tokens.tk_table and token_list[2].typ == tokens.tk_id) {
         for (connection.virtual_tables.items) |table| {
@@ -7556,8 +7552,25 @@ fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const To
         allocator.free(source);
         return .{ .result = .error_, .error_offset = @intCast(offset), .consumed = consumed };
     }
-    const name = token_list[position].text;
-    position += 1;
+    var schema_name: []const u8 = "main";
+    var name = token_list[position].text;
+    var name_start = token_list[position].start;
+    var qualified = false;
+    if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_dot and token_list[position + 2].typ == tokens.tk_id) {
+        schema_name = name;
+        name = token_list[position + 2].text;
+        name_start = token_list[position + 2].start;
+        position += 3;
+        qualified = true;
+    } else {
+        position += 1;
+    }
+    const located_database = locateDatabase(connection, schema_name);
+    if (located_database.result != .ok) {
+        allocator.free(source);
+        return .{ .result = if (located_database.result == .not_found) .error_ else located_database.result, .consumed = consumed };
+    }
+    const database = located_database.database.?;
     if (creating) {
         if (position >= token_list.len or token_list[position].typ != tokens.tk_lp or token_list[token_list.len - 1].typ != tokens.tk_rp or position + 2 > token_list.len) {
             allocator.free(source);
@@ -7587,7 +7600,7 @@ fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const To
         allocator.free(source);
         return .{ .result = .error_, .error_offset = @intCast(offset), .consumed = consumed };
     }
-    const existence = connection.database.?.schemaTableExists(name);
+    const existence = database.schemaTableExists(name);
     if (existence.result != .ok) {
         allocator.free(source);
         return .{ .result = existence.result, .consumed = consumed };
@@ -7596,6 +7609,15 @@ fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const To
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
+    const normalized_sql: ?[]u8 = if (creating and qualified)
+        std.fmt.allocPrint(allocator, "CREATE TABLE {s}", .{source[name_start..token_list[token_list.len - 1].end]}) catch {
+            allocator.free(source);
+            return .{ .result = .no_memory, .consumed = consumed };
+        }
+    else
+        null;
+    var normalized_adopted = false;
+    defer if (!normalized_adopted) if (normalized_sql) |sql| allocator.free(sql);
     const owner = allocator.create(Owner) catch {
         allocator.free(source);
         return .{ .result = .no_memory, .consumed = consumed };
@@ -7615,11 +7637,18 @@ fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const To
         .parameters = parameters,
         .columns = columns,
         .action = if (creating)
-            .{ .create = .{ .connection = connection, .name = name, .sql = std.mem.trim(u8, source[0..token_list[token_list.len - 1].end], " \t\r\n"), .if_not_exists = conditional } }
+            .{ .create = .{ .connection = connection, .database = database, .schema_name = schema_name, .name = name, .sql = if (normalized_sql) |sql| sql else std.mem.trim(u8, source[0..token_list[token_list.len - 1].end], " \t\r\n"), .if_not_exists = conditional } }
         else
-            .{ .drop = .{ .connection = connection, .name = name, .if_exists = conditional } },
+            .{ .drop = .{ .connection = connection, .database = database, .schema_name = schema_name, .name = name, .if_exists = conditional } },
         .program = .{ .instructions = instructions, .register_count = 1 },
     };
+    if (normalized_sql) |sql| {
+        owner.strings.append(allocator, sql) catch {
+            Owner.destroy(allocator, owner);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        normalized_adopted = true;
+    }
     owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
     owner.program.functions = owner.functions[0..];
     const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
@@ -9646,6 +9675,23 @@ test "attached schema serialize and deserialize preserve image ownership" {
     try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(statement_pointer));
     try std.testing.expectEqual(@as(i64, 44), statement.sqlite3_column_int64(statement_pointer, 0));
     try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(statement_pointer));
+    statement_pointer = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(target, "CREATE TABLE aux.created(id INTEGER PRIMARY KEY, value)", null, null, null));
+    const target_connection = asConnection(target).?;
+    const attached_owner = attachedDatabaseByName(target_connection, "aux").?;
+    const created_schema_outcome = attached_owner.database.?.schemaTable("created");
+    try std.testing.expectEqual(ResultCode.ok, created_schema_outcome.result);
+    var created_schema = created_schema_outcome.table.?;
+    defer created_schema.deinit();
+    try std.testing.expectEqualStrings("CREATE TABLE created(id INTEGER PRIMARY KEY, value)", created_schema.sql);
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(target, "INSERT INTO aux.created VALUES(1,99)", null, null, null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(target, "SELECT value FROM aux.created", -1, &statement_pointer, null));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(statement_pointer));
+    try std.testing.expectEqual(@as(i64, 99), statement.sqlite3_column_int64(statement_pointer, 0));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(statement_pointer));
+    statement_pointer = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(target, "DROP TABLE aux.created", null, null, null));
+    try std.testing.expectEqual(ResultCode.error_.toC(), sqlite3_prepare_v2(target, "SELECT value FROM aux.created", -1, &statement_pointer, null));
 
     var malformed: ?*sqlite3 = null;
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &malformed));

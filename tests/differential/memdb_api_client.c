@@ -121,7 +121,12 @@ int main(void){
   int attached_delete_rc=sqlite3_exec(attached,"DELETE FROM aux.t WHERE id=1",0,0,0);
   sqlite3_int64 attached_final_value=-1;
   int attached_final_query_rc=query_value(attached,"SELECT x FROM aux.t WHERE id=2",&attached_final_value);
-  printf("attached\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%lld\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"),attached_query_rc,(long long)attached_value,attached_insert_rc,attached_update_rc,attached_delete_rc,attached_final_query_rc,(long long)attached_final_value);
+  int attached_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.created(id INTEGER PRIMARY KEY,value)",0,0,0);
+  int attached_created_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.created VALUES(1,99)",0,0,0);
+  sqlite3_int64 attached_created_value=-1;
+  int attached_created_query_rc=query_value(attached,"SELECT value FROM aux.created",&attached_created_value);
+  int attached_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.created",0,0,0);
+  printf("attached\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%lld\t%d\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"),attached_query_rc,(long long)attached_value,attached_insert_rc,attached_update_rc,attached_delete_rc,attached_final_query_rc,(long long)attached_final_value,attached_create_rc,attached_created_insert_rc,attached_created_query_rc,(long long)attached_created_value,attached_drop_rc);
   sqlite3_free(attached_replacement);
 
   int close_clone = sqlite3_close(clone);
