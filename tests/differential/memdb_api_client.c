@@ -190,6 +190,7 @@ int main(void){
   int attached_backup_first_step_rc=sqlite3_backup_step(attached_backup,1);
   int attached_backup_first_remaining=sqlite3_backup_remaining(attached_backup);
   int attached_backup_pages=sqlite3_backup_pagecount(attached_backup);
+  int attached_backup_source_update_rc=sqlite3_exec(attached,"UPDATE aux.t SET x=45 WHERE id=2",0,0,0);
   int attached_backup_step_rc=sqlite3_backup_step(attached_backup,-1);
   int attached_backup_remaining=sqlite3_backup_remaining(attached_backup);
   int attached_backup_finish_rc=sqlite3_backup_finish(attached_backup);
@@ -197,7 +198,7 @@ int main(void){
   int attached_backup_query_rc=query_value(backup_target,"SELECT x FROM auxcopy.t WHERE id=2",&attached_backup_value);
   int attached_backup_target_detach_rc=sqlite3_exec(backup_target,"DETACH auxcopy",0,0,0);
   int attached_backup_target_close_rc=sqlite3_close(backup_target);
-  printf("attached-backup\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",backup_target_open_rc,backup_target_attach_rc,attached_backup_init_ok,attached_backup_detach_rc,attached_backup_first_step_rc,attached_backup_first_remaining,attached_backup_pages,attached_backup_step_rc,attached_backup_remaining,attached_backup_finish_rc,attached_backup_query_rc,(long long)attached_backup_value,attached_backup_target_detach_rc,attached_backup_target_close_rc);
+  printf("attached-backup\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",backup_target_open_rc,backup_target_attach_rc,attached_backup_init_ok,attached_backup_detach_rc,attached_backup_first_step_rc,attached_backup_first_remaining,attached_backup_pages,attached_backup_source_update_rc,attached_backup_step_rc,attached_backup_remaining,attached_backup_finish_rc,attached_backup_query_rc,(long long)attached_backup_value,attached_backup_target_detach_rc,attached_backup_target_close_rc);
 
   int attached_txn_state=sqlite3_txn_state(attached,"aux");
   int attached_txn_all=sqlite3_txn_state(attached,0);

@@ -3130,6 +3130,7 @@ const Backup = struct {
     source_name: [:0]u8,
     source_attached: ?*AttachedDatabase,
     source_page_size: u32,
+    source_changes: i64 = 0,
     image: ?[*]u8 = null,
     image_size: i64 = 0,
     image_capacity: i64 = 0,
@@ -3183,6 +3184,12 @@ pub export fn sqlite3_backup_init(destination_pointer: ?*sqlite3, destination_na
 pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callconv(.c) c_int {
     const backup: *Backup = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
     if (backup.result != .ok) return backup.result.toC();
+    if (backup.image != null and backup.source.total_changes != backup.source_changes) {
+        public_api.sqlite3_free(backup.image.?);
+        backup.image = null;
+        backup.remaining = 0;
+        backup.pages = 0;
+    }
     if (backup.image == null) {
         var size: i64 = 0;
         const bytes = sqlite3_serialize(toOpaque(backup.source), backup.source_name.ptr, &size, 0) orelse {
@@ -3190,6 +3197,7 @@ pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callc
             return backup.result.toC();
         };
         backup.image = bytes;
+        backup.source_changes = backup.source.total_changes;
         backup.image_size = size;
         backup.image_capacity = @intCast(public_api.sqlite3_msize(bytes));
         const page_size: i64 = @intCast(backup.source_page_size);
