@@ -222,7 +222,7 @@
     {
       "id": "memdb-file-storage-locking-and-mapping",
       "path": "upstream/atomic-units/memdb-file-storage-locking-and-mapping.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "memdb-serialize-deserialize-store-replacement",

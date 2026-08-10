@@ -270,6 +270,7 @@ fn initializeProcessOs(_: *anyopaque) c_int {
 pub fn initializeOs() c_int {
     if (process_os_initialized) return memory.ok;
     process_mem_vfs.vfs_name_manager = &memory.process_manager;
+    process_mem_vfs.attachMemdbMutexSubsystem(&process_mutex_subsystem);
     vfs.registerProcessVfs(&process_unix_adapter.abi, true);
     vfs.registerProcessVfs(&process_unix_none_adapter.abi, false);
     vfs.registerProcessVfs(&process_unix_dotfile_adapter.abi, false);

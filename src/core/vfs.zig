@@ -20,6 +20,45 @@ const LocalMutex = struct {
     }
 };
 
+const StoreMutex = union(enum) {
+    none,
+    local: LocalMutex,
+    subsystem: struct {
+        owner: *sqlite_mutex.Subsystem,
+        handle: ?sqlite_mutex.Handle,
+    },
+
+    fn init(mutex_subsystem: ?*sqlite_mutex.Subsystem) error{OutOfMemory}!StoreMutex {
+        const owner = mutex_subsystem orelse return .{ .local = .{} };
+        return .{ .subsystem = .{ .owner = owner, .handle = try owner.allocHandle(.fast) } };
+    }
+
+    fn lock(self: *StoreMutex) void {
+        switch (self.*) {
+            .none => {},
+            .local => |*value| value.lock(),
+            .subsystem => |*value| if (value.handle) |*handle| handle.enter(),
+        }
+    }
+
+    fn unlock(self: *StoreMutex) void {
+        switch (self.*) {
+            .none => {},
+            .local => |*value| value.unlock(),
+            .subsystem => |*value| if (value.handle) |*handle| handle.leave(),
+        }
+    }
+
+    fn deinit(self: *StoreMutex) void {
+        switch (self.*) {
+            .none => {},
+            .local => |*value| value.deinit(),
+            .subsystem => |*value| value.owner.freeHandle(value.handle),
+        }
+        self.* = .none;
+    }
+};
+
 pub const OK: c_int = 0;
 pub const OK_SYMLINK: c_int = OK | (2 << 8);
 pub const ERROR: c_int = 1;
@@ -162,7 +201,7 @@ pub const Event = struct { method: Method, kind: FileKind };
 
 const FileState = struct {
     name: []u8,
-    mutex: LocalMutex = .{},
+    mutex: StoreMutex = .none,
     volatile_data: std.ArrayList(u8) = .empty,
     durable: std.ArrayList(u8) = .empty,
     locks: [5]usize = .{0} ** 5,
@@ -539,6 +578,7 @@ pub const MemoryVfs = struct {
     memdb_mode: bool = false,
     memdb_max_size: i64 = 1_073_741_824,
     vfs_name_manager: ?*memory.Manager = null,
+    memdb_mutex_subsystem: ?*sqlite_mutex.Subsystem = null,
     registry_mutex: LocalMutex = .{},
     event_mutex: LocalMutex = .{},
 
@@ -591,6 +631,14 @@ pub const MemoryVfs = struct {
         self.memdb_max_size = maximum;
     }
 
+    pub fn attachMemdbMutexSubsystem(self: *MemoryVfs, subsystem: *sqlite_mutex.Subsystem) void {
+        std.debug.assert(self.memdb_mode and subsystem.initialized);
+        self.registry_mutex.lock();
+        defer self.registry_mutex.unlock();
+        std.debug.assert(self.files.count() == 0);
+        self.memdb_mutex_subsystem = subsystem;
+    }
+
     fn classify(flags: c_int) FileKind {
         if (flags & OPEN_MAIN_DB != 0) return .database;
         if (flags & OPEN_MAIN_JOURNAL != 0) return .journal;
@@ -616,6 +664,14 @@ pub const MemoryVfs = struct {
                 self.allocator.destroy(created);
                 return .{ .rc = NOMEM, .file = null };
             }, .size_max = if (self.memdb_mode) self.memdb_max_size else std.math.maxInt(i64) };
+            if (shared_memdb) {
+                created.mutex = StoreMutex.init(self.memdb_mutex_subsystem) catch {
+                    self.destroyState(created);
+                    return .{ .rc = NOMEM, .file = null };
+                };
+            } else if (!self.memdb_mode) {
+                created.mutex = .{ .local = .{} };
+            }
             if (!private_state) self.files.put(created.name, created) catch {
                 self.destroyState(created);
                 return .{ .rc = NOMEM, .file = null };
@@ -1280,6 +1336,64 @@ test "memdb doubled growth size controls OOM and source result codes" {
     try std.testing.expectEqual(@as(usize, 3), oom_file.state.volatile_data.items.len);
     native.allocator = std.testing.allocator;
     try std.testing.expectEqual(OK, native.closeAndDestroy(oom_file));
+}
+
+test "shared memdb uses configured dynamic mutex allocation and fails open atomically" {
+    const Probe = struct {
+        var fail_allocation = true;
+        var allocations: usize = 0;
+        var frees: usize = 0;
+        var enters: usize = 0;
+        var leaves: usize = 0;
+        fn alloc(kind: c_int) callconv(.c) ?*anyopaque {
+            std.debug.assert(kind == @intFromEnum(sqlite_mutex.Kind.fast));
+            allocations += 1;
+            return if (fail_allocation) null else @ptrFromInt(16);
+        }
+        fn free(_: ?*anyopaque) callconv(.c) void {
+            frees += 1;
+        }
+        fn enter(_: ?*anyopaque) callconv(.c) void {
+            enters += 1;
+        }
+        fn leave(_: ?*anyopaque) callconv(.c) void {
+            leaves += 1;
+        }
+    };
+    Probe.fail_allocation = true;
+    Probe.allocations = 0;
+    Probe.frees = 0;
+    Probe.enters = 0;
+    Probe.leaves = 0;
+    var methods = sqlite_mutex.noop_methods;
+    methods.xMutexAlloc = Probe.alloc;
+    methods.xMutexFree = Probe.free;
+    methods.xMutexEnter = Probe.enter;
+    methods.xMutexLeave = Probe.leave;
+    var mutexes = sqlite_mutex.Subsystem.init(std.testing.allocator);
+    try mutexes.configureMethods(methods);
+    try std.testing.expectEqual(@as(c_int, 0), mutexes.startLifecycle());
+    defer _ = mutexes.stopLifecycle();
+    var native = MemoryVfs.initMemdb(std.testing.allocator);
+    defer native.deinit();
+    native.attachMemdbMutexSubsystem(&mutexes);
+
+    const failed = native.open("/configured", OPEN_READWRITE | OPEN_CREATE | OPEN_MAIN_DB);
+    try std.testing.expectEqual(NOMEM, failed.rc);
+    try std.testing.expectEqual(null, failed.file);
+    try std.testing.expect(!native.files.contains("/configured"));
+
+    const private = native.open("private", OPEN_READWRITE | OPEN_CREATE | OPEN_MAIN_DB).file.?;
+    try std.testing.expectEqual(@as(usize, 1), Probe.allocations);
+    try std.testing.expectEqual(OK, native.closeAndDestroy(private));
+
+    Probe.fail_allocation = false;
+    const shared = native.open("/configured", OPEN_READWRITE | OPEN_CREATE | OPEN_MAIN_DB).file.?;
+    try std.testing.expectEqual(@as(usize, 2), Probe.allocations);
+    try std.testing.expectEqual(OK, shared.write("x", 0));
+    try std.testing.expectEqual(OK, native.closeAndDestroy(shared));
+    try std.testing.expectEqual(@as(usize, 1), Probe.frees);
+    try std.testing.expect(Probe.enters > 0 and Probe.enters == Probe.leaves);
 }
 
 test "shared memdb serializes concurrent open growth and last close" {
