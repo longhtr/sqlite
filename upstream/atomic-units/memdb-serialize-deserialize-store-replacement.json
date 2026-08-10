@@ -65,7 +65,7 @@
     ],
     "excluded_responsibilities": [
       "Memdb file methods and delegated VFS services assigned to memdb-file-storage-locking-and-mapping",
-      "Attached triggers, secondary-index parent keys/maintenance, virtual/temporary DDL, and broader foreign-key actions outside serialize/deserialize",
+      "Attached triggers, secondary-index parent keys/maintenance, virtual/temporary DDL, and update/deferred foreign-key actions outside serialize/deserialize",
       "Inactive OMIT_DESERIALIZE profile"
     ]
   },
@@ -126,7 +126,7 @@
     "Attached private stores are stable heap owners selected through the connection attachment catalog rather than source aDb/Btree file-control traversal."
   ],
   "oracle": {
-    "protocol": "Native SQL frontend and C ABI integration create memory and ordinary Unix database images, copy serialize with nullable size, NOCOPY borrow/rejection and exact size, clone the ordinary live Pager image through deserialize and execute its content, reject missing schema with size -1, enforce read-only opening, validate negative-capacity armor, preserve the old database on pre-publication allocation failure, publish malformed transferred storage before validation, preserve exact NOCOPY identity, return NOTADB on preparation and replacement, release FREEONCLOSE input at the correct owner, enforce the configured maximum, and inject realloc failure while checking exact pointer/content/size continuation. A maintained pinned C/Zig public-API differential compares deterministic private-store copy OOM with exact size output, copy size/header, main and attached-schema transfer/NOCOPY identity, schema-qualified attached query and aggregate, bounded INSERT/UPDATE/DELETE, ordinary CREATE/DROP TABLE, and inline-key foreign-key constraint/delete-cascade continuation, READONLY reporting/write rejection, malformed deferred failure/replacement rejection, and close results.",
+    "protocol": "Native SQL frontend and C ABI integration create memory and ordinary Unix database images, copy serialize with nullable size, NOCOPY borrow/rejection and exact size, clone the ordinary live Pager image through deserialize and execute its content, reject missing schema with size -1, enforce read-only opening, validate negative-capacity armor, preserve the old database on pre-publication allocation failure, publish malformed transferred storage before validation, preserve exact NOCOPY identity, return NOTADB on preparation and replacement, release FREEONCLOSE input at the correct owner, enforce the configured maximum, and inject realloc failure while checking exact pointer/content/size continuation. A maintained pinned C/Zig public-API differential compares deterministic private-store copy OOM with exact size output, copy size/header, main and attached-schema transfer/NOCOPY identity, schema-qualified attached query and aggregate, bounded INSERT/UPDATE/DELETE, ordinary CREATE/DROP TABLE, and inline-key foreign-key constraint/delete CASCADE/SET NULL/SET DEFAULT/RESTRICT continuation, READONLY reporting/write rejection, malformed deferred failure/replacement rejection, and close results.",
     "internal_observations": [
       "size output initialization and success",
       "copied image allocator ownership",
@@ -181,7 +181,7 @@
     ],
     "callers": [
       "Public sqlite3_serialize/sqlite3_deserialize exports and backup clone flow call this unit under the serialized connection path",
-      "Main and attached memory databases use private MemoryVfs images selected through the connection catalog, and schema-qualified bounded and aggregate scans, DML, ordinary CREATE/DROP TABLE, and inline-key foreign-key enforcement/delete cascades execute the deserialized attached B-tree; named shared memdb denies NOCOPY; Unix serialization uses live Pager page count, page size, get, copy/zero-fill, and release operations",
+      "Main and attached memory databases use private MemoryVfs images selected through the connection catalog, and schema-qualified bounded and aggregate scans, DML, ordinary CREATE/DROP TABLE, and inline-key foreign-key enforcement/delete CASCADE/SET NULL/SET DEFAULT/RESTRICT actions execute the deserialized attached B-tree; named shared memdb denies NOCOPY; Unix serialization uses live Pager page count, page size, get, copy/zero-fill, and release operations",
       "Deserialize closes/replaces the selected main or attached database, adopts caller storage, reopens Pager/Btree against the replacement, and later close frees storage only with FREEONCLOSE"
     ],
     "callees": [

@@ -143,6 +143,27 @@ int main(void){
   int attached_child_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.child",0,0,0);
   int attached_parent_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.parent",0,0,0);
   printf("attached\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"),attached_query_rc,(long long)attached_value,attached_insert_rc,attached_update_rc,attached_delete_rc,attached_final_query_rc,(long long)attached_final_value,attached_create_rc,attached_created_insert_rc,attached_created_query_rc,(long long)attached_created_value,attached_drop_rc,attached_fk_config_rc,attached_parent_create_rc,attached_child_create_rc,attached_parent_insert_rc,attached_child_insert_rc,attached_invalid_child_rc,attached_parent_delete_rc,attached_child_count_rc,(long long)attached_child_count,attached_child_drop_rc,attached_parent_drop_rc);
+
+  int actions_parent_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_parent(id INTEGER PRIMARY KEY)",0,0,0);
+  int actions_null_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_null(id INTEGER PRIMARY KEY,parent_id REFERENCES action_parent(id) ON DELETE SET NULL)",0,0,0);
+  int actions_default_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_default(id INTEGER PRIMARY KEY,parent_id DEFAULT 2 REFERENCES action_parent(id) ON DELETE SET DEFAULT)",0,0,0);
+  int actions_restrict_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_restrict(id INTEGER PRIMARY KEY,parent_id REFERENCES action_parent(id) ON DELETE RESTRICT)",0,0,0);
+  int actions_parent_one_rc=sqlite3_exec(attached,"INSERT INTO aux.action_parent VALUES(1)",0,0,0);
+  int actions_parent_two_rc=sqlite3_exec(attached,"INSERT INTO aux.action_parent VALUES(2)",0,0,0);
+  int actions_null_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.action_null VALUES(1,1)",0,0,0);
+  int actions_default_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.action_default VALUES(1,1)",0,0,0);
+  int actions_restrict_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.action_restrict VALUES(1,1)",0,0,0);
+  int actions_restricted_delete_rc=sqlite3_exec(attached,"DELETE FROM aux.action_parent WHERE id=1",0,0,0);
+  int actions_restrict_clear_rc=sqlite3_exec(attached,"DELETE FROM aux.action_restrict WHERE id=1",0,0,0);
+  int actions_parent_delete_rc=sqlite3_exec(attached,"DELETE FROM aux.action_parent WHERE id=1",0,0,0);
+  sqlite3_int64 actions_null_value=-1,actions_default_value=-1;
+  int actions_null_query_rc=query_value(attached,"SELECT parent_id FROM aux.action_null",&actions_null_value);
+  int actions_default_query_rc=query_value(attached,"SELECT parent_id FROM aux.action_default",&actions_default_value);
+  printf("attached-fk-actions\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%lld\n",actions_parent_create_rc,actions_null_create_rc,actions_default_create_rc,actions_restrict_create_rc,actions_parent_one_rc,actions_parent_two_rc,actions_null_insert_rc,actions_default_insert_rc,actions_restrict_insert_rc,actions_restricted_delete_rc,actions_restrict_clear_rc,actions_parent_delete_rc,actions_null_query_rc,(long long)actions_null_value,actions_default_query_rc,(long long)actions_default_value);
+  sqlite3_exec(attached,"DROP TABLE aux.action_null",0,0,0);
+  sqlite3_exec(attached,"DROP TABLE aux.action_default",0,0,0);
+  sqlite3_exec(attached,"DROP TABLE aux.action_restrict",0,0,0);
+  sqlite3_exec(attached,"DROP TABLE aux.action_parent",0,0,0);
   sqlite3_free(attached_replacement);
 
   int close_clone = sqlite3_close(clone);
