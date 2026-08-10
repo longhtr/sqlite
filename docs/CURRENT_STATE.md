@@ -15,6 +15,7 @@ Incomplete and unsafe for production data. Reusable source-corresponding slices 
 | Behavioral inventory | 25,930 blocks in 2,457 functions |
 | Atomic-unit dossiers total | 46 |
 | Admission-ready dossiers | 46 |
+| Source-translated atomic units | 12 |
 | Historical mechanical function claims | 1,738; 0 completion credit |
 | Active batch and durable checkpoints | 0 entries; 0 checkpoints |
 | Exact internal layouts | 69 |
@@ -33,7 +34,7 @@ These are controls and planning facts, not completion percentages.
 | Parser/compiler/planner | scaffold/missing | Generated tables/contracts do not execute final concrete owners. |
 | VDBE/`Mem` | partial | Value conversion, exact numeric rendering, bounded string/blob ownership, bindings, results, and builder/record/P4 lifecycle execute production paths; complete upstream VDBE ownership remains open. |
 | Schema/AST | partial | Exact roots exist; recursive ownership/destruction remains incomplete. |
-| PCache/VFS/memdb | partial | Focused source traces exist; final coupled ownership remains incomplete. |
+| PCache/VFS/memdb | partial | Pager rollback now uses the typed memory-journal owner and embedded v1 file ABI; broader final coupled ownership remains incomplete. |
 | Pager/WAL | scaffold | Rollback-journal transaction/playback and WAL open/checkpoint slices exist, but they do not own the existing SQL storage path. |
 | B-tree | partial/scaffold | Reads exist; mutation still reconstructs whole trees. |
 | SQL and Zig API | missing | Handwritten bounded frontend remains; active public responsibilities are not complete. |

@@ -2515,7 +2515,7 @@ fn fileControl(connection: *Connection, database_name: ?[*:0]const u8, operation
         },
         28 => {
             const output: *?*btree.vfs.sqlite3_file = @ptrCast(@alignCast(raw));
-            output.* = database.pager.journal_file;
+            output.* = database.pager.journalFile();
             return ResultCode.ok.toC();
         },
         35 => {

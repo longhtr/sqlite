@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-allocator-core-for-connection-growth",
   "title": "Global allocator, size, free, realloc, statistics, and alarm core",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These six malloc.c functions are the immediate global allocator closure beneath connection heap fallback and reallocation. They combine method-table calls, rounding, statistics, soft/hard alarms, and allocator ownership.",
@@ -96,42 +96,42 @@
   "mappings": [
     {
       "source_entity_id": "src/malloc.c::function::sqlite3MallocAlarm::line-217",
-      "relation": "one-to-one-function-candidate",
+      "relation": "one-to-one-function",
       "zig_declaration_ids": [
         "src/core/memory.zig::function::releaseMemory"
       ]
     },
     {
       "source_entity_id": "src/malloc.c::function::mallocWithAlarm::line-246",
-      "relation": "many-to-one-manager-method-candidate",
+      "relation": "many-to-one-manager-method",
       "zig_declaration_ids": [
         "src/core/memory.zig::function::Manager.alloc"
       ]
     },
     {
       "source_entity_id": "src/malloc.c::function::sqlite3Malloc::line-296",
-      "relation": "many-to-one-manager-method-candidate",
+      "relation": "many-to-one-manager-method",
       "zig_declaration_ids": [
         "src/core/memory.zig::function::Manager.alloc"
       ]
     },
     {
       "source_entity_id": "src/malloc.c::function::sqlite3MallocSize::line-344",
-      "relation": "one-to-one-function-candidate",
+      "relation": "one-to-one-function",
       "zig_declaration_ids": [
         "src/core/memory.zig::function::Manager.size"
       ]
     },
     {
       "source_entity_id": "src/malloc.c::function::sqlite3_free::line-391",
-      "relation": "one-to-one-function-candidate",
+      "relation": "one-to-one-function",
       "zig_declaration_ids": [
         "src/core/memory.zig::function::Manager.free"
       ]
     },
     {
       "source_entity_id": "src/malloc.c::function::sqlite3Realloc::line-503",
-      "relation": "one-to-one-function-candidate",
+      "relation": "one-to-one-function",
       "zig_declaration_ids": [
         "src/core/memory.zig::function::Manager.realloc"
       ]
@@ -156,7 +156,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Manager tests cover one-shot/sticky allocation and realloc failures; the C/Zig trace covers hard-limit rejection with old-pointer and byte preservation.",

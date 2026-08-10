@@ -13,6 +13,7 @@ const ResultCode = @import("result_code.zig").ResultCode;
 const limits = @import("build_profile").limits;
 pub const page_cache = @import("page_cache.zig");
 pub const vfs = @import("vfs.zig");
+pub const memory_journal = @import("memory_journal.zig");
 pub const wal = @import("wal.zig");
 
 pub const header_size = 100;
@@ -86,6 +87,7 @@ pub const OpenOptions = struct {
     max_cached_pages: usize = 2_000,
     writable: bool = false,
     wal_external_index: bool = false,
+    journal_spill_threshold: i64 = 0,
 };
 
 pub const CommitEvent = enum {
@@ -143,8 +145,8 @@ pub const Pager = struct {
     stats: Stats = .{},
     busy_handler: ?BusyHandler = null,
     busy_context: ?*anyopaque = null,
-    journal_file_bytes: ?AlignedFileBytes = null,
-    journal_file: ?*vfs.sqlite3_file = null,
+    journal: ?memory_journal.Journal = null,
+    journal_spill_threshold: i64 = 0,
     journaled_pages: ?[]bool = null,
     journal_offset: u64 = 0,
     journal_records: u32 = 0,
@@ -261,6 +263,7 @@ pub const Pager = struct {
             ),
             .read_only = !options.writable,
             .wal_external_index = options.wal_external_index,
+            .journal_spill_threshold = options.journal_spill_threshold,
         };
 
         if (!pager.cache.ready()) {
@@ -416,34 +419,19 @@ pub const Pager = struct {
     }
 
     fn openJournalFile(self: *Pager, truncate_existing: bool) ResultCode {
-        if (self.journal_file != null) return .ok;
-        const bytes = self.allocator.alignedAlloc(
-            u8,
-            .of(vfs.sqlite3_file),
-            @intCast(self.abi_vfs.szOsFile),
-        ) catch return .no_memory;
-        @memset(bytes, 0);
-        const file: *vfs.sqlite3_file = @ptrCast(bytes.ptr);
-        var output_flags: c_int = 0;
-        const rc = ResultCode.fromC(vfs.osOpen(
+        if (self.journal != null) return .ok;
+        const opened = memory_journal.Journal.open(
+            self.allocator,
             self.abi_vfs,
             self.journal_name.ptr,
-            file,
             vfs.OPEN_READWRITE | vfs.OPEN_CREATE | vfs.OPEN_MAIN_JOURNAL,
-            &output_flags,
-        ));
-        if (rc != .ok) {
-            self.allocator.free(bytes);
-            return rc;
-        }
-        if (file.pMethods == null) {
-            self.allocator.free(bytes);
-            return .cannot_open;
-        }
-        self.journal_file_bytes = bytes;
-        self.journal_file = file;
+            self.journal_spill_threshold,
+        );
+        const rc = ResultCode.fromC(opened.result);
+        if (rc != .ok) return rc;
+        self.journal = opened.journal;
         if (truncate_existing) {
-            const truncate_rc = truncateFile(file, 0);
+            const truncate_rc = ResultCode.fromC(self.journal.?.truncate(0));
             if (truncate_rc != .ok) {
                 _ = self.closeJournalFile(false);
                 return truncate_rc;
@@ -454,13 +442,9 @@ pub const Pager = struct {
 
     fn closeJournalFile(self: *Pager, delete_file: bool) ResultCode {
         var rc: ResultCode = .ok;
-        if (self.journal_file) |file| {
-            const methods = file.pMethods orelse return .io_error;
-            const close_fn = methods.xClose orelse return .io_error;
-            rc = ResultCode.fromC(close_fn(file));
-            self.journal_file = null;
-            if (self.journal_file_bytes) |bytes| self.allocator.free(bytes);
-            self.journal_file_bytes = null;
+        if (self.journal) |*journal| {
+            rc = ResultCode.fromC(journal.close());
+            self.journal = null;
         }
         if (delete_file and rc == .ok) {
             const delete_fn = self.abi_vfs.xDelete orelse return .io_error;
@@ -497,6 +481,10 @@ pub const Pager = struct {
         self.commit_context = context;
     }
 
+    pub fn journalFile(self: *Pager) ?*vfs.sqlite3_file {
+        return if (self.journal) |*journal| journal.abiFile() else null;
+    }
+
     /// Source `setSectorSize()`: normalize the VFS device sector size once per
     /// pager before either large-sector journaling or a journal header write.
     fn refreshSectorSize(self: *Pager) ResultCode {
@@ -511,7 +499,7 @@ pub const Pager = struct {
     }
 
     fn writeInitialJournalHeader(self: *Pager) ResultCode {
-        const file = self.journal_file orelse return .misuse;
+        const journal = if (self.journal) |*value| value else return .misuse;
         const sector_rc = self.refreshSectorSize();
         if (sector_rc != .ok) return sector_rc;
         const sector = self.journal_sector_size;
@@ -527,15 +515,15 @@ pub const Pager = struct {
         putU32(header, 16, self.original_database_pages);
         putU32(header, 20, sector);
         putU32(header, 24, self.page_size);
-        const rc = writeToFile(file, header, 0);
+        const rc = ResultCode.fromC(journal.write(header, 0));
         if (rc != .ok) return rc;
         self.journal_offset = sector;
         return .ok;
     }
 
-    fn playbackJournal(self: *Pager, file: *vfs.sqlite3_file, write_database: bool) ResultCode {
+    fn playbackJournal(self: *Pager, source: *memory_journal.Journal, write_database: bool) ResultCode {
         var header: [28]u8 = undefined;
-        var rc = readFromFile(file, &header, 0);
+        var rc = ResultCode.fromC(source.read(&header, 0));
         if (rc != .ok) return if (rc.toC() == vfs.IOERR_SHORT_READ) .corrupt else rc;
         const magic = [_]u8{ 0xd9, 0xd5, 0x05, 0xf9, 0x20, 0xa1, 0x63, 0xd7 };
         if (!std.mem.eql(u8, header[0..8], &magic)) return .corrupt;
@@ -548,8 +536,7 @@ pub const Pager = struct {
             !std.math.isPowerOfTwo(sector_size) or original_pages > maximum_page_count)
             return .corrupt;
         var journal_size: i64 = 0;
-        const size_fn = (file.pMethods orelse return .io_error).xFileSize orelse return ioerr_fstat;
-        rc = ResultCode.fromC(size_fn(file, &journal_size));
+        rc = ResultCode.fromC(source.fileSize(&journal_size));
         if (rc != .ok) return rc;
         if (journal_size < 0 or @as(u64, @intCast(journal_size)) < sector_size) return .corrupt;
         const record_size: u64 = self.page_size + 8;
@@ -561,14 +548,14 @@ pub const Pager = struct {
         var offset: u64 = sector_size;
         for (0..record_count) |_| {
             var number_bytes: [4]u8 = undefined;
-            rc = readFromFile(file, &number_bytes, offset);
+            rc = ResultCode.fromC(source.read(&number_bytes, offset));
             if (rc != .ok) return rc;
             const page_number = getU32(&number_bytes, 0);
             if (page_number == 0 or page_number == @as(u32, @intCast(pending_byte / self.page_size + 1))) return .corrupt;
-            rc = readFromFile(file, data, offset + 4);
+            rc = ResultCode.fromC(source.read(data, offset + 4));
             if (rc != .ok) return rc;
             var checksum_bytes: [4]u8 = undefined;
-            rc = readFromFile(file, &checksum_bytes, offset + 4 + self.page_size);
+            rc = ResultCode.fromC(source.read(&checksum_bytes, offset + 4 + self.page_size));
             if (rc != .ok) return rc;
             if (getU32(&checksum_bytes, 0) != self.journalChecksum(data)) return .corrupt;
             if (page_number <= original_pages) {
@@ -605,7 +592,7 @@ pub const Pager = struct {
         var rc = ResultCode.fromC(lock_fn(self.file, vfs.LOCK_EXCLUSIVE));
         if (rc != .ok) return rc;
         rc = self.openJournalFile(false);
-        if (rc == .ok) rc = self.playbackJournal(self.journal_file.?, true);
+        if (rc == .ok) rc = self.playbackJournal(&self.journal.?, true);
         const close_rc = self.closeJournalFile(rc == .ok);
         if (rc == .ok) rc = close_rc;
         if (rc == .ok) {
@@ -940,16 +927,16 @@ pub const Pager = struct {
     }
 
     fn appendJournalRecord(self: *Pager, page: *page_cache.Page) ResultCode {
-        const file = self.journal_file orelse return .misuse;
+        const journal = if (self.journal) |*value| value else return .misuse;
         var number: [4]u8 = undefined;
         putU32(&number, 0, page.key);
-        var rc = writeToFile(file, &number, self.journal_offset);
+        var rc = ResultCode.fromC(journal.write(&number, self.journal_offset));
         if (rc != .ok) return rc;
-        rc = writeToFile(file, page.data, self.journal_offset + 4);
+        rc = ResultCode.fromC(journal.write(page.data, self.journal_offset + 4));
         if (rc != .ok) return rc;
         var checksum: [4]u8 = undefined;
         putU32(&checksum, 0, self.journalChecksum(page.data));
-        rc = writeToFile(file, &checksum, self.journal_offset + 4 + self.page_size);
+        rc = ResultCode.fromC(journal.write(&checksum, self.journal_offset + 4 + self.page_size));
         if (rc != .ok) return rc;
         self.journal_offset += self.page_size + 8;
         self.journal_records += 1;
@@ -1084,20 +1071,20 @@ pub const Pager = struct {
     }
 
     fn syncJournalForCommit(self: *Pager) ResultCode {
-        const file = self.journal_file orelse return .misuse;
+        const journal = if (self.journal) |*value| value else return .misuse;
         var rc = self.lockForWrite(vfs.LOCK_EXCLUSIVE, true);
         if (rc != .ok) return rc;
-        rc = syncFile(file);
+        rc = ResultCode.fromC(journal.sync(2));
         if (rc != .ok) return rc;
         if (!self.emitCommitEvent(.journal_initial_sync)) return .interrupt;
         const magic = [_]u8{ 0xd9, 0xd5, 0x05, 0xf9, 0x20, 0xa1, 0x63, 0xd7 };
         var header: [12]u8 = undefined;
         @memcpy(header[0..8], &magic);
         putU32(&header, 8, self.journal_records);
-        rc = writeToFile(file, &header, 0);
+        rc = ResultCode.fromC(journal.write(&header, 0));
         if (rc != .ok) return rc;
         if (!self.emitCommitEvent(.journal_header_write)) return .interrupt;
-        rc = syncFile(file);
+        rc = ResultCode.fromC(journal.sync(2));
         if (rc != .ok) return rc;
         if (!self.emitCommitEvent(.journal_final_sync)) return .interrupt;
         self.cache.clearSyncFlags();
@@ -1184,7 +1171,7 @@ pub const Pager = struct {
         var rc: ResultCode = .ok;
         if (self.wal_mode) {
             rc = if (self.wal_state) |*state| state.endWrite() else .cannot_open;
-        } else if (self.journal_file != null) rc = self.closeJournalFile(true);
+        } else if (self.journal != null) rc = self.closeJournalFile(true);
         if (rc != .ok) return rc;
         self.cache.cleanAll();
         self.clearTransaction();
@@ -1256,8 +1243,8 @@ pub const Pager = struct {
             self.database_pages = self.original_database_pages;
             rc = if (self.wal_state) |*state| state.endWrite() else .cannot_open;
         } else if (self.state == .writer_database_modified or self.state == .writer_finished) {
-            if (self.journal_file == null) rc = self.openJournalFile(false);
-            if (rc == .ok) rc = self.playbackJournal(self.journal_file.?, true);
+            if (self.journal == null) rc = self.openJournalFile(false);
+            if (rc == .ok) rc = self.playbackJournal(&self.journal.?, true);
         } else {
             self.cache.clear();
             self.database_pages = self.original_database_pages;
@@ -1354,13 +1341,9 @@ pub const Pager = struct {
     pub fn crashClose(self: *Pager) void {
         if (self.wal_state) |*state| state.deinit();
         self.wal_state = null;
-        if (self.journal_file) |journal| {
-            if (journal.pMethods) |methods| {
-                if (methods.xClose) |close_fn| _ = close_fn(journal);
-            }
-            if (self.journal_file_bytes) |bytes| self.allocator.free(bytes);
-            self.journal_file = null;
-            self.journal_file_bytes = null;
+        if (self.journal) |*journal| {
+            _ = journal.close();
+            self.journal = null;
         }
         if (self.file.pMethods) |methods| {
             if (methods.xClose) |close_fn| _ = close_fn(self.file);
@@ -1604,6 +1587,34 @@ test "Phase 8 commit and rollback preserve DELETE FULL ordering and content" {
     const restored = pager.getPage(1, false).page.?;
     try std.testing.expectEqual(@as(u32, 0x1020_3040), readUserVersion(restored.data));
     try std.testing.expectEqual(ResultCode.ok, pager.release(restored));
+    try std.testing.expectEqual(ResultCode.ok, pager.close());
+}
+
+test "pager routes memory-only rollback through the source-shaped journal owner" {
+    const fixture = try readFixture("valid-empty-4096.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "memory-journal.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-memory-journal", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "memory-journal.db", .{
+        .writable = true,
+        .journal_spill_threshold = -1,
+    }).pager.?;
+    try std.testing.expectEqual(ResultCode.ok, pager.beginRead());
+    try std.testing.expectEqual(ResultCode.ok, pager.beginWrite());
+    const page = pager.getPage(1, false).page.?;
+    try std.testing.expectEqual(ResultCode.ok, pager.makeWritable(page));
+    try std.testing.expect(pager.journal != null and pager.journal.?.isInMemory());
+    writeUserVersion(page.data, 0x5566_7788);
+    try std.testing.expectEqual(ResultCode.ok, pager.release(page));
+    try std.testing.expectEqual(ResultCode.ok, pager.rollback());
+    const restored = pager.getPage(1, false).page.?;
+    try std.testing.expectEqual(@as(u32, 0), readUserVersion(restored.data));
+    try std.testing.expectEqual(ResultCode.ok, pager.release(restored));
+    var exists: c_int = 1;
+    try std.testing.expectEqual(vfs.OK, memory.access("memory-journal.db-journal", vfs.ACCESS_EXISTS, &exists));
+    try std.testing.expectEqual(@as(c_int, 0), exists);
     try std.testing.expectEqual(ResultCode.ok, pager.close());
 }
 

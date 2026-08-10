@@ -16,6 +16,7 @@ const Point = struct {
 };
 
 pub const Journal = struct {
+    base: vfs.sqlite3_file,
     allocator: std.mem.Allocator,
     chunk_size: usize,
     spill_threshold: i64,
@@ -32,6 +33,7 @@ pub const Journal = struct {
 
     pub fn open(allocator: std.mem.Allocator, underlying_vfs: ?*vfs.sqlite3_vfs, journal_name: ?[*:0]const u8, flags: c_int, spill_threshold: i64) OpenResult {
         var journal = Journal{
+            .base = .{ .pMethods = &journal_io_methods },
             .allocator = allocator,
             .chunk_size = if (spill_threshold > 0) @intCast(spill_threshold) else default_allocation_size - @sizeOf(Chunk),
             .spill_threshold = spill_threshold,
@@ -91,12 +93,19 @@ pub const Journal = struct {
     }
 
     pub fn close(self: *Journal) c_int {
-        if (self.real_file != null) return self.closeReal();
-        self.freeChunks(self.first);
-        self.first = null;
-        self.endpoint = .{};
-        self.readpoint = .{};
-        return vfs.OK;
+        const result = if (self.real_file != null) self.closeReal() else blk: {
+            self.freeChunks(self.first);
+            self.first = null;
+            self.endpoint = .{};
+            self.readpoint = .{};
+            break :blk vfs.OK;
+        };
+        self.base.pMethods = null;
+        return result;
+    }
+
+    pub fn abiFile(self: *Journal) *vfs.sqlite3_file {
+        return &self.base;
     }
 
     pub fn isInMemory(self: *const Journal) bool {
@@ -257,8 +266,81 @@ pub const Journal = struct {
     }
 };
 
+fn journalOwner(file: *vfs.sqlite3_file) *Journal {
+    return @fieldParentPtr("base", file);
+}
+
+fn journalClose(file: *vfs.sqlite3_file) callconv(.c) c_int {
+    return journalOwner(file).close();
+}
+
+fn journalRead(file: *vfs.sqlite3_file, output: *anyopaque, amount: c_int, offset: i64) callconv(.c) c_int {
+    if (amount < 0 or offset < 0) return vfs.IOERR_READ;
+    return journalOwner(file).read(@as([*]u8, @ptrCast(output))[0..@intCast(amount)], @intCast(offset));
+}
+
+fn journalWrite(file: *vfs.sqlite3_file, input: *const anyopaque, amount: c_int, offset: i64) callconv(.c) c_int {
+    if (amount < 0 or offset < 0) return vfs.IOERR_WRITE;
+    return journalOwner(file).write(@as([*]const u8, @ptrCast(input))[0..@intCast(amount)], @intCast(offset));
+}
+
+fn journalTruncate(file: *vfs.sqlite3_file, size: i64) callconv(.c) c_int {
+    if (size < 0) return vfs.IOERR_TRUNCATE;
+    return journalOwner(file).truncate(@intCast(size));
+}
+
+fn journalSync(file: *vfs.sqlite3_file, flags: c_int) callconv(.c) c_int {
+    return journalOwner(file).sync(flags);
+}
+
+fn journalFileSize(file: *vfs.sqlite3_file, output: *i64) callconv(.c) c_int {
+    return journalOwner(file).fileSize(output);
+}
+
+const journal_io_methods = vfs.sqlite3_io_methods{
+    .iVersion = 1,
+    .xClose = journalClose,
+    .xRead = journalRead,
+    .xWrite = journalWrite,
+    .xTruncate = journalTruncate,
+    .xSync = journalSync,
+    .xFileSize = journalFileSize,
+    .xLock = null,
+    .xUnlock = null,
+    .xCheckReservedLock = null,
+    .xFileControl = null,
+    .xSectorSize = null,
+    .xDeviceCharacteristics = null,
+    .xShmMap = null,
+    .xShmLock = null,
+    .xShmBarrier = null,
+    .xShmUnmap = null,
+    .xFetch = null,
+    .xUnfetch = null,
+};
+
 pub fn journalSize(underlying_vfs: *const vfs.sqlite3_vfs) usize {
     return @max(@as(usize, @intCast(underlying_vfs.szOsFile)), @sizeOf(Journal));
+}
+
+test "memory journal publishes the source sqlite3_file method tail" {
+    const opened = Journal.open(std.testing.allocator, null, null, 0, -1);
+    try std.testing.expectEqual(vfs.OK, opened.result);
+    var journal = opened.journal;
+    const file = journal.abiFile();
+    const methods = file.pMethods.?;
+    try std.testing.expectEqual(@as(c_int, 1), methods.iVersion);
+    try std.testing.expect(methods.xLock == null and methods.xFileControl == null);
+    try std.testing.expect(methods.xShmMap == null and methods.xFetch == null);
+    try std.testing.expectEqual(vfs.OK, methods.xWrite.?(file, "abcdef".ptr, 6, 0));
+    var output: [4]u8 = undefined;
+    try std.testing.expectEqual(vfs.OK, methods.xRead.?(file, &output, output.len, 1));
+    try std.testing.expectEqualStrings("bcde", &output);
+    var size: i64 = -1;
+    try std.testing.expectEqual(vfs.OK, methods.xFileSize.?(file, &size));
+    try std.testing.expectEqual(@as(i64, 6), size);
+    try std.testing.expectEqual(vfs.OK, methods.xClose.?(file));
+    try std.testing.expectEqual(null, file.pMethods);
 }
 
 test "memory journal chunks read overwrite truncate and close" {

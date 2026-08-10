@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-allocator-init-shutdown",
   "title": "Global allocator default-method selection, initialization, and shutdown",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These three functions select the pinned default mem1 backend, initialize allocator mutex/backend/page-cache configuration, clear mem0 on failure, and shut down/reset allocator state. They are the immediate lifecycle closure required before the global allocation core.",
@@ -63,21 +63,21 @@
   "mappings": [
     {
       "source_entity_id": "src/malloc.c::function::sqlite3MallocInit::line-159",
-      "relation": "one-to-one-lifecycle-or-default-backend-candidate",
+      "relation": "one-to-one-lifecycle-or-default-backend",
       "zig_declaration_ids": [
         "src/core/memory.zig::function::Manager.start"
       ]
     },
     {
       "source_entity_id": "src/malloc.c::function::sqlite3MallocEnd::line-187",
-      "relation": "one-to-one-lifecycle-or-default-backend-candidate",
+      "relation": "one-to-one-lifecycle-or-default-backend",
       "zig_declaration_ids": [
         "src/core/memory.zig::function::Manager.stop"
       ]
     },
     {
       "source_entity_id": "src/mem1.c::function::sqlite3MemSetDefault::line-277",
-      "relation": "one-to-one-lifecycle-or-default-backend-candidate",
+      "relation": "one-to-one-lifecycle-or-default-backend",
       "zig_declaration_ids": [
         "src/core/memory.zig::function::systemBackend"
       ]
@@ -101,7 +101,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Injected initialization failure clears allocator-local state; mutex-allocation OOM integration remains open.",

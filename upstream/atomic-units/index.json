@@ -12,7 +12,7 @@
     {
       "id": "active-profile-limit-constants",
       "path": "upstream/atomic-units/active-profile-limit-constants.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "btree-sharability-and-vdbe-usage-lock-masks",
@@ -142,37 +142,37 @@
     {
       "id": "global-allocator-core-for-connection-growth",
       "path": "upstream/atomic-units/global-allocator-core-for-connection-growth.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "profile-release-memory-noop",
       "path": "upstream/atomic-units/profile-release-memory-noop.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "global-status-primitives",
       "path": "upstream/atomic-units/global-status-primitives.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "global-allocator-state-representations",
       "path": "upstream/atomic-units/global-allocator-state-representations.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "global-allocator-init-shutdown",
       "path": "upstream/atomic-units/global-allocator-init-shutdown.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "pthread-mutex-enter-leave-core",
       "path": "upstream/atomic-units/pthread-mutex-enter-leave-core.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "mutex-static-and-dynamic-allocation",
       "path": "upstream/atomic-units/mutex-static-and-dynamic-allocation.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "global-library-initialize-shutdown",
@@ -182,12 +182,12 @@
     {
       "id": "mutex-method-selection-and-lifecycle",
       "path": "upstream/atomic-units/mutex-method-selection-and-lifecycle.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "global-initialization-state-representations",
       "path": "upstream/atomic-units/global-initialization-state-representations.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "pcache-process-lifecycle-and-static-buffer",
@@ -197,7 +197,7 @@
     {
       "id": "os-unix-process-lifecycle-and-default-vfs",
       "path": "upstream/atomic-units/os-unix-process-lifecycle-and-default-vfs.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "pcache-static-slot-allocation-and-free",
@@ -207,7 +207,7 @@
     {
       "id": "memory-journal-chunks-spill-and-lifecycle",
       "path": "upstream/atomic-units/memory-journal-chunks-spill-and-lifecycle.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "key-info-reference-ownership",

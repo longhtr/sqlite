@@ -80,7 +80,7 @@ def main() -> None:
             mutated_historical = copy.deepcopy(historical)
             mutated_historical["entries"][0]["reconciliation"]["completion_credit"] = True
             historical_path.write_text(json.dumps(mutated_historical))
-            expect_failure("historical mechanical claim reconciliation is stale", gate.validate)
+            expect_failure("historical mechanical claim reconciliation is inconsistent", gate.validate)
             historical_path.write_text(json.dumps(historical))
 
             bad_checkpoints = copy.deepcopy(checkpoints)

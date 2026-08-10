@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "profile-release-memory-noop",
   "title": "Pinned-profile sqlite3_release_memory no-op",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "The pinned profile omits SQLITE_ENABLE_MEMORY_MANAGEMENT, making sqlite3_release_memory an unconditional result-zero no-op used both publicly and by allocator alarm handoff.",
@@ -94,7 +94,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation; exact no-op remains valid under OOM.",

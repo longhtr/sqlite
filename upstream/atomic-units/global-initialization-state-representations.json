@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-initialization-state-representations",
   "title": "Global initialization layer flags, progress owner, and waiter synchronization state",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These seven Sqlite3Config fields are the complete initialization-progress and per-layer state read or written by sqlite3_initialize/shutdown. Coordinator and subsystem owners now preserve partial-success state across late failures.",
@@ -121,7 +121,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Allocator/mutex failure state is represented; per-cache allocation OOM remains outside this representation unit.",

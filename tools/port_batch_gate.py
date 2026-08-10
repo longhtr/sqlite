@@ -103,6 +103,7 @@ def validate(require_threshold: bool = False) -> dict[str, int | str]:
         fail("checkpoint ledger checkpoints must be a list")
     checkpoint_ids: list[str] = []
     checkpoint_source_ids: set[str] = set()
+    checkpoint_entries_by_source: dict[str, dict[str, object]] = {}
     previous_checkpoint: str | None = None
     for checkpoint in checkpoint_items:
         required_checkpoint = {
@@ -143,6 +144,7 @@ def validate(require_threshold: bool = False) -> dict[str, int | str]:
                 if not isinstance(entry.get(key), str) or not entry[key]:
                     fail(f"checkpoint entry lacks {key}: {identity}")
             local_ids.add(identity)
+            checkpoint_entries_by_source[identity] = entry
             counts[entry_class] += 1
         if checkpoint["short_functions"] != counts["short"] or checkpoint["substantive_functions"] != counts["substantive"]:
             fail(f"checkpoint totals are stale: {checkpoint_id}")
@@ -198,24 +200,16 @@ def validate(require_threshold: bool = False) -> dict[str, int | str]:
     }
     units = atomic_units()
 
-    if historical.get("schema_version") != 2 or historical.get("sqlite_checkin") != source_manifest.get("sqlite_checkin"):
+    if historical.get("schema_version") != 3 or historical.get("sqlite_checkin") != source_manifest.get("sqlite_checkin"):
         fail("historical mechanical claims use another schema or SQLite baseline")
     if historical.get("completion_credit") is not False:
         fail("historical mechanical claims need an explicit no-credit boundary")
     historical_entries = historical.get("entries")
     if not isinstance(historical_entries, list):
         fail("historical mechanical claim entries must be a list")
-    unit_memberships: dict[str, list[str]] = collections.defaultdict(list)
-    for unit_id, unit in units.items():
-        for identity in unit.get("scope", {}).get("source_entity_ids", []):
-            if isinstance(identity, str):
-                unit_memberships[identity].append(unit_id)
-    declaration_candidates: dict[tuple[str, str], list[str]] = collections.defaultdict(list)
-    for declaration_id, declaration in declarations.items():
-        if declaration.get("kind") == "function":
-            declaration_candidates[(declaration.get("file"), declaration.get("name"))].append(declaration_id)
 
     historical_ids: list[str] = []
+    historical_by_id: dict[str, dict[str, object]] = {}
     historical_counts: collections.Counter[str] = collections.Counter()
     target_status_counts: collections.Counter[str] = collections.Counter()
     target_resolution_counts: collections.Counter[str] = collections.Counter()
@@ -240,52 +234,66 @@ def validate(require_threshold: bool = False) -> dict[str, int | str]:
             fail(f"historical mechanical claim has wrong class: {identity}")
         if entry.get("complete") is not True:
             fail(f"historical mechanical claim lost its historical complete marker: {identity}")
-        zig_path = entry.get("zig_path")
-        zig_function = entry.get("zig_function")
-        if not isinstance(zig_path, str) or not isinstance(zig_function, str):
+        if not isinstance(entry.get("zig_path"), str) or not isinstance(entry.get("zig_function"), str):
             fail(f"historical mechanical claim has malformed target: {identity}")
-        claimed_ids = sorted(declaration_candidates.get((zig_path, zig_function), []))
-        if not claimed_ids:
-            fail(f"historical mechanical target is absent from the AST inventory: {identity}")
-        mapping = mappings.get(identity)
-        canonical_ids = sorted(
-            target.get("declaration_id")
-            for target in mapping.get("zig", [])
-            if isinstance(target, dict) and isinstance(target.get("declaration_id"), str)
-        ) if mapping else []
+        reconciliation = entry.get("reconciliation")
+        required_reconciliation = {
+            "disposition", "canonical_target_status", "claimed_target_resolution",
+            "claimed_declarations", "canonical_declarations", "atomic_unit_ids",
+            "mapping_classification", "completion_credit",
+        }
+        if not isinstance(reconciliation, dict) or set(reconciliation) != required_reconciliation:
+            fail(f"historical mechanical claim reconciliation is malformed: {identity}")
+        claimed = reconciliation["claimed_declarations"]
+        canonical = reconciliation["canonical_declarations"]
+        for label, snapshots in (("claimed", claimed), ("canonical", canonical)):
+            if not isinstance(snapshots, list) or (label == "claimed" and not snapshots):
+                fail(f"historical mechanical {label} snapshot is malformed: {identity}")
+            snapshot_ids: list[str] = []
+            for snapshot in snapshots:
+                if (
+                    not isinstance(snapshot, dict)
+                    or set(snapshot) != {"declaration_id", "source_sha256"}
+                    or not isinstance(snapshot.get("declaration_id"), str)
+                    or not isinstance(snapshot.get("source_sha256"), str)
+                    or not snapshot["declaration_id"]
+                    or re.fullmatch(r"[0-9a-f]{64}", snapshot["source_sha256"]) is None
+                ):
+                    fail(f"historical mechanical {label} snapshot is malformed: {identity}")
+                snapshot_ids.append(snapshot["declaration_id"])
+            if snapshot_ids != sorted(set(snapshot_ids)):
+                fail(f"historical mechanical {label} snapshot is not unique and sorted: {identity}")
+        claimed_ids = {item["declaration_id"] for item in claimed}
+        canonical_ids = {item["declaration_id"] for item in canonical}
         canonical_status = (
-            "matching" if set(claimed_ids) & set(canonical_ids)
+            "matching" if claimed_ids & canonical_ids
             else "conflicting" if canonical_ids
             else "no-canonical-target"
         )
-        claimed_resolution = "unique" if len(claimed_ids) == 1 else "ambiguous"
+        claimed_resolution = "unique" if len(claimed) == 1 else "ambiguous"
         disposition = {
             "matching": "retired-pre-gate-no-durable-evidence",
             "conflicting": "retired-canonical-target-conflict",
             "no-canonical-target": "retired-no-canonical-target",
         }[canonical_status]
-        atomic_unit_ids = sorted(unit_memberships.get(identity, []))
-        mapping_classification = (
-            mapping.get("classification") if mapping else entity.get("ledger_status")
-        )
-        expected_reconciliation = {
-            "disposition": disposition,
-            "canonical_target_status": canonical_status,
-            "claimed_target_resolution": claimed_resolution,
-            "claimed_declaration_ids": claimed_ids,
-            "canonical_declaration_ids": canonical_ids,
-            "atomic_unit_ids": atomic_unit_ids,
-            "mapping_classification": mapping_classification,
-            "completion_credit": False,
-        }
-        if entry.get("reconciliation") != expected_reconciliation:
-            fail(f"historical mechanical claim reconciliation is stale: {identity}")
+        atomic_unit_ids = reconciliation["atomic_unit_ids"]
+        if not isinstance(atomic_unit_ids, list) or atomic_unit_ids != sorted(set(atomic_unit_ids)) or not all(isinstance(item, str) for item in atomic_unit_ids):
+            fail(f"historical mechanical atomic-unit snapshot is malformed: {identity}")
+        if (
+            reconciliation["canonical_target_status"] != canonical_status
+            or reconciliation["claimed_target_resolution"] != claimed_resolution
+            or reconciliation["disposition"] != disposition
+            or not isinstance(reconciliation["mapping_classification"], str)
+            or reconciliation["completion_credit"] is not False
+        ):
+            fail(f"historical mechanical claim reconciliation is inconsistent: {identity}")
         historical_ids.append(identity)
+        historical_by_id[identity] = entry
         historical_counts[source_class] += 1
         target_status_counts[canonical_status] += 1
         target_resolution_counts[claimed_resolution] += 1
         disposition_counts[disposition] += 1
-        mapping_classification_counts[str(mapping_classification)] += 1
+        mapping_classification_counts[reconciliation["mapping_classification"]] += 1
         assigned_to_atomic_units += bool(atomic_unit_ids)
     if len(historical_ids) != len(set(historical_ids)):
         fail("historical mechanical claims contain duplicate source IDs")
@@ -304,9 +312,16 @@ def validate(require_threshold: bool = False) -> dict[str, int | str]:
     }
     if historical.get("reconciliation") != expected_historical_reconciliation:
         fail("historical mechanical claim reconciliation summary is stale")
-    overlap = checkpoint_source_ids & set(historical_ids)
-    if overlap:
-        fail(f"historical claims overlap accepted checkpoints: {sorted(overlap)[0]}")
+    for identity in checkpoint_source_ids & set(historical_ids):
+        checkpoint_entry = checkpoint_entries_by_source[identity]
+        retired = historical_by_id[identity]["reconciliation"]["claimed_declarations"]
+        unchanged = any(
+            item["declaration_id"] == checkpoint_entry["zig_declaration_id"]
+            and item["source_sha256"] == checkpoint_entry["zig_declaration_sha256"]
+            for item in retired
+        )
+        if unchanged:
+            fail(f"checkpoint revives an unchanged retired historical claim: {identity}")
 
     entries = manifest.get("entries")
     if not isinstance(entries, list):
@@ -330,8 +345,8 @@ def validate(require_threshold: bool = False) -> dict[str, int | str]:
         identity = entry["source_entity_id"]
         if not isinstance(identity, str) or identity not in sources:
             fail(f"active entry has unknown source ID: {identity!r}")
-        if identity in historical_ids or identity in checkpoint_source_ids:
-            fail(f"previously recorded function cannot receive net-new batch credit: {identity}")
+        if identity in checkpoint_source_ids:
+            fail(f"previously checkpointed function cannot receive net-new batch credit: {identity}")
         entity = sources[identity]
         if entity.get("kind") != "function" or not str(entity.get("activity", "")).startswith("active-profile"):
             fail(f"active entry is not an active-profile function: {identity}")
@@ -347,6 +362,15 @@ def validate(require_threshold: bool = False) -> dict[str, int | str]:
             fail(f"active entry has missing/non-function Zig declaration: {declaration_id}")
         if entry["zig_declaration_sha256"] != declaration.get("source_sha256"):
             fail(f"active entry has stale Zig declaration hash: {declaration_id}")
+        if identity in historical_by_id:
+            retired = historical_by_id[identity]["reconciliation"]["claimed_declarations"]
+            unchanged = any(
+                item["declaration_id"] == declaration_id
+                and item["source_sha256"] == entry["zig_declaration_sha256"]
+                for item in retired
+            )
+            if unchanged:
+                fail(f"active entry revives an unchanged retired historical claim: {identity}")
 
         mapping = mappings.get(identity)
         mapping_targets = {

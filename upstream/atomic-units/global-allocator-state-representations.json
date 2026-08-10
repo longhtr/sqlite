@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-allocator-state-representations",
   "title": "Global allocator configuration, limits, mutex, and method-table state representations",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the complete private mem0 identities and the Sqlite3Config identities directly read by the admitted global allocation core. They consolidate into the process-lifetime Manager owner.",
@@ -202,7 +202,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No representation allocation; backend initialization failure leaves started false.",
