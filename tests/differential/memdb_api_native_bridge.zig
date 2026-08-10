@@ -8,6 +8,11 @@ comptime {
     _ = &frontend.sqlite3_serialize;
     _ = &frontend.sqlite3_deserialize;
     _ = &frontend.sqlite3_db_readonly;
+    _ = &frontend.sqlite3_blob_open;
+    _ = &frontend.sqlite3_blob_bytes;
+    _ = &frontend.sqlite3_blob_read;
+    _ = &frontend.sqlite3_blob_write;
+    _ = &frontend.sqlite3_blob_close;
     _ = &frontend.zig_sqlite3_db_config_flag;
     _ = &frontend.sqlite3_prepare_v2;
     _ = &statement.sqlite3_step;

@@ -164,6 +164,22 @@ int main(void){
   sqlite3_exec(attached,"DROP TABLE aux.action_default",0,0,0);
   sqlite3_exec(attached,"DROP TABLE aux.action_restrict",0,0,0);
   sqlite3_exec(attached,"DROP TABLE aux.action_parent",0,0,0);
+
+  int attached_blob_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.blobs(id INTEGER PRIMARY KEY,payload BLOB)",0,0,0);
+  int attached_blob_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.blobs VALUES(1,x'01020304')",0,0,0);
+  sqlite3_blob *attached_blob=0;
+  int attached_blob_open_rc=sqlite3_blob_open(attached,"aux","blobs","payload",1,1,&attached_blob);
+  int attached_blob_bytes=sqlite3_blob_bytes(attached_blob);
+  unsigned char attached_blob_before[4]={0,0,0,0};
+  int attached_blob_read_rc=sqlite3_blob_read(attached_blob,attached_blob_before,4,0);
+  const unsigned char attached_blob_patch=0x7f;
+  int attached_blob_write_rc=sqlite3_blob_write(attached_blob,&attached_blob_patch,1,1);
+  unsigned char attached_blob_after[4]={0,0,0,0};
+  int attached_blob_reread_rc=sqlite3_blob_read(attached_blob,attached_blob_after,4,0);
+  int attached_blob_detach_rc=sqlite3_exec(attached,"DETACH aux",0,0,0);
+  int attached_blob_close_rc=sqlite3_blob_close(attached_blob);
+  int attached_blob_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.blobs",0,0,0);
+  printf("attached-blob\t%d\t%d\t%d\t%d\t%d\t%u\t%u\t%u\t%u\t%d\t%d\t%u\t%u\t%u\t%u\t%d\t%d\t%d\n",attached_blob_create_rc,attached_blob_insert_rc,attached_blob_open_rc,attached_blob_bytes,attached_blob_read_rc,attached_blob_before[0],attached_blob_before[1],attached_blob_before[2],attached_blob_before[3],attached_blob_write_rc,attached_blob_reread_rc,attached_blob_after[0],attached_blob_after[1],attached_blob_after[2],attached_blob_after[3],attached_blob_detach_rc,attached_blob_close_rc,attached_blob_drop_rc);
   sqlite3_free(attached_replacement);
 
   int close_clone = sqlite3_close(clone);

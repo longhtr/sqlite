@@ -200,6 +200,7 @@ const AttachedDatabase = struct {
     memory_adapter: btree.vfs.AbiAdapter = undefined,
     database: ?btree.Database = null,
     pending_deserialize_readonly: ?bool = null,
+    active_blobs: usize = 0,
 
     fn createMemory(allocator: std.mem.Allocator) ?*AttachedDatabase {
         const attached = allocator.create(AttachedDatabase) catch return null;
@@ -2859,6 +2860,8 @@ pub export fn sqlite3_deserialize(pointer: ?*sqlite3, schema: ?[*:0]const u8, da
 
 const Blob = struct {
     connection: *Connection,
+    database: *btree.Database,
+    attached: ?*AttachedDatabase,
     root_page: u32,
     column: usize,
     rowid: i64,
@@ -2880,12 +2883,8 @@ const Blob = struct {
 /// after a missing row, non-blob value, or cursor error.
 fn blobSeekToRow(blob: *Blob, rowid: i64) ResultCode {
     if (blob.invalidated) return .abort;
-    const database = blob.connection.database orelse {
-        blob.invalidate();
-        return .misuse;
-    };
     if (blob.cursor == null) {
-        const opened = database.openCursor(blob.root_page, .table);
+        const opened = blob.database.openCursor(blob.root_page, .table);
         if (opened.result != .ok) {
             blob.invalidate();
             return opened.result;
@@ -2926,10 +2925,13 @@ pub export fn sqlite3_blob_open(database_pointer: ?*sqlite3, database_name: ?[*:
     defer connection.connection_mutex.leave();
     const out = output orelse return ResultCode.misuse.toC();
     out.* = null;
-    if (database_name) |name| if (!std.ascii.eqlIgnoreCase(std.mem.span(name), "main")) return ResultCode.error_.toC();
+    const requested_database = if (database_name) |name| std.mem.span(name) else "main";
+    const located_database = locateDatabase(connection, if (schemaNameMatches(connection, database_name)) null else requested_database);
+    if (located_database.result != .ok) return (if (located_database.result == .not_found) ResultCode.error_ else located_database.result).toC();
+    const database = located_database.database.?;
+    const attached = if (schemaNameMatches(connection, database_name)) null else attachedDatabaseByName(connection, database_name) orelse return ResultCode.error_.toC();
     const table = if (table_name) |name| std.mem.span(name) else return ResultCode.misuse.toC();
     const column = if (column_name) |name| std.mem.span(name) else return ResultCode.misuse.toC();
-    const database = connection.database orelse return ResultCode.misuse.toC();
     const schema_outcome = database.schemaTable(table);
     if (schema_outcome.result != .ok) return schema_outcome.result.toC();
     var schema = schema_outcome.table.?;
@@ -2948,7 +2950,7 @@ pub export fn sqlite3_blob_open(database_pointer: ?*sqlite3, database_name: ?[*:
         }
     }
     const blob = connection.allocator.create(Blob) catch return ResultCode.no_memory.toC();
-    blob.* = .{ .connection = connection, .root_page = schema.root_page, .column = record_column orelse {
+    blob.* = .{ .connection = connection, .database = database, .attached = attached, .root_page = schema.root_page, .column = record_column orelse {
         connection.allocator.destroy(blob);
         return ResultCode.error_.toC();
     }, .rowid = rowid, .writable = flags != 0 };
@@ -2958,6 +2960,7 @@ pub export fn sqlite3_blob_open(database_pointer: ?*sqlite3, database_name: ?[*:
         return rc.toC();
     }
     connection.active_blobs += 1;
+    if (attached) |owner| owner.active_blobs += 1;
     out.* = @ptrCast(blob);
     return ResultCode.ok.toC();
 }
@@ -2973,6 +2976,10 @@ pub export fn sqlite3_blob_close(pointer: ?*sqlite3_blob) callconv(.c) c_int {
     const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.ok.toC();
     const connection = blob.connection;
     if (blob.cursor) |*cursor| cursor.deinit();
+    if (blob.attached) |owner| {
+        std.debug.assert(owner.active_blobs > 0);
+        owner.active_blobs -= 1;
+    }
     connection.allocator.destroy(blob);
     std.debug.assert(connection.active_blobs > 0);
     connection.active_blobs -= 1;
@@ -3031,7 +3038,6 @@ fn blobReadWrite(blob: *Blob, buffer: ?*anyopaque, amount: c_int, offset: c_int,
         return .ok;
     }
 
-    const database = blob.connection.database orelse return .misuse;
     const replacement = blob.connection.allocator.dupe(u8, original) catch return .no_memory;
     defer blob.connection.allocator.free(replacement);
     if (count != 0) @memcpy(replacement[start..][0..count], @as([*]const u8, @ptrCast(buffer.?))[0..count]);
@@ -3040,7 +3046,7 @@ fn blobReadWrite(blob: *Blob, buffer: ?*anyopaque, amount: c_int, offset: c_int,
     values[blob.column] = if (original_is_text) .{ .text = replacement } else .{ .blob = replacement };
     const payload = btree.encodeRecord(blob.connection.allocator, values) catch return .no_memory;
     defer blob.connection.allocator.free(payload);
-    const result = database.insertTable(blob.root_page, blob.rowid, payload, true);
+    const result = blob.database.insertTable(blob.root_page, blob.rowid, payload, true);
     if (result != .ok) {
         if (result == .abort) blob.invalidate();
         return result;
@@ -7106,6 +7112,12 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
         },
         .detach_database => |action| blk: {
             const attachments = ensureAttachmentCatalog(action.connection) catch break :blk .no_memory;
+            if (attachment_runtime.findDatabase(attachments, action.name)) |entry| {
+                if (entry.native_context) |native| {
+                    const attached: *AttachedDatabase = @ptrCast(@alignCast(native));
+                    if (attached.active_blobs != 0) break :blk .error_;
+                }
+            }
             attachment_runtime.detachFunction(attachments, action.name) catch |failure| break :blk switch (failure) {
                 error.OutOfMemory => .no_memory,
                 error.Locked => .busy,
