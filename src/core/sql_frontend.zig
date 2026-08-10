@@ -2590,7 +2590,9 @@ pub export fn sqlite3_system_errno(pointer: ?*sqlite3) callconv(.c) c_int {
 }
 
 pub export fn sqlite3_serialize(pointer: ?*sqlite3, schema: ?[*:0]const u8, size_output: ?*i64, flags: c_uint) callconv(.c) ?[*]u8 {
-    const connection = asConnection(pointer) orelse return null;
+    const connection = safetyCheckOk(pointer) orelse return null;
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
     if (size_output) |output| output.* = -1;
     const schema_name = if (schema) |name| std.mem.span(name) else null;
     if (schema_name) |name| if (!std.ascii.eqlIgnoreCase(name, "main")) return null;
@@ -2611,21 +2613,27 @@ pub export fn sqlite3_serialize(pointer: ?*sqlite3, schema: ?[*:0]const u8, size
             },
         }
     }
-    if (connection.unix_backend) |*backend| {
-        const filename = connection.filename orelse return null;
-        const opened = backend.openFile(filename, btree.vfs.OPEN_READONLY | btree.vfs.OPEN_MAIN_DB);
-        if (opened.rc != btree.vfs.OK) return null;
-        const file = opened.file.?;
-        defer _ = file.destroy();
-        var length: i64 = 0;
-        if (file.size(&length) != btree.vfs.OK or length < 0) return null;
-        if (size_output) |output| output.* = length;
+    if (connection.unix_backend != null) {
+        const database = connection.database orelse return null;
+        const page_count: usize = database.pager.pageCount();
+        const page_size: usize = database.pager.pageSize();
+        const length = std.math.mul(usize, page_count, page_size) catch return null;
+        if (length > @as(usize, std.math.maxInt(i64))) return null;
+        if (size_output) |output| output.* = @intCast(length);
         if (flags & 1 != 0) return null;
-        const output = public_api.sqlite3_malloc64(@intCast(length)) orelse return null;
-        const bytes = @as([*]u8, @ptrCast(output))[0..@intCast(length)];
-        if (file.read(bytes, 0) != btree.vfs.OK) {
-            public_api.sqlite3_free(output);
-            return null;
+        const output = public_api.sqlite3_malloc64(length) orelse return null;
+        const bytes = @as([*]u8, @ptrCast(output))[0..length];
+        for (1..page_count + 1) |page_number| {
+            const start = (page_number - 1) * page_size;
+            const target = bytes[start..][0..page_size];
+            const fetched = database.pager.getPage(@intCast(page_number), false);
+            if (fetched.result == .ok) {
+                const page = fetched.page.?;
+                @memcpy(target, page.data);
+                _ = database.pager.release(page);
+            } else {
+                @memset(target, 0);
+            }
         }
         return @ptrCast(output);
     }
@@ -9241,6 +9249,39 @@ test "named memory URI cache is shared until the final connection closes" {
     try std.testing.expect(memdb.access("shared-cache"));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_close(second));
     try std.testing.expect(!memdb.access("shared-cache"));
+}
+
+test "ordinary database serialization copies the live pager image page by page" {
+    try std.Io.Dir.cwd().createDirPath(std.testing.io, "tmp");
+    const path = "tmp/serialize-pager.db";
+    unix_vfs.remove(path);
+    defer unix_vfs.remove(path);
+    var source: ?*sqlite3 = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(path, &source));
+    defer _ = sqlite3_close(source);
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(source, "CREATE TABLE t(x); INSERT INTO t VALUES(42)", null, null, null));
+
+    const source_connection = asConnection(source).?;
+    const expected_size = @as(i64, @intCast(source_connection.database.?.pager.pageCount())) * @as(i64, @intCast(source_connection.database.?.pager.pageSize()));
+    var size: i64 = -1;
+    const image = sqlite3_serialize(source, "main", &size, 0) orelse return error.TestUnexpectedResult;
+    defer public_api.sqlite3_free(image);
+    try std.testing.expectEqual(expected_size, size);
+    try std.testing.expectEqualSlices(u8, "SQLite format 3\x00", image[0..16]);
+    var no_copy_size: i64 = -1;
+    try std.testing.expectEqual(null, sqlite3_serialize(source, "main", &no_copy_size, 1));
+    try std.testing.expectEqual(size, no_copy_size);
+
+    var clone: ?*sqlite3 = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &clone));
+    defer _ = sqlite3_close(clone);
+    const capacity: i64 = @intCast(public_api.sqlite3_msize(image));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_deserialize(clone, "main", image, size, capacity, 0));
+    var prepared: ?*statement.sqlite3_stmt = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(clone, "SELECT x FROM t", -1, &prepared, null));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(@as(i64, 42), statement.sqlite3_column_int64(prepared, 0));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
 }
 
 test "serialize NOCOPY nullable size and deserialize armor preserve source contracts" {

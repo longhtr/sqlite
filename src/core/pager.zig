@@ -872,6 +872,10 @@ pub const Pager = struct {
         return self.database_pages;
     }
 
+    pub fn pageSize(self: *const Pager) u32 {
+        return self.page_size;
+    }
+
     pub fn cacheReferences(self: *const Pager) usize {
         return self.cache.refCount();
     }
