@@ -492,12 +492,14 @@ pub const Connection = struct {
         };
         return .ok;
     }
-    fn afterWrite(self: *Connection, rc: ResultCode, operation: ?c_int, table: []const u8, rowid: i64) ResultCode {
+    fn afterWrite(self: *Connection, rc: ResultCode, operation: ?c_int, schema_name: []const u8, table: []const u8, rowid: i64) ResultCode {
         if (rc == .ok) {
             if (operation) |code| if (self.update_callback) |callback| {
                 const name = self.allocator.dupeZ(u8, table) catch return .no_memory;
                 defer self.allocator.free(name);
-                callback(self.update_context, code, "main", name.ptr, rowid);
+                const schema = self.allocator.dupeZ(u8, schema_name) catch return .no_memory;
+                defer self.allocator.free(schema);
+                callback(self.update_context, code, schema.ptr, name.ptr, rowid);
             };
             const wal_result = doWalCallbacks(self);
             if (wal_result != .ok) return wal_result;
@@ -3356,9 +3358,9 @@ const ProgramAction = union(enum) {
     virtual_create: struct { connection: *Connection, name: []const u8, module_name: []const u8 },
     virtual_drop: struct { connection: *Connection, name: []const u8 },
     drop: struct { connection: *Connection, name: []const u8, if_exists: bool },
-    insert: struct { connection: *Connection, root_page: u32, table_name: []const u8, column_count: usize, integer_primary_key: ?usize, replace: bool, conflict_ignore: bool },
-    update: struct { connection: *Connection, root_page: u32, table_name: []const u8, target_column: usize, foreign_key_old_mask: u32 },
-    delete: struct { connection: *Connection, root_page: u32, table_name: []const u8, foreign_key_old_mask: u32 },
+    insert: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, column_count: usize, integer_primary_key: ?usize, replace: bool, conflict_ignore: bool },
+    update: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, target_column: usize, foreign_key_old_mask: u32 },
+    delete: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, foreign_key_old_mask: u32 },
     vacuum: struct { connection: *Connection },
     analyze: struct { connection: *Connection, table_name: ?[]const u8 },
 };
@@ -7238,7 +7240,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             const database = action.connection.database orelse break :blk .misuse;
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
-            break :blk action.connection.afterWrite(database.createSchemaTable(action.name, action.sql, action.if_not_exists), null, action.name, 0);
+            break :blk action.connection.afterWrite(database.createSchemaTable(action.name, action.sql, action.if_not_exists), null, "main", action.name, 0);
         },
         .drop => |action| blk: {
             std.debug.assert(action.connection.foreign_key_action_allocations.items.len == 0);
@@ -7258,20 +7260,21 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             if (dropped != .ok) break :blk dropped;
             const committed = database.commitMutationBatch();
             batch_active = false;
-            break :blk action.connection.afterWrite(committed, null, action.name, 0);
+            break :blk action.connection.afterWrite(committed, null, "main", action.name, 0);
         },
         .vacuum => |action| blk: {
             const database = action.connection.database orelse break :blk .misuse;
             if (action.connection.autovacuum_callback) |callback| _ = callback(action.connection.autovacuum_context, "main", 0, 0, 4096);
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
-            break :blk action.connection.afterWrite(database.vacuumCompactNoop(), null, "", 0);
+            break :blk action.connection.afterWrite(database.vacuumCompactNoop(), null, "main", "", 0);
         },
         .analyze => |action| runAnalyze(action.connection, action.table_name),
         .update => |action| blk: {
             std.debug.assert(action.connection.foreign_key_action_allocations.items.len == 0);
             defer clearForeignKeyActionAllocations(action.connection);
-            const database = action.connection.database orelse break :blk .misuse;
+            const database = action.database;
+            if (database != action.connection.database and action.connection.database_configuration[2] != 0) break :blk .error_;
             if (arguments.len != 2) break :blk .corrupt;
             if (vdbe.vdbe_mem.valueType(&arguments[1]) != 1) break :blk .mismatch;
             const rowid = vdbe.vdbe_mem.valueInt64(&arguments[1]);
@@ -7316,12 +7319,13 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 action.connection.changes = 1;
                 action.connection.total_changes += 1;
             }
-            break :blk action.connection.afterWrite(committed, 23, action.table_name, rowid);
+            break :blk action.connection.afterWrite(committed, 23, action.schema_name, action.table_name, rowid);
         },
         .delete => |action| blk: {
             std.debug.assert(action.connection.foreign_key_action_allocations.items.len == 0);
             defer clearForeignKeyActionAllocations(action.connection);
-            const database = action.connection.database orelse break :blk .misuse;
+            const database = action.database;
+            if (database != action.connection.database and action.connection.database_configuration[2] != 0) break :blk .error_;
             if (arguments.len != 1) break :blk .corrupt;
             if (vdbe.vdbe_mem.valueType(&arguments[0]) != 1) break :blk .mismatch;
             const rowid = vdbe.vdbe_mem.valueInt64(&arguments[0]);
@@ -7362,12 +7366,13 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 action.connection.changes = 1;
                 action.connection.total_changes += 1;
             }
-            break :blk action.connection.afterWrite(committed, 9, action.table_name, rowid);
+            break :blk action.connection.afterWrite(committed, 9, action.schema_name, action.table_name, rowid);
         },
         .insert => |action| blk: {
             std.debug.assert(action.connection.foreign_key_action_allocations.items.len == 0);
             defer clearForeignKeyActionAllocations(action.connection);
-            const database = action.connection.database orelse break :blk .misuse;
+            const database = action.database;
+            if (database != action.connection.database and action.connection.database_configuration[2] != 0) break :blk .error_;
             if (arguments.len != owner.indices.len) break :blk .corrupt;
             const values = allocator.alloc(btree.Value, action.column_count) catch break :blk .no_memory;
             defer allocator.free(values);
@@ -7438,7 +7443,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 action.connection.total_changes += 1;
                 action.connection.last_insert_rowid = rowid;
             }
-            break :blk action.connection.afterWrite(committed, 18, action.table_name, rowid);
+            break :blk action.connection.afterWrite(committed, 18, action.schema_name, action.table_name, rowid);
         },
     };
 }
@@ -7628,7 +7633,6 @@ fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const To
 
 fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Token) !*statement.Statement {
     const allocator = connection.allocator;
-    const database = connection.database orelse return error.Misuse;
     var position: usize = 1;
     var replace = false;
     if (position + 1 < token_list.len and token_list[position].typ == tokens.tk_or and token_list[position + 1].typ == tokens.tk_replace) {
@@ -7638,7 +7642,19 @@ fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Toke
     if (position >= token_list.len or token_list[position].typ != tokens.tk_into) return error.Syntax;
     position += 1;
     if (position >= token_list.len or token_list[position].typ != tokens.tk_id) return error.Syntax;
-    const table_name = token_list[position].text;
+    var schema_name: []const u8 = "main";
+    var table_name = token_list[position].text;
+    if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_dot and token_list[position + 2].typ == tokens.tk_id) {
+        schema_name = table_name;
+        table_name = token_list[position + 2].text;
+        position += 3;
+    } else {
+        position += 1;
+    }
+    const located_database = locateDatabase(connection, schema_name);
+    if (located_database.result == .no_memory) return error.OutOfMemory;
+    if (located_database.result != .ok) return error.Syntax;
+    const database = located_database.database.?;
     const schema_outcome = database.schemaTable(table_name);
     if (schema_outcome.result == .no_memory) return error.OutOfMemory;
     if (schema_outcome.result != .ok) return error.Syntax;
@@ -7650,7 +7666,6 @@ fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Toke
         allocator.free(resolved.tokens);
         allocator.free(resolved.source);
     }
-    position += 1;
     var mappings = std.ArrayList(usize).empty;
     defer mappings.deinit(allocator);
     if (position < token_list.len and token_list[position].typ == tokens.tk_lp) {
@@ -7750,7 +7765,7 @@ fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Toke
         .columns = columns,
         .strings = parser.strings,
         .names = parser.names,
-        .action = .{ .insert = .{ .connection = connection, .root_page = schema.root_page, .table_name = table_name, .column_count = resolved.columns.len, .integer_primary_key = integer_primary_key, .replace = replace, .conflict_ignore = conflict_ignore } },
+        .action = .{ .insert = .{ .connection = connection, .database = database, .schema_name = schema_name, .root_page = schema.root_page, .table_name = table_name, .column_count = resolved.columns.len, .integer_primary_key = integer_primary_key, .replace = replace, .conflict_ignore = conflict_ignore } },
         .indices = indices,
         .program = .{ .instructions = instructions, .register_count = parser.next_register - 1 },
     };
@@ -7765,14 +7780,25 @@ fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Toke
 
 fn buildRowMutation(connection: *Connection, source: [:0]u8, token_list: []const Token, updating: bool) !*statement.Statement {
     const allocator = connection.allocator;
-    const database = connection.database orelse return error.Misuse;
     var position: usize = 1;
     if (!updating) {
         if (position >= token_list.len or token_list[position].typ != tokens.tk_from) return error.Syntax;
         position += 1;
     }
     if (position >= token_list.len or token_list[position].typ != tokens.tk_id) return error.Syntax;
-    const table_name = token_list[position].text;
+    var schema_name: []const u8 = "main";
+    var table_name = token_list[position].text;
+    if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_dot and token_list[position + 2].typ == tokens.tk_id) {
+        schema_name = table_name;
+        table_name = token_list[position + 2].text;
+        position += 3;
+    } else {
+        position += 1;
+    }
+    const located_database = locateDatabase(connection, schema_name);
+    if (located_database.result == .no_memory) return error.OutOfMemory;
+    if (located_database.result != .ok) return error.Syntax;
+    const database = located_database.database.?;
     const schema_outcome = database.schemaTable(table_name);
     if (schema_outcome.result == .no_memory) return error.OutOfMemory;
     if (schema_outcome.result != .ok) return error.Syntax;
@@ -7793,7 +7819,6 @@ fn buildRowMutation(connection: *Connection, source: [:0]u8, token_list: []const
         break;
     };
     const pk = primary_key orelse return error.Syntax;
-    position += 1;
     var target_column: usize = 0;
     if (updating) {
         if (position >= token_list.len or token_list[position].typ != tokens.tk_set) return error.Syntax;
@@ -7870,7 +7895,7 @@ fn buildRowMutation(connection: *Connection, source: [:0]u8, token_list: []const
     parser.parameter_names = .empty;
     parser.named_parameters.deinit();
     parser.named_parameters = std.StringHashMap(u16).init(allocator);
-    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .strings = parser.strings, .names = parser.names, .action = if (updating) .{ .update = .{ .connection = connection, .root_page = schema.root_page, .table_name = table_name, .target_column = target_column, .foreign_key_old_mask = old_mask.mask } } else .{ .delete = .{ .connection = connection, .root_page = schema.root_page, .table_name = table_name, .foreign_key_old_mask = old_mask.mask } }, .program = .{ .instructions = instructions, .register_count = parser.next_register - 1 } };
+    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .strings = parser.strings, .names = parser.names, .action = if (updating) .{ .update = .{ .connection = connection, .database = database, .schema_name = schema_name, .root_page = schema.root_page, .table_name = table_name, .target_column = target_column, .foreign_key_old_mask = old_mask.mask } } else .{ .delete = .{ .connection = connection, .database = database, .schema_name = schema_name, .root_page = schema.root_page, .table_name = table_name, .foreign_key_old_mask = old_mask.mask } }, .program = .{ .instructions = instructions, .register_count = parser.next_register - 1 } };
     owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
     owner.program.functions = owner.functions[0..];
     const prepared = try statement.Statement.create(allocator, &owner.program, parameters, columns);
@@ -7886,7 +7911,6 @@ fn compileRowMutation(connection: *Connection, source: [:0]u8, token_list: []con
         return .{ .result = switch (err) {
             error.OutOfMemory => .no_memory,
             error.TooBig => .too_big,
-            error.Misuse => .misuse,
             else => .error_,
         }, .consumed = consumed };
     };
@@ -7899,7 +7923,6 @@ fn compileInsert(connection: *Connection, source: [:0]u8, token_list: []const To
         return .{ .result = switch (err) {
             error.OutOfMemory => .no_memory,
             error.TooBig => .too_big,
-            error.Misuse => .misuse,
             else => .error_,
         }, .consumed = consumed };
     };
@@ -9597,7 +9620,7 @@ test "attached schema serialize and deserialize preserve image ownership" {
     defer _ = sqlite3_close(source);
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &target));
     defer _ = sqlite3_close(target);
-    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(source, "CREATE TABLE t(x); INSERT INTO t VALUES(42)", null, null, null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(source, "CREATE TABLE t(id INTEGER PRIMARY KEY, x); INSERT INTO t VALUES(1,42)", null, null, null));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(target, "ATTACH ':memory:' AS aux", null, null, null));
     var size: i64 = -1;
     const image = sqlite3_serialize(source, "main", &size, 0) orelse return error.TestUnexpectedResult;
@@ -9611,10 +9634,18 @@ test "attached schema serialize and deserialize preserve image ownership" {
     try std.testing.expectEqualStrings("aux", std.mem.span(sqlite3_db_name(target, 2).?));
     var statement_pointer: ?*statement.sqlite3_stmt = null;
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(target, "SELECT x FROM aux.t", -1, &statement_pointer, null));
-    defer _ = statement.sqlite3_finalize(statement_pointer);
     try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(statement_pointer));
     try std.testing.expectEqual(@as(i64, 42), statement.sqlite3_column_int64(statement_pointer, 0));
     try std.testing.expectEqual(ResultCode.done.toC(), statement.sqlite3_step(statement_pointer));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(statement_pointer));
+    statement_pointer = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(target, "INSERT INTO aux.t VALUES(2,43)", null, null, null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(target, "UPDATE aux.t SET x=44 WHERE id=2", null, null, null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(target, "DELETE FROM aux.t WHERE id=1", null, null, null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(target, "SELECT x FROM aux.t WHERE id=2", -1, &statement_pointer, null));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(statement_pointer));
+    try std.testing.expectEqual(@as(i64, 44), statement.sqlite3_column_int64(statement_pointer, 0));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(statement_pointer));
 
     var malformed: ?*sqlite3 = null;
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &malformed));

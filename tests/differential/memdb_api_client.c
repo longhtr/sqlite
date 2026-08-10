@@ -54,7 +54,7 @@ int main(void){
   sqlite3_int64 size=-1, borrowed_size=-1, value=-1;
   int rc = sqlite3_open(":memory:", &source);
   if(rc!=SQLITE_OK) return rc;
-  rc = sqlite3_exec(source, "CREATE TABLE t(x); INSERT INTO t VALUES(42)", 0, 0, 0);
+  rc = sqlite3_exec(source, "CREATE TABLE t(id INTEGER PRIMARY KEY,x); INSERT INTO t VALUES(1,42)", 0, 0, 0);
   if(rc!=SQLITE_OK) return rc;
   unsigned char *seed = sqlite3_serialize(source, "main", &size, 0);
   sqlite3 *normalized=0;
@@ -116,7 +116,12 @@ int main(void){
   printf("attached-deserialize-oom\t%d\t%d\t%lld\n",attached_oom_rc,attached_borrowed==attached_image,(long long)borrowed_size);
   sqlite3_int64 attached_value=-1;
   int attached_query_rc=query_value(attached,"SELECT x FROM aux.t",&attached_value);
-  printf("attached\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"),attached_query_rc,(long long)attached_value);
+  int attached_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.t VALUES(2,43)",0,0,0);
+  int attached_update_rc=sqlite3_exec(attached,"UPDATE aux.t SET x=44 WHERE id=2",0,0,0);
+  int attached_delete_rc=sqlite3_exec(attached,"DELETE FROM aux.t WHERE id=1",0,0,0);
+  sqlite3_int64 attached_final_value=-1;
+  int attached_final_query_rc=query_value(attached,"SELECT x FROM aux.t WHERE id=2",&attached_final_value);
+  printf("attached\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%lld\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"),attached_query_rc,(long long)attached_value,attached_insert_rc,attached_update_rc,attached_delete_rc,attached_final_query_rc,(long long)attached_final_value);
   sqlite3_free(attached_replacement);
 
   int close_clone = sqlite3_close(clone);
