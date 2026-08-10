@@ -30,6 +30,7 @@ static void fault_shutdown(void *context){ (void)context; }
 static sqlite3_mem_methods fault_methods={fault_malloc,fault_free,fault_realloc,fault_size,fault_roundup,fault_init,fault_shutdown,0};
 #ifdef NATIVE_ENGINE
 extern int zig_sqlite3_config_malloc(const sqlite3_mem_methods*);
+extern int zig_sqlite3_db_config_flag(sqlite3*,int,int,int*);
 #endif
 
 static int query_value(sqlite3 *db, const char *sql, sqlite3_int64 *value){
@@ -126,7 +127,22 @@ int main(void){
   sqlite3_int64 attached_created_value=-1;
   int attached_created_query_rc=query_value(attached,"SELECT value FROM aux.created",&attached_created_value);
   int attached_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.created",0,0,0);
-  printf("attached\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%lld\t%d\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"),attached_query_rc,(long long)attached_value,attached_insert_rc,attached_update_rc,attached_delete_rc,attached_final_query_rc,(long long)attached_final_value,attached_create_rc,attached_created_insert_rc,attached_created_query_rc,(long long)attached_created_value,attached_drop_rc);
+#ifdef NATIVE_ENGINE
+  int attached_fk_config_rc=zig_sqlite3_db_config_flag(attached,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
+#else
+  int attached_fk_config_rc=sqlite3_db_config(attached,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
+#endif
+  int attached_parent_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.parent(id INTEGER PRIMARY KEY)",0,0,0);
+  int attached_child_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.child(id INTEGER PRIMARY KEY,parent_id REFERENCES parent(id) ON DELETE CASCADE)",0,0,0);
+  int attached_parent_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.parent VALUES(1)",0,0,0);
+  int attached_child_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.child VALUES(1,1)",0,0,0);
+  int attached_invalid_child_rc=sqlite3_exec(attached,"INSERT INTO aux.child VALUES(2,99)",0,0,0);
+  int attached_parent_delete_rc=sqlite3_exec(attached,"DELETE FROM aux.parent WHERE id=1",0,0,0);
+  sqlite3_int64 attached_child_count=-1;
+  int attached_child_count_rc=query_value(attached,"SELECT id FROM aux.child",&attached_child_count);
+  int attached_child_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.child",0,0,0);
+  int attached_parent_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.parent",0,0,0);
+  printf("attached\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"),attached_query_rc,(long long)attached_value,attached_insert_rc,attached_update_rc,attached_delete_rc,attached_final_query_rc,(long long)attached_final_value,attached_create_rc,attached_created_insert_rc,attached_created_query_rc,(long long)attached_created_value,attached_drop_rc,attached_fk_config_rc,attached_parent_create_rc,attached_child_create_rc,attached_parent_insert_rc,attached_child_insert_rc,attached_invalid_child_rc,attached_parent_delete_rc,attached_child_count_rc,(long long)attached_child_count,attached_child_drop_rc,attached_parent_drop_rc);
   sqlite3_free(attached_replacement);
 
   int close_clone = sqlite3_close(clone);
