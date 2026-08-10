@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "pcache-static-slot-allocation-and-free",
   "title": "PCache bulk/static/heap page allocation, free, and status accounting",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These functions initialize per-cache bulk pages, allocate page objects from bulk-local storage or configured process slots before one contiguous Manager fallback, classify static versus heap pressure, update source status slots, and return or release each storage class in source order.",
     "source_files": [
@@ -218,7 +218,7 @@
     "normalization": "Heap/static addresses are allocation identities; counts, ranges, rounded sizes, status values, ownership, results, and event order are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -245,8 +245,37 @@
     "notes": "Requires independent review of chunk layout representation, the explicit PGroup dependency boundary, exact status/ownership traces, and concurrent behavior."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "PGroup-wide cross-cache LRU, purgeable counters, and source-shaped hash buckets are integrated in a separate scaffolded unit pending exact object-allocation and upper-cache coupling.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pcache1.c was reviewed completely, with lines 297-526 covering bulk initialization, static-slot/heap allocation and free, page object allocation/free, public page allocation wrappers, and pressure selection",
+      "The PgFreeslot, PgHdr1.isBulkLocal, PCache1.pFree/pBulk layouts and their initialization, classification, and teardown sites were reviewed in the same file",
+      "src/core/page_cache.zig Lifecycle slot/overflow transport and Cache contiguous bulk/static/heap page owners, nearby Pager-facing cache operations, source-identity comments, and native tests were reviewed; mapped targets are AST-hashed"
+    ],
+    "callers": [
+      "pcache1FetchStage2 reaches pcache1AllocPage after soft-admission/recycling; remove/truncate/destroy/enforcement reach pcache1FreePage",
+      "sqlite3PageMalloc/PageFree expose the same static-slot then heap allocator to other page-oriented internals",
+      "Native Pager.open constructs Cache with activeProcessLifecycle; production fetch, discard, truncate, shrink, clear, and deinit exercise all storage classes"
+    ],
+    "callees": [
+      "InitBulk rejects disabled/small caches, computes count or negative-KiB bytes capped at nMax, performs benign one-allocation acquisition, splits aligned page/header/extra chunks, and publishes a cache-local free chain",
+      "pcache1Alloc pops an eligible static slot under STATIC_PMEM and updates pressure/PAGECACHE_USED/SIZE; exhaustion or oversize falls back to sqlite3Malloc and PAGECACHE_OVERFLOW",
+      "pcache1Free classifies by configured range, pushes static slots and restores pressure/status, or retags/accounts/frees heap ownership",
+      "AllocPage gives bulk-local precedence, brackets optional benign ordinary allocation, builds contiguous pBuf/PgHdr1/pExtra layout, and increments the selected purgeable counter only on success; FreePage reverses owner and counter transitions",
+      "UnderMemoryPressure reads static pressure only when configured slots fit page plus extra, otherwise delegates to heap-nearly-full"
+    ],
+    "assertions_branches_cleanup": [
+      "All 40 behavior IDs cover disabled/capped/count/KiB bulk modes, benign OOM, static eligibility/exhaustion/accounting, heap fallback/accounting, null/range free, bulk precedence, alignment, purgeable counters, and pressure selection",
+      "Bulk allocation is one cache owner split into borrowed page chunks and is released only when every chunk has returned; static slots are borrowed process owners; overflow is one Manager heap owner",
+      "STATIC_PMEM protects free-chain/count/pressure/status; the selected active profile does not enable memory-management mutex release/reentry branches",
+      "Hash insertion OOM rolls newly acquired storage back through its exact class; ordinary sticky OOM leaves counters and owners unchanged"
+    ],
+    "upstream_tests": [
+      "upstream pcache2.test and memsubsys1.test exercise configured slots, exhaustion, fallback, PAGECACHE_USED/OVERFLOW/SIZE, release, and wrong-size bypass; shrink/cache-size/OOM suites cover lifecycle continuation",
+      "Project page-cache tests cover direct and Cache slot use, bulk count/KiB/cap/preference/release, benign bulk OOM, sticky overflow OOM, pressure selection, hash rollback, status restoration, and sixteen concurrent allocations",
+      "The PCache differential compares storage identity/class, counters, pressure, LRU interactions, event order, and continuation; PGroup coupling is owned by the dependent dossier"
+    ]
+  }
 }

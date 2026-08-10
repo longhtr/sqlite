@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-final-operation-array-transfer",
   "title": "VDBE finalized operation-array ownership transfer",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeTakeOpArray is the unique no-copy ownership boundary that finalizes labels/metadata and detaches the operation allocation from its builder Vdbe for subprogram ownership. Its preconditions, outputs and nulling mutation are atomic.",
     "source_files": [
@@ -76,7 +76,7 @@
     "normalization": "Pointer address is normalized only to exact identity with the former owner. Counts, targets and null transitions are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -102,9 +102,34 @@
     "notes": "Requires destination owner integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port P4-aware operation-array destruction and SubProgram destination ownership.",
     "Migrate production compiler/subprogram construction to source VDBE owners.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:1110-1134 was reviewed completely for TakeOpArray assertions, final fixup, output publication, no-copy detach, and return",
+      "trigger.c:1310-1345 was reviewed for the sole SubProgram destination caller and ownership transfer context",
+      "src/core/internal/vdbe_aux.zig takeOperationArray is the canonical AST-hashed target"
+    ],
+    "callers": [
+      "Trigger subprogram compilation calls TakeOpArray, storing returned aOp/nOp and sharing top-level nMaxArg",
+      "SubProgram linkage and P4-aware destruction become the destination owner and remain follow-on units",
+      "Main-program MakeReady does not use this transfer and retains Vdbe ownership"
+    ],
+    "callees": [
+      "TakeOpArray snapshots aOp, requires nonnull/no OOM/zero btreeMask, runs resolveP2Values, writes nOp, nulls Vdbe.aOp, and returns the original pointer",
+      "No copy, allocation, callback, or I/O occurs; label storage is finalized/retired by the dependency before detach"
+    ],
+    "assertions_branches_cleanup": [
+      "Three behavior IDs cover live-owner/no-OOM assertion, zero-btree assertion, and return",
+      "nOp remains historical metadata while only aOp ownership moves; the builder cannot double-free the detached array",
+      "Preconditions rule out fallible continuation; destination must eventually invoke source-equivalent operation/P4 destruction"
+    ],
+    "upstream_tests": [
+      "Upstream trigger, nested trigger, FK action, OOM, and statement teardown suites exercise subprogram transfer and cleanup",
+      "Project builder differential compares former/returned identity, null detach, nOp, resolved P2, max args, and label retirement",
+      "Destination SubProgram and P4 destruction integration remain blockers"
+    ]
+  }
 }

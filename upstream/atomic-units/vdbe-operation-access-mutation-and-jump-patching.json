@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-operation-access-mutation-and-jump-patching",
   "title": "VDBE operation access, operand mutation, and jump patching",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These accessors and mutators form the source builder patching interface: current/last/addressed operation access, OOM dummy fallback, exact operand changes, typeof flagging, and jump-here/pop optimization. They share one INIT-state and dummy-continuation contract.",
     "source_files": [
@@ -173,7 +173,7 @@
     "normalization": "Pointer values normalize to real-array identity versus dummy. All operation fields/counts are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -200,9 +200,37 @@
     "notes": "Requires compiler integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port P4 replacement/ownership and operation destruction.",
     "Migrate production compiler to source VDBE patching interface.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:1035-1085 was reviewed for current-address INIT contract and excluded debug verifier adjacency",
+      "upstream/sqlite/src/vdbeaux.c:1250-1352 was reviewed completely for opcode/P1/P2/P3/P5 mutation, typeof-column flagging, JumpHere, and JumpHereOrPopInst",
+      "upstream/sqlite/src/vdbeaux.c:1675-1713 was reviewed completely for real/dummy operation access and last-operation delegation",
+      "src/core/internal/vdbe_aux.zig current/get/change/typeof/jump targets and generated opcode properties are canonical AST-hashed declarations"
+    ],
+    "callers": [
+      "Expression, WHERE, SELECT, insert/update/delete, trigger, pragma, analyze, window, and VDBE helpers use current/get/change/jump operations throughout compilation",
+      "GetLastOp serves compiler inspection and ChangeP5/typeof-column last-op semantics; GetOp supports arbitrary real address reads and sticky-OOM dummy continuation",
+      "P4 replacement/destruction and final label sweep are separate ownership/fixup units"
+    ],
+    "callees": [
+      "CurrentAddr returns nOp under INIT assertion; ChangeOpcode/P1/P2/P3 route through GetOp, while ChangeP5 targets the last real operation only when present",
+      "GetOp returns a module-static all-zero dummy whenever mallocFailed is sticky, otherwise aOp[addr]; GetLastOp requests nOp-1",
+      "TypeofColumn sets OPFLAG_TYPEOFARG only when the last active-profile operation is OP_Column targeting iDest",
+      "JumpHere writes current nOp to P2; JumpHereOrPop decrements nOp for an immediately preceding Once/If/FkIfZero with unused P4, otherwise patches P2"
+    ],
+    "assertions_branches_cleanup": [
+      "All 18 behavior IDs cover INIT/address assertions, dummy selection, operand conditions, typeof match, and jump pop-versus-patch",
+      "No allocation or owner transition occurs; popped operation has unused P4 and is overwritten by later append",
+      "Debug ReleaseReg skipping and coverage source-line clearing are inactive; source assertions constrain all writable accesses"
+    ],
+    "upstream_tests": [
+      "Upstream expression, pragma, trigger, window, planner, and mutation suites exercise patching via real generated programs",
+      "OOM suites exercise dummy continuation after compiler allocation failure; bytecode/explain tests observe patched operands",
+      "Project 366-observation builder differential compares real/dummy identity, all fields, typeof flag, pop/patch counts, sticky OOM, and continuation"
+    ]
+  }
 }

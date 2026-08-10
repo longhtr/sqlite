@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-p4-leaf-payload-ownership-release",
   "title": "VDBE P4 ephemeral-function, Mem, and function-context leaf release",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These three source helpers are the leaf destructors used by freeP4 for P4_FUNCDEF, P4_MEM, and P4_FUNCCTX. Their owned fields and SQLITE_FUNC_EPHEM flag completely determine whether nested allocations and functions are consumed.",
     "source_files": [
@@ -139,7 +139,7 @@
     "normalization": "Addresses normalize to membership in the owning connection free lists. Type flags and consumed-owner booleans are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -165,8 +165,36 @@
     "notes": "Requires top-level P4/destruction integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate the completed P4/VDBE destruction path with production compiler reset/finalize ownership.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:1335-1380 was reviewed through jump-pop adjacency and complete freeEphemeralFunction/freeP4Mem/freeP4FuncCtx bodies plus their top-level freeP4 callers",
+      "upstream/sqlite/src/sqliteInt.h:1945-2050 was reviewed for complete FuncDef ownership context, funcFlags, and SQLITE_FUNC_EPHEM",
+      "upstream/sqlite/src/vdbeInt.h:215-260 and 375-410 were reviewed for Mem zMalloc/szMalloc and sqlite3_context pFunc ownership neighborhoods",
+      "src/core/internal/vdbe_aux.zig leaf destructors and vdbe_types exact fields/constants are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "freeP4 dispatches P4_FUNCDEF to freeEphemeralFunction, P4_MEM to freeP4Mem, and P4_FUNCCTX to freeP4FuncCtx",
+      "P4 replacement, operation-array destruction, and final VDBE deletion consume freeP4 in follow-on units",
+      "Function definitions without SQLITE_FUNC_EPHEM remain registry-owned; ephemeral definitions and P4 wrapper objects are connection-owned"
+    ],
+    "callees": [
+      "freeEphemeralFunction conditionally calls sqlite3DbNNFreeNN only for SQLITE_FUNC_EPHEM",
+      "freeP4Mem frees zMalloc through nullable sqlite3DbFree exactly when szMalloc is nonzero, then frees the Mem owner non-null",
+      "freeP4FuncCtx first applies ephemeral-function ownership to pFunc and then frees the context non-null",
+      "All frees use the reviewed connection allocator and require the caller-held connection mutex"
+    ],
+    "assertions_branches_cleanup": [
+      "Four behavior IDs cover live db assertions and each conditional nested-owner decision",
+      "No allocation, callback, I/O, result, or recoverable failure occurs; each consumed owner is final and must not be reused",
+      "Static FuncDef is retained; ephemeral FuncDef is consumed; Mem/Context outer owners are always consumed with their qualifying nested owner exactly once"
+    ],
+    "upstream_tests": [
+      "Upstream function, aggregate, window, statement-finalize, and OOM suites exercise FuncDef/context/Mem P4 cleanup through preparation/finalization",
+      "Project vdbe-builder differential allocates static/ephemeral FuncDef, Context, and Mem owners and observes exact lookaside free-list membership for retained/consumed owners",
+      "Internal VDBE layout tests verify field widths/offsets; top-level P4 dispatch promotion remains separate"
+    ]
+  }
 }

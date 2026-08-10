@@ -1,13 +1,13 @@
 {
   "baseline_checkin": "bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
   "engineering_process": {
-    "atomic_unit_dossiers_complete": false,
+    "atomic_unit_dossiers_complete": true,
     "atomic_unit_state_counts": {
       "assurance-passed": 0,
       "internal-trace-equivalent": 0,
-      "inventoried": 29,
+      "inventoried": 0,
       "scaffolded": 0,
-      "source-context-reviewed": 17,
+      "source-context-reviewed": 46,
       "source-translated": 0,
       "subsystem-integrated": 0
     },
@@ -15,7 +15,7 @@
     "behavioral_block_inventory_complete": true,
     "bounded_build_commands_and_artifacts": true,
     "containment_mutation_tested": true,
-    "current_gate": "all atomic units were downgraded to inventoried pending structured context; historical mechanical function claims have no completion credit; exact active-batch promotion and durable checkpoint controls are installed",
+    "current_gate": "all atomic units have structured source context; historical mechanical claims are formally retired with no completion credit; exact net-new active-batch promotion and durable checkpoint controls are installed",
     "headline_progress_basis": "dependency-closed atomic units at source-translated, trace-equivalent, integrated, or assurance-passed states",
     "non_progress_accounting": [
       "reviewed entity percentage",
@@ -123,8 +123,8 @@
     "zig_native_api_status": "declaration-level responsibilities accounted; coherent Zig surface and complete behavior remain open"
   },
   "release_blockers": [
-    "record structured source context and durable evidence before promoting any inventoried atomic unit, then reconcile or retire all historical mechanical function claims",
-    "assign remaining source and behavioral responsibilities to dependency-closed atomic units, resolve legacy candidates, and context-review every active responsibility",
+    "promote source-context-reviewed atomic units only with exact translation, trace, integration, and assurance evidence",
+    "assign remaining source and behavioral responsibilities to dependency-closed atomic units and resolve legacy candidates without reviving retired historical credit",
     "port VDBE builder/labels/fixups, connect concrete Lemon action owners, and complete the SQL resolver, compiler, planner, and generated opcode system",
     "port SQLite Mem/VDBE semantics and all active opcodes",
     "replace bounded B-tree reconstruction, pager, WAL, and VFS subsets with source-faithful implementations",
@@ -133,16 +133,16 @@
   ],
   "schema_version": 3,
   "source": {
-    "active_entities_context_reviewed_or_later": 1707,
+    "active_entities_context_reviewed_or_later": 2111,
     "active_entities_initially_classified": 6752,
-    "active_entities_inventoried": 404,
+    "active_entities_inventoried": 0,
     "active_entities_unmapped": 3877,
     "active_entities_with_legacy_candidates": 764,
     "active_profile_entities": 6752,
     "active_source_files": 85,
     "ast_resolved_legacy_target_references": 451,
-    "ast_resolved_reviewed_target_references": 1448,
-    "atomic_unit_dossiers_admission_ready": 17,
+    "ast_resolved_reviewed_target_references": 1887,
+    "atomic_unit_dossiers_admission_ready": 46,
     "atomic_unit_dossiers_total": 46,
     "atomic_units_assurance_passed": 0,
     "atomic_units_source_translated_or_later": 0,
@@ -153,33 +153,33 @@
     "by_kind": {
       "function": {
         "active": 2588,
-        "inventoried": 177,
+        "inventoried": 0,
         "legacy_candidates": 582,
-        "reviewed": 322
+        "reviewed": 499
       },
       "macro": {
         "active": 1484,
-        "inventoried": 46,
+        "inventoried": 0,
         "legacy_candidates": 112,
-        "reviewed": 337
+        "reviewed": 383
       },
       "member": {
         "active": 2195,
-        "inventoried": 145,
+        "inventoried": 0,
         "legacy_candidates": 50,
-        "reviewed": 925
+        "reviewed": 1070
       },
       "struct": {
         "active": 203,
-        "inventoried": 15,
+        "inventoried": 0,
         "legacy_candidates": 6,
-        "reviewed": 59
+        "reviewed": 74
       },
       "typedef": {
         "active": 201,
-        "inventoried": 16,
+        "inventoried": 0,
         "legacy_candidates": 7,
-        "reviewed": 47
+        "reviewed": 63
       },
       "union": {
         "active": 2,
@@ -189,9 +189,9 @@
       },
       "variable": {
         "active": 79,
-        "inventoried": 5,
+        "inventoried": 0,
         "legacy_candidates": 7,
-        "reviewed": 15
+        "reviewed": 20
       }
     },
     "cross_file_dependency_edges": 654,
@@ -199,7 +199,7 @@
     "mapping_status": "working-classification-with-inventoried-unpromoted-atomic-units",
     "mapping_warning": "Inventoried mappings, AST resolution, and legacy candidates are planning facts only, not semantic review, promotion, or fidelity evidence.",
     "reviewed_coverage_is_completion_metric": false,
-    "reviewed_coverage_percent": 25.28,
+    "reviewed_coverage_percent": 31.26,
     "source_dependency_file_units": 85,
     "unresolved_legacy_target_references": 402,
     "zig_declaration_inventory": 12863
@@ -214,14 +214,22 @@
     "completion_credit": 0,
     "durable_checkpoints": 0,
     "historical_claim_classifications": {
-      "inventoried": 77,
       "legacy-candidate-target-resolved": 208,
       "legacy-candidate-unresolved": 162,
-      "source-context-reviewed": 27,
+      "source-context-reviewed": 104,
       "targeted-differential-passed": 76,
       "unmapped": 1188
     },
+    "historical_claim_dispositions": {
+      "retired-canonical-target-conflict": 269,
+      "retired-no-canonical-target": 1333,
+      "retired-pre-gate-no-durable-evidence": 136
+    },
     "historical_claim_ledger": "upstream/historical-port-claims.json",
+    "historical_claimed_target_resolution": {
+      "ambiguous": 1,
+      "unique": 1737
+    },
     "historical_claims_assigned_to_atomic_units": 104,
     "historical_claims_conflicting_with_canonical_target": 269,
     "historical_claims_matching_canonical_target": 136,
@@ -229,7 +237,7 @@
     "historical_mechanical_claims": 1738,
     "historical_mechanical_short_functions": 172,
     "historical_mechanical_substantive_functions": 1566,
-    "reconciled": false,
-    "warning": "These cumulative claims passed the retired file/name quantity gate but are not canonical mappings, atomic-unit promotions, durable checkpoints, or completion evidence."
+    "reconciled": true,
+    "warning": "All retired path/name claims are formally reconciled as pre-gate, no-credit history. They are not translation checkpoints or completion evidence."
   }
 }

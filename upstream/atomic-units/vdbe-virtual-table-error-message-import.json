@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-virtual-table-error-message-import",
   "title": "Virtual-table global-to-connection error-message import",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VtabImportErrmsg crosses allocator domains: it conditionally consumes sqlite3_vtab.zErrMsg from the global allocator, replaces the Vdbe connection-owned error, and clears the virtual-table owner even when duplication fails.",
     "source_files": [
@@ -72,7 +72,7 @@
     "normalization": "Pointers normalize to null/non-null and free-list membership; message bytes and sticky OOM state are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -99,9 +99,34 @@
     "notes": "Requires callback integration, destruction closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate virtual-table callback error paths.",
     "Complete Vdbe error-message destruction.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:5660-5685 was reviewed completely for conditional cross-allocator virtual-table error import and owner clearing",
+      "Runtime virtual-table callback call sites that invoke sqlite3VtabImportErrmsg were identified in VDBE execution",
+      "src/core/internal/vdbe_aux.zig importVtabError plus process/connection allocator dependencies are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "VDBE virtual-table method execution imports module-populated sqlite3_vtab.zErrMsg after callback failure",
+      "Vdbe error transfer/public errmsg later consumes the connection-owned duplicate; VDBE deletion owns final cleanup",
+      "The callback creating the global message and callback invocation itself remain external"
+    ],
+    "callees": [
+      "Null incoming zErrMsg is a complete no-op, preserving any prior Vdbe message",
+      "Non-null input frees prior connection message, attempts sqlite3DbStrDup, always sqlite3_free consumes the original process allocation, and clears public zErrMsg",
+      "Duplication OOM publishes sticky connection OOM and null destination while still retiring source owner"
+    ],
+    "assertions_branches_cleanup": [
+      "The one behavior block is the non-null import guard; inner operations are straight-line and order-sensitive",
+      "Global and connection allocator domains remain distinct; no callback or direct I/O occurs in import itself"
+    ],
+    "upstream_tests": [
+      "Upstream virtual-table callback/error, OOM, errmsg, statement reset/finalize, and module tests exercise import",
+      "Project builder differential compares replacement bytes, null no-op, owner clearing, and forced duplicate OOM with unconditional source consumption",
+      "Production vtab callback integration remains blocking"
+    ]
+  }
 }

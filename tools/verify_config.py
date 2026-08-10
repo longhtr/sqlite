@@ -226,9 +226,11 @@ def main() -> None:
             active_port_batch["status"] in {"idle", "active"} and
             not active_port_batch["completion_claim"],
             "active translation tracking boundary mismatch")
-    require(historical_port_claims["schema_version"] == 1 and
+    require(historical_port_claims["schema_version"] == 2 and
             historical_port_claims["sqlite_checkin"] == pinned["fossil_checkin"] and
-            historical_port_claims["completion_credit"] is False,
+            historical_port_claims["completion_credit"] is False and
+            historical_port_claims["reconciliation"]["status"] == "formally-retired" and
+            historical_port_claims["reconciliation"]["completion_credit"] is False,
             "historical mechanical claim boundary mismatch")
     require(port_checkpoints["schema_version"] == 1 and
             port_checkpoints["sqlite_checkin"] == pinned["fossil_checkin"] and

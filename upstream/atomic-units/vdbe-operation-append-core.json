@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-operation-append-core",
   "title": "VDBE operation-array growth and fixed-operand append core",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These eight mutually coupled vdbeaux.c routines implement the smallest operation-array append state machine: geometric growth, allocator-reported capacity, fixed P1/P2/P3 initialization, and P4_INT32 insertion.",
     "source_files": [
@@ -161,7 +161,7 @@
     "normalization": "Pointer addresses are replaced only by stable allocation identities; capacities, operation bytes, results, and event order are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -189,9 +189,40 @@
     "notes": "The combined 366-observation builder trace preserves the append/growth/OOM observations; broader builder closure, production ownership, assurance, and independent review remain."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "P4 pointer ownership, labels/fixups, VDBE creation, operation-list transfer, readiness, and deletion remain separate prerequisite/follow-on units.",
     "The source-corresponding builder is not yet the production compiler owner; handwritten Program construction must be retired before integration.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:120-202 was reviewed through the complete active growOpArray body, surrounding VDBE ownership, geometric growth, limit check, connection realloc, usable-size capacity, and old-array preservation",
+      "upstream/sqlite/src/vdbeaux.c:218-365 was reviewed completely for growOp3, addOp4IntSlow, AddOp0/1/2/3, and AddOp4Int including fast/slow initialization symmetry",
+      "upstream/sqlite/src/vdbeaux.c:1140-1160 was reviewed for the separate AddOpList consumer of growOpArray; list append behavior remains a follow-on unit",
+      "src/core/internal/vdbe_aux.zig growOperationArray/growOperation3/addOperation0/1/2/3/4Int targets and exact representation dependencies are AST-hashed"
+    ],
+    "callers": [
+      "Parser, expression, SELECT, DDL, trigger, pragma, and mutation compiler families call AddOp0/1/2/3/4Int extensively to construct all source VDBE programs",
+      "growOp3 and addOp4IntSlow are reached only when nOpAlloc is exhausted; addOp4IntSlow delegates base initialization to AddOp3 before setting P4_INT32 when no sticky OOM exists",
+      "sqlite3VdbeAddOpList also calls growOpArray with a bounded multi-op count and is assigned to vdbe-compact-operation-list-append-and-relocation",
+      "Handwritten production Program construction remains the retiring scaffold; source-corresponding compiler ownership is a later integration gate"
+    ],
+    "callees": [
+      "growOpArray reads Parse.db SQLITE_LIMIT_VDBE_OP, signals sqlite3OomFault on growth-limit rejection, and calls sqlite3DbRealloc/sqlite3DbMallocSize from the reviewed connection allocator",
+      "Normal growth doubles nonzero capacity or starts with floor(1024/sizeof(Op)); SQLITE_TEST_REALLOC_STRESS is inactive",
+      "AddOp0/1/2 delegate to AddOp3 with zero operands; AddOp3 initializes opcode, P1-P5, null P4, and P4_NOTUSED; AddOp4Int initializes the same fields with P4_INT32",
+      "No callback, lock acquisition, or I/O occurs; holding the connection mutex and INIT state are caller invariants"
+    ],
+    "assertions_branches_cleanup": [
+      "All 29 behavior IDs cover growth arithmetic/limit/realloc, allocator-reported capacity, slow-path sentinel 1, fixed-operand wrappers, INIT/opcode/capacity assertions, and P4_INT32 fast/slow branches",
+      "nOp advances only after capacity exists; growth failure preserves aOp, nOpAlloc, nOp, and all existing operation ownership for eventual destruction",
+      "Limit failure explicitly sets sticky connection OOM; allocation failure is made sticky by sqlite3DbRealloc and both return SQLITE_NOMEM to the slow append, whose historical address result is 1",
+      "Explain comments, scan status, profiling, debug add-op tracing, VDBE coverage, and realloc-stress branches are inactive in the pinned profile"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/sqllimits1.test exercises SQLITE_LIMIT_VDBE_OP defaults, runtime reduction, and maximum clamping through real preparation",
+      "Upstream malloc/oomfault and parser/compiler suites exercise array growth failure and cleanup through statement preparation",
+      "Project vdbe_aux native tests cover operand initialization and limit failure; vdbe-builder differential compares addresses, capacities, operation bytes, reached one-shot/sticky realloc failures, preservation, mutation rejection, and continuation",
+      "Opcode generation and internal layout tests validate enum range and Op/Parse/Vdbe storage dependencies; durable trace promotion remains later"
+    ]
+  }
 }

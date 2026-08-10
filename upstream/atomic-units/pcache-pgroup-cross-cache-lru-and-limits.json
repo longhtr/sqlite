@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "pcache-pgroup-cross-cache-lru-and-limits",
   "title": "PCache PGroup cross-cache LRU, limits, and recycling",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These source responsibilities jointly own PGroup-wide maximum/minimum/pinned/purgeable accounting, cache registration, recyclable-page LRU membership, cross-cache buffer recycling, soft-create admission, limit enforcement, shrink, and page counts. Native unified mode now shares one intrusive LRU and exact page buffer across caches. The dossier also owns the PCache1/PgHdr1/PGroup fields that directly carry these semantics; static/bulk allocation-only fields remain with their allocation unit.",
     "source_files": [
@@ -617,7 +617,7 @@
     "normalization": "C/Zig page addresses differ, but within-worker pointer identity is exact. Keys, counts, limits, LRU victim order, slot ownership, results, and continuation are not normalized."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -645,10 +645,41 @@
     "notes": "PGroup/LRU and source-shaped hash behavior are integrated. Requires exact PCache1/PGroup object allocation publication, complete upper-cache coupling traces, assurance, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "PCache1/private-PGroup one-allocation create/failure topology differs from embedded Cache plus PageTable allocation.",
     "Complete upper pcache.c dirty/stress/reference coupling traces remain open.",
     "Independent fidelity review remains open."
   ],
-  "caller_closure": "Production Pager caches use Cache. Unified target mode is selected only for a startup static page buffer with core mutexes disabled, matching the active profile. Separate caches retain private groups. PageTable now preserves source bucket/chaining/resize behavior."
+  "caller_closure": "Production Pager caches use Cache. Unified target mode is selected only for a startup static page buffer with core mutexes disabled, matching the active profile. Separate caches retain private groups. PageTable now preserves source bucket/chaining/resize behavior.",
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pcache1.c was reviewed completely, including selected PgHdr1/PGroup/PCache1 representations and active-profile mutex/pin macros",
+      "Lines 537-689 were reviewed for initial/doubling hash resize, intrusive rehash order, pin/LRU removal, hash removal, cross-cache maximum enforcement, and optimized/full truncate scans",
+      "Lines 764-1187 were reviewed for create/failure topology, cache-size arithmetic, shrink/pagecount, complete five-stage fetch, unpin, rekey, truncate, and destroy accounting/cleanup",
+      "src/core/page_cache.zig PageTable, Group, Cache ownership/LRU/fetch/limit/rekey/truncate/deinit paths, production Pager ownership, source-identity comments, and focused tests were reviewed; mapped declarations are AST-hashed"
+    ],
+    "callers": [
+      "pcache.c is the sole lower-cache client and supplies create modes, reference/dirty/stress semantics; Pager owns the native Cache and invokes fetch/release/move/truncate/size/shrink/deinit",
+      "Create registers purgeable cache limits in a private or shared group; cachesize/shrink/destroy enforce limits across the group; fetch/unpin maintain group LRU membership",
+      "Unified native mode is selected only for the active startup-buffer/core-mutex-disabled condition; otherwise each Cache uses its private group"
+    ],
+    "callees": [
+      "Create allocates zeroed PCache1 plus optional adjacent PGroup, initializes circular anchor, page/hash sizing and purgeable minimum, and fails closed when initial 256-bucket resize fails",
+      "ResizeHash releases group lock around allocation, treats later OOM as benign, and prepends pages into doubled/modulo buckets; PageTable preserves this 256/doubling/chaining contract",
+      "Pin unlinks one unpinned page and decrements its owner recyclable count; unpin either destroys unlikely/overlimit pages or inserts at LRU newest head; enforcement/shrink evict oldest tail across caches until limit or pinned exhaustion",
+      "Fetch probes hash, pins hits, rejects soft create by pinned/group/cache/pressure limits, then recycles oldest compatible group buffer or frees incompatible storage before allocation; publication updates key/hash/owner/extra/iMaxKey",
+      "Rekey removes and prepends under new modulo key; truncate selects narrow or full bucket scan and discards qualifying pinned/unpinned pages; destroy drains, unregisters max/min, enforces resulting group cap, and frees bulk/hash/object owners"
+    ],
+    "assertions_branches_cleanup": [
+      "All 97 behavior IDs cover structural/mutex invariants, hash allocation/rehash, pin/hash/LRU transitions, max enforcement, create/cachesize/shrink/count, fetch admission/recycling/allocation, unpin, rekey, truncate scan choices, and destroy",
+      "Each page belongs to exactly one cache hash and purgeable counter; each eligible unpinned page belongs to exactly one group LRU; cross-cache recycle transfers the same underlying storage without free/reallocate",
+      "Initial hash OOM prevents usable Cache publication; later resize OOM retains the old table; pre-transfer native capacity failure leaves victim and both caches unchanged",
+      "Pinned and dirty upper-cache pages remain unavailable to lower LRU eviction; exact PCache1 plus private-PGroup one-allocation topology and full pcache.c coupling remain explicit blockers rather than promoted claims"
+    ],
+    "upstream_tests": [
+      "upstream pcache2.test, pcache.test, shrink.test, cache-size pragma, fault-injection, pager/WAL/rollback and memory-subsystem suites exercise counts, limits, reuse, truncation, shrink, and OOM",
+      "Project tests cover initial/later hash OOM, exact 256-to-512 growth, collision order, cross-cache pointer/static-slot recycle, aggregate max/min/purgeable counts, limit victims, group shrink, deterministic LRU, truncate/rekey, pinned/dirty retention, and invariants",
+      "The 787-line C/Zig PCache differential compares group counts, LRU ends, page ownership/identity, hash state, allocation class/status, results, and continuation",
+      "Pager tests establish production construction and upper-cache use, while exact object-allocation timing and complete dirty/stress/reference trace closure remain blockers"
+    ]
+  }
 }

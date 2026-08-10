@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "memdb-file-storage-locking-and-mapping",
   "title": "Memdb shared/private storage, file methods, locking, and mapping",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These active memdb.c methods own shared-versus-private store creation and last-close destruction, contiguous doubled-capacity byte I/O, rollback-only truncation/sync, reader/writer locks, fetch behavior, file controls, ABI method tails, access, and pathname handling. The dedicated native memdb owner now follows these target-profile traces. The source MemStore/MemFile/MemFS representations, method tables, selected mutex helpers, delegated VFS services, and memdb identity predicate are also assigned here.",
     "source_files": [
@@ -596,7 +596,7 @@
     "normalization": "C and Zig store/pointer addresses are allocation identities. VFSNAME pointer spelling is normalized to its memdb prefix and size suffix; all names, bytes, capacities, limits, result codes, lock states, ABI tails, close continuation and allocator ownership are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -623,9 +623,41 @@
     "notes": "Internal trace equivalence is established for scoped file methods. Requires configured-mutex allocation-site review, deserialize boundary completion, assurance expansion, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Configured dynamic-mutex allocation identity and exact mutex-allocation OOM site remain open.",
     "Mapped-store creation is tracked by the scaffolded serialize/deserialize unit, which now adopts main-schema external buffers; attached schemas and complete differential assurance remain open there.",
     "Independent review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/memdb.c was reviewed completely; lines 25-200 define selected MemStore/MemFile/MemFS ownership, VFS v2 and I/O v3 method tails, delegated original-VFS services, registry state and store mutex helpers",
+      "Lines 210-619 were reviewed completely for close/last-reference destruction, byte I/O/growth/truncate/sync/size, reader-writer locks, controls, device flags, fetch/unfetch mapping, and shared/private open publication/failure",
+      "Lines 639-728 and 915-917 were reviewed completely for access/pathname, delegated dynamic-loading/random/sleep/error/time services, and memdb identity",
+      "src/core/vfs.zig MemoryVfs/FileState/MemoryFile, ABI adapters and memdb-focused tests plus src/core/memdb.zig process named-store owner were reviewed, including every source-identity comment and mapped AST-hashed declaration"
+    ],
+    "callers": [
+      "The registered memdb VFS routes Pager/Btree file operations through memdb_io_methods; source file controls, locking, mmap, and close are reached through standard sqlite3_file dispatch",
+      "Process named-memory URI handling uses memdb.open/close to retain one anchor handle for store lifetime and connection references around it; direct memdb adapter opens preserve source shared/private pathname classification",
+      "Serialize/deserialize consumes private-store identity and byte ownership in the dependent dossier; original VFS handles delegated platform services"
+    ],
+    "callees": [
+      "Open classifies absolute names longer than one byte as shared, serializes lookup/publication with STATIC_VFS1, allocates store/registry/mutex atomically, increments references under store mutex, and otherwise creates an unpublished private store",
+      "Close removes a last shared reference from registry before decrement/destruction, conditionally frees FREEONCLOSE bytes, frees mutex/store, and preserves shared content until final close",
+      "Read zero-fills the entire destination on short range; write rejects readonly, doubles contiguous capacity up to szMax, preserves state on FULL/IOERR_NOMEM, zero-fills gaps, then updates logical size/content; truncate only shrinks and sync is a no-op",
+      "Lock grants SHARED only without writer, RESERVED/PENDING one writer, EXCLUSIVE only with no other reader, and rejects write locks on readonly stores; failed upgrades preserve prior levels and unlock reverses reader/writer counts",
+      "SIZE_LIMIT and VFSNAME controls update/query under lock; fetch maps only bounded non-resizable stores and balances nMmap in unfetch; ordinary resizable stores return null",
+      "Access always reports false and pathname copies input; dynamic-load, randomness, sleep, last-error and time64 methods delegate to original VFS; identity is exact method/VFS owner"
+    ],
+    "assertions_branches_cleanup": [
+      "All 97 behavior IDs cover last-close search/removal/free, short/full reads, every growth/readonly/limit/OOM branch, truncate/sync/size, complete lock transitions and BUSY continuation, controls, mapping, open reuse/allocation rollback, ABI tails and delegated services",
+      "Shared registry then store lock order is preserved; private stores remain unpublished but use a safe owner; data pointer resizing requires zero active mappings",
+      "Every handle borrows exactly one store reference; FREEONCLOSE controls byte-buffer destruction; fresh reopen after last close receives an empty store",
+      "Dynamic configured-mutex allocation identity and exact allocation-site OOM remain explicit blockers; the native embedded mutex provides functional serialization but is not promoted as representation identity"
+    ],
+    "upstream_tests": [
+      "upstream memdb.test and memdb2.test exercise shared/private names, locks, readonly behavior, growth/limits, access, file controls, mapping constraints, close/reopen and VFS behavior; malloc/fault and multithread suites cover failures and contention",
+      "Project memdb adapter tests compare VFS v2/I/O v3 tails, OPEN_MEMORY, shared bytes, lock upgrades/BUSY, fetch null, rollback truncate/sync, private isolation, surviving references and fresh last-close reopen",
+      "Focused native tests cover exact doubled capacity, FULL and allocator OOM continuation, process-manager VFSNAME ownership, and eight-thread shared open/growth/content/close serialization",
+      "The 38-field C/Zig differential covers 24 operation orderings and normalizes only allocation addresses/VFSNAME pointer spelling; deserialize flag ownership is owned by the dependent dossier"
+    ]
+  }
 }

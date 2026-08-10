@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-label-resolution-progress-and-reuse",
   "title": "VDBE label resolution, progress checks, and reusable-program marker",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These active source functions and state fields form the dependency-closed label state machine used by the VDBE builder: negative label issuance, geometric label-array growth, resolve-to-next-op, hundred-label progress checks, interrupt/callback propagation, and Expire/Noop reusable marking. They extend the admitted fixed-operand append core and share its connection allocation/OOM closure.",
     "source_files": [
@@ -216,7 +216,7 @@
     "normalization": "Label values, capacities, targets, result states and opcodes are exact. Pointer values are reduced only to null/non-null ownership."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -243,9 +243,38 @@
     "notes": "Requires final fixup/compiler integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Final P2 fixup is now trace-equivalent; integrate it through MakeReady and the production compiler owner.",
     "Integrate source builder into compiler ownership and retire handwritten Program construction.",
     "Complete callback reentrancy/concurrency assurance and independent fidelity review."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:575-677 was reviewed completely for negative-label issuance, realloc-or-free growth, hundred-boundary progress checks, resolution, and Expire/Noop marking",
+      "upstream/sqlite/src/util.c:185-236 was reviewed completely for atomic interrupt and progress callback ordering/state",
+      "upstream/sqlite/src/vdbe.h:170-182 and sqliteInt.h connection/Parse neighborhoods were reviewed for ADDR, label storage, progress state, and callback transport",
+      "src/core/internal/vdbe_aux.zig label/progress/reuse functions and exact parse/vdbe_types fields are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "Expression, SELECT, WHERE, mutation, foreign-key, trigger, pragma, analyze, and window code issue and resolve labels",
+      "WHERE and SELECT additionally call sqlite3ProgressCheck during expensive compile loops; this unit owns the same helper behavior reached by label growth",
+      "Pragma uses RunOnlyOnce/Reusable to retain or rewrite the mandatory OP_Expire marker; final negative-P2 sweep belongs to readiness/fixup"
+    ],
+    "callees": [
+      "MakeLabel pre-decrements negative nLabel; ADDR bit-complements a label into its aLabel index",
+      "resizeResolveLabel grows to 10-nLabel with sqlite3DbReallocOrFree, clears allocation count on failure, checks progress on crossed hundreds, then publishes capacity and current nOp target",
+      "ProgressCheck atomically reads interrupt first, then increments callback steps or invokes xProgress and normalizes steps to zero on interrupt/callback threshold",
+      "RunOnlyOnce appends Expire(1,1); Reusable finds the invariant Expire marker and rewrites operation one to Noop"
+    ],
+    "assertions_branches_cleanup": [
+      "All 16 behavior IDs cover interrupt/callback paths, label growth/failure/publication, resolution range/once assertions, and reusable scan",
+      "Realloc-or-free consumes old aLabel on failure and sets pointer/count null/zero while sticky OOM remains in connection/Parse state",
+      "Resolution still publishes the target after a progress callback reports interrupt; no I/O occurs and callback reentrancy remains an assurance obligation",
+      "Debug unresolved-slot initialization and add-op tracing are inactive in the pinned profile"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/progress.test exercises callback thresholds, interruption, errors, and continuation; interrupt.test exercises interrupt state across statements",
+      "Broad expression/planner/mutation suites exercise forward labels and final fixup; pragma tests exercise reusable statement behavior",
+      "Project builder differential observes negative labels, capacities, hundred-boundary callback/interrupt state, realloc-or-free OOM, Expire/Noop, clear, and continuation"
+    ]
+  }
 }

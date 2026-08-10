@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-saved-sql-and-reprepare-bytecode-swap",
   "title": "VDBE saved SQL ownership and reprepare bytecode swap",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeSetSql owns the saved SQL copy and preparation metadata; sqlite3VdbeSwap exchanges a recompiled VDBE body while deliberately restoring handle list links and saved SQL identity, then propagating preparation/counter state to the persistent statement. These are one reprepare ownership boundary.",
     "source_files": [
@@ -125,7 +125,7 @@
     "normalization": "SQL contents, fields, counters and link/owner relationships are exact; allocation addresses are ignored."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -151,9 +151,37 @@
     "notes": "Requires production reprepare integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Connect production schema-reprepare orchestration to source VDBE owners.",
     "Port P4-aware destruction for both swapped bodies.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:55-82 was reviewed completely for SetSql null handling, prepFlags/expmask ordering, zSql precondition, and connection duplication",
+      "upstream/sqlite/src/vdbeaux.c:115-153 was reviewed completely for whole-Vdbe swap followed by list-link/zSql restoration, metadata propagation, counter copy, and REPREPARE increment",
+      "upstream/sqlite/src/vdbeInt.h:490-525 was reviewed for prepFlags/aCounter/zSql/expmask and adjacent swapped ownership fields",
+      "prepare.c:780-815 and 895-920 caller context was inspected for saved-SQL and same-connection reprepare ordering; vdbe_aux.zig targets are AST-hashed"
+    ],
+    "callers": [
+      "sqlite3LockAndPrepare calls SetSql after successful parser/code generation when a VDBE exists",
+      "sqlite3Reprepare prepares a replacement statement, calls Swap(new,persistent), resets old/new ownership, and finalizes the temporary owner",
+      "Statement status, binding-expiration, expanded-SQL, and finalize paths consume zSql/expmask/counters after these transitions"
+    ],
+    "callees": [
+      "SetSql always records prepFlags, clears expmask unless SAVESQL, asserts first ownership, and calls sqlite3DbStrNDup for exactly n SQL bytes",
+      "Swap requires same db, exchanges all fields, then swaps pVNext/ppVPrev and zSql back so handle/list/SQL identity stays stable",
+      "Persistent B receives A expmask/prepFlags/counters after restoration and increments SQLITE_STMTSTATUS_REPREPARE; old B body remains on A for cleanup",
+      "SQL normalization fields are inactive in the pinned profile"
+    ],
+    "assertions_branches_cleanup": [
+      "Five behavior IDs cover null no-op, SAVESQL branch, first-zSql assertion, and same-db swap assertion",
+      "Duplication OOM leaves zSql null with metadata already updated and sticky connection OOM; Swap cannot allocate or fail",
+      "Every body owner moves exactly once while list and SQL owners remain attached to their original public handles"
+    ],
+    "upstream_tests": [
+      "upstream/sqlite/test/schema.test, errmsg.test, capi3.test, and reprepare-related pragma/auth tests exercise SQLITE_SCHEMA recompilation and persistent handles",
+      "Statement status and expanded-SQL tests observe REPREPARE counters, saved SQL, binding masks, and continuation",
+      "Project builder differential compares null/OOM SetSql, distinct SQL/body/list/Parse relationships, metadata/counters, REPREPARE increment, and exact cleanup ownership"
+    ]
+  }
 }

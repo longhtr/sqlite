@@ -88,6 +88,7 @@ def main() -> None:
     unmapped_active = set(active) - explicitly_classified_active
 
     historical_claims = historical_claim_ledger["entries"]
+    historical_reconciliation = historical_claim_ledger["reconciliation"]
     historical_ids = {item["source_entity_id"] for item in historical_claims}
     declarations = {item["id"]: item for item in zig_inventory["declarations"]}
     historical_no_canonical_target = 0
@@ -207,13 +208,15 @@ def main() -> None:
             "historical_claims_conflicting_with_canonical_target": historical_conflicting_canonical_target,
             "historical_claims_assigned_to_atomic_units": len(historical_ids & atomic_source_ids),
             "historical_claim_classifications": dict(sorted(historical_classifications.items())),
+            "historical_claim_dispositions": historical_reconciliation["disposition_counts"],
+            "historical_claimed_target_resolution": historical_reconciliation["claimed_target_resolution_counts"],
             "completion_credit": 0,
-            "reconciled": False,
+            "reconciled": historical_reconciliation["status"] == "formally-retired",
             "warning": historical_claim_ledger["warning"],
         },
         "engineering_process": {
             "authoritative_process": "docs/ENGINEERING_PROCESS.md",
-            "current_gate": "all atomic units were downgraded to inventoried pending structured context; historical mechanical function claims have no completion credit; exact active-batch promotion and durable checkpoint controls are installed",
+            "current_gate": "all atomic units have structured source context; historical mechanical claims are formally retired with no completion credit; exact net-new active-batch promotion and durable checkpoint controls are installed",
             "headline_progress_basis": "dependency-closed atomic units at source-translated, trace-equivalent, integrated, or assurance-passed states",
             "non_progress_accounting": [
                 "reviewed entity percentage",
@@ -231,7 +234,10 @@ def main() -> None:
             "bounded_build_commands_and_artifacts": True,
             "containment_mutation_tested": True,
             "behavioral_block_inventory_complete": True,
-            "atomic_unit_dossiers_complete": False,
+            "atomic_unit_dossiers_complete": all(
+                dossier["status"] != "inventoried" and dossier["assurance"]["source_context_reviewed"]
+                for dossier in atomic_dossiers
+            ),
             "atomic_unit_state_counts": atomic_state_counts,
         },
         "public_api": {
@@ -433,8 +439,8 @@ def main() -> None:
             "release_compatibility_claim": False,
         },
         "release_blockers": [
-            "record structured source context and durable evidence before promoting any inventoried atomic unit, then reconcile or retire all historical mechanical function claims",
-            "assign remaining source and behavioral responsibilities to dependency-closed atomic units, resolve legacy candidates, and context-review every active responsibility",
+            "promote source-context-reviewed atomic units only with exact translation, trace, integration, and assurance evidence",
+            "assign remaining source and behavioral responsibilities to dependency-closed atomic units and resolve legacy candidates without reviving retired historical credit",
             "port VDBE builder/labels/fixups, connect concrete Lemon action owners, and complete the SQL resolver, compiler, planner, and generated opcode system",
             "port SQLite Mem/VDBE semantics and all active opcodes",
             "replace bounded B-tree reconstruction, pager, WAL, and VFS subsets with source-faithful implementations",

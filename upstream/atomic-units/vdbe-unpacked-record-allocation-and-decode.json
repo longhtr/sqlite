@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-unpacked-record-allocation-and-decode",
   "title": "UnpackedRecord connection allocation and record decode",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These functions allocate the contiguous UnpackedRecord/Mem workspace from the owning connection and decode a record header into bounded Mem fields using the serial-format helpers, including malformed payload nulling.",
     "source_files": [
@@ -96,7 +96,7 @@
     "normalization": "Interior pointer normalizes to exact expected offset; external addresses are not compared. Flags, values, counts, text pointer identity, and OOM state are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -122,9 +122,35 @@
     "notes": "Requires record comparison/opcode integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port and integrate record comparison families.",
     "Connect index/search opcodes to exact unpacked records.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:4215-4290 was reviewed completely for contiguous UnpackedRecord/Mem allocation, aligned interior pointer, bounded header loop, serial decode, malformed last-field nulling, and count publication",
+      "KeyInfo reference/layout and serial length/value decode dependencies were reviewed completely",
+      "Record compare, VDBE, blob, and preupdate caller families were identified by source search; src/core/internal/vdbe_record.zig targets are AST-hashed"
+    ],
+    "callers": [
+      "Record comparison/index seek allocates and populates UnpackedRecord workspaces; VDBE API/preupdate and integrity paths decode record fields",
+      "Caller owns the one connection allocation and input record bytes; comparison/collation execution remains follow-on",
+      "Decoded text/blob fields are ephemeral aliases into input and are not separately freed"
+    ],
+    "callees": [
+      "Allocator computes ROUND8P(sizeof UnpackedRecord)+Mem*(nKeyField+1), calls connection allocator, and publishes aligned aMem/pKeyInfo/capacity only on success",
+      "Unpack reads header size/serial varints, initializes enc/db/szMalloc/z before serial decode, advances payload length, and stops on header/data/capacity bounds",
+      "If logical payload exceeds nKey after at least one field, the actual last decoded field is overwritten NULL before final nField publication"
+    ],
+    "assertions_branches_cleanup": [
+      "All 13 behavior IDs cover size bound, OOM, alignment, header loop/bounds, capacity break, malformed repair and final count",
+      "Allocation OOM returns null with no partial owner and sticky connection state; decode itself allocates nothing",
+      "Fixture must provide physically safe backing bytes even when logical nKey is truncated, matching source read contract"
+    ],
+    "upstream_tests": [
+      "Upstream record/index/corruption/integrity/preupdate/blob and OOM suites exercise allocation/decode/malformed behavior",
+      "Project worker compares one-block interior offset, capacity/owner, mixed signed/text/NULL decode, no-lookaside OOM, and truncated 64-bit NULL repair",
+      "Record comparison/opcode integration remains follow-on"
+    ]
+  }
 }

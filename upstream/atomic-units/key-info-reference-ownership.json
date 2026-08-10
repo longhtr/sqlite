@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "key-info-reference-ownership",
   "title": "KeyInfo reference ownership and final release",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "sqlite3KeyInfoRef/Unref and the KeyInfo nRef/db owner fields are the complete intrusive reference contract used by P4_KEYINFO and unpacked records. Increment, decrement and final connection-aware free cannot be split.",
     "source_files": [
@@ -104,7 +104,7 @@
     "normalization": "Pointer addresses normalize to same-pointer/live identity. Counts and null transitions are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -130,9 +130,36 @@
     "notes": "Requires P4/record integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Connect P4_KEYINFO and unpacked-record callers to this owner.",
     "Port remaining P4 owner families and operation destruction.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/select.c:1535-1575 was reviewed through KeyInfo allocation tail and complete nullable ref/unref/final-free bodies",
+      "upstream/sqlite/src/sqliteInt.h:2645-2695 was reviewed for complete KeyInfo ownership/variable-tail representation and nRef/db fields",
+      "Callers in select/build/expr/vdbemem and P4_KEYINFO dispatch were identified by complete source search",
+      "src/core/internal/vdbe_aux.zig keyInfoRef/keyInfoUnref and exact KeyInfo fields are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "SELECT/build create shared P4_KEYINFO claims; expression and temporary planner owners unref them",
+      "UnpackedRecord owns and releases a KeyInfo claim; freeP4 conditionally unrefs P4_KEYINFO unless in bytes-freed measurement mode",
+      "Allocation/population and record execution are outside this reference-only unit"
+    ],
+    "callees": [
+      "Ref on non-null asserts positive nRef, increments, and returns identical pointer; null returns null",
+      "Unref on non-null asserts db/positive count, decrements, and on 1->0 calls sqlite3DbNNFreeNN through owning connection; null is no-op",
+      "No allocation, callback, I/O, or failure occurs in assigned functions"
+    ],
+    "assertions_branches_cleanup": [
+      "All seven behavior IDs cover nullable paths, live assertions, final branch, and pointer return",
+      "Each ref creates exactly one claim and each unref consumes one; use after final release is forbidden",
+      "Mutable count operations require caller-held connection mutex"
+    ],
+    "upstream_tests": [
+      "Upstream select/index/order/group, record unpack, trigger, OOM, and statement teardown suites exercise shared KeyInfo owners",
+      "Project builder differential compares null behavior, 1->2, 2->1, 1->0, same-pointer/owner identity and final retirement",
+      "P4 and unpacked-record integration remain separate units"
+    ]
+  }
 }

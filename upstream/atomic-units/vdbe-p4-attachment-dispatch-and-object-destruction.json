@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-p4-attachment-dispatch-and-object-destruction",
   "title": "VDBE P4 attachment, dispatch, operation-array, and object destruction",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These seven coupled routines own the complete active-profile P4 attach/replace/release path and recursively retire operation arrays, subprograms, and VDBE objects. Keeping them together closes every owner transition from attachment through statement deletion.",
     "source_files": [
@@ -203,7 +203,7 @@
     "normalization": "Pointers normalize only to identity relations and membership in connection lookaside free lists. P4 types, values, counts, OOM state, callback effects, and list state are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -230,9 +230,38 @@
     "notes": "Requires reset/finalize integration, broad assurance, and independent fidelity review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port and integrate VDBE halt/reset/finalize sequencing around this destruction path.",
     "Switch compiler production ownership to the source-layout VDBE builder.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:1370-1468 was reviewed completely for active freeP4 dispatch, reverse operation-array destruction, and adjacent SubProgram owner linkage",
+      "upstream/sqlite/src/vdbeaux.c:1530-1625 was reviewed completely for replacement clearing, dynamic string copy, negative-address selection, sticky-OOM consumption, typed attachment, VTable lock, and AppendP4 fast path",
+      "upstream/sqlite/src/vdbeaux.c:3700-3800 was reviewed completely for recursive ClearObject owner walk, state-dependent arrays, operation/SQL cleanup, connection-list unlink, byte-count mode, and final object free",
+      "All leaf/KeyInfo/VTable/SubProgram/result-metadata dependencies were reviewed; src/core/internal/vdbe_aux.zig typed P4 and destruction functions are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "Compiler helper families attach static, copied/dynamic, integer, function/context, KeyInfo, VTable, TableRef, SubrtnSig, Mem and SubProgram payloads",
+      "Opcode replacement/noop and array teardown call freeP4; reset/finalize/connection close eventually call VdbeDelete after halt/reset sequencing",
+      "Typed Zig entry points split C pointer-overloaded int/string/pointer transport without changing owner transitions"
+    ],
+    "callees": [
+      "freeP4 dispatches each active owning P4 class: direct connection free, KeyInfo unref, leaf FuncDef/Mem/Context, VTable unlock/callback chain, Table delete, or SubrtnSig nested affinity/free",
+      "freeOperationArray walks operations in reverse, releases only p4type<=P4_FREE_IF_LE, then frees the array",
+      "ChangeP4 consumes eligible incoming owners under sticky OOM except P4_VTAB, resolves negative address to latest op, copies n>=0 strings, installs INT32 inline, borrows static/non-owning pointers, and locks VTable claims",
+      "ClearObject releases metadata, every linked SubProgram body/node, READY arrays/VList/pFree, main aOp and zSql; Delete then conditionally unlinks and frees Vdbe"
+    ],
+    "assertions_branches_cleanup": [
+      "All 72 behavior IDs cover every active P4 case, reverse owner walk, replace/attach/OOM branches, object state branches, recursive subprogram cleanup, list unlink and final free",
+      "Replacement is allowed only when old P4 is non-owning/inline; incoming owning values transfer or are consumed on OOM so no double owner remains",
+      "Byte-count accounting suppresses KeyInfo/VTable/Table destructive ref transitions and connection unlink exactly as source",
+      "Normalize, explain-comment, cursor-hint expression, and statement-scan-status branches are inactive or excluded"
+    ],
+    "upstream_tests": [
+      "Upstream prepare/finalize/reset, function/aggregate/window, vtab, trigger/subprogram, schema/TableRef, OOM, and memory accounting suites exercise owner families",
+      "Project builder differential attaches/replaces static/int/copied/dynamic/VTable values, forces Change/Append OOM, compares callback/ref effects, reverse releases, recursive subprogram cleanup, linked deletion and free-list membership",
+      "Internal layout and dependency differentials validate every typed owner; halt/reset sequencing and production compiler switch remain blockers"
+    ]
+  }
 }

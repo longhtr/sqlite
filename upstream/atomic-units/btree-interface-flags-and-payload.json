@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "btree-interface-flags-and-payload",
   "title": "B-tree interface flags, opaque handles, and insertion payload",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "The active btree.h entities are representation contracts rather than function bodies: opaque handle aliases, exact BtreePayload fields, open/table/meta/hint/cursor/mutation flags, active defaults/header identity, and the non-debug seek-count expansion. The native module translates each declaration and compile-time checks payload layout against C.",
     "source_files": [
@@ -414,7 +414,7 @@
     "normalization": "Integer constants and layout facts are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -440,9 +440,39 @@
     "notes": "Requires B-tree consumer integration, broader target ABI validation, assurance, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Use BtreePayload in source-shaped insertion path.",
     "Translate cursor/open/meta API behavior and all B-tree ownership.",
     "Validate release targets and independently review."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/btree.h was reviewed completely, including header/default/autovacuum declarations, opaque handle types, open/table/meta/hint/cursor/mutation constants, complete BtreePayload field semantics and insertion interface, active seek-count macro, and neighboring function consumers excluded from this representation-only unit",
+      "Active-profile preprocessing was checked: SQLITE_DEFAULT_AUTOVACUUM resolves to zero, SQLITE_N_BTREE_META is 16, debug seek instrumentation is inactive, and all 44 inventoried declarations are active",
+      "src/core/internal/btree_api.zig was reviewed completely; opaque types, exact constants, extern payload, non-debug seekCount, generated C layout comparisons, and focused tests are canonical AST-hashed targets",
+      "Consumer searches covered VDBE opcode flag equality assertions, create/open/meta/hint/cursor paths, Btree insert/delete/payload implementations, preparation/schema/vacuum/pragma users, and root-module export"
+    ],
+    "callers": [
+      "sqlite3BtreeOpen/CreateTable/GetMeta/UpdateMeta/Cursor/CursorHint/Insert/Delete and payload consumers use these contracts throughout btree.c, vdbe.c, prepare.c, build.c, vacuum.c, pragma.c and VDBE API/memory/blob helpers",
+      "VDBE asserts exact OPFLAG equality with BTREE_BULKLOAD, SEEK_EQ, FORDELETE, SAVEPOSITION, AUXDELETE and PREFORMAT before forwarding flags",
+      "The native module is exported through src/root.zig and available to B-tree/VDBE owners, but broad executable cursor/insertion consumers are not yet migrated and remain blockers"
+    ],
+    "callees": [
+      "Open flags match Pager bits; table flags distinguish integer-key rowid tables from blob-key indexes; metadata indices map to header offset 36+4*idx except virtual DATA_VERSION slot 15",
+      "Cursor flags encode writable/FORDELETE and bulk/equality hints; insert/delete flags encode save-position, auxiliary delete, append and preformatted-cell behavior",
+      "BtreePayload borrows index encoded key plus optional Mem decomposition or table rowid/data/zero-tail fields according to mutually exclusive table/index contracts",
+      "Active non-debug sqlite3BtreeSeekCount expands to constant zero without evaluating or owning the argument"
+    ],
+    "assertions_branches_cleanup": [
+      "The behavioral inventory correctly assigns zero blocks because all selected entities are macros, typedefs, opaque declarations, fields, one extern representation, or a non-debug constant expansion rather than executable source bodies",
+      "Every constant value and all seven payload field order/type/offset/size/alignment facts are exact against the generated pinned-C layout owner",
+      "Payload pointers and Mem arrays are borrowed only for the insertion call; this unit allocates, frees, locks, invokes callbacks, or performs I/O nowhere",
+      "Invalid flag combinations and table-versus-index payload initialization are consumer responsibilities; executable B-tree cursor/page/shared-cache behavior remains outside this unit"
+    ],
+    "upstream_tests": [
+      "Upstream B-tree, index, WITHOUT ROWID, VDBE insert/delete, cursor hint, metadata/pragma, auto-vacuum, incremental blob, integrity, vacuum and corruption suites exercise consumers of these representation contracts",
+      "Pinned amalgamation layout extraction supplies BtreePayload size/alignment and all seven offsets/sizes; Zig compile-time checks fail closed on any mismatch",
+      "Native focused tests verify active metadata count, DATA_VERSION, PREFORMAT and non-debug seek count; internal-vdbe-layout-test owns the broader generated ABI check",
+      "No runtime differential is needed for pure constants beyond consumer execution; source-shaped insertion/cursor integration and broader target ABI validation remain explicit blockers"
+    ]
+  }
 }

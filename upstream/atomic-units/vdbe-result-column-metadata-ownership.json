@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-result-column-metadata-ownership",
   "title": "VDBE result-column metadata allocation and string ownership",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeSetNumCols and sqlite3VdbeSetColName own the pre-execution result-column metadata matrix. Count replacement releases prior Mem values/allocation, allocates COLNAME_N cells per column, and name assignment applies SQLite static/transient/dynamic string ownership.",
     "source_files": [
@@ -142,7 +142,7 @@
     "normalization": "Text contents, pointer identity where contractually meaningful, flags/counts/results and null ownership are exact. Uninitialized non-owning fields are ignored."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -169,9 +169,36 @@
     "notes": "Requires statement/public integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate public column metadata access with source Vdbe owner.",
     "Complete P4-aware Vdbe destruction for final matrix cleanup.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:2840-2913 was reviewed completely for prior matrix release, count publication, contiguous Mem allocation/init, sticky-OOM guard, transposed indexing, and string-owner assignment",
+      "upstream/sqlite/src/vdbe.h:150-172 was reviewed for active NAME/DECLTYPE and profile COLNAME_N=2; metadata-disabled variants were identified",
+      "select.c, pragma.c, and delete.c complete active caller families were inspected for static/transient/dynamic ownership",
+      "src/core/internal/vdbe_aux.zig setColumnCount/setColumnName, vdbe_mem ownership, and exact fields/constants are AST-hashed"
+    ],
+    "callers": [
+      "SELECT result naming allocates the matrix then assigns generated/transient/dynamic names and declared types; pragma/delete assign static/transient names",
+      "Public sqlite3_column_count/name/decltype accessors consume the pre-step metadata; VDBE deletion releases it",
+      "Database/table/origin metadata variants are inactive because SQLITE_ENABLE_COLUMN_METADATA is absent"
+    ],
+    "callees": [
+      "SetNumCols releases every prior Mem then matrix owner when nResAlloc is nonzero, publishes both counts, allocates COLNAME_N*n cells, and initializes them MEM_Null",
+      "SetColName returns NOMEM before access under sticky OOM, computes idx+variant*nResAlloc, and delegates static/transient/dynamic ownership to sqlite3VdbeMemSetText",
+      "Dynamic/custom destructor execution occurs during replacement/final cleanup through Mem ownership; no direct I/O"
+    ],
+    "assertions_branches_cleanup": [
+      "All 11 behavior IDs cover replacement, allocation/null return, bounds, sticky OOM, owner preconditions, Mem text result and termination",
+      "Allocation OOM deliberately retains published counts with null aColName; a later SetColName returns NOMEM without dereference",
+      "Uninitialized non-owner Mem fields remain intentionally unobserved unless szMalloc/flags activate them"
+    ],
+    "upstream_tests": [
+      "Upstream capi2/capi3, bind, select1, pragma, metadata, OOM, and statement finalize tests exercise counts/names/types and replacement",
+      "Project builder differential compares matrix/counts, Mem owner headers, all three string strategies, pointer identity/content, replacement cleanup, matrix OOM and sticky continuation",
+      "VDBE Mem/layout tests validate destructor and representation dependencies"
+    ]
+  }
 }

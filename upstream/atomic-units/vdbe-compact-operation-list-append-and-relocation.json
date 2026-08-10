@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-compact-operation-list-append-and-relocation",
   "title": "VDBE compact operation-list append and jump relocation",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeAddOpList consumes the generated compact VdbeOpList representation, reserves the whole batch atomically, expands every operand, and relocates positive jump P2 values by one shared insertion base. Representation and expansion behavior form one atomic unit.",
     "source_files": [
@@ -135,7 +135,7 @@
     "normalization": "Pointer values normalize to identity with aOp[base]. Every expanded field and count is exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -162,9 +162,36 @@
     "notes": "Requires generated-caller integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Migrate generated compiler list callers to source VDBE ownership.",
     "Port P4 ownership and operation-array/object destruction.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbe.h:95-123 was reviewed completely for compact VdbeOpList field widths/signs and typedef",
+      "upstream/sqlite/src/vdbeaux.c:1125-1185 was reviewed completely for whole-list reservation, expansion, jump-property relocation, field initialization, count publication, and return identity",
+      "The shared growOpArray body and connection-allocation failure semantics were reviewed in dependency dossiers",
+      "src/core/internal/vdbe_aux.zig addOperationList and vdbe_types VdbeOpList declarations are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "vdbeblob.c uses a compact list for incremental-blob open; insert.c uses lists for autoincrement begin/end; pragma.c uses multiple metadata/cookie lists",
+      "Generated/static list producers own input lifetime; expanded operations become Vdbe-owned and later P4/fixup/destruction units consume them",
+      "No other active callers exist beyond the complete source search"
+    ],
+    "callees": [
+      "One preflight calls growOpArray for the entire positive count and returns null before mutation on failure",
+      "Each entry widens signed-byte operands, initializes P4_NOTUSED/null and P5 zero, and uses generated OPFLG_JUMP to add insertion base only to positive jump P2",
+      "nOp advances once after the loop and the returned pointer is exactly aOp at the pre-append base"
+    ],
+    "assertions_branches_cleanup": [
+      "All eight behavior IDs cover positive count/INIT assertions, one-shot growth failure, linear expansion, nonnegative P2, jump relocation, and return",
+      "Input is borrowed/static; output ownership is part of aOp; failure leaves nOp and operation bytes unchanged with sticky OOM",
+      "Explain comments, VDBE coverage source lines, and debug tracing are inactive; iLineno has no active-profile output"
+    ],
+    "upstream_tests": [
+      "Upstream incremental blob, autoincrement, pragma, bytecode, OOM, and limits tests exercise all active list caller families",
+      "Project builder differential appends Integer/Goto/Noop after a prior operation and compares return identity, capacity/count, all fields, relocation, and zero-limit no-mutation failure",
+      "Opcode and internal-layout tests verify generated jump properties and compact representation"
+    ]
+  }
 }

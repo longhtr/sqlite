@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-make-ready-bulk-allocation-and-rewind",
   "title": "VDBE MakeReady bulk allocation, Parse transfer, and rewind",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "MakeReady is the one-way packaging boundary from Parse-owned builder metadata to execution-ready Vdbe arrays. ReusableSpace/allocSpace, Mem initialization, rewind, transferred VList, array/count fields, and execution defaults form one inseparable ownership unit.",
     "source_files": [
@@ -322,7 +322,7 @@
     "normalization": "Pointer addresses are normalized to presence, owner transfer, and db identity. Counts, flags, Mem headers, state and OOM results are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -349,9 +349,38 @@
     "notes": "Requires teardown/runtime integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port P4 ownership and VDBE operation/object destruction.",
     "Switch compiler/runtime ownership from handwritten Program to source VDBE and retire duplicate representations.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:2135-2173 was reviewed completely for hot-path Mem header initialization and inactive debug fields",
+      "upstream/sqlite/src/vdbeaux.c:2535-2590 was reviewed for complete ReusableSpace and aligned allocSpace tail-carving semantics",
+      "upstream/sqlite/src/vdbeaux.c:2591-2618 and 2620-2745 were reviewed completely for Rewind defaults and MakeReady one-way Parse packaging, fixup, two-pass allocation, count publication, Mem/cursor initialization, and READY transition",
+      "upstream/sqlite/src/vdbeInt.h Vdbe array/count/state fields and sqliteInt.h Parse pVList were reviewed in complete owner neighborhoods; Zig targets are AST-hashed"
+    ],
+    "callers": [
+      "build.c finalizes ordinary compiled statements with MakeReady; vdbeblob.c packages incremental-blob statements",
+      "vdbeapi.c rewinds prepared VDBEs before first execution and reset/reprepare paths reuse Rewind after halt",
+      "Runtime execution, cursor release, Mem release, and VDBE deletion consume all published arrays/owners in follow-on lifecycle units"
+    ],
+    "callees": [
+      "MakeReady transfers pVList Parse-to-Vdbe, derives nVar/nMem/nCursor/nArg, reserves cursor Mem cells and aMem[0], and derives aligned unused aOp tail from allocator-reported szOpAlloc",
+      "resolveP2Values finalizes labels/flags; usesStmtJournal, explain minimum memory/result columns, and expired reset are published before allocation",
+      "allocSpace first carves tail from high addresses while accumulating rounded deficit; one sqlite3DbMallocRawNN pFree allocation satisfies remaining arrays in a second pass",
+      "On success counts publish, aVar/aMem receive only flags/db/szMalloc initialization and apCsr is zeroed; on OOM executable counts publish zero; Rewind always sets READY defaults"
+    ],
+    "assertions_branches_cleanup": [
+      "All 27 behavior IDs cover exact owner/state/alignment preconditions, tail reuse/deficit, explain/cursor sizing, OOM count suppression, array initialization, and rewind state",
+      "pFree owns only the aggregate deficit; independently satisfied pointers may remain in aOp tail; transferred pVList is never left on Parse",
+      "Deficit OOM leaves sticky connection state, any tail pointers non-owning under zero counts, and a READY VDBE safe for ordinary destruction",
+      "No callback or I/O occurs; debug Mem verification and profile counters are inactive"
+    ],
+    "upstream_tests": [
+      "Upstream prepare, explain, parameter, cursor, OOM, incremental-blob, reset, and finalize suites exercise packaging and teardown",
+      "Project builder worker compares 351 exact observations for tail/pFree ownership, VList transfer, arrays/counts, Mem headers, cursor zeroing, explain/journal flags, READY defaults, and forced deficit OOM",
+      "Internal VDBE/Parse layout tests verify alignment, offsets, and target widths; production compiler/runtime ownership remains blocking"
+    ]
+  }
 }

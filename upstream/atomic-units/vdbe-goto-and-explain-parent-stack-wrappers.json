@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-goto-and-explain-parent-stack-wrappers",
   "title": "VDBE unconditional goto and EXPLAIN parent-stack wrappers",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These source-shaped code-generation wrappers preserve unconditional jump operands and the addrExplain parent chain used to nest and pop EXPLAIN QUERY PLAN nodes.",
     "source_files": [
@@ -87,7 +87,7 @@
     "normalization": "Opcode and every integer field are exact; no pointer values are compared."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -113,9 +113,35 @@
     "notes": "Requires parser integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate source parser code generation with these wrappers.",
     "Complete formatted OP_Explain ownership.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:355-375 was reviewed for exact sqlite3VdbeGoto delegation and neighboring wrapper ownership",
+      "upstream/sqlite/src/vdbeaux.c:480-555 was reviewed through explain parent zero short-circuit, formatted Explain ownership context, and explain pop state update",
+      "src/core/internal/vdbe_aux.zig addGoto/explainParent/explainPop and exact Parse/Vdbe operation fields are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "Expression, WHERE, SELECT, insert/delete, foreign-key, pragma, analyze, build, and window code use sqlite3VdbeGoto for unconditional control flow",
+      "ExplainQueryPlanParent/Pop macros and formatted sqlite3VdbeExplain manage nested EQP parent chains in planner/compiler code",
+      "Formatted Explain allocation/P4 ownership and scan-status attachment remain excluded"
+    ],
+    "callees": [
+      "Goto delegates to AddOp3(Goto,0,destination,0) and inherits append/OOM continuation",
+      "ExplainParent returns zero before dereferencing pVdbe when addrExplain is zero; otherwise it reads the parent operation P2 through GetOp",
+      "ExplainPop assigns addrExplain from ExplainParent after the inactive debug breakpoint"
+    ],
+    "assertions_branches_cleanup": [
+      "Four behavior IDs cover Goto return, zero-parent branch/return, and nonzero parent return; ExplainPop is straight-line state mutation",
+      "No direct allocation, owner transfer, callback, or I/O occurs; parent address must identify a valid Explain operation",
+      "Sticky OOM behavior for Goto/GetOp is inherited from reviewed dependencies"
+    ],
+    "upstream_tests": [
+      "Upstream expression/planner/mutation suites exercise Goto operands and label destinations through bytecode execution",
+      "upstream/sqlite/test/eqp.test and broad EXPLAIN QUERY PLAN suites exercise nested parent push/pop relationships",
+      "Project builder differential compares all Goto fields/address, zero-parent no-dereference, nonzero P2, and addrExplain after pop"
+    ]
+  }
 }

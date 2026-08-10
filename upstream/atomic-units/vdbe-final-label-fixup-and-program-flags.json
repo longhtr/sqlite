@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-final-label-fixup-and-program-flags",
   "title": "VDBE final label fixup, reader/write flags, and virtual-table argument sizing",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "resolveP2Values is the source builder finalization scan that consumes resolved labels, patches negative jump P2 operands, computes maximum VUpdate/VFilter argument demand, derives read-only/reader flags, and releases Parse label storage. Its reverse scan and generated opcode-property coupling form one atomic unit.",
     "source_files": [
@@ -153,7 +153,7 @@
     "normalization": "Opcode, P2, maximum arguments, flags, counts and null ownership are exact; allocation addresses are ignored."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -180,9 +180,38 @@
     "notes": "Requires MakeReady/compiler integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port and integrate VDBE creation, P4 ownership, MakeReady/operation transfer, and deletion.",
     "Switch compiler ownership from handwritten Program to source builder and retire the duplicate.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:840-975 was reviewed completely for resolveP2Values preconditions, reverse scan, special opcode cases, label patching, generated-property assertions, label retirement, and outputs",
+      "upstream/sqlite/src/vdbeInt.h:490-525 was reviewed for exact readOnly/bIsReader bitfields, btreeMask, counters, zSql, and expmask adjacency",
+      "upstream/sqlite/src/global.c:350-370 was reviewed for generated sqlite3OpcodeProperty ownership and opcodes.h coupling",
+      "src/core/internal/vdbe_aux.zig resolveP2Values, packed VdbeFlags fields, btreeMask, and generated opcodes.properties are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "sqlite3VdbeTakeOpArray calls resolveP2Values before transferring aOp and sqlite3VdbeMakeReady calls it before runtime allocation/state transition",
+      "Compiler callers populate labels, btreeMask, Transaction/control opcodes, and VUpdate/VFilter argument conventions before finalization",
+      "MakeReady/TakeOpArray ownership and runtime execution remain follow-on units"
+    ],
+    "callees": [
+      "The scan initializes readOnly=true/bIsReader=false and walks backward from the last operation to mandatory Init at index zero",
+      "Transaction/AutoCommit/Savepoint and Checkpoint/Vacuum/JournalMode derive reader/write flags; VUpdate P2 and preceding Integer before VFilter derive max virtual-table arguments",
+      "Negative P2 on generated jump properties resolves through ADDR/aLabel; generated maximum-jump ordering skips unrelated opcodes",
+      "After scan, aLabel is freed non-null, set null, nLabel reset, max args published, and reader/btreeMask invariant asserted"
+    ],
+    "assertions_branches_cleanup": [
+      "All 38 behavior IDs cover entry/state, reverse loop, every special opcode family, label/property/range invariants, stop label, cleanup, and final invariant",
+      "Entry forbids sticky OOM and requires all labels resolved; no allocation, callback, or I/O occurs during scan",
+      "Operations remain VDBE-owned while Parse label storage is consumed exactly once even when the label set is empty",
+      "Debug-only subroutine validation is excluded and no generated-property behavior beyond consumed flags/order is credited"
+    ],
+    "upstream_tests": [
+      "Upstream expression/planner/mutation/virtual-table bytecode suites exercise label patching, read-only classification, and argument sizing through prepare",
+      "Query-only/read-only, transaction, pragma, vtab, bytecode, and OOM suites observe resulting metadata and preconditions",
+      "Project builder differential emits Init/jump/Transaction/VFilter/VUpdate programs and compares targets, max args, flags, label retirement, and generated-property decisions"
+    ]
+  }
 }

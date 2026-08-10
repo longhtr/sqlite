@@ -9,12 +9,12 @@ Incomplete and unsafe for production data. Reusable source-corresponding slices 
 | Fact | Current value |
 |---|---:|
 | Active source entities | 6,752 active |
-| Historical reviewed-or-later classifications | 1,707 |
-| Inventoried, unpromoted entities | 404 |
+| Historical reviewed-or-later classifications | 2,111 |
+| Inventoried, unpromoted entities | 0 |
 | Unmapped entities | 3,877 |
 | Behavioral inventory | 25,930 blocks in 2,457 functions |
 | Atomic-unit dossiers total | 46 |
-| Admission-ready dossiers | 17 |
+| Admission-ready dossiers | 46 |
 | Historical mechanical function claims | 1,738; 0 completion credit |
 | Active batch and durable checkpoints | 0 entries; 0 checkpoints |
 | Exact internal layouts | 69 |
@@ -45,7 +45,7 @@ Pinned source/profile/toolchain, inventories, generated Lemon/opcode artifacts, 
 
 ## Immediate blockers
 
-1. Add structured source-context evidence to the remaining 29 inventoried dossiers, advance the 17 reviewed dependency-closed units only with durable evidence, and keep the 1,738 retired historical mechanical claims quarantined with zero credit.
+1. Open the first dependency-closed net-new production translation batch against the 46 reviewed dossiers; the 1,738 historical mechanical claims are formally retired and retain zero completion credit.
 2. Complete global/runtime and recursive AST/schema/VDBE ownership.
 3. Connect concrete Lemon/compiler/planner owners and retire the handwritten frontend.
 4. Replace reconstructed B-tree mutation and bounded pager/WAL ownership with source algorithms.

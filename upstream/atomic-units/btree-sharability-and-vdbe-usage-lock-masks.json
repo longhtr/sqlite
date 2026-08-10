@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "btree-sharability-and-vdbe-usage-lock-masks",
   "title": "Btree sharability and VDBE database-usage/shared-cache lock masks",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "sqlite3BtreeSharable and sqlite3VdbeUsesBtree establish the prepared-statement database-use mask and the shared-cache lock subset. Exact Btree/BtLock layout is required because sharability is a source field rather than a delegated API property.",
     "source_files": [
@@ -219,7 +219,7 @@
     "normalization": "All index, sharable, and mask values are exact; pointers are not compared."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -246,9 +246,36 @@
     "notes": "Requires shared-cache call-path integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Connect source compiler database-use call sites.",
     "Integrate shared-cache lock acquisition/release.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/btreeInt.h:295-365 was reviewed completely for BtLock and Btree ownership/layout, mutex rule, sharable flag, and embedded shared-cache lock",
+      "upstream/sqlite/src/btree.c:11560-11588 was reviewed for active shared-cache sqlite3BtreeSharable and adjacent connection-count semantics",
+      "upstream/sqlite/src/vdbeaux.c:2015-2045 was reviewed completely for database-use and shared-lock mask accumulation",
+      "src/core/internal/btree_aux.zig sharable, vdbe_aux.zig usesBtree, and exact Btree/BtLock layouts are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "Build/DDL, alter, vacuum, pragma, incremental blob, and ParseSchema generation record all databases a VDBE may access",
+      "resolveP2Values asserts a non-reader has zero btreeMask; TakeOpArray requires no database-use ownership for detached subprograms",
+      "Runtime VDBE enter/leave uses btreeMask/lockMask to acquire shared-cache mutexes and locks in a separate integration unit"
+    ],
+    "callees": [
+      "sqlite3BtreeSharable directly returns p.sharable without allocation or lock action",
+      "sqlite3VdbeUsesBtree asserts index and mask widths, always ORs btreeMask, and ORs lockMask only for non-TEMP sharable Btree",
+      "DbMaskSet is an exact typed bit shift/or and repeated calls retain existing bits"
+    ],
+    "assertions_branches_cleanup": [
+      "Four behavior IDs cover direct return, index/mask assertions, and conditional lock mask",
+      "No ownership, callback, failure, OOM, or I/O occurs; all Btree fields are accessed under the connection mutex by caller contract",
+      "TEMP index one is deliberately excluded from lockMask even if its test fixture Btree is sharable"
+    ],
+    "upstream_tests": [
+      "Upstream shared-cache, attach/temp, pragma, incremental-blob, schema, and locking suites exercise mask consumers",
+      "Project builder differential packages main/TEMP/attached Btrees and compares direct sharability plus cumulative masks",
+      "Internal VDBE layout probe verifies every active Btree/BtLock field; runtime lock acquisition remains blocking"
+    ]
+  }
 }

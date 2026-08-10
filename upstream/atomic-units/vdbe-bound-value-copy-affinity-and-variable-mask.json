@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-bound-value-copy-affinity-and-variable-mask",
   "title": "VDBE bound-value copy, affinity, and reoptimization variable mask",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeGetBoundValue and sqlite3VdbeSetVarmask are the planner/reprepare boundary for bound parameters: one returns a caller-owned affinity-applied copy while preserving the binding, and the other records parameters whose rebinding may change a query plan.",
     "source_files": [
@@ -91,7 +91,7 @@
     "normalization": "Returned pointers normalize to null/non-null; flags, integer values, masks and OOM state are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -118,9 +118,35 @@
     "notes": "Requires bind/planner integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate public bindings and planner reoptimization with source Vdbe aVar/expmask.",
     "Complete Vdbe reset/final destruction of bound values.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:5355-5405 was reviewed completely for nullable/NULL bound-value retrieval, copy/affinity allocation, QPSG assertion, and saturated variable mask",
+      "expr.c and whereexpr.c planner/reprepare callers plus vdbemem.c binding-value caller were inspected",
+      "src/core/internal/vdbe_aux.zig getBoundValue/setVariableMask and source-shaped Mem helpers are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "Expression constant extraction and WHERE optimization read old pReprepare bindings and mark corresponding variables on the new VDBE",
+      "vdbemem.c value-from-expression marks bind variables; public bind APIs later use expmask to trigger reoptimization",
+      "Bound arrays/expmask are packaged and preserved by reviewed MakeReady/Swap units"
+    ],
+    "callees": [
+      "GetBoundValue returns null for null VDBE or SQL NULL; otherwise sqlite3ValueNew allocates a caller-owned Mem, sqlite3VdbeMemCopy preserves source binding, and affinity is applied UTF-8",
+      "SetVarmask ORs bit iVar-1 for 1..31 and saturates every index >=32 into bit 31",
+      "No callback or I/O occurs; connection allocator OOM is sticky and leaves original binding unchanged"
+    ],
+    "assertions_branches_cleanup": [
+      "All ten behavior IDs cover positive-index/QPSG assertions, nullable VDBE, NULL, allocation, copy return, and mask split",
+      "Successful copied value must be released by caller; source aVar remains VDBE-owned through every path",
+      "Index upper-bound relies on caller/source variable ownership, matching upstream rather than adding a substitute check"
+    ],
+    "upstream_tests": [
+      "Upstream bind, bindxfer, analyze3 QPSG, reprepare, planner, parameter, and OOM suites exercise binding snapshots and masks",
+      "Project builder differential packages integer/NULL values, applies affinity, sets 1/31/32 masks, forces copy OOM, and verifies source binding retention",
+      "VDBE Mem differential covers copy/affinity ownership details"
+    ]
+  }
 }

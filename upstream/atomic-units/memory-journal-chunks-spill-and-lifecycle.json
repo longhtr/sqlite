@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "memory-journal-chunks-spill-and-lifecycle",
   "title": "In-memory rollback-journal chunks, spill, and lifecycle",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "This unit owns the complete active memjournal.c chunk representation, sequential/header writes, cached reads, truncation, cleanup, optional atomic spill to the underlying VFS, open mode selection, identity, and size calculation. The native Journal is a direct source-shaped translation and its chunk/cursor/truncate/spill trace matches the pinned C implementation; production Pager ABI routing and complete failure assurance remain open.",
     "source_files": [
@@ -394,7 +394,7 @@
     "normalization": "Bytes, sizes, result codes and ordered method events are exact; allocation addresses are ignored."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -421,10 +421,40 @@
     "notes": "Requires pinned C differential, complete failure matrix, Pager ABI integration, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate Journal behind Pager journal-open policy and sqlite3_file ABI storage.",
     "Extend the pinned C/Zig differential with all chunk-boundary and spill failure/OOM continuation cases.",
     "Complete all chunk-boundary and spill OOM/VFS fault continuation cases.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/memjournal.c was reviewed completely, including all FileChunk/FilePoint/MemJournal layout, method-table, read/write/truncate/free/close/sync/size, spill, open-mode, identity and sizing responsibilities",
+      "The inactive sqlite3JournalCreate conditional body was inspected for its relationship to memjrnlCreateFile but remains excluded by the selected compile profile",
+      "src/core/memory_journal.zig was reviewed completely, including typed chunk allocation, cursor state, atomic spill owner transition, real-file dispatch, and focused tests; every mapped declaration is AST-hashed"
+    ],
+    "callers": [
+      "Pager and pcache policy select memory-only, spillable statement, or immediate real-file journal handles; atomic-write callers may force materialization in profiles where enabled",
+      "The native focused caller invokes Journal directly through production MemoryVfs ABI; Pager still opens its configured VFS journal directly and is an explicit integration blocker",
+      "After successful spill, all read/write/truncate/sync/size/close operations dispatch to the underlying sqlite3_file method table"
+    ],
+    "callees": [
+      "Read rejects ranges past endpoint without cursor mutation, restarts from head unless exact readpoint reuse applies, copies across chunks, and caches the next chunk/end offset only when available",
+      "Write spills before mutation when positive threshold is exceeded; otherwise it permits append, initial bounded header overwrite, or truncate-before-rewrite, allocating one linked payload chunk at each boundary",
+      "Truncate frees the suffix or whole list, retains the containing final chunk for partial size, moves endpoint, and invalidates readpoint; close frees all memory chunks while sync is a memory no-op and size returns endpoint",
+      "CreateFile snapshots the memory owner, opens real storage, writes each chunk with a shortened final write, frees chunks only after complete success, and on any open/write error closes provisional storage and restores the original journal",
+      "JournalOpen zeroes storage, opens real VFS immediately for zero threshold, selects threshold-sized chunks for positive spill, and default 1024-byte allocation shape for negative memory-only mode"
+    ],
+    "assertions_branches_cleanup": [
+      "All 55 behavior IDs cover short/readpoint/head traversal and cross-chunk reads; chunk free; spill open/write/success/restore; spill threshold; append/header/truncate writes; chunk OOM; truncate variants; lifecycle dispatch; open modes; identity and sizing",
+      "Every chunk is one owner containing link plus payload; successful spill retires all chunk owners and installs real-file ownership, while failed spill retains byte-identical in-memory rollback content",
+      "Chunk allocation failure leaves the already-linked prefix closable and endpoint at the successfully written prefix; failed spill continuation and exhaustive boundary/fault matrices remain blockers",
+      "The source module is single-threaded and owns no mutex; all I/O is confined to spill and post-spill method dispatch"
+    ],
+    "upstream_tests": [
+      "upstream memjournal.test, memjournal2.test, savepoint7.test, pager memory-journal, journal-mode, malloc/OOM, atomic-write and permutation suites exercise chunk, cursor, overwrite, truncate, spill, rollback and lifecycle behavior",
+      "Project tests cross chunk boundaries, repeated/cached and short reads, header overwrite, partial truncate/reappend, threshold spill through MemoryVfs, exact bytes/size/identity, close, and first-chunk OOM continuation",
+      "The pinned C/Zig differential compares 14 exact state/byte/VFS-event observations; all-boundary and failed-open/write/OOM expansion remains an explicit blocker",
+      "Pager production selection and preallocated sqlite3_file ABI ownership remain open and are not claimed as integrated"
+    ]
+  }
 }

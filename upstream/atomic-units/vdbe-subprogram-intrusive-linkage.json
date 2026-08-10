@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-subprogram-intrusive-linkage",
   "title": "VDBE trigger SubProgram intrusive linkage and presence",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeLinkSubProgram and sqlite3VdbeHasSubProgram establish and query the Vdbe-owned intrusive list used to retain transferred trigger programs until statement destruction. SubProgram/pNext and Vdbe.pProgram are the complete linkage representation.",
     "source_files": [
@@ -120,7 +120,7 @@
     "normalization": "Addresses normalize to exact node/head relationships. Boolean results are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -146,9 +146,35 @@
     "notes": "Requires trigger compiler/destruction integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate SubProgram construction from transferred operation arrays.",
     "Port P4-aware SubProgram and VDBE destruction.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbe.h:30-110 was reviewed for complete SubProgram representation and pNext owner",
+      "upstream/sqlite/src/vdbeaux.c:1435-1468 was reviewed through operation-array destruction adjacency and complete LinkSubProgram/HasSubProgram bodies",
+      "trigger.c:1260-1280 linkage and insert.c presence optimization caller were inspected",
+      "src/core/internal/vdbe_aux.zig linkage functions and exact SubProgram/Vdbe fields are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "Trigger program construction transfers/initializes a SubProgram then links it into the top-level VDBE",
+      "Insert conflict optimization queries HasSubProgram to avoid unsafe seek reuse when trigger subprograms exist",
+      "VDBE deletion traverses pProgram and owns final SubProgram/aOp/P4 teardown in a follow-on unit"
+    ],
+    "callees": [
+      "LinkSubProgram assigns node.pNext to prior pProgram and publishes node as new head; HasSubProgram is exact non-null predicate",
+      "No allocation, copy, callback, I/O, or failure occurs; caller transfers retention ownership and holds connection mutex"
+    ],
+    "assertions_branches_cleanup": [
+      "The single behavioral block is the presence return; linkage is straight-line LIFO mutation",
+      "Input must be a distinct live fully initialized node not already linked; prior list remains reachable",
+      "P4_SUBPROGRAM operation references are non-owning and do not replace list ownership"
+    ],
+    "upstream_tests": [
+      "Upstream trigger, recursive-trigger, FK action, conflict, OOM, reset/finalize, and connection close suites consume linkage",
+      "Project builder differential links two exact nodes and compares empty/nonempty, head, prior-head next and null tail identities",
+      "Transferred array construction and final destruction remain explicit blockers"
+    ]
+  }
 }

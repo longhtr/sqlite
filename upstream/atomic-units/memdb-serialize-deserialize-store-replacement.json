@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "memdb-serialize-deserialize-store-replacement",
   "title": "Memdb serialization, deserialization, and store replacement",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These three source functions resolve a schema to a private memdb store, expose copied or borrowed database images, and replace a schema store with caller-provided bytes and ownership/resize/read-only flags. Native public APIs preserve main-schema copy/NOCOPY sizing and directly adopt replacement buffers with source-shaped capacity, resize, ownership, and read-only flags; attached-schema closure and complete differential assurance remain open.",
     "source_files": [
@@ -141,7 +141,7 @@
     "normalization": "Database image bytes, sizes, result codes and within-worker pointer identity are exact. Absolute C/Zig addresses are not compared."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -169,10 +169,40 @@
     "notes": "Requires external-buffer adoption, full flags/schema/OOM differential, assurance, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Complete the transferred-buffer failure/OOM/free differential, including resize failure and configured memdb maximum.",
     "Support eligible attached schemas and source reopen path.",
     "Add pinned C/Zig flags, OOM, ownership and continuation differential.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/memdb.c was reviewed completely, with lines 734-745 covering schema/file-control resolution and private-store rejection of shared names",
+      "Lines 750-837 were reviewed completely for API armor/mutex, size initialization, private memdb fast path, NOCOPY/copy ownership, ordinary Btree page-count and page-by-page fallback, empty-database materialization, and cleanup",
+      "Lines 841-910 were reviewed completely for deserialize armor, schema constraints, ATTACH/reopen flow, private-store resolution, caller-buffer transfer, size/capacity/max/flags publication, FREEONCLOSE failure cleanup and mutex exit",
+      "src/core/memdb.zig schema resolution/serialize/deserialize owner, vfs.zig external-buffer adoption/growth/free, and sql_frontend.zig public exports/tests/backup callers were reviewed; mapped targets are AST-hashed"
+    ],
+    "callers": [
+      "Public sqlite3_serialize/sqlite3_deserialize exports and backup clone flow call this unit under the serialized connection path",
+      "Main-schema memory databases use private MemoryVfs images; named shared memdb denies NOCOPY; Unix serialization uses a native whole-file fallback rather than source page iteration",
+      "Deserialize closes/replaces the existing main database, adopts caller storage, reopens Pager/Btree against the replacement, and later close frees storage only with FREEONCLOSE"
+    ],
+    "callees": [
+      "memdbFromDbSchema resolves through file control, verifies memdb methods, locks store, and returns only private zFName-null stores",
+      "Serialize initializes piSize to -1 after mutex entry, resolves schema, reports private-store size, borrows exact bytes for NOCOPY or sqlite3_malloc-copies them; ordinary Btree path obtains page count/page size and copies each page, zero-filling failed page gets",
+      "Deserialize rejects invalid handle/negative sizes, restricts temp schema, prepares ATTACH with reopenMemdb, resolves the new private store, transfers pData exactly once, publishes sz/szAlloc/szMax=max(buffer,global maximum)/flags, and frees untransferred FREEONCLOSE input on every failure",
+      "Native adoption records external pointer, logical size, capacity, resize/readonly/free flags; growth reallocates through process manager with source doubling/maximum and preserves pointer/content on failure"
+    ],
+    "assertions_branches_cleanup": [
+      "All 44 behavior IDs cover schema resolution, size initialization, private/shared/ordinary branches, NOCOPY, empty database materialization, allocation/page loop cleanup, deserialize armor/schema/reopen, transfer and failure FREEONCLOSE",
+      "Copy results are caller-owned sqlite3_malloc memory; NOCOPY is borrowed and only available for private stores; adopted bytes are borrowed or owned according to FREEONCLOSE and must not be double-freed",
+      "Native main-schema copy/NOCOPY/adoption/readonly/resizable paths are reachable and tested, but attached-schema reopen, exact Btree page-by-page fallback equivalence, and complete failure/OOM/free matrix remain blockers",
+      "Failure before transfer honors FREEONCLOSE; failure after successful transfer leaves the replacement backend as owner and connection closable, though complete source continuation traces remain open"
+    ],
+    "upstream_tests": [
+      "upstream memdb1.test covers main/attached serialization, direct/readonly/maxsize/empty/malformed deserialize, misuse, replacement restrictions, reopen and continuation; memdb.test/memdb2.test and corruption/fuzz suites exercise consumed images",
+      "Project SQL integration verifies nullable size, copy ownership, exact NOCOPY pointer/size, missing schema size -1, negative-capacity armor, clone SQL, direct adopted-pointer identity, resizable growth, FREEONCLOSE, readonly reopen/write rejection and close",
+      "Backup integration routes through the same public exports, establishing a production caller; focused memdb tests cover byte-store size/limit/growth owners",
+      "A pinned C/Zig flag/ownership/OOM differential, attached schemas, and full transferred-buffer failure continuation remain explicit blockers rather than claimed assurance"
+    ]
+  }
 }

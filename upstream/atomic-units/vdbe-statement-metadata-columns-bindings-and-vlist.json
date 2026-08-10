@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-statement-metadata-columns-bindings-and-vlist",
   "title": "VDBE statement metadata, result columns, bindings, and variable lists",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These 37 coupled active-profile routines form the allocation-aware prepared-statement observation and binding layer: API safety, result-column access, VList variable identity, binding transfer/clear, statement metadata, counters, and API-exit OOM conversion.",
     "source_files": [
@@ -477,7 +477,7 @@
     "normalization": "Pointers normalize only to nullness, identity, retained allocation, and list ownership. Values, flags, counts, result codes, OOM state, and ordering are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -504,9 +504,40 @@
     "notes": "Requires complete source-layout statement lifecycle integration and isolated fidelity review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port bind setters and column name/declared-type APIs.",
     "Port and integrate VDBE step/reset/finalize before replacing bounded public statement ownership.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/malloc.c:850-900 was reviewed completely for API OOM normalization, OOM clear/result masking, connection error publication, and mutex preconditions",
+      "upstream/sqlite/src/util.c:2160-2260 was reviewed completely for packed VList format, growth/old-owner retention, pointer-freeze convention, append, and both lookup directions",
+      "upstream/sqlite/src/vdbeapi.c:1-195 was reviewed for expiration/safety/logging and complete clear-bindings owner loop in reset/finalize context",
+      "upstream/sqlite/src/vdbeapi.c:1245-1470 and 1915-2185 were reviewed completely for selected count/row/column conversions, null/range/mutex/OOM handling, parameter identity, binding transfer, statement metadata/list/status/SQL access; vdbe_api.zig targets are AST-hashed"
+    ],
+    "callers": [
+      "Exported statement APIs directly expose these functions; result access follows successful sqlite3_step pResultRow publication and binding APIs populate aVar/VList",
+      "Planner/reprepare consumes parameter names/masks and sqlite3TransferBindings moves old bindings to newly prepared statements",
+      "Finalize/reset/step, bind setters, column-name/decltype conversion, stmt_explain, and expanded SQL remain separate lifecycle/API units"
+    ],
+    "callees": [
+      "ColumnMem enters connection mutex and returns real row Mem or static NULL after setting RANGE; every selected conversion invokes source-shaped sqlite3_value conversion then columnMallocFailure normalizes OOM and unlocks",
+      "column_value converts borrowed MEM_Static to MEM_Ephem; column/data counts and nullable statement metadata follow exact documented defaults",
+      "VListAdd geometrically reallocates packed int storage, returns old owner unchanged on OOM, writes value/slot/name terminator, and lookup walks slot lengths; parameter APIs delegate directly",
+      "ClearBindings releases every aVar owner to NULL and expires on expmask; transfer moves each Mem owner under same-db mutex and deprecated wrapper validates counts/expires both",
+      "MEMUSED temporarily enables byte-count mode and suppresses lookaside/unlink/destructive frees while walking VdbeDelete; other status ops read/reset counters"
+    ],
+    "assertions_branches_cleanup": [
+      "All 101 behavior IDs cover API masking/OOM, packed list growth/lookups, nullable/safety, clear/transfer, every selected column conversion, RANGE, parameter and statement metadata defaults, list traversal, status measurement/reset, and SQL identity",
+      "Connection mutex remains held from ColumnMem through conversion and API-exit normalization; safety failures alone may invoke configured log callback",
+      "VList growth OOM preserves pointer/content despite sticky OOM; column OOM clears sticky state only when no VDBE executes per OomClear; binding move nulls source owners",
+      "MEMUSED traverses complete owner graph for measurement but restores pnBytesFreed/lookaside bounds and leaves live statement linked/owned"
+    ],
+    "upstream_tests": [
+      "Upstream capi2/capi3, bind/bindxfer, column/value/UTF16, stmt/status/memused, schema/reprepare, misuse, OOM and statement-list suites cover the selected API surface",
+      "Upstream planner parameter tests and VList consumers cover exact named/indexed variable behavior and QPSG interactions",
+      "Project source-layout worker compares 373 observations across values/encodings/bytes/types/RANGE, VList OOM retention, binding move/clear/expiration, list/status/SQL/safety/MEMUSED and API-exit OOM",
+      "VDBE Mem/builder differentials and layout tests validate conversion, allocator, object-destruction and field dependencies; public owner switch waits for step/reset/finalize and bind setters"
+    ]
+  }
 }

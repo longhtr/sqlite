@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-connection-change-expiration-and-access-metadata",
   "title": "VDBE connection changes, statement expiration, and metadata access",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These source helpers are the small connection/statement metadata boundary: publish connection changes, opt a statement into change counting, expire all linked statements with immediate/advisory strength, expose db/preparation flags, and reset the step result. They operate on the same exact linked Vdbe state.",
     "source_files": [
@@ -116,7 +116,7 @@
     "normalization": "All counters, flags and results are exact; database pointer normalizes only to owner identity."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -142,9 +142,36 @@
     "notes": "Requires production caller integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate public changes, reset, and expiration callers.",
     "Complete P4-aware reset/destruction lifecycle.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:3505-3532 was reviewed for ResetStepResult and adjacent error-transfer ownership",
+      "upstream/sqlite/src/vdbeaux.c:5285-5360 was reviewed completely for change publication/count opt-in, linked-list expiration, db/prepFlags accessors",
+      "Callers in main/auth/callback/vdbe/prepare and mutation compilers were identified by complete source search",
+      "src/core/internal/vdbe_aux.zig metadata helpers and exact connection/Vdbe fields are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "VDBE execution/halt publishes statement changes; top-level insert/update/delete enable change counting",
+      "Configuration, authorization, collation/function changes, schema operations, and OP_Expire expire all connection statements with immediate/advisory strength",
+      "Reprepare resets temporary statement step result; public change/error/reset APIs consume the resulting metadata"
+    ],
+    "callees": [
+      "SetChanges requires connection mutex, replaces nChange and accumulates nTotalChange; CountChanges sets sticky changeCntOn",
+      "ExpirePreparedStatements linearly traverses db.pVdbe/pVNext without relinking and writes expired=iCode+1",
+      "VdbeDb and PrepareFlags directly return owners/metadata; ResetStepResult assigns SQLITE_OK"
+    ],
+    "assertions_branches_cleanup": [
+      "Four behavior IDs represent mutex assertion, expiration loop, and direct access returns; other helpers are straight-line assignments",
+      "No allocation, callback, I/O, failure, or owner mutation occurs",
+      "Expiration code zero maps immediate one and one maps advisory two across every linked statement"
+    ],
+    "upstream_tests": [
+      "Upstream changes/total_changes, schema/reprepare, auth/collation/function replacement, reset, and statement lifecycle tests exercise these transitions",
+      "Project builder differential uses a two-node list and compares counters, change bit, both expiration strengths, owner/flags access, and interrupt-to-OK reset",
+      "Public/reset/reprepare production integration remains a separate gate"
+    ]
+  }
 }

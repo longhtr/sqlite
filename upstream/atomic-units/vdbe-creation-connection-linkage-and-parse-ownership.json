@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-creation-connection-linkage-and-parse-ownership",
   "title": "VDBE creation, connection linkage, and Parse ownership",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeCreate atomically allocates the statement object, initializes the zero-required tail, links it at the connection head, establishes Parse ownership, and appends mandatory OP_Init. sqlite3VdbeParser is the inverse owner accessor. The intrusive-list fields have no independent behavior outside this lifecycle.",
     "source_files": [
@@ -134,7 +134,7 @@
     "normalization": "Pointer values are normalized to exact identity/relationship booleans. Counts, state, operands, OOM flags and result codes are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -161,9 +161,37 @@
     "notes": "Requires lifecycle integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Port and integrate P4 ownership, MakeReady/operation transfer, and deletion.",
     "Switch compiler ownership from handwritten Program to source VDBE builder and retire the duplicate.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:1-55 was reviewed completely for object allocation, tail zeroing, intrusive connection-head insertion, Parse linkage, assertions, mandatory Init append, and inverse parser accessor",
+      "upstream/sqlite/src/sqliteInt.h sqlite3/Parse neighborhoods were reviewed for both pVdbe owners; upstream/sqlite/src/vdbeInt.h:440-480 was reviewed for Vdbe intrusive fields and zero-tail boundary",
+      "select.c:2490 and vdbeblob.c:250 direct creation callers plus expr.c parser accessor were inspected",
+      "src/core/internal/vdbe_aux.zig create/parser and exact layout fields are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "select.c sqlite3GetVdbe creates the main compiler VDBE lazily; vdbeblob.c creates the incremental-blob statement VDBE",
+      "expr.c uses sqlite3VdbeParser to recover Parse ownership from a VDBE",
+      "Connection close/finalize owns later unlink/delete; MakeReady owns transition out of INIT and remains separate"
+    ],
+    "callees": [
+      "Create allocates exactly sizeof(Vdbe) through sqlite3DbMallocRawNN and returns null without mutation on object OOM",
+      "It zeroes from aOp through the tail, assigns db, inserts at db.pVdbe head with reciprocal ppVPrev/pVNext links, links Parse both ways, and appends Init(0,1)",
+      "Initial operation allocation failure leaves a linked zero-op VDBE under sticky OOM so ordinary cleanup can retire it",
+      "Parser accessor returns pParse directly; no callback or I/O occurs"
+    ],
+    "assertions_branches_cleanup": [
+      "All ten behavior IDs cover allocation/no-mutation OOM, prior-head retargeting, INIT/zero-state assertions, return, and parser access",
+      "Connection mutex is a caller obligation; allocated VDBE ownership transfers to connection list immediately before Init append",
+      "Tail memset intentionally excludes db/list fields before explicit assignment and preserves source offsetof semantics"
+    ],
+    "upstream_tests": [
+      "Upstream prepare, incremental blob, OOM, statement lifecycle, and connection-close suites exercise creation, linkage, failed Init append, and cleanup",
+      "Project builder differential creates one/two statements and deterministic object/Init allocation failures, comparing exact reciprocal identities, state, Init operands, and OOM continuation",
+      "Internal VDBE/Parse layout tests verify offsets and pointer representations; production compiler migration remains blocking"
+    ]
+  }
 }

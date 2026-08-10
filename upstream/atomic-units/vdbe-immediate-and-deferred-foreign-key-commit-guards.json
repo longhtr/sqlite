@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "vdbe-immediate-and-deferred-foreign-key-commit-guards",
   "title": "VDBE immediate and deferred foreign-key commit guards",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "These guards convert outstanding immediate or connection-deferred foreign-key counts into the exact VDBE constraint state, abort policy, fixed error message, and prepare-mode-dependent return code used by halt/commit.",
     "source_files": [
@@ -98,7 +98,7 @@
     "normalization": "Return codes, rc, action, prepare flags, message bytes/nullness, and OOM state are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -124,9 +124,35 @@
     "notes": "Requires halt-path integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Integrate source FK counter producers.",
     "Connect sqlite3VdbeHalt transaction path.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:3265-3301 was reviewed completely for fixed FK error transition and immediate/deferred guard bodies in halt context",
+      "vdbe.c immediate execution and commit/deferred call sites plus vdbeaux.c halt call sites were identified by complete source search",
+      "src/core/internal/vdbe_aux.zig foreignKeyError/checkForeignKeyImmediate/checkForeignKeyDeferred are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "sqlite3VdbeHalt checks immediate constraints during statement close and deferred constraints before transaction commit",
+      "vdbe.c runtime checks immediate counts and deferred commit counts at execution boundaries",
+      "Constraint producer arithmetic and transaction commit/rollback remain external integration responsibilities"
+    ],
+    "callees": [
+      "vdbeFkError sets extended FK constraint rc and OE_Abort before replacing zErrMsg through sqlite3VdbeError",
+      "Return is generic SQLITE_ERROR without SQLITE_PREPARE_SAVESQL and extended SQLITE_CONSTRAINT_FOREIGNKEY with it",
+      "Immediate guard selects Vdbe.nFkConstraint; deferred guard selects connection nDeferredCons+nDeferredImmCons and leaves state untouched at zero"
+    ],
+    "assertions_branches_cleanup": [
+      "All nine behavior IDs cover message return policy and both zero/nonzero count guards",
+      "Prior zErrMsg is consumed and fixed message becomes connection-owned; allocation OOM leaves null/sticky OOM while preserving rc/action/return",
+      "No callback or I/O occurs; negative counter states are forbidden by external producers"
+    ],
+    "upstream_tests": [
+      "Upstream foreign-key immediate/deferred, transaction, savepoint, prepare-v2, OOM, and error-message suites exercise both guards",
+      "Project builder differential seeds prior state and compares zero no-mutation, count selection, rc/action, generic/extended result, message replacement, and deterministic message OOM",
+      "Halt-path and counter-producer integration remain explicit blockers rather than credited behavior"
+    ]
+  }
 }

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "id": "virtual-table-and-module-reference-ownership",
   "title": "Virtual-table and module reference ownership",
-  "status": "inventoried",
-  "admission_ready": false,
+  "status": "source-context-reviewed",
+  "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VtabLock/Unlock and sqlite3VtabModuleUnref are the complete nested reference lifecycle consumed by P4_VTAB: VTable references protect disconnection, final unlock invokes xDisconnect, consumes a Module reference, runs optional module destructor, and releases both internal wrappers.",
     "source_files": [
@@ -182,7 +182,7 @@
     "normalization": "Addresses normalize to owning lookaside free-list membership. Counts and callback totals are exact."
   },
   "assurance": {
-    "source_context_reviewed": false,
+    "source_context_reviewed": true,
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
@@ -208,8 +208,35 @@
     "notes": "Requires P4/registry integration, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Structured implementation spans, callers, callees, branches/cleanup, and upstream-test context must be recorded before promotion.",
     "Connect production virtual-table registry owners to the completed P4/VDBE lifecycle.",
     "Independent fidelity review remains open."
-  ]
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vtab.c:135-225 was reviewed completely for Module unref, nested VTable lock, final unlock callback/module/wrapper order, and neighboring module-drop/get lookup context",
+      "upstream/sqlite/src/sqliteInt.h:2205-2230 and 2395-2425 were reviewed for complete Module/VTable owner fields and deferred-disconnect rationale",
+      "All active lock/unlock/module-unref callers in registration, deferred disconnect, VDBE execution, and P4 dispatch were identified",
+      "src/core/internal/vdbe_aux.zig lifecycle functions and exact internal/public ABI prefixes are canonical AST-hashed targets"
+    ],
+    "callers": [
+      "Module replacement/drop and connection close consume module claims; registration/connect paths create claims",
+      "VTable lookup/connect, deferred disconnect lists, VDBE table lock/unlock, and P4_VTAB attachment/destruction nest VTable claims",
+      "Top-level registry and deferred-list mutation remain outside this unit but every ref transition helper is assigned"
+    ],
+    "callees": [
+      "ModuleUnref decrements positive nRefModule and on zero invokes optional xDestroy(pAux), asserts no eponymous table, then frees Module",
+      "VtabLock increments nRef; VtabUnlock asserts live OPEN/ZOMBIE owner, decrements, and on zero invokes optional public xDisconnect ignoring result, unrefs Module, then frees VTable",
+      "Callbacks run synchronously before corresponding wrapper free and may reenter application code under source caller conditions"
+    ],
+    "assertions_branches_cleanup": [
+      "All nine behavior IDs cover count/state assertions and optional/final callback/free paths",
+      "No allocation/OOM or direct I/O occurs; nonfinal references remain valid, final wrappers become inaccessible exactly once",
+      "Connection mutex/deferred-disconnect concurrency remains integration evidence rather than assumed"
+    ],
+    "upstream_tests": [
+      "Upstream vtab, module replacement/drop, shared/disconnect, callback, OOM, and statement-finalize suites exercise lifecycle transitions",
+      "Project builder differential covers public-vtab/destructor presence, nested 1->2->1->0 counts, callback order/count and exact lookaside retirement",
+      "P4 top-level dispatch and production registry integration remain follow-on gates"
+    ]
+  }
 }
