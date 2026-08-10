@@ -175,6 +175,11 @@
       "status": "source-translated"
     },
     {
+      "id": "builtin-function-hash-and-lifecycle-registration",
+      "path": "upstream/atomic-units/builtin-function-hash-and-lifecycle-registration.json",
+      "status": "source-context-reviewed"
+    },
+    {
       "id": "global-library-initialize-shutdown",
       "path": "upstream/atomic-units/global-library-initialize-shutdown.json",
       "status": "source-context-reviewed"
@@ -192,7 +197,7 @@
     {
       "id": "pcache-process-lifecycle-and-static-buffer",
       "path": "upstream/atomic-units/pcache-process-lifecycle-and-static-buffer.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "os-unix-process-lifecycle-and-default-vfs",
@@ -202,7 +207,7 @@
     {
       "id": "pcache-static-slot-allocation-and-free",
       "path": "upstream/atomic-units/pcache-static-slot-allocation-and-free.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "memory-journal-chunks-spill-and-lifecycle",

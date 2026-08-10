@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "pcache-process-lifecycle-and-static-buffer",
   "title": "Default/configured PCache lifecycle and pcache1 static buffer setup",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the process PCache method owner, active pcache1 lifecycle/static-buffer state, default selection, init/shutdown, and post-OS buffer setup executed by sqlite3_initialize/shutdown.",
@@ -309,7 +309,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Lifecycle allocates no heap. Per-page and custom callback OOM remain outside scope.",

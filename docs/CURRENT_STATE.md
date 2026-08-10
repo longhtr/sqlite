@@ -9,13 +9,13 @@ Incomplete and unsafe for production data. Reusable source-corresponding slices 
 | Fact | Current value |
 |---|---:|
 | Active source entities | 6,752 active |
-| Historical reviewed-or-later classifications | 2,111 |
+| Historical reviewed-or-later classifications | 2,113 |
 | Inventoried, unpromoted entities | 0 |
-| Unmapped entities | 3,877 |
+| Unmapped entities | 3,875 |
 | Behavioral inventory | 25,930 blocks in 2,457 functions |
-| Atomic-unit dossiers total | 46 |
-| Admission-ready dossiers | 46 |
-| Source-translated atomic units | 12 |
+| Atomic-unit dossiers total | 47 |
+| Admission-ready dossiers | 47 |
+| Source-translated atomic units | 14 |
 | Historical mechanical function claims | 1,738; 0 completion credit |
 | Active batch and durable checkpoints | 0 entries; 0 checkpoints |
 | Exact internal layouts | 69 |
@@ -34,7 +34,7 @@ These are controls and planning facts, not completion percentages.
 | Parser/compiler/planner | scaffold/missing | Generated tables/contracts do not execute final concrete owners. |
 | VDBE/`Mem` | partial | Value conversion, exact numeric rendering, bounded string/blob ownership, bindings, results, and builder/record/P4 lifecycle execute production paths; complete upstream VDBE ownership remains open. |
 | Schema/AST | partial | Exact roots exist; recursive ownership/destruction remains incomplete. |
-| PCache/VFS/memdb | partial | Pager rollback now uses the typed memory-journal owner and embedded v1 file ABI; broader final coupled ownership remains incomplete. |
+| Process/PCache/VFS/memdb | partial | Process initialization rebuilds the ported built-in hash before PCache/OS startup, and Pager rollback uses the typed memory-journal owner; complete registry and broader coupled ownership remain incomplete. |
 | Pager/WAL | scaffold | Rollback-journal transaction/playback and WAL open/checkpoint slices exist, but they do not own the existing SQL storage path. |
 | B-tree | partial/scaffold | Reads exist; mutation still reconstructs whole trees. |
 | SQL and Zig API | missing | Handwritten bounded frontend remains; active public responsibilities are not complete. |
@@ -46,7 +46,7 @@ Pinned source/profile/toolchain, inventories, generated Lemon/opcode artifacts, 
 
 ## Immediate blockers
 
-1. Open the first dependency-closed net-new production translation batch against the 46 reviewed dossiers; the 1,738 historical mechanical claims are formally retired and retain zero completion credit.
+1. Open the first dependency-closed net-new production translation batch against the 47 reviewed dossiers; the 1,738 historical mechanical claims are formally retired and retain zero completion credit.
 2. Complete global/runtime and recursive AST/schema/VDBE ownership.
 3. Connect concrete Lemon/compiler/planner owners and retire the handwritten frontend.
 4. Replace reconstructed B-tree mutation and bounded pager/WAL ownership with source algorithms.

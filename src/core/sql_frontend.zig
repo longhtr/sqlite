@@ -763,7 +763,7 @@ fn parseUri(allocator: std.mem.Allocator, filename: []const u8, initial_flags: c
 }
 
 fn openConnection(filename: []const u8, flags_initial: c_int, vfs_name_initial: ?[]const u8, output: ?*?*sqlite3) c_int {
-    const init_result = global.initializeProcess();
+    const init_result = public_api.sqlite3_initialize();
     if (init_result != 0) return init_result;
     const out = output orelse return ResultCode.misuse.toC();
     out.* = null;

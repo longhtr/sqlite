@@ -15,6 +15,7 @@ pub const process_config = @import("process_config.zig");
 
 pub const Hooks = struct {
     context: *anyopaque,
+    builtinInitFn: ?*const fn () void = null,
     pcacheInitFn: ?*const fn (*anyopaque) c_int = null,
     pcacheShutdownFn: ?*const fn (*anyopaque) void = null,
     postInitFn: ?*const fn (*anyopaque) c_int = null,
@@ -168,6 +169,9 @@ pub const Coordinator = struct {
             if (init_mutex) |*handle| handle.leave();
             self.mutex_subsystem.freeHandle(init_mutex);
         }
+        if (result == memory.ok) {
+            if (self.hooks.builtinInitFn) |callback| callback();
+        }
         if (result == memory.ok and !self.pcache_initialized) {
             result = if (self.hooks.pcacheInitFn) |callback| callback(self.hooks.context) else memory.ok;
             if (result == memory.ok) self.pcache_initialized = true;
@@ -305,6 +309,23 @@ pub fn configureProcessMutexMethods(methods: mutex.MutexMethods) error{Misuse}!v
 }
 
 pub fn initializeProcess() c_int {
+    return process_coordinator.initialize();
+}
+
+/// Installs the process built-in registry initializer before entering the
+/// source lifecycle state machine. Concurrent public callers may repeat this
+/// with the same function identity; only the outer initializer invokes it.
+pub fn initializeProcessWithBuiltins(initializer: *const fn () void) c_int {
+    process_coordinator.lock();
+    if (process_coordinator.hooks.builtinInitFn) |configured| {
+        std.debug.assert(configured == initializer);
+    } else if (process_coordinator.state == .uninitialized) {
+        process_coordinator.hooks.builtinInitFn = initializer;
+    } else {
+        process_coordinator.unlock();
+        return memory.misuse;
+    }
+    process_coordinator.unlock();
     return process_coordinator.initialize();
 }
 
@@ -543,6 +564,48 @@ test "failed late initialization preserves completed layers and repeats mutex in
     try std.testing.expectEqual(@as(usize, 2), MutexProbe.init_count);
     try std.testing.expectEqual(memory.ok, coordinator.shutdown());
     try std.testing.expectEqual(@as(usize, 1), MutexProbe.end_count);
+}
+
+test "built-in registration precedes PCache and repeats on late retry" {
+    const Stages = struct {
+        var events: [5]u8 = undefined;
+        var count: usize = 0;
+        var fail_os = true;
+        fn record(event: u8) void {
+            events[count] = event;
+            count += 1;
+        }
+        fn builtins() void {
+            record(1);
+        }
+        fn pcache(_: *anyopaque) c_int {
+            record(2);
+            return memory.ok;
+        }
+        fn os(_: *anyopaque) c_int {
+            record(3);
+            if (fail_os) return memory.no_memory;
+            return memory.ok;
+        }
+    };
+    Stages.count = 0;
+    Stages.fail_os = true;
+    var context: u8 = 0;
+    const hooks = Hooks{
+        .context = &context,
+        .builtinInitFn = Stages.builtins,
+        .pcacheInitFn = Stages.pcache,
+        .initFn = Stages.os,
+        .shutdownFn = noopShutdown,
+    };
+    var manager = memory.Manager.init(memory.systemBackend());
+    var mutexes = mutex.Subsystem.init(std.testing.allocator);
+    var coordinator = Coordinator.init(&manager, &mutexes, hooks);
+    try std.testing.expectEqual(memory.no_memory, coordinator.initialize());
+    Stages.fail_os = false;
+    try std.testing.expectEqual(memory.ok, coordinator.initialize());
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 1, 3 }, Stages.events[0..Stages.count]);
+    try std.testing.expectEqual(memory.ok, coordinator.shutdown());
 }
 
 test "pcache failure preserves earlier layers and skips OS until retry" {

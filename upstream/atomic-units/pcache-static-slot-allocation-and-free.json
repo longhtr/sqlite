@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "pcache-static-slot-allocation-and-free",
   "title": "PCache bulk/static/heap page allocation, free, and status accounting",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These functions initialize per-cache bulk pages, allocate page objects from bulk-local storage or configured process slots before one contiguous Manager fallback, classify static versus heap pressure, update source status slots, and return or release each storage class in source order.",
@@ -219,7 +219,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "One-shot bulk OOM is benign and falls through to ordinary Manager allocation; sticky process OOM leaves Memory/PCache status and Cache ownership unchanged; hash rollback is leak-free.",

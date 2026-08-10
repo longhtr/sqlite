@@ -59,10 +59,11 @@
       "mutex-method-selection-and-lifecycle",
       "global-initialization-state-representations",
       "pcache-process-lifecycle-and-static-buffer",
+      "builtin-function-hash-and-lifecycle-registration",
       "os-unix-process-lifecycle-and-default-vfs"
     ],
     "external_source_responsibilities": [],
-    "caller_closure": "The two public lifecycle coordinators are assigned. Subsystem hooks are dependencies; mutex, allocator, PCache, and scoped OS/VFS lifecycle owners are concrete."
+    "caller_closure": "The two public lifecycle coordinators are assigned. Subsystem hooks are dependencies; mutex, allocator, PCache, scoped OS/VFS, and the process built-in hash/reset owners are concrete."
   },
   "contracts": {
     "inputs": [
@@ -130,7 +131,7 @@
   },
   "integration": {
     "production_owner": "src/core/global.zig process_coordinator",
-    "native_call_path": "src/core/public_api.zig sqlite3_initialize/shutdown and auto-initializing utility paths call global.initializeProcess/shutdownProcess.",
+    "native_call_path": "src/core/public_api.zig installs the process built-in initializer, then sqlite3_initialize/shutdown and auto-initializing utility paths call global.initializeProcessWithBuiltins/shutdownProcess.",
     "bounded_owner_retired": "Direct public start/stop of memory.process_manager was retired; one production Coordinator now owns process lifecycle."
   },
   "independent_review": {
@@ -140,7 +141,7 @@
     "notes": "Requires exact top-level lifecycle/refcount event traces, public configuration consolidation, assurance, and independent review."
   },
   "known_blockers": [
-    "Port and integrate source builtin-function registry reset/registration performed inside sqlite3_initialize before this unit can be source-translated.",
+    "Complete the active-profile built-in definition table and registration families tracked by builtin-function-hash-and-lifecycle-registration.",
     "Complete nRefInitMutex waiter-lifetime and configured lock-callback event equivalence; retry/recursive xMutexInit and init-mutex OOM are now covered.",
     "Configured mutex methods and typed process configuration are wired into lifecycle; consolidation into the final public configuration domain and independent review remain open."
   ],

@@ -26,7 +26,7 @@ pub fn runAutoExtensions(database: ?*anyopaque) c_int {
     return auto_extension.run(database);
 }
 pub export fn sqlite3_auto_extension(pointer: ?*const fn () callconv(.c) void) callconv(.c) c_int {
-    const rc = global.initializeProcess();
+    const rc = initializeProcess();
     if (rc != 0) return rc;
     return auto_extension.add(pointer);
 }
@@ -39,13 +39,14 @@ pub export fn sqlite3_reset_auto_extension() callconv(.c) void {
 extern "c" fn getrandom(*anyopaque, usize, c_uint) isize;
 var random_lock: std.c.pthread_mutex_t = std.c.PTHREAD_MUTEX_INITIALIZER;
 
+fn initializeProcess() c_int {
+    return global.initializeProcessWithBuiltins(&function_registry.resetAndRegisterPortedBuiltinFunctions);
+}
 fn ensure() void {
-    if (global.initializeProcess() == 0) function_registry.registerPortedBuiltinFunctions();
+    _ = initializeProcess();
 }
 pub export fn sqlite3_initialize() callconv(.c) c_int {
-    const result = global.initializeProcess();
-    if (result == 0) function_registry.registerPortedBuiltinFunctions();
-    return result;
+    return initializeProcess();
 }
 pub export fn sqlite3_shutdown() callconv(.c) c_int {
     return global.shutdownProcess();
@@ -574,7 +575,7 @@ pub export fn sqlite3_vfs_unregister(item: ?*vfs.sqlite3_vfs) callconv(.c) c_int
 
 pub export fn sqlite3_mutex_alloc(kind_value: c_int) callconv(.c) ?*anyopaque {
     if (kind_value < 0 or kind_value > 13) return null;
-    if (global.initializeProcess() != 0) return null;
+    if (initializeProcess() != 0) return null;
     return global.process_mutex_subsystem.allocOpaque(@enumFromInt(kind_value));
 }
 pub export fn sqlite3_mutex_free(pointer: ?*anyopaque) callconv(.c) void {

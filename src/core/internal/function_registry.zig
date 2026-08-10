@@ -339,3 +339,33 @@ pub fn registerPortedBuiltinFunctions() void {
     insertBuiltinFunctions(&ported_definitions);
     registered = true;
 }
+
+/// Source `sqlite3_initialize()` clears `sqlite3BuiltinFunctions` before
+/// rebuilding its immutable-after-initialization hash chains. A failed later
+/// lifecycle stage may retry, so both the hash heads and mutable definition
+/// links are rebuilt on every outer initialization attempt.
+pub fn resetAndRegisterPortedBuiltinFunctions() void {
+    types.builtin_functions = types.initial_builtin_functions;
+    registered = false;
+    registerPortedBuiltinFunctions();
+}
+
+test "built-in registry reset rebuilds finite hash chains" {
+    resetAndRegisterPortedBuiltinFunctions();
+    for (0..2) |_| {
+        var seen: usize = 0;
+        for (types.builtin_functions.a) |head| {
+            var definition = head;
+            while (definition) |present| : (definition = present.u.pHash) {
+                var overload: ?*types.FuncDef = present;
+                while (overload) |item| : (overload = item.pNext) {
+                    seen += 1;
+                    try std.testing.expect(seen <= ported_definitions.len);
+                }
+            }
+        }
+        try std.testing.expectEqual(ported_definitions.len, seen);
+        resetAndRegisterPortedBuiltinFunctions();
+    }
+    try std.testing.expect(functionSearch(types.functionHash('a', 3), "abs") != null);
+}

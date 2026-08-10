@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "id": "builtin-function-hash-and-lifecycle-registration",
+  "title": "Process built-in function hash insertion, reset, and lifecycle registration",
+  "status": "source-context-reviewed",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These entities own the process-global built-in function hash, overload insertion, and the registration entry invoked by sqlite3_initialize before PCache and OS initialization. Production initialization now resets and rebuilds the ported subset under the coordinator's recursive initialization lock.",
+    "source_files": [
+      {
+        "path": "src/global.c",
+        "sha256": "3587266a1a73e09914a4820186cbceb8bd22e0fe63d7e169fa59532adce938de"
+      },
+      {
+        "path": "src/callback.c",
+        "sha256": "a9a9afd9b76c8a534f4cb4cf110b210a9b319ac8f887e4377ac3dc9aca8e2118"
+      },
+      {
+        "path": "src/func.c",
+        "sha256": "4e07af88e78d099bbdb942906f5bd892c5ec030fa0a500c9fb7cfff190e0e731"
+      }
+    ],
+    "source_entity_ids": [
+      "src/global.c::variable::sqlite3BuiltinFunctions::line-309",
+      "src/callback.c::function::sqlite3InsertBuiltinFuncs::line-358",
+      "src/func.c::function::sqlite3RegisterBuiltinFunctions::line-3266"
+    ],
+    "behavioral_block_ids": [
+      "src/callback.c::function::sqlite3InsertBuiltinFuncs::behavior::for::line-363-column-3::ordinal-0",
+      "src/callback.c::function::sqlite3InsertBuiltinFuncs::behavior::assert::line-368-column-5::ordinal-0",
+      "src/callback.c::function::sqlite3InsertBuiltinFuncs::behavior::if::line-370-column-5::ordinal-0",
+      "src/callback.c::function::sqlite3InsertBuiltinFuncs::behavior::assert::line-371-column-7::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Individual scalar, aggregate, window, date/time, JSON, LIKE, math, and ALTER TABLE function bodies",
+      "Connection-local application-defined function creation and destruction",
+      "Function overload lookup and match-quality selection"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "global-initialization-state-representations"
+    ],
+    "external_source_responsibilities": [
+      "Complete active-profile built-in definition table and registration families",
+      "Date/time, JSON, window, ALTER TABLE, LIKE, math, and inline function registrars"
+    ],
+    "caller_closure": "The public and auto-initializing production paths install one initializer callback before entering the process coordinator. The outer lifecycle attempt invokes it before PCache and OS initialization; recursive and already-initialized calls do not rebuild the table."
+  },
+  "contracts": {
+    "inputs": [
+      "Mutable static FuncDef definitions and an empty process-global function hash during outer initialization"
+    ],
+    "outputs": [
+      "Case-insensitive name-hash chains whose entries link same-name overloads through pNext"
+    ],
+    "ownership": "Definitions are static mutable records. Hash heads and links borrow those records and become read-only after successful initialization.",
+    "state_and_results": "Every outer initialization attempt clears the hash before registration. Same-name definitions extend the overload chain; a new name prepends one hash head. Registration does not allocate or fail.",
+    "locks_callbacks_io": "The top-level coordinator invokes reset and registration while holding its recursive initialization mutex. No allocation or I/O occurs.",
+    "failure_and_continuation": "A later lifecycle failure leaves the built-in table populated. Retry clears and deterministically rebuilds all heads and mutable links without cycles or duplicates."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/global.c::variable::sqlite3BuiltinFunctions::line-309",
+      "relation": "process-global-function-hash-to-native-owner",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_types.zig::variable::builtin_functions"
+      ]
+    },
+    {
+      "source_entity_id": "src/callback.c::function::sqlite3InsertBuiltinFuncs::line-358",
+      "relation": "source-overload-and-hash-insertion-to-native-operation",
+      "zig_declaration_ids": [
+        "src/core/internal/function_registry.zig::function::insertBuiltinFunctions"
+      ]
+    },
+    {
+      "source_entity_id": "src/func.c::function::sqlite3RegisterBuiltinFunctions::line-3266",
+      "relation": "source-registration-entry-to-ported-subset-candidate",
+      "zig_declaration_ids": [
+        "src/core/internal/function_registry.zig::variable::ported_definitions",
+        "src/core/internal/function_registry.zig::function::registerPortedBuiltinFunctions",
+        "src/core/internal/function_registry.zig::function::resetAndRegisterPortedBuiltinFunctions"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The C global is an uninitialized static FuncDefHash cleared with memset; Zig assigns the typed zero-valued initial_builtin_functions constant.",
+    "C constructs the full active-profile table inside sqlite3RegisterBuiltinFunctions. Zig keeps a module-level mutable ported_definitions array, which remains an incomplete subset and blocks translation promotion.",
+    "The coordinator receives the registry initializer as a typed function pointer so the foundational global module does not import the full VDBE/function implementation graph."
+  ],
+  "oracle": {
+    "protocol": "Native tests reset and rebuild the process table repeatedly, traverse every hash and overload chain with a strict definition-count bound, and verify lookup after reconstruction. The broad suite exercises repeated initialization, shutdown, retry, prepared built-ins, and internal function lookup.",
+    "internal_observations": [
+      "finite hash and overload chains",
+      "one occurrence for every ported definition",
+      "case-insensitive lookup after reset",
+      "outer initialization ordering",
+      "repeat initialization and shutdown continuation"
+    ],
+    "normalization": "Static addresses and exact missing-definition coverage are not normalized. Hash membership, overload count, callback order, and continuation are exact for the ported subset."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": false,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Reset and insertion allocate nothing; function bodies and connection-local function allocation are outside scope.",
+    "io_crash_concurrency": "No I/O. Production rebuild is serialized by the process initialization owner; concurrent public initialization is covered by the global lifecycle tests.",
+    "malformed_input": "Definitions are compile-time-owned records with non-null names; insertion assertions and finite-chain tests cover structural misuse.",
+    "continuation": "Repeated rebuild and lifecycle retry preserve finite deterministic chains.",
+    "performance": "Insertion is linear in definitions plus short name/overload chains, matching the source table construction strategy.",
+    "commands": [
+      "zig build test -j2",
+      "zig build infrastructure-differential",
+      "zig build vdbe-builder-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/function_registry.zig process hash and src/core/global.zig lifecycle callback",
+    "native_call_path": "public_api auto-initializing entry -> global.initializeProcessWithBuiltins -> Coordinator.initialize -> resetAndRegisterPortedBuiltinFunctions -> insertBuiltinFunctions",
+    "bounded_owner_retired": "Public initialization no longer performs registration after process initialization; registration is now ordered inside the process lifecycle before PCache and OS initialization."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires complete active-profile definition coverage, exact registration-family ordering, trace evidence, and independent review."
+  },
+  "known_blockers": [
+    "Complete the active-profile inline unlikely/likelihood/likely, ifnull/coalesce, load-extension, ALTER TABLE, date/time, JSON, window, LIKE, math, and remaining registration-family definitions in the canonical process table.",
+    "Compare exact full-table hash and overload topology with the pinned C oracle.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/global.c:303-309 was reviewed for the process-global zero-initialized FuncDefHash owner",
+      "upstream/sqlite/src/callback.c:331-380 was reviewed completely for hash lookup adjacency, insertion hash calculation, same-name overload linkage, new-name head insertion, assertions, and no-allocation behavior",
+      "upstream/sqlite/src/func.c:3266-3469 was reviewed completely for the mutable full definition table, selected-profile registrars, insertion order, and diagnostic-only hash dump",
+      "src/core/internal/function_registry.zig, vdbe_types.zig, global.zig, public_api.zig, and sql_frontend.zig owners and all lifecycle call sites were reviewed"
+    ],
+    "callers": [
+      "sqlite3_initialize clears the global hash and invokes sqlite3RegisterBuiltinFunctions before PCache initialization",
+      "sqlite3FindFunction and compiler analysis read the immutable hash after initialization",
+      "Every public auto-initializing entry converges on the callback-configured coordinator; same-thread recursion returns without rebuilding"
+    ],
+    "callees": [
+      "Registration invokes ALTER TABLE, window, date/time, and JSON registrars before inserting the core array",
+      "sqlite3InsertBuiltinFuncs hashes folded first byte plus bounded name length, finds a same-name head, links overloads through pNext, or prepends a new hash-chain head",
+      "The Zig reset owner clears typed hash heads and rebuilds the ported static records; full registrar coverage remains explicit"
+    ],
+    "assertions_branches_cleanup": [
+      "All four insertion behavior IDs cover the definition loop, built-in assertion, same-name branch, and duplicate-link assertion",
+      "Static definition links are mutable only during initialization and borrowed thereafter",
+      "Retry must clear stale heads and reconstruct both pNext and pHash links without retaining cycles",
+      "No full-source translation claim is made while active-profile definitions and registrars remain missing"
+    ],
+    "upstream_tests": [
+      "upstream func.test, func4.test, window tests, date tests, json tests, load-extension tests, and initialization/fault suites exercise registration and lookup",
+      "Project function-registry, global lifecycle, SQL frontend, VDBE builder differential, and broad tests exercise the ported subset and lifecycle placement"
+    ]
+  }
+}
