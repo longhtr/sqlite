@@ -211,6 +211,7 @@ const FileState = struct {
     memdb_resizable: bool = true,
     memdb_readonly: bool = false,
     external_data: ?[*]u8 = null,
+    external_manager: ?*memory.Manager = null,
     external_size: usize = 0,
     external_capacity: usize = 0,
     external_flags: c_uint = 0,
@@ -308,7 +309,8 @@ pub const MemoryFile = struct {
                 if (!self.state.memdb_resizable or self.state.memdb_mmap_count > 0 or end > maximum) return FULL;
                 const capacity = if (end > maximum / 2) maximum else end * 2;
                 if (self.state.external_data) |old_pointer| {
-                    const allocation = memory.process_manager.realloc(@ptrCast(old_pointer), capacity) orelse return IOERR_NOMEM;
+                    const manager = self.state.external_manager orelse unreachable;
+                    const allocation = manager.realloc(@ptrCast(old_pointer), capacity) orelse return IOERR_NOMEM;
                     self.state.external_data = @ptrCast(allocation);
                     self.state.external_capacity = capacity;
                 } else {
@@ -602,7 +604,10 @@ pub const MemoryVfs = struct {
     fn destroyState(self: *MemoryVfs, state: *FileState) void {
         state.mutex.deinit();
         if (state.external_data) |pointer| {
-            if (state.external_flags & DESERIALIZE_FREEONCLOSE != 0) memory.process_manager.free(@ptrCast(pointer));
+            if (state.external_flags & DESERIALIZE_FREEONCLOSE != 0) {
+                const manager = state.external_manager orelse unreachable;
+                manager.free(@ptrCast(pointer));
+            }
         }
         state.volatile_data.deinit(self.allocator);
         state.durable.deinit(self.allocator);
@@ -736,7 +741,13 @@ pub const MemoryVfs = struct {
     }
 
     pub fn adoptVolatileBuffer(self: *MemoryVfs, file: *MemoryFile, data: [*]u8, size: usize, capacity: usize, flags: c_uint) void {
-        std.debug.assert(file.vfs == self and size <= capacity);
+        self.adoptVolatileBufferWithManager(file, data, size, capacity, flags, &memory.process_manager);
+    }
+
+    /// Source deserialized buffers retain the allocator domain used by
+    /// sqlite3_realloc64() and sqlite3_free() for growth and final ownership.
+    pub fn adoptVolatileBufferWithManager(self: *MemoryVfs, file: *MemoryFile, data: [*]u8, size: usize, capacity: usize, flags: c_uint, manager: *memory.Manager) void {
+        std.debug.assert(file.vfs == self and size <= capacity and manager.started);
         const state = file.state;
         state.mutex.lock();
         defer state.mutex.unlock();
@@ -744,6 +755,7 @@ pub const MemoryVfs = struct {
         state.volatile_data.deinit(self.allocator);
         state.volatile_data = .empty;
         state.external_data = data;
+        state.external_manager = manager;
         state.external_size = size;
         state.external_capacity = capacity;
         state.external_flags = flags;
@@ -1336,6 +1348,32 @@ test "memdb doubled growth size controls OOM and source result codes" {
     try std.testing.expectEqual(@as(usize, 3), oom_file.state.volatile_data.items.len);
     native.allocator = std.testing.allocator;
     try std.testing.expectEqual(OK, native.closeAndDestroy(oom_file));
+}
+
+test "deserialized resize OOM preserves external pointer content and size" {
+    var fault = memory.FaultingBackend{ .inner = memory.systemBackend() };
+    var manager = memory.Manager.init(fault.backend());
+    try std.testing.expectEqual(memory.ok, manager.start());
+    defer manager.stop();
+    const allocation = manager.alloc(16) orelse return error.OutOfMemory;
+    const original = @as([*]u8, @ptrCast(allocation))[0..16];
+    @memset(original, 0x5a);
+
+    var native = MemoryVfs.init(std.testing.allocator);
+    defer native.deinit();
+    const opened = native.open("main", OPEN_READWRITE | OPEN_CREATE | OPEN_MAIN_DB);
+    try std.testing.expectEqual(OK, opened.rc);
+    const file = opened.file.?;
+    native.adoptVolatileBufferWithManager(file, original.ptr, original.len, original.len, DESERIALIZE_FREEONCLOSE | DESERIALIZE_RESIZEABLE, &manager);
+    const pointer_before = @intFromPtr(native.borrowVolatile("main").?.ptr);
+    fault.fail_at = fault.attempt_count;
+    try std.testing.expectEqual(IOERR_NOMEM, file.write(&.{0xff}, original.len));
+    try std.testing.expect(fault.fired);
+    const after = native.borrowVolatile("main").?;
+    try std.testing.expectEqual(pointer_before, @intFromPtr(after.ptr));
+    try std.testing.expectEqual(@as(usize, 16), after.len);
+    try std.testing.expectEqualSlices(u8, &([_]u8{0x5a} ** 16), after);
+    try std.testing.expectEqual(OK, native.closeAndDestroy(file));
 }
 
 test "shared memdb uses configured dynamic mutex allocation and fails open atomically" {

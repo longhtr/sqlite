@@ -117,18 +117,19 @@
       "zig_declaration_ids": [
         "src/core/memdb.zig::function::deserialize",
         "src/core/sql_frontend.zig::function::sqlite3_deserialize",
-        "src/core/vfs.zig::function::MemoryVfs.adoptVolatileBuffer"
+        "src/core/vfs.zig::function::MemoryVfs.adoptVolatileBuffer",
+        "src/core/vfs.zig::function::MemoryVfs.adoptVolatileBufferWithManager"
       ]
     }
   ],
   "representation_differences": [
     "Private main-memory database lookup uses Connection.memory_backend instead of sqlite3_file_control plus memdb_io_methods identity.",
     "NOCOPY now borrows the exact native main-store byte pointer and copied output uses the process memory manager.",
-    "Deserialize stages pData directly as native store bytes, preserves szDb/szBuf, applies max(szBuf, configured process memdb maximum), doubles process-manager reallocations up to that bound, and keeps post-replacement NOCOPY pointer identity.",
+    "Deserialize stages pData directly as native store bytes, retains the exact allocator-manager domain for realloc/free, preserves szDb/szBuf, applies max(szBuf, configured process memdb maximum), doubles reallocations up to that bound, and keeps post-replacement NOCOPY pointer identity.",
     "Only main schema is supported; source can replace eligible attached schemas."
   ],
   "oracle": {
-    "protocol": "Native SQL frontend and C ABI integration create a database image, copy serialize with nullable size, NOCOPY borrow with exact native pointer/size, reject missing schema with size -1, deserialize a clone, enforce read-only opening, validate negative-capacity armor, preserve the old database on pre-publication allocation failure, release FREEONCLOSE input, and enforce the configured maximum. A pinned C/Zig flag/ownership differential remains open.",
+    "protocol": "Native SQL frontend and C ABI integration create a database image, copy serialize with nullable size, NOCOPY borrow with exact native pointer/size, reject missing schema with size -1, deserialize a clone, enforce read-only opening, validate negative-capacity armor, preserve the old database on pre-publication allocation failure, release FREEONCLOSE input, enforce the configured maximum, and inject realloc failure while checking exact pointer/content/size continuation. A pinned C/Zig flag/ownership differential remains open.",
     "internal_observations": [
       "size output initialization and success",
       "copied image allocator ownership",
@@ -146,7 +147,7 @@
     "source_translated": false,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
-    "oom": "Copy allocation, direct FREEONCLOSE close, borrowed storage, read-only storage, successful resize, configured maximum, pre-publication backend OOM, exact NOMEM, old-database continuation, and input release are covered. Injected process-manager realloc failure and the complete flag matrix remain open.",
+    "oom": "Copy allocation, direct FREEONCLOSE close, borrowed storage, read-only storage, successful resize, configured maximum, pre-publication backend OOM, exact NOMEM, old-database continuation, input release, and injected allocator-manager realloc failure with unchanged pointer/content/size are covered for main schema. Attached-schema ownership remains open.",
     "io_crash_concurrency": "Unix serialization reads a stable file in the serialized connection path. Exact connection/store lock ordering and concurrent API misuse traces remain open.",
     "malformed_input": "Negative size/capacity, null data and unknown schema have native guards; full source API-armor matrix remains open.",
     "continuation": "Successful clone and subsequent SQL pass. Pre-publication allocation failure preserves queryable old content and releases FREEONCLOSE input; post-publication malformed/reopen continuation remains open.",
@@ -167,11 +168,10 @@
     "status": "pending",
     "reviewer": null,
     "review_commit": null,
-    "notes": "Requires external-buffer adoption, full flags/schema/OOM differential, assurance, and independent review."
+    "notes": "Requires attached-schema replacement, post-publication malformed continuation, complete cross-schema differential, assurance, and independent review."
   },
   "known_blockers": [
-    "Complete the transferred-buffer flag/OOM/free differential, including injected process-manager resize failure; configured maximum and pre-publication backend OOM are covered.",
-    "Support eligible attached schemas and source reopen path.",
+    "Support eligible attached schemas and the source reopen path, then extend the main-schema ownership/OOM matrix across schemas.",
     "Add pinned C/Zig flags, OOM, ownership and continuation differential.",
     "Independent fidelity review remains open."
   ],
@@ -196,12 +196,12 @@
     "assertions_branches_cleanup": [
       "All 44 behavior IDs cover schema resolution, size initialization, private/shared/ordinary branches, NOCOPY, empty database materialization, allocation/page loop cleanup, deserialize armor/schema/reopen, transfer and failure FREEONCLOSE",
       "Copy results are caller-owned sqlite3_malloc memory; NOCOPY is borrowed and only available for private stores; adopted bytes are borrowed or owned according to FREEONCLOSE and must not be double-freed",
-      "Native main-schema copy/NOCOPY/adoption/readonly/resizable paths, configured maximum, and pre-publication OOM continuation are reachable and tested, but attached-schema reopen, exact Btree page-by-page fallback equivalence, process-manager realloc failure, and the complete flag matrix remain blockers",
+      "Native main-schema copy/NOCOPY/adoption/readonly/resizable paths, configured maximum, pre-publication OOM continuation, and exact realloc-failure pointer/content/size preservation are reachable and tested, but attached-schema reopen, exact Btree page-by-page fallback equivalence, and post-publication malformed continuation remain blockers",
       "Failure before transfer honors FREEONCLOSE; failure after successful transfer leaves the replacement backend as owner and connection closable, though complete source continuation traces remain open"
     ],
     "upstream_tests": [
       "upstream memdb1.test covers main/attached serialization, direct/readonly/maxsize/empty/malformed deserialize, misuse, replacement restrictions, reopen and continuation; memdb.test/memdb2.test and corruption/fuzz suites exercise consumed images",
-      "Project SQL integration verifies nullable size, copy ownership, exact NOCOPY pointer/size, missing schema size -1, negative-capacity armor, clone SQL, direct adopted-pointer identity, resizable growth, FREEONCLOSE, readonly reopen/write rejection and close",
+      "Project SQL integration verifies nullable size, copy ownership, exact NOCOPY pointer/size, missing schema size -1, negative-capacity armor, clone SQL, direct adopted-pointer identity, resizable growth, FREEONCLOSE, readonly reopen/write rejection and close; VFS injection verifies realloc OOM leaves the original manager allocation, content, and logical size unchanged",
       "Backup integration routes through the same public exports, establishing a production caller; focused memdb tests cover byte-store size/limit/growth owners",
       "A pinned C/Zig flag/ownership/OOM differential, attached schemas, and full transferred-buffer failure continuation remain explicit blockers rather than claimed assurance"
     ]
