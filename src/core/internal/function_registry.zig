@@ -283,6 +283,22 @@ var ported_definitions = [_]types.FuncDef{
     aggregate("lag", 3, windows.noOpStep, windows.noOpValue, windows.noOpValue, windows.noOpStep, types.function_flag.window),
 };
 
+// Source registrar order: window, date/time, JSON, then the core func.c
+// table. ALTER TABLE precedes these in C and remains an explicit gap.
+const source_registration_order = [_]u8{
+    152, 153, 156, 157, 158, 159, 160, 154, 155, 161, 162, 163, 164, 165, 166, 94,
+    95,  96,  97,  98,  99,  100, 101, 103, 102, 104, 105, 106, 107, 108, 109, 110,
+    111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126,
+    127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 0,   1,   2,
+    3,   53,  54,  4,   5,   6,   11,  12,  13,  14,  15,  16,  17,  18,  19,  20,
+    22,  23,  24,  29,  26,  27,  28,  25,  35,  30,  31,  32,  33,  34,  39,  40,
+    41,  42,  43,  7,   49,  50,  21,  51,  52,  55,  36,  37,  38,  56,  57,  58,
+    44,  59,  45,  46,  47,  48,  140, 141, 142, 143, 144, 145, 146, 147, 148, 149,
+    150, 151, 60,  61,  62,  63,  64,  65,  66,  67,  68,  69,  70,  71,  72,  73,
+    74,  75,  76,  77,  78,  79,  80,  81,  82,  83,  84,  85,  86,  87,  88,  89,
+    90,  91,  92,  93,  8,   9,   10,
+};
+
 /// Source `matchQuality()`.
 pub fn matchQuality(definition: *const types.FuncDef, requested_arguments: c_int, encoding: u8) c_int {
     if (definition.nArg != requested_arguments) {
@@ -385,7 +401,9 @@ var registered = false;
 /// Installs the source definitions that now have production Zig bodies.
 pub fn registerPortedBuiltinFunctions() void {
     if (registered) return;
-    insertBuiltinFunctions(&ported_definitions);
+    for (source_registration_order) |index| {
+        insertBuiltinFunctions(ported_definitions[index .. index + 1]);
+    }
     registered = true;
 }
 
@@ -397,6 +415,21 @@ pub fn resetAndRegisterPortedBuiltinFunctions() void {
     types.builtin_functions = types.initial_builtin_functions;
     registered = false;
     registerPortedBuiltinFunctions();
+}
+
+pub const TopologyVisitor = *const fn (bucket: c_int, name: [*:0]const u8, argument_count: c_int, flags: u32, user_data: usize) callconv(.c) void;
+
+/// Test/oracle observation of the immutable post-registration topology.
+pub fn visitPortedTopology(visitor: TopologyVisitor) void {
+    for (types.builtin_functions.a, 0..) |head, bucket| {
+        var definition = head;
+        while (definition) |present| : (definition = present.u.pHash) {
+            var overload: ?*types.FuncDef = present;
+            while (overload) |item| : (overload = item.pNext) {
+                visitor(@intCast(bucket), item.zName.?, item.nArg, item.funcFlags, if (item.pUserData) |pointer| @intFromPtr(pointer) else 0);
+            }
+        }
+    }
 }
 
 test "built-in registry reset rebuilds finite hash chains" {

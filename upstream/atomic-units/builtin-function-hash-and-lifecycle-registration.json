@@ -5,7 +5,7 @@
   "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
-    "rationale": "These entities own the process-global built-in function hash, overload insertion, and the registration entry invoked by sqlite3_initialize before PCache and OS initialization. Production initialization now resets and rebuilds 167 of the 178 active-profile definitions under the coordinator's recursive initialization lock, with no extra name/arity pairs; only two load-extension and nine ALTER TABLE internal definitions remain absent.",
+    "rationale": "These entities own the process-global built-in function hash, overload insertion, and the registration entry invoked by sqlite3_initialize before PCache and OS initialization. Production initialization now resets and rebuilds 167 of the 178 active-profile definitions under the coordinator's recursive initialization lock, with no extra name/arity pairs and exact pinned-C hash-head/overload topology after filtering the two load-extension and nine ALTER TABLE definitions that remain absent.",
     "source_files": [
       {
         "path": "src/global.c",
@@ -42,8 +42,7 @@
       "global-initialization-state-representations"
     ],
     "external_source_responsibilities": [
-      "The two load-extension definitions and nine ALTER TABLE internal definitions",
-      "Exact source registrar ordering and full hash/overload topology"
+      "The two load-extension definitions and nine ALTER TABLE internal definitions"
     ],
     "caller_closure": "The public and auto-initializing production paths install one initializer callback before entering the process coordinator. The outer lifecycle attempt invokes it before PCache and OS initialization; recursive and already-initialized calls do not rebuild the table."
   },
@@ -79,6 +78,7 @@
       "relation": "source-registration-entry-to-ported-subset-candidate",
       "zig_declaration_ids": [
         "src/core/internal/function_registry.zig::variable::ported_definitions",
+        "src/core/internal/function_registry.zig::constant::source_registration_order",
         "src/core/internal/function_registry.zig::function::registerPortedBuiltinFunctions",
         "src/core/internal/function_registry.zig::function::resetAndRegisterPortedBuiltinFunctions"
       ]
@@ -86,11 +86,11 @@
   ],
   "representation_differences": [
     "The C global is an uninitialized static FuncDefHash cleared with memset; Zig assigns the typed zero-valued initial_builtin_functions constant.",
-    "C inserts ALTER TABLE, window, date/time, JSON, then core arrays. Zig keeps one mutable ported_definitions array containing all callback-backed window, date/time, JSON/JSONB, inline, LIKE, math, percentile, aggregate, and core definitions; the remaining 11 definitions and exact registrar ordering block promotion.",
+    "C inserts ALTER TABLE, window, date/time, JSON, then core arrays. Zig keeps one mutable ported_definitions array and an exact source_registration_order permutation for all callback-backed window, date/time, JSON/JSONB, inline, LIKE, math, percentile, aggregate, and core definitions; only the remaining 11 definitions block complete-table promotion.",
     "The coordinator receives the registry initializer as a typed function pointer so the foundational global module does not import the full VDBE/function implementation graph."
   ],
   "oracle": {
-    "protocol": "Native tests reset and rebuild the process table repeatedly, traverse all 167 installed definitions with a strict count bound, verify lookup after reconstruction, and check source-exact flags/user data for representative internal-inline, likelihood, C99 math, JSONB scalar/aggregate, and lead overload definitions. A pinned source probe establishes 178 active name/arity definitions and the remaining 11-name gap. The broad suite exercises repeated initialization, shutdown, retry, prepared built-ins, and internal function lookup.",
+    "protocol": "The pinned C worker initializes the full source table, filters only the explicit 11-definition gap, normalizes static callback/data addresses, and emits every bucket, hash head, overload, arity, flag word, and integer user-data value. The native worker resets and traverses the 167-definition production table through a callback bridge; byte-exact differential output establishes exact subset topology. Native tests also enforce finite rebuilds and representative flags/user data, while the broad suite exercises repeated initialization, shutdown, retry, prepared built-ins, and internal function lookup.",
     "internal_observations": [
       "finite hash and overload chains",
       "one occurrence for every ported definition",
@@ -98,7 +98,7 @@
       "outer initialization ordering",
       "repeat initialization and shutdown continuation"
     ],
-    "normalization": "Function/data pointer addresses are normalized. Name, arity, flags, integer user data, installed-definition count, overload finiteness, lookup, lifecycle ordering, and continuation are exact for the 167-definition subset; full hash-head ordering remains open."
+    "normalization": "Function/data pointer addresses above 255 are normalized to zero. Bucket order, hash-head order, overload order, name, arity, flags, integer user data, installed-definition count, lookup, lifecycle ordering, and continuation are exact for the 167-definition subset."
   },
   "assurance": {
     "source_context_reviewed": true,
@@ -112,6 +112,7 @@
     "performance": "Insertion is linear in definitions plus short name/overload chains, matching the source table construction strategy.",
     "commands": [
       "zig build test -j2",
+      "zig build builtin-registry-differential",
       "zig build infrastructure-differential",
       "zig build vdbe-builder-differential"
     ]
@@ -125,11 +126,11 @@
     "status": "pending",
     "reviewer": null,
     "review_commit": null,
-    "notes": "Requires the 11 load-extension/ALTER definitions, exact registration-family and hash-head ordering, full topology differential, and independent review."
+    "notes": "Requires the 11 load-extension/ALTER definitions, complete-table topology differential, and independent review."
   },
   "known_blockers": [
     "Port the two load-extension and nine ALTER TABLE internal definitions; the canonical table now has the other 167 of 178 active name/arity definitions with no extras.",
-    "Compare exact full-table hash and overload topology with the pinned C oracle.",
+    "Extend the exact pinned-C hash/overload differential from the current 167-definition subset to the complete 178-definition table after those callbacks land.",
     "Independent fidelity review remains open."
   ],
   "context_review": {
@@ -147,7 +148,7 @@
     "callees": [
       "Registration invokes ALTER TABLE, window, date/time, and JSON registrars before inserting the core array",
       "sqlite3InsertBuiltinFuncs hashes folded first byte plus bounded name length, finds a same-name head, links overloads through pNext, or prepends a new hash-chain head",
-      "The Zig reset owner clears typed hash heads and rebuilds 167 static records, including all active inline/test-inline, C99 math, JSON/JSONB, date/time, window/lead/lag, LIKE, percentile, aggregate, and ordinary callback-backed definitions; load-extension and ALTER callbacks remain explicit gaps"
+      "The Zig reset owner clears typed hash heads and rebuilds 167 static records in source registrar/definition order, including all active inline/test-inline, C99 math, JSON/JSONB, date/time, window/lead/lag, LIKE, percentile, aggregate, and ordinary callback-backed definitions; load-extension and ALTER callbacks remain explicit gaps"
     ],
     "assertions_branches_cleanup": [
       "All four insertion behavior IDs cover the definition loop, built-in assertion, same-name branch, and duplicate-link assertion",
@@ -157,7 +158,7 @@
     ],
     "upstream_tests": [
       "upstream func.test, func4.test, window tests, date tests, json tests, load-extension tests, and initialization/fault suites exercise registration and lookup",
-      "Project function-registry tests enforce a 167-definition finite rebuild and source-exact representative flags/user data; global lifecycle, SQL frontend, VDBE builder differential, and broad tests exercise the subset and lifecycle placement"
+      "The builtin-registry differential compares all 167 definitions against the pinned C buckets, hash heads, overload chains, arities, flags, and integer user data; function-registry tests enforce finite rebuilds and representative values, while global lifecycle, SQL frontend, VDBE builder differential, and broad tests exercise lifecycle placement"
     ]
   }
 }

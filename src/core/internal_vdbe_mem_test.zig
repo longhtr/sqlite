@@ -8,6 +8,7 @@ pub const vdbe_record = @import("internal/vdbe_record.zig");
 pub const walker = @import("internal/walker.zig");
 pub const collation = @import("internal/collation.zig");
 pub const builtin_functions = @import("internal/builtin_functions.zig");
+pub const function_registry = @import("internal/function_registry.zig");
 pub const memory = @import("memory.zig");
 pub const public_api = @import("public_api.zig");
 

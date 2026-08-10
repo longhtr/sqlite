@@ -1391,6 +1391,51 @@ pub fn build(b: *std.Build) void {
     formatter_sql_step.dependOn(&formatter_sql_differential.step);
     formatter_sql_step.dependOn(&run_formatter_sql_tests.step);
 
+    const builtin_registry_module = b.createModule(.{
+        .root_source_file = b.path("src/core/internal_vdbe_mem_test.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    builtin_registry_module.addImport("build_profile", direct_build_profile);
+    const builtin_registry_bridge_module = b.createModule(.{
+        .root_source_file = b.path("tests/differential/builtin_registry_native_bridge.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{.{ .name = "registry_root", .module = builtin_registry_module }},
+    });
+    const builtin_registry_bridge = b.addObject(.{
+        .name = "sqlite3-native-builtin-registry-bridge",
+        .root_module = builtin_registry_bridge_module,
+    });
+    const native_builtin_registry_module = b.createModule(.{ .target = target, .optimize = optimize, .link_libc = true });
+    native_builtin_registry_module.addCSourceFile(.{
+        .file = b.path("tests/differential/builtin_registry_worker_main.c"),
+        .flags = &.{"-std=c99"},
+    });
+    native_builtin_registry_module.addObject(builtin_registry_bridge);
+    const native_builtin_registry = b.addExecutable(.{
+        .name = "sqlite3-native-builtin-registry-worker",
+        .root_module = native_builtin_registry_module,
+    });
+    const oracle_builtin_registry_module = b.createModule(.{ .target = target, .optimize = optimize, .link_libc = true });
+    oracle_builtin_registry_module.addIncludePath(b.path("reference/c_oracle"));
+    oracle_builtin_registry_module.addCSourceFile(.{
+        .file = b.path("reference/c_oracle/builtin_registry_worker.c"),
+        .flags = sqlite_c_flags,
+    });
+    if (target.result.os.tag != .windows) oracle_builtin_registry_module.linkSystemLibrary("m", .{});
+    if (target.result.os.tag == .linux) oracle_builtin_registry_module.linkSystemLibrary("dl", .{});
+    const oracle_builtin_registry = b.addExecutable(.{
+        .name = "sqlite3-oracle-builtin-registry-worker",
+        .root_module = oracle_builtin_registry_module,
+    });
+    const builtin_registry_differential = boundedSystemCommand(b, &.{ "python3", "tools/builtin_registry_differential.py" });
+    builtin_registry_differential.addArtifactArg(oracle_builtin_registry);
+    builtin_registry_differential.addArtifactArg(native_builtin_registry);
+    b.step("builtin-registry-differential", "Compare active built-in hash and overload topology")
+        .dependOn(&builtin_registry_differential.step);
+
     const infrastructure_module = b.createModule(.{
         .root_source_file = b.path("src/core/global.zig"),
         .target = target,
@@ -2472,6 +2517,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&utf16to8_differential.step);
     test_step.dependOn(&formatter_arguments_differential.step);
     test_step.dependOn(formatter_sql_step);
+    test_step.dependOn(&builtin_registry_differential.step);
     test_step.dependOn(&infrastructure_differential.step);
     test_step.dependOn(&mutex_noop_differential.step);
     test_step.dependOn(&tokenizer_differential.step);
