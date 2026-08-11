@@ -968,13 +968,16 @@ int main(void){
   printf("partial-like-escape-index\t%d\n",partial_like_escape_index_rc);
   int partial_glob_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_glob_index ON partial_like_data(value) WHERE marker GLOB 'A?*'",0,0,0);
   int partial_not_glob_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_glob_index ON partial_like_data(value) WHERE marker NOT GLOB '*z?'",0,0,0);
-  int partial_glob_class_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_glob_class_index ON partial_like_data(value) WHERE marker GLOB '[A-C]*'",0,0,0);
+  int partial_glob_class_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_glob_class_index ON partial_like_data(value) WHERE marker GLOB '[d-f]*'",0,0,0);
   int partial_glob_invert_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_glob_invert_index ON partial_like_data(value) WHERE marker GLOB '[^z]*'",0,0,0);
   printf("partial-glob-index\t%d\t%d\t%d\t%d\n",partial_glob_index_rc,partial_not_glob_index_rc,partial_glob_class_index_rc,partial_glob_invert_index_rc);
   int partial_like_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(1,'b_value',7)",0,0,0);
   int partial_like_escape_conflict_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(4,'b_more',7)",0,0,0);
   printf("partial-like-escape-conflict\t%d\n",partial_like_escape_conflict_rc);
   int partial_like_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(2,'Alpha',7)",0,0,0);
+  int partial_glob_class_first_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(5,'delta',7)",0,0,0);
+  int partial_glob_class_conflict_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(6,'echo',7)",0,0,0);
+  printf("partial-glob-class-membership\t%d\t%d\n",partial_glob_class_first_rc,partial_glob_class_conflict_rc);
   int partial_like_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(3,'apple',7)",0,0,0);
   int partial_like_enter_conflict_rc=sqlite3_exec(clone,"UPDATE partial_like_data SET marker='atom' WHERE id=1",0,0,0);
   int partial_like_delete_rc=sqlite3_exec(clone,"DELETE FROM partial_like_data WHERE id=2",0,0,0);
