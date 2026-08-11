@@ -94,7 +94,7 @@
     "utf_active_entities_differentially_checked": 13,
     "vdbe_opcode_coverage_warning": "A mapped case proves name-level runtime presence only, not complete SQLite semantics or fidelity.",
     "vlist_entities_differentially_checked": 0,
-    "zig_source_lines": 85196
+    "zig_source_lines": 85242
   },
   "overall_status": "incomplete-control-revalidation-and-source-port",
   "public_api": {
@@ -202,7 +202,7 @@
     "reviewed_coverage_percent": 31.29,
     "source_dependency_file_units": 85,
     "unresolved_legacy_target_references": 402,
-    "zig_declaration_inventory": 12990
+    "zig_declaration_inventory": 12994
   },
   "translation_tracking": {
     "active_batch_entries": 0,

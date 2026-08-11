@@ -3017,6 +3017,39 @@ fn blobSeekToRow(blob: *Blob, rowid: i64) ResultCode {
     return .ok;
 }
 
+const IndexedColumnOutcome = struct {
+    result: ResultCode,
+    found: bool = false,
+};
+
+fn secondaryIndexContainsColumn(connection: *Connection, database: *btree.Database, table_name: []const u8, column_name: []const u8) IndexedColumnOutcome {
+    const opened = database.openCursor(1, .table);
+    if (opened.result != .ok) return .{ .result = opened.result };
+    var cursor = opened.cursor.?;
+    defer cursor.deinit();
+    for (cursor.entries.items) |entry| {
+        const decoded = btree.decodeRecord(connection.allocator, entry.payload);
+        if (decoded.result != .ok) return .{ .result = decoded.result };
+        var record = decoded.record.?;
+        defer record.deinit();
+        if (record.values.len < 5) continue;
+        const object_type = schemaEntryText(record.values[0]) orelse continue;
+        const indexed_table = schemaEntryText(record.values[2]) orelse continue;
+        if (!std.ascii.eqlIgnoreCase(object_type, "index") or !std.ascii.eqlIgnoreCase(indexed_table, table_name)) continue;
+        const sql = schemaEntryText(record.values[4]) orelse return .{ .result = .error_ };
+        const resolved = resolveColumns(connection.allocator, sql) catch |err| return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_ };
+        defer {
+            connection.allocator.free(resolved.columns);
+            connection.allocator.free(resolved.tokens);
+            connection.allocator.free(resolved.source);
+        }
+        for (resolved.columns) |index_column| {
+            if (std.ascii.eqlIgnoreCase(index_column.name, column_name)) return .{ .result = .ok, .found = true };
+        }
+    }
+    return .{ .result = .ok };
+}
+
 pub export fn sqlite3_blob_open(database_pointer: ?*sqlite3, database_name: ?[*:0]const u8, table_name: ?[*:0]const u8, column_name: ?[*:0]const u8, rowid: i64, flags: c_int, output: ?*?*sqlite3_blob) callconv(.c) c_int {
     const connection = asConnection(database_pointer) orelse return ResultCode.misuse.toC();
     connection.connection_mutex.enter();
@@ -3041,10 +3074,23 @@ pub export fn sqlite3_blob_open(database_pointer: ?*sqlite3, database_name: ?[*:
         connection.allocator.free(resolved.source);
     }
     var record_column: ?usize = null;
-    for (resolved.columns) |item| {
+    var declared_column: ?usize = null;
+    for (resolved.columns, 0..) |item, index| {
         if (std.ascii.eqlIgnoreCase(item.name, column) and !item.integer_primary_key) {
             record_column = item.record_index;
+            declared_column = index;
             break;
+        }
+    }
+    if (flags != 0 and declared_column != null) {
+        const indexed = secondaryIndexContainsColumn(connection, database, table, column);
+        if (indexed.result != .ok) return indexed.result.toC();
+        if (indexed.found) return ResultCode.error_.toC();
+        const foreign_keys = resolveForeignKeys(connection.allocator, schema.sql, resolved.columns) catch |err| return (if (err == error.OutOfMemory) ResultCode.no_memory else ResultCode.error_).toC();
+        var keys = foreign_keys;
+        defer keys.deinit();
+        for (keys.mappings) |mapping| {
+            if (mapping.child_column == declared_column.?) return ResultCode.error_.toC();
         }
     }
     const blob = connection.allocator.create(Blob) catch return ResultCode.no_memory.toC();

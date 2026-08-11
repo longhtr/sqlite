@@ -339,6 +339,22 @@ int main(void){
 
   int attached_blob_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.blobs(id INTEGER PRIMARY KEY,payload BLOB)",0,0,0);
   int attached_blob_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.blobs VALUES(1,x'01020304')",0,0,0);
+  int attached_blob_index_create_rc=sqlite3_exec(attached,"CREATE INDEX aux.idx_blobs_payload ON blobs(payload)",0,0,0);
+  sqlite3_blob *attached_indexed_write_blob=0,*attached_indexed_read_blob=0;
+  int attached_indexed_write_blob_rc=sqlite3_blob_open(attached,"aux","blobs","payload",1,1,&attached_indexed_write_blob);
+  int attached_indexed_read_blob_rc=sqlite3_blob_open(attached,"aux","blobs","payload",1,0,&attached_indexed_read_blob);
+  int attached_indexed_read_blob_close_rc=sqlite3_blob_close(attached_indexed_read_blob);
+  int attached_blob_index_drop_rc=sqlite3_exec(attached,"DROP INDEX aux.idx_blobs_payload",0,0,0);
+  printf("attached-blob-guard\t%d\t%d\t%d\t%d\t%d\t%d\n",attached_blob_index_create_rc,attached_indexed_write_blob_rc,attached_indexed_write_blob==0,attached_indexed_read_blob_rc,attached_indexed_read_blob_close_rc,attached_blob_index_drop_rc);
+  int attached_blob_parent_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.blob_parent(id INTEGER PRIMARY KEY)",0,0,0);
+  int attached_blob_child_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.blob_child(id INTEGER PRIMARY KEY,parent_id INTEGER REFERENCES blob_parent(id))",0,0,0);
+  int attached_blob_parent_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.blob_parent VALUES(1)",0,0,0);
+  int attached_blob_child_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.blob_child VALUES(1,1)",0,0,0);
+  sqlite3_blob *attached_fk_write_blob=0;
+  int attached_fk_write_blob_rc=sqlite3_blob_open(attached,"aux","blob_child","parent_id",1,1,&attached_fk_write_blob);
+  int attached_blob_child_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.blob_child",0,0,0);
+  int attached_blob_parent_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.blob_parent",0,0,0);
+  printf("attached-blob-fk-guard\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",attached_blob_parent_create_rc,attached_blob_child_create_rc,attached_blob_parent_insert_rc,attached_blob_child_insert_rc,attached_fk_write_blob_rc,attached_fk_write_blob==0,attached_blob_child_drop_rc,attached_blob_parent_drop_rc);
   sqlite3_blob *attached_blob=0;
   int attached_blob_open_rc=sqlite3_blob_open(attached,"aux","blobs","payload",1,1,&attached_blob);
   int attached_blob_bytes=sqlite3_blob_bytes(attached_blob);
