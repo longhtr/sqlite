@@ -810,6 +810,11 @@ int main(void){
   int like_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX like_expression_index ON pattern_expression_data(value LIKE 'a%')",0,0,0);
   int not_like_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX not_like_expression_index ON pattern_expression_data(value NOT LIKE 'z%')",0,0,0);
   int glob_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX glob_expression_index ON pattern_expression_data(value GLOB '[A-C]*')",0,0,0);
+  int like_function_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX like_function_expression_index ON pattern_expression_data(like('a%',value))",0,0,0);
+  int not_like_function_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX not_like_function_expression_index ON pattern_expression_data(NOT like('z%',value))",0,0,0);
+  int like_escape_function_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX like_escape_function_expression_index ON pattern_expression_data(like('a!_%',value,'!'))",0,0,0);
+  int glob_function_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX glob_function_expression_index ON pattern_expression_data(glob('[A-C]*',value))",0,0,0);
+  printf("pattern-function-expression-index\t%d\t%d\t%d\t%d\n",like_function_expression_index_rc,not_like_function_expression_index_rc,like_escape_function_expression_index_rc,glob_function_expression_index_rc);
   int pattern_expression_second_rc=sqlite3_exec(clone,"INSERT INTO pattern_expression_data VALUES(2,'beta')",0,0,0);
   int pattern_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO pattern_expression_data VALUES(3,'atom')",0,0,0);
   int pattern_expression_update_rc=sqlite3_exec(clone,"UPDATE pattern_expression_data SET value='apple' WHERE id=2",0,0,0);

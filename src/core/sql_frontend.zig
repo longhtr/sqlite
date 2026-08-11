@@ -4863,6 +4863,21 @@ fn resolveReversedIntegerIndexExpression(token_list: []const Token, position: us
 const PatternIndexExpression = struct { column_name: []const u8, transform: btree.IndexTransform, consumed: usize };
 
 fn resolvePatternIndexExpression(token_list: []const Token, position: usize) ?PatternIndexExpression {
+    const function_not = position < token_list.len and token_list[position].typ == tokens.tk_not;
+    const function_position = position + @intFromBool(function_not);
+    if (function_position + 5 < token_list.len and token_list[function_position].typ == tokens.tk_like_kw and token_list[function_position + 1].typ == tokens.tk_lp and token_list[function_position + 2].typ == tokens.tk_string and token_list[function_position + 3].typ == tokens.tk_comma and token_list[function_position + 4].typ == tokens.tk_id) {
+        const glob = std.ascii.eqlIgnoreCase(token_list[function_position].text, "glob");
+        if (!glob and !std.ascii.eqlIgnoreCase(token_list[function_position].text, "like")) return null;
+        var end_position = function_position + 5;
+        var escape: u8 = 0;
+        if (token_list[end_position].typ == tokens.tk_comma) {
+            if (glob or end_position + 2 >= token_list.len or token_list[end_position + 1].typ != tokens.tk_string) return null;
+            escape = resolveAsciiEscapeLiteral(token_list[end_position + 1].text) orelse return null;
+            end_position += 2;
+        }
+        if (end_position >= token_list.len or token_list[end_position].typ != tokens.tk_rp) return null;
+        return .{ .column_name = token_list[function_position + 4].text, .transform = .{ .text_pattern = .{ .pattern = token_list[function_position + 2].text, .escape = escape, .glob = glob, .is_not = function_not } }, .consumed = end_position + 1 - position };
+    }
     if (position + 2 >= token_list.len or token_list[position].typ != tokens.tk_id) return null;
     const is_not = token_list[position + 1].typ == tokens.tk_not;
     const operation_position = position + 1 + @intFromBool(is_not);
