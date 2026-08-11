@@ -5402,10 +5402,15 @@ const IndexMutationRow = struct {
     values: []const btree.Value,
 };
 
-fn indexCollation(name: []const u8) ?btree.IndexCollation {
+fn indexCollation(connection: *Connection, name: []const u8) ?btree.IndexCollation {
     if (std.ascii.eqlIgnoreCase(name, "BINARY")) return .binary;
     if (std.ascii.eqlIgnoreCase(name, "NOCASE")) return .nocase;
     if (std.ascii.eqlIgnoreCase(name, "RTRIM")) return .rtrim;
+    for (connection.collations.items) |collation| {
+        if (collation.encoding & 7 == 1 and std.ascii.eqlIgnoreCase(collation.name, name)) {
+            return .{ .custom = .{ .context = collation.auxiliary, .callback = collation.compare } };
+        }
+    }
     return null;
 }
 
@@ -5508,7 +5513,7 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
             selected[selected_position] = found orelse return .corrupt;
             const table_column = table_columns.columns[selected[selected_position]];
             const collation_name = if (index_column.explicit_collation) index_column.collation else table_column.collation;
-            selected_collations[selected_position] = indexCollation(collation_name) orelse return .error_;
+            selected_collations[selected_position] = indexCollation(connection, collation_name) orelse return .error_;
             selected_sort_orders[selected_position] = if (index_column.descending) .descending else .ascending;
         }
         if (old_row) |row| {
@@ -8549,7 +8554,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             return .{ .result = .no_memory, .consumed = consumed };
         };
         const collation_name = specified_collations.items[selected_position] orelse resolved.columns[selected].collation;
-        selected_collations.append(allocator, indexCollation(collation_name) orelse {
+        selected_collations.append(allocator, indexCollation(connection, collation_name) orelse {
             allocator.free(source);
             return .{ .result = .error_, .consumed = consumed };
         }) catch {

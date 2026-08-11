@@ -33,7 +33,14 @@ pub const Value = union(enum) {
     blob: []const u8,
 };
 
-pub const IndexCollation = enum { binary, nocase, rtrim };
+pub const IndexCollationCallback = *const fn (?*anyopaque, c_int, ?*const anyopaque, c_int, ?*const anyopaque) callconv(.c) c_int;
+
+pub const IndexCollation = union(enum) {
+    binary,
+    nocase,
+    rtrim,
+    custom: struct { context: ?*anyopaque, callback: IndexCollationCallback },
+};
 pub const IndexSortOrder = enum { ascending, descending };
 
 pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge };
@@ -1374,6 +1381,10 @@ fn compareIndexText(left: []const u8, right: []const u8, collation: IndexCollati
                 if (folded_left > folded_right) break :blk .gt;
             }
             break :blk std.math.order(left.len, right.len);
+        },
+        .custom => |custom| blk: {
+            const result = custom.callback(custom.context, @intCast(left.len), left.ptr, @intCast(right.len), right.ptr);
+            break :blk if (result < 0) .lt else if (result > 0) .gt else .eq;
         },
     };
 }

@@ -61,6 +61,16 @@ static int query_scan(sqlite3 *db, const char *sql, int *count, sqlite3_int64 *f
   return rc;
 }
 
+static int reverse_collation(void *context,int left_size,const void *left_pointer,int right_size,const void *right_pointer){
+  const unsigned char *left=(const unsigned char*)left_pointer,*right=(const unsigned char*)right_pointer;
+  int common=left_size<right_size ? left_size : right_size;
+  int compared=memcmp(left,right,(size_t)common);
+  (void)context;
+  if(compared<0) return 1;
+  if(compared>0) return -1;
+  return left_size<right_size ? 1 : left_size>right_size ? -1 : 0;
+}
+
 static int query_text_initials(sqlite3 *db, const char *sql, int *count, int *first, int *last){
   sqlite3_stmt *statement = 0;
   int rc = sqlite3_prepare_v2(db, sql, -1, &statement, 0);
@@ -318,6 +328,18 @@ int main(void){
   int mixed_query_rc=query_scan(clone,"SELECT b FROM mixed_order_data INDEXED BY mixed_order_index",&mixed_count,&mixed_first,&mixed_last);
   int mixed_drop_rc=sqlite3_exec(clone,"DROP TABLE mixed_order_data",0,0,0);
   printf("descending-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\n",descending_table_rc,descending_insert_first_rc,descending_insert_second_rc,descending_insert_third_rc,descending_index_rc,descending_query_rc,descending_count,(long long)descending_first,(long long)descending_last,descending_insert_rc,descending_update_rc,descending_delete_rc,descending_after_query_rc,descending_after_count,(long long)descending_after_first,(long long)descending_after_last,descending_drop_rc,mixed_table_rc,mixed_first_rc,mixed_second_rc,mixed_third_rc,mixed_index_rc,mixed_query_rc,mixed_count,(long long)mixed_first,(long long)mixed_last,mixed_drop_rc);
+  int custom_collation_register_rc=sqlite3_create_collation(clone,"REVERSE",SQLITE_UTF8,0,reverse_collation);
+  int custom_collation_table_rc=sqlite3_exec(clone,"CREATE TABLE custom_collation_data(id INTEGER PRIMARY KEY,value TEXT)",0,0,0);
+  int custom_collation_first_rc=sqlite3_exec(clone,"INSERT INTO custom_collation_data VALUES(1,'a')",0,0,0);
+  int custom_collation_second_rc=sqlite3_exec(clone,"INSERT INTO custom_collation_data VALUES(2,'c')",0,0,0);
+  int custom_collation_third_rc=sqlite3_exec(clone,"INSERT INTO custom_collation_data VALUES(3,'b')",0,0,0);
+  int custom_collation_index_rc=sqlite3_exec(clone,"CREATE INDEX custom_collation_index ON custom_collation_data(value COLLATE REVERSE)",0,0,0);
+  int custom_collation_count=-1,custom_collation_after_count=-1,custom_collation_first_initial=-1,custom_collation_last_initial=-1,custom_collation_after_first=-1,custom_collation_after_last=-1;
+  int custom_collation_query_rc=query_text_initials(clone,"SELECT value FROM custom_collation_data INDEXED BY custom_collation_index",&custom_collation_count,&custom_collation_first_initial,&custom_collation_last_initial);
+  int custom_collation_insert_rc=sqlite3_exec(clone,"INSERT INTO custom_collation_data VALUES(4,'d')",0,0,0);
+  int custom_collation_after_query_rc=query_text_initials(clone,"SELECT value FROM custom_collation_data INDEXED BY custom_collation_index",&custom_collation_after_count,&custom_collation_after_first,&custom_collation_after_last);
+  int custom_collation_drop_rc=sqlite3_exec(clone,"DROP TABLE custom_collation_data",0,0,0);
+  printf("custom-collated-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",custom_collation_register_rc,custom_collation_table_rc,custom_collation_first_rc,custom_collation_second_rc,custom_collation_third_rc,custom_collation_index_rc,custom_collation_query_rc,custom_collation_count,custom_collation_first_initial,custom_collation_last_initial,custom_collation_insert_rc,custom_collation_after_query_rc,custom_collation_after_count,custom_collation_after_first,custom_collation_after_last,custom_collation_drop_rc);
 #ifdef NATIVE_ENGINE
   int deferred_fk_config_rc=zig_sqlite3_db_config_flag(clone,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
 #else
