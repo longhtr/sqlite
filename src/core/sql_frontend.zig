@@ -4634,6 +4634,31 @@ fn resolveMinMaxIndexExpression(token_list: []const Token, position: usize) ?Min
     return .{ .column_name = token_list[position + 2].text, .comparison = comparison.value, .maximum = std.ascii.eqlIgnoreCase(token_list[position].text, "max"), .consumed = end_position + 1 - position };
 }
 
+const ReversedIntegerIndexExpression = struct { column_name: []const u8, transform: btree.IndexTransform, consumed: usize };
+
+fn resolveReversedIntegerIndexExpression(token_list: []const Token, position: usize) ?ReversedIntegerIndexExpression {
+    const operand = resolveSignedIndexOperand(token_list, position) orelse return null;
+    const operation_position = position + operand.consumed;
+    if (operation_position + 1 >= token_list.len) return null;
+    if (token_list[operation_position].typ == tokens.tk_is) {
+        const is_suffix = resolveIndexIsSuffix(token_list, operation_position + 1);
+        const column_position = operation_position + 1 + is_suffix.consumed;
+        if (column_position >= token_list.len or token_list[column_position].typ != tokens.tk_id) return null;
+        return .{ .column_name = token_list[column_position].text, .transform = .{ .integer_is = .{ .value = operand.value, .is_not = is_suffix.is_not } }, .consumed = column_position + 1 - position };
+    }
+    if (token_list[operation_position + 1].typ != tokens.tk_id) return null;
+    const operation: btree.IndexComparisonOperation = switch (token_list[operation_position].typ) {
+        tokens.tk_eq => .eq,
+        tokens.tk_ne => .ne,
+        tokens.tk_lt => .gt,
+        tokens.tk_le => .ge,
+        tokens.tk_gt => .lt,
+        tokens.tk_ge => .le,
+        else => return null,
+    };
+    return .{ .column_name = token_list[operation_position + 1].text, .transform = .{ .integer_compare = .{ .operation = operation, .value = operand.value } }, .consumed = operation_position + 2 - position };
+}
+
 const SubstringIndexExpression = struct { column_name: []const u8, start: i64, count: ?i64, consumed: usize };
 
 fn resolveSubstringIndexExpression(token_list: []const Token, position: usize) ?SubstringIndexExpression {
@@ -4689,7 +4714,11 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var index_transform: btree.IndexTransform = .identity;
         var name: []const u8 = undefined;
         var start = position;
-        if (if (schema_is_index) resolveBinaryMathIndexExpression(parsed.tokens, position) else null) |binary_math_expression| {
+        if (if (schema_is_index) resolveReversedIntegerIndexExpression(parsed.tokens, position) else null) |reversed_expression| {
+            scan_expression = true;
+            index_transform = reversed_expression.transform;
+            name = reversed_expression.column_name;
+        } else if (if (schema_is_index) resolveBinaryMathIndexExpression(parsed.tokens, position) else null) |binary_math_expression| {
             scan_expression = true;
             index_transform = .{ .binary_math = .{ .operation = binary_math_expression.operation, .operand = binary_math_expression.operand, .column_first = binary_math_expression.column_first } };
             name = binary_math_expression.column_name;
@@ -9443,7 +9472,11 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if (wrapped_expression) position += 1;
         var transform: btree.IndexTransform = .identity;
         var column_name: []const u8 = undefined;
-        if (resolveBinaryMathIndexExpression(token_list, position)) |binary_math_expression| {
+        if (resolveReversedIntegerIndexExpression(token_list, position)) |reversed_expression| {
+            transform = reversed_expression.transform;
+            column_name = reversed_expression.column_name;
+            position += reversed_expression.consumed;
+        } else if (resolveBinaryMathIndexExpression(token_list, position)) |binary_math_expression| {
             transform = .{ .binary_math = .{ .operation = binary_math_expression.operation, .operand = binary_math_expression.operand, .column_first = binary_math_expression.column_first } };
             column_name = binary_math_expression.column_name;
             position += binary_math_expression.consumed;
