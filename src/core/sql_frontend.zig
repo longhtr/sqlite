@@ -6204,11 +6204,11 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
             }
         }
         const column_index = selected orelse return error.Syntax;
-        if (!columns[column_index].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "INTEGER")) return error.Syntax;
+        if (!columns[column_index].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "INTEGER") and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "REAL")) return error.Syntax;
         position.* += 1;
         return .{ .column_index = column_index, .integer_primary_key = columns[column_index].integer_primary_key, .operation = operation, .comparison_real = comparison_real };
     }
-    if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_integer or token_list[position.*].typ == tokens.tk_minus)) {
+    if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_integer or token_list[position.*].typ == tokens.tk_minus or token_list[position.*].typ == tokens.tk_plus)) {
         const comparison_value = try resolveIndexPredicateInteger(token_list, position);
         if (position.* >= token_list.len) return error.Syntax;
         const is_suffix = if (token_list[position.*].typ == tokens.tk_is) resolveIndexIsSuffix(token_list, position.* + 1) else IndexIsSuffix{ .is_not = false, .consumed = 0 };
@@ -6233,7 +6233,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
             }
         }
         const column_index = selected orelse return error.Syntax;
-        if (!columns[column_index].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "INTEGER")) return error.Syntax;
+        if (!columns[column_index].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "INTEGER") and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "REAL")) return error.Syntax;
         position.* += 1;
         return .{ .column_index = column_index, .integer_primary_key = columns[column_index].integer_primary_key, .operation = operation, .comparison_value = comparison_value };
     }
@@ -6297,7 +6297,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
     }
     const selected = column_index orelse return error.Syntax;
     position.* += 1;
-    const integer_column = columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER");
+    const integer_column = columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER") or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "REAL");
     const text_column = std.ascii.eqlIgnoreCase(columns[selected].declared_type, "TEXT");
     var text_collation: ?btree.IndexPredicateTextCollation = if (std.ascii.eqlIgnoreCase(columns[selected].collation, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "RTRIM")) .rtrim else null;
     var explicit_column_collation = false;
