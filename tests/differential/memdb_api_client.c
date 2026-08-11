@@ -818,6 +818,8 @@ int main(void){
   int glob_function_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX glob_function_expression_index ON pattern_expression_data(glob('[A-C]*',value))",0,0,0);
   printf("pattern-function-expression-index\t%d\t%d\t%d\t%d\n",like_function_expression_index_rc,not_like_function_expression_index_rc,like_escape_function_expression_index_rc,glob_function_expression_index_rc);
   int pattern_expression_second_rc=sqlite3_exec(clone,"INSERT INTO pattern_expression_data VALUES(2,'beta')",0,0,0);
+  int pattern_expression_null_rc=sqlite3_exec(clone,"INSERT INTO pattern_expression_data VALUES(4,NULL)",0,0,0);
+  printf("pattern-expression-null\t%d\n",pattern_expression_null_rc);
   int pattern_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO pattern_expression_data VALUES(3,'atom')",0,0,0);
   int pattern_expression_update_rc=sqlite3_exec(clone,"UPDATE pattern_expression_data SET value='apple' WHERE id=2",0,0,0);
   sqlite3_int64 pattern_expression_count=-1;
@@ -830,6 +832,8 @@ int main(void){
   int integer_like_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX integer_like_expression_index ON integer_pattern_expression_data(value LIKE '1%')",0,0,0);
   int integer_glob_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX integer_glob_expression_index ON integer_pattern_expression_data(glob('2*',value))",0,0,0);
   int integer_pattern_expression_second_rc=sqlite3_exec(clone,"INSERT INTO integer_pattern_expression_data VALUES(2,20)",0,0,0);
+  int integer_pattern_expression_null_rc=sqlite3_exec(clone,"INSERT INTO integer_pattern_expression_data VALUES(4,NULL)",0,0,0);
+  printf("integer-pattern-expression-null\t%d\n",integer_pattern_expression_null_rc);
   int integer_pattern_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO integer_pattern_expression_data VALUES(3,13)",0,0,0);
   int integer_pattern_expression_update_rc=sqlite3_exec(clone,"UPDATE integer_pattern_expression_data SET value=14 WHERE id=2",0,0,0);
   sqlite3_int64 integer_pattern_expression_count=-1;
