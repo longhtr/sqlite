@@ -4680,12 +4680,23 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             scan_expression = true;
             index_transform = .is_not_null;
         }
-        if (schema_is_index and start + 2 < position and (parsed.tokens[start + 1].typ == tokens.tk_plus or parsed.tokens[start + 1].typ == tokens.tk_minus or parsed.tokens[start + 1].typ == tokens.tk_star or parsed.tokens[start + 1].typ == tokens.tk_slash or parsed.tokens[start + 1].typ == tokens.tk_rem or parsed.tokens[start + 1].typ == tokens.tk_bitand or parsed.tokens[start + 1].typ == tokens.tk_bitor or parsed.tokens[start + 1].typ == tokens.tk_lshift or parsed.tokens[start + 1].typ == tokens.tk_rshift)) {
+        if (schema_is_index and start + 2 < position and (parsed.tokens[start + 1].typ == tokens.tk_plus or parsed.tokens[start + 1].typ == tokens.tk_minus or parsed.tokens[start + 1].typ == tokens.tk_star or parsed.tokens[start + 1].typ == tokens.tk_slash or parsed.tokens[start + 1].typ == tokens.tk_rem or parsed.tokens[start + 1].typ == tokens.tk_bitand or parsed.tokens[start + 1].typ == tokens.tk_bitor or parsed.tokens[start + 1].typ == tokens.tk_lshift or parsed.tokens[start + 1].typ == tokens.tk_rshift or parsed.tokens[start + 1].typ == tokens.tk_eq or parsed.tokens[start + 1].typ == tokens.tk_ne or parsed.tokens[start + 1].typ == tokens.tk_lt or parsed.tokens[start + 1].typ == tokens.tk_le or parsed.tokens[start + 1].typ == tokens.tk_gt or parsed.tokens[start + 1].typ == tokens.tk_ge)) {
             if (resolveSignedIndexOperand(parsed.tokens, start + 2)) |resolved_operand| {
                 if (start + 2 + resolved_operand.consumed == position) {
                     var operand = resolved_operand.value;
                     scan_expression = true;
-                    if (parsed.tokens[start + 1].typ == tokens.tk_star) {
+                    if (parsed.tokens[start + 1].typ == tokens.tk_eq or parsed.tokens[start + 1].typ == tokens.tk_ne or parsed.tokens[start + 1].typ == tokens.tk_lt or parsed.tokens[start + 1].typ == tokens.tk_le or parsed.tokens[start + 1].typ == tokens.tk_gt or parsed.tokens[start + 1].typ == tokens.tk_ge) {
+                        const operation: btree.IndexComparisonOperation = switch (parsed.tokens[start + 1].typ) {
+                            tokens.tk_eq => .eq,
+                            tokens.tk_ne => .ne,
+                            tokens.tk_lt => .lt,
+                            tokens.tk_le => .le,
+                            tokens.tk_gt => .gt,
+                            tokens.tk_ge => .ge,
+                            else => unreachable,
+                        };
+                        index_transform = .{ .integer_compare = .{ .operation = operation, .value = operand } };
+                    } else if (parsed.tokens[start + 1].typ == tokens.tk_star) {
                         index_transform = .{ .integer_multiply = operand };
                     } else if (parsed.tokens[start + 1].typ == tokens.tk_slash) {
                         index_transform = .{ .integer_divide = operand };
@@ -9108,10 +9119,21 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if ((switch (transform) {
             .identity => true,
             else => false,
-        }) and position < token_list.len and (token_list[position].typ == tokens.tk_plus or token_list[position].typ == tokens.tk_minus or token_list[position].typ == tokens.tk_star or token_list[position].typ == tokens.tk_slash or token_list[position].typ == tokens.tk_rem or token_list[position].typ == tokens.tk_bitand or token_list[position].typ == tokens.tk_bitor or token_list[position].typ == tokens.tk_lshift or token_list[position].typ == tokens.tk_rshift)) {
+        }) and position < token_list.len and (token_list[position].typ == tokens.tk_plus or token_list[position].typ == tokens.tk_minus or token_list[position].typ == tokens.tk_star or token_list[position].typ == tokens.tk_slash or token_list[position].typ == tokens.tk_rem or token_list[position].typ == tokens.tk_bitand or token_list[position].typ == tokens.tk_bitor or token_list[position].typ == tokens.tk_lshift or token_list[position].typ == tokens.tk_rshift or token_list[position].typ == tokens.tk_eq or token_list[position].typ == tokens.tk_ne or token_list[position].typ == tokens.tk_lt or token_list[position].typ == tokens.tk_le or token_list[position].typ == tokens.tk_gt or token_list[position].typ == tokens.tk_ge)) {
             if (resolveSignedIndexOperand(token_list, position + 1)) |resolved_operand| {
                 var operand = resolved_operand.value;
-                if (token_list[position].typ == tokens.tk_star) {
+                if (token_list[position].typ == tokens.tk_eq or token_list[position].typ == tokens.tk_ne or token_list[position].typ == tokens.tk_lt or token_list[position].typ == tokens.tk_le or token_list[position].typ == tokens.tk_gt or token_list[position].typ == tokens.tk_ge) {
+                    const operation: btree.IndexComparisonOperation = switch (token_list[position].typ) {
+                        tokens.tk_eq => .eq,
+                        tokens.tk_ne => .ne,
+                        tokens.tk_lt => .lt,
+                        tokens.tk_le => .le,
+                        tokens.tk_gt => .gt,
+                        tokens.tk_ge => .ge,
+                        else => unreachable,
+                    };
+                    transform = .{ .integer_compare = .{ .operation = operation, .value = operand } };
+                } else if (token_list[position].typ == tokens.tk_star) {
                     transform = .{ .integer_multiply = operand };
                 } else if (token_list[position].typ == tokens.tk_slash) {
                     transform = .{ .integer_divide = operand };
@@ -9216,7 +9238,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         };
         const transformed = switch (specified_transforms.items[selected_position]) {
             .identity, .is_null, .is_not_null, .null_coalesce_integer => false,
-            .numeric_negate, .numeric_abs, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right => true,
+            .numeric_negate, .numeric_abs, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_compare => true,
         };
         if (transformed and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
             allocator.free(source);

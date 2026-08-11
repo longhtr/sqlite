@@ -42,6 +42,8 @@ pub const IndexCollation = union(enum) {
     custom: struct { context: ?*anyopaque, callback: IndexCollationCallback },
 };
 pub const IndexSortOrder = enum { ascending, descending };
+pub const IndexComparisonOperation = enum { eq, ne, lt, le, gt, ge };
+pub const IndexComparison = struct { operation: IndexComparisonOperation, value: i64 };
 pub const IndexTransform = union(enum) {
     identity,
     numeric_negate,
@@ -58,6 +60,7 @@ pub const IndexTransform = union(enum) {
     integer_bit_or: i64,
     integer_shift_left: i64,
     integer_shift_right: i64,
+    integer_compare: IndexComparison,
 };
 
 fn numericIndexValue(value: Value) Value {
@@ -160,6 +163,26 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
         .integer_shift_right => |amount| switch (numeric) {
             .integer => |integer| .{ .integer = shiftIndexInteger(integer, amount, false) },
             else => .null_,
+        },
+        .integer_compare => |comparison| switch (numeric) {
+            .null_ => .null_,
+            .integer => |integer| .{ .integer = @intFromBool(switch (comparison.operation) {
+                .eq => integer == comparison.value,
+                .ne => integer != comparison.value,
+                .lt => integer < comparison.value,
+                .le => integer <= comparison.value,
+                .gt => integer > comparison.value,
+                .ge => integer >= comparison.value,
+            }) },
+            .real => |real| .{ .integer = @intFromBool(switch (comparison.operation) {
+                .eq => real == @as(f64, @floatFromInt(comparison.value)),
+                .ne => real != @as(f64, @floatFromInt(comparison.value)),
+                .lt => real < @as(f64, @floatFromInt(comparison.value)),
+                .le => real <= @as(f64, @floatFromInt(comparison.value)),
+                .gt => real > @as(f64, @floatFromInt(comparison.value)),
+                .ge => real >= @as(f64, @floatFromInt(comparison.value)),
+            }) },
+            .text, .blob => unreachable,
         },
     };
 }
