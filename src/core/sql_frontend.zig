@@ -557,6 +557,31 @@ fn disconnectAllVirtualTables(connection: *Connection) void {
     connection.virtual_tables_disconnected = true;
 }
 
+/// Source schema reset during DETACH disconnects only virtual-table instances
+/// owned by that Db before its B-tree and schema storage are released.
+fn disconnectVirtualTablesInSchema(connection: *Connection, schema_name: []const u8) void {
+    var index: usize = 0;
+    while (index < connection.virtual_tables.items.len) {
+        const table = connection.virtual_tables.items[index];
+        if (!virtualSchemaMatches(connection, table.schema_name, schema_name)) {
+            index += 1;
+            continue;
+        }
+        if (table.module.xDisconnect) |raw| {
+            const callback: *const fn (*sqlite3_vtab) callconv(.c) c_int = @ptrCast(@alignCast(raw));
+            _ = callback(table.instance);
+        }
+        _ = connection.virtual_tables.orderedRemove(index);
+        for (table.columns.items) |column| {
+            connection.allocator.free(column);
+        }
+        table.columns.deinit(connection.allocator);
+        connection.allocator.free(table.schema_name);
+        connection.allocator.free(table.name);
+        connection.allocator.destroy(table);
+    }
+}
+
 /// Source `invokeProfileCallback()`: compute elapsed wall-clock microseconds
 /// once and deliver the same value to legacy and TRACE_PROFILE callbacks.
 fn invokeProfileCallback(connection: *Connection, prepared: *statement.Statement) void {
@@ -7314,6 +7339,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                     if (attached.active_blobs != 0 or attached.active_backups != 0) break :blk .error_;
                 }
             }
+            disconnectVirtualTablesInSchema(action.connection, action.name);
             attachment_runtime.detachFunction(attachments, action.name) catch |failure| break :blk switch (failure) {
                 error.OutOfMemory => .no_memory,
                 error.Locked => .busy,
