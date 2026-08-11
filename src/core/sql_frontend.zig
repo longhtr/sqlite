@@ -4812,19 +4812,16 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         if (schema_is_index and start + 2 == position and (parsed.tokens[start + 1].typ == tokens.tk_isnull or parsed.tokens[start + 1].typ == tokens.tk_notnull)) {
             scan_expression = true;
             index_transform = if (parsed.tokens[start + 1].typ == tokens.tk_notnull) .is_not_null else .is_null;
-        } else if (schema_is_index and start + 3 == position and parsed.tokens[start + 1].typ == tokens.tk_is and parsed.tokens[start + 2].typ == tokens.tk_null) {
-            scan_expression = true;
-            index_transform = .is_null;
-        } else if (schema_is_index and start + 4 == position and parsed.tokens[start + 1].typ == tokens.tk_is and parsed.tokens[start + 2].typ == tokens.tk_not and parsed.tokens[start + 3].typ == tokens.tk_null) {
-            scan_expression = true;
-            index_transform = .is_not_null;
         } else if (schema_is_index and start + 2 < position and parsed.tokens[start + 1].typ == tokens.tk_is) {
-            const is_not = parsed.tokens[start + 2].typ == tokens.tk_not;
-            const operand_position = start + 2 + @intFromBool(is_not);
-            if (resolveSignedIndexOperand(parsed.tokens, operand_position)) |resolved_operand| {
+            const is_suffix = resolveIndexIsSuffix(parsed.tokens, start + 2);
+            const operand_position = start + 2 + is_suffix.consumed;
+            if (operand_position < position and parsed.tokens[operand_position].typ == tokens.tk_null and operand_position + 1 == position) {
+                scan_expression = true;
+                index_transform = if (is_suffix.is_not) .is_not_null else .is_null;
+            } else if (resolveSignedIndexOperand(parsed.tokens, operand_position)) |resolved_operand| {
                 if (operand_position + resolved_operand.consumed == position) {
                     scan_expression = true;
-                    index_transform = .{ .integer_is = .{ .value = resolved_operand.value, .is_not = is_not } };
+                    index_transform = .{ .integer_is = .{ .value = resolved_operand.value, .is_not = is_suffix.is_not } };
                 }
             }
         }
@@ -9514,19 +9511,14 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             .identity => true,
             else => false,
         }) and position + 1 < token_list.len and token_list[position].typ == tokens.tk_is) {
-            if (token_list[position + 1].typ == tokens.tk_null) {
-                transform = .is_null;
-                position += 2;
-            } else if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_not and token_list[position + 2].typ == tokens.tk_null) {
-                transform = .is_not_null;
-                position += 3;
-            } else {
-                const is_not = token_list[position + 1].typ == tokens.tk_not;
-                const operand_position = position + 1 + @intFromBool(is_not);
-                if (resolveSignedIndexOperand(token_list, operand_position)) |resolved_operand| {
-                    transform = .{ .integer_is = .{ .value = resolved_operand.value, .is_not = is_not } };
-                    position = operand_position + resolved_operand.consumed;
-                }
+            const is_suffix = resolveIndexIsSuffix(token_list, position + 1);
+            const operand_position = position + 1 + is_suffix.consumed;
+            if (operand_position < token_list.len and token_list[operand_position].typ == tokens.tk_null) {
+                transform = if (is_suffix.is_not) .is_not_null else .is_null;
+                position = operand_position + 1;
+            } else if (resolveSignedIndexOperand(token_list, operand_position)) |resolved_operand| {
+                transform = .{ .integer_is = .{ .value = resolved_operand.value, .is_not = is_suffix.is_not } };
+                position = operand_position + resolved_operand.consumed;
             }
         }
         if (switch (transform) {

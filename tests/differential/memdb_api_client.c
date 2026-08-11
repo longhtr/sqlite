@@ -534,6 +534,8 @@ int main(void){
   int not_null_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX not_null_expression_index ON null_expression_data(value IS NOT NULL)",0,0,0);
   int isnull_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX isnull_expression_index ON null_expression_data(value ISNULL)",0,0,0);
   int notnull_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX notnull_expression_index ON null_expression_data(value NOTNULL)",0,0,0);
+  int null_distinct_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX null_distinct_expression_index ON null_expression_data(value IS DISTINCT FROM NULL)",0,0,0);
+  int null_not_distinct_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX null_not_distinct_expression_index ON null_expression_data(value IS NOT DISTINCT FROM NULL)",0,0,0);
   int null_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO null_expression_data VALUES(2,NULL)",0,0,0);
   int null_expression_second_rc=sqlite3_exec(clone,"INSERT INTO null_expression_data VALUES(2,20)",0,0,0);
   int not_null_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO null_expression_data VALUES(3,30)",0,0,0);
@@ -541,7 +543,7 @@ int main(void){
   int null_expression_count_rc=query_value(clone,"SELECT count(*) FROM null_expression_data",&null_expression_count);
   int null_expression_reindex_rc=sqlite3_exec(clone,"REINDEX null_expression_index",0,0,0);
   int null_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE null_expression_data",0,0,0);
-  printf("null-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",null_expression_table_rc,null_expression_first_rc,null_expression_index_rc,not_null_expression_index_rc,isnull_expression_index_rc,notnull_expression_index_rc,null_expression_duplicate_rc,null_expression_second_rc,not_null_expression_duplicate_rc,null_expression_count_rc,(long long)null_expression_count,null_expression_reindex_rc,null_expression_drop_rc);
+  printf("null-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",null_expression_table_rc,null_expression_first_rc,null_expression_index_rc,not_null_expression_index_rc,isnull_expression_index_rc,notnull_expression_index_rc,null_distinct_expression_index_rc,null_not_distinct_expression_index_rc,null_expression_duplicate_rc,null_expression_second_rc,not_null_expression_duplicate_rc,null_expression_count_rc,(long long)null_expression_count,null_expression_reindex_rc,null_expression_drop_rc);
   int comparison_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE comparison_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int comparison_expression_first_rc=sqlite3_exec(clone,"INSERT INTO comparison_expression_data VALUES(1,5)",0,0,0);
   int comparison_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX comparison_expression_index ON comparison_expression_data(value>10)",0,0,0);
@@ -567,6 +569,8 @@ int main(void){
   int is_expression_first_rc=sqlite3_exec(clone,"INSERT INTO is_expression_data VALUES(1,NULL)",0,0,0);
   int is_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX is_expression_index ON is_expression_data(value IS 1)",0,0,0);
   int is_not_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX is_not_expression_index ON is_expression_data(value IS NOT 1)",0,0,0);
+  int is_distinct_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX is_distinct_expression_index ON is_expression_data(value IS DISTINCT FROM 1)",0,0,0);
+  int is_not_distinct_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX is_not_distinct_expression_index ON is_expression_data(value IS NOT DISTINCT FROM 1)",0,0,0);
   int is_expression_second_rc=sqlite3_exec(clone,"INSERT INTO is_expression_data VALUES(2,1)",0,0,0);
   int is_expression_false_duplicate_rc=sqlite3_exec(clone,"INSERT INTO is_expression_data VALUES(3,2)",0,0,0);
   int is_expression_true_duplicate_rc=sqlite3_exec(clone,"INSERT INTO is_expression_data VALUES(3,1)",0,0,0);
@@ -574,7 +578,7 @@ int main(void){
   int is_expression_count_rc=query_value(clone,"SELECT count(*) FROM is_expression_data",&is_expression_count);
   int is_expression_reindex_rc=sqlite3_exec(clone,"REINDEX is_expression_index",0,0,0);
   int is_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE is_expression_data",0,0,0);
-  printf("is-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",is_expression_table_rc,is_expression_first_rc,is_expression_index_rc,is_not_expression_index_rc,is_expression_second_rc,is_expression_false_duplicate_rc,is_expression_true_duplicate_rc,is_expression_count_rc,(long long)is_expression_count,is_expression_reindex_rc,is_expression_drop_rc);
+  printf("is-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",is_expression_table_rc,is_expression_first_rc,is_expression_index_rc,is_not_expression_index_rc,is_distinct_expression_index_rc,is_not_distinct_expression_index_rc,is_expression_second_rc,is_expression_false_duplicate_rc,is_expression_true_duplicate_rc,is_expression_count_rc,(long long)is_expression_count,is_expression_reindex_rc,is_expression_drop_rc);
   int not_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE not_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int not_expression_first_rc=sqlite3_exec(clone,"INSERT INTO not_expression_data VALUES(1,0)",0,0,0);
   int not_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX not_expression_index ON not_expression_data(NOT value)",0,0,0);
