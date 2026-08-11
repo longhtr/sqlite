@@ -4628,6 +4628,17 @@ fn resolveSignedNumericIndexOperand(token_list: []const Token, position: usize) 
     return .{ .value = @floatFromInt(operand.value), .consumed = operand.consumed };
 }
 
+const LikelihoodIndexExpression = struct { column_name: []const u8, consumed: usize = 0, valid: bool = false };
+
+fn resolveLikelihoodIndexExpression(token_list: []const Token, position: usize) ?LikelihoodIndexExpression {
+    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or !std.ascii.eqlIgnoreCase(token_list[position].text, "likelihood") or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 2].typ != tokens.tk_id or token_list[position + 3].typ != tokens.tk_comma) return null;
+    const column_name = token_list[position + 2].text;
+    if ((token_list[position + 4].typ != tokens.tk_integer and token_list[position + 4].typ != tokens.tk_float) or token_list[position + 5].typ != tokens.tk_rp) return .{ .column_name = column_name };
+    const probability = std.fmt.parseFloat(f64, token_list[position + 4].text) catch return .{ .column_name = column_name };
+    if (probability < 0 or probability > 1) return .{ .column_name = column_name };
+    return .{ .column_name = column_name, .consumed = 6, .valid = true };
+}
+
 const SignedOffsetIndexOperand = SignedIndexOperand;
 
 fn resolveSignedOffsetIndexOperand(token_list: []const Token, position: usize) ?SignedOffsetIndexOperand {
@@ -5068,11 +5079,10 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             else
                 .{ .constant_integer = ifnull_expression.replacement };
             name = ifnull_expression.column_name;
-        } else if (schema_is_index and position + 5 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "likelihood") and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_comma and (parsed.tokens[position + 4].typ == tokens.tk_integer or parsed.tokens[position + 4].typ == tokens.tk_float) and parsed.tokens[position + 5].typ == tokens.tk_rp) {
-            const probability = std.fmt.parseFloat(f64, parsed.tokens[position + 4].text) catch return error.Syntax;
-            if (probability < 0 or probability > 1) return error.Syntax;
+        } else if (if (schema_is_index) resolveLikelihoodIndexExpression(parsed.tokens, position) else null) |likelihood_expression| {
+            if (!likelihood_expression.valid) return error.Syntax;
             scan_expression = true;
-            name = parsed.tokens[position + 2].text;
+            name = likelihood_expression.column_name;
         } else if (schema_is_index and position + 3 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "abs") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "sign") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "round") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "ceil") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "ceiling") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "floor") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "trunc") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "typeof") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "octet_length") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "length") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "unicode") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "trim") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "ltrim") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "rtrim") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "concat") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "likely") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "unlikely")) and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_rp) {
             scan_expression = true;
             index_transform = if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "sign")) .numeric_sign else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "round")) .numeric_round else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "ceil") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "ceiling")) .numeric_ceil else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "floor")) .numeric_floor else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "trunc")) .numeric_trunc else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "typeof")) .storage_type else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "octet_length")) .octet_length else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "length")) .text_length else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "unicode")) .unicode_value else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "trim")) .text_trim else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "ltrim")) .text_ltrim else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "rtrim")) .text_rtrim else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "concat")) .concat_single else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "likely") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "unlikely")) .identity else .numeric_abs;
@@ -9987,17 +9997,13 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
                 .{ .constant_integer = ifnull_expression.replacement };
             column_name = ifnull_expression.column_name;
             position += ifnull_expression.consumed;
-        } else if (position + 5 < token_list.len and token_list[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(token_list[position].text, "likelihood") and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_comma and (token_list[position + 4].typ == tokens.tk_integer or token_list[position + 4].typ == tokens.tk_float) and token_list[position + 5].typ == tokens.tk_rp) {
-            const probability = std.fmt.parseFloat(f64, token_list[position + 4].text) catch {
-                allocator.free(source);
-                return .{ .result = .error_, .consumed = consumed };
-            };
-            if (probability < 0 or probability > 1) {
+        } else if (resolveLikelihoodIndexExpression(token_list, position)) |likelihood_expression| {
+            if (!likelihood_expression.valid) {
                 allocator.free(source);
                 return .{ .result = .error_, .consumed = consumed };
             }
-            column_name = token_list[position + 2].text;
-            position += 6;
+            column_name = likelihood_expression.column_name;
+            position += likelihood_expression.consumed;
         } else if (position + 3 < token_list.len and token_list[position].typ == tokens.tk_id and (std.ascii.eqlIgnoreCase(token_list[position].text, "abs") or std.ascii.eqlIgnoreCase(token_list[position].text, "sign") or std.ascii.eqlIgnoreCase(token_list[position].text, "round") or std.ascii.eqlIgnoreCase(token_list[position].text, "ceil") or std.ascii.eqlIgnoreCase(token_list[position].text, "ceiling") or std.ascii.eqlIgnoreCase(token_list[position].text, "floor") or std.ascii.eqlIgnoreCase(token_list[position].text, "trunc") or std.ascii.eqlIgnoreCase(token_list[position].text, "typeof") or std.ascii.eqlIgnoreCase(token_list[position].text, "octet_length") or std.ascii.eqlIgnoreCase(token_list[position].text, "length") or std.ascii.eqlIgnoreCase(token_list[position].text, "unicode") or std.ascii.eqlIgnoreCase(token_list[position].text, "trim") or std.ascii.eqlIgnoreCase(token_list[position].text, "ltrim") or std.ascii.eqlIgnoreCase(token_list[position].text, "rtrim") or std.ascii.eqlIgnoreCase(token_list[position].text, "concat") or std.ascii.eqlIgnoreCase(token_list[position].text, "likely") or std.ascii.eqlIgnoreCase(token_list[position].text, "unlikely")) and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_rp) {
             transform = if (std.ascii.eqlIgnoreCase(token_list[position].text, "sign")) .numeric_sign else if (std.ascii.eqlIgnoreCase(token_list[position].text, "round")) .numeric_round else if (std.ascii.eqlIgnoreCase(token_list[position].text, "ceil") or std.ascii.eqlIgnoreCase(token_list[position].text, "ceiling")) .numeric_ceil else if (std.ascii.eqlIgnoreCase(token_list[position].text, "floor")) .numeric_floor else if (std.ascii.eqlIgnoreCase(token_list[position].text, "trunc")) .numeric_trunc else if (std.ascii.eqlIgnoreCase(token_list[position].text, "typeof")) .storage_type else if (std.ascii.eqlIgnoreCase(token_list[position].text, "octet_length")) .octet_length else if (std.ascii.eqlIgnoreCase(token_list[position].text, "length")) .text_length else if (std.ascii.eqlIgnoreCase(token_list[position].text, "unicode")) .unicode_value else if (std.ascii.eqlIgnoreCase(token_list[position].text, "trim")) .text_trim else if (std.ascii.eqlIgnoreCase(token_list[position].text, "ltrim")) .text_ltrim else if (std.ascii.eqlIgnoreCase(token_list[position].text, "rtrim")) .text_rtrim else if (std.ascii.eqlIgnoreCase(token_list[position].text, "concat")) .concat_single else if (std.ascii.eqlIgnoreCase(token_list[position].text, "likely") or std.ascii.eqlIgnoreCase(token_list[position].text, "unlikely")) .identity else .numeric_abs;
             column_name = token_list[position + 2].text;
