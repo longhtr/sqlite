@@ -4570,8 +4570,31 @@ fn resolveIfnullIndexExpression(token_list: []const Token, position: usize) ?Ifn
 }
 
 fn resolveUnaryMathIndexOperation(name: []const u8) ?btree.IndexUnaryMath {
-    if (std.ascii.eqlIgnoreCase(name, "sqrt")) return .square_root;
-    if (std.ascii.eqlIgnoreCase(name, "exp")) return .exponential;
+    const mappings = [_]struct { name: []const u8, operation: btree.IndexUnaryMath }{
+        .{ .name = "sqrt", .operation = .square_root },
+        .{ .name = "exp", .operation = .exponential },
+        .{ .name = "ln", .operation = .natural_log },
+        .{ .name = "log", .operation = .common_log },
+        .{ .name = "log10", .operation = .common_log },
+        .{ .name = "log2", .operation = .binary_log },
+        .{ .name = "acos", .operation = .arc_cosine },
+        .{ .name = "asin", .operation = .arc_sine },
+        .{ .name = "atan", .operation = .arc_tangent },
+        .{ .name = "cos", .operation = .cosine },
+        .{ .name = "sin", .operation = .sine },
+        .{ .name = "tan", .operation = .tangent },
+        .{ .name = "cosh", .operation = .hyperbolic_cosine },
+        .{ .name = "sinh", .operation = .hyperbolic_sine },
+        .{ .name = "tanh", .operation = .hyperbolic_tangent },
+        .{ .name = "acosh", .operation = .inverse_hyperbolic_cosine },
+        .{ .name = "asinh", .operation = .inverse_hyperbolic_sine },
+        .{ .name = "atanh", .operation = .inverse_hyperbolic_tangent },
+        .{ .name = "radians", .operation = .radians },
+        .{ .name = "degrees", .operation = .degrees },
+    };
+    for (mappings) |mapping| {
+        if (std.ascii.eqlIgnoreCase(name, mapping.name)) return mapping.operation;
+    }
     return null;
 }
 

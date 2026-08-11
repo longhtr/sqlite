@@ -49,7 +49,27 @@ pub const IndexIsComparison = struct { value: i64, is_not: bool };
 pub const IndexRangeComparison = struct { low: i64, high: i64, is_not: bool };
 pub const IndexMembership = struct { first: i64, second: i64, is_not: bool };
 pub const IndexSubstring = struct { start: i64, count: ?i64 };
-pub const IndexUnaryMath = enum { square_root, exponential };
+pub const IndexUnaryMath = enum {
+    square_root,
+    exponential,
+    natural_log,
+    common_log,
+    binary_log,
+    arc_cosine,
+    arc_sine,
+    arc_tangent,
+    cosine,
+    sine,
+    tangent,
+    hyperbolic_cosine,
+    hyperbolic_sine,
+    hyperbolic_tangent,
+    inverse_hyperbolic_cosine,
+    inverse_hyperbolic_sine,
+    inverse_hyperbolic_tangent,
+    radians,
+    degrees,
+};
 pub const IndexTransform = union(enum) {
     identity,
     numeric_negate,
@@ -223,6 +243,23 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
                 const result = switch (operation) {
                     .square_root => @sqrt(input),
                     .exponential => @exp(input),
+                    .natural_log => if (input <= 0) std.math.nan(f64) else @log(input),
+                    .common_log => if (input <= 0) std.math.nan(f64) else @log10(input),
+                    .binary_log => if (input <= 0) std.math.nan(f64) else @log2(input),
+                    .arc_cosine => std.math.acos(input),
+                    .arc_sine => std.math.asin(input),
+                    .arc_tangent => std.math.atan(input),
+                    .cosine => @cos(input),
+                    .sine => @sin(input),
+                    .tangent => @tan(input),
+                    .hyperbolic_cosine => std.math.cosh(input),
+                    .hyperbolic_sine => std.math.sinh(input),
+                    .hyperbolic_tangent => std.math.tanh(input),
+                    .inverse_hyperbolic_cosine => std.math.acosh(input),
+                    .inverse_hyperbolic_sine => std.math.asinh(input),
+                    .inverse_hyperbolic_tangent => std.math.atanh(input),
+                    .radians => input * (std.math.pi / 180.0),
+                    .degrees => input * (180.0 / std.math.pi),
                 };
                 break :numeric_result if (std.math.isNan(result)) .null_ else .{ .real = result };
             },
