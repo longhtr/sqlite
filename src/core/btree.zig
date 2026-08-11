@@ -812,12 +812,16 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
             else => true,
         },
         .text_like, .text_not_like, .text_glob, .text_not_glob => {
-            const text = switch (value) {
-                .text => |text| text,
+            const glob = predicate.operation == .text_glob or predicate.operation == .text_not_glob;
+            const matches = switch (value) {
+                .text => |text| indexPredicatePatternMatch(text, 0, predicate.comparison_text, 1, if (glob) '*' else '%', if (glob) '?' else '_', !glob, if (glob) 0 else @intCast(predicate.comparison_value)),
+                .integer => |integer| integer_match: {
+                    var buffer: [32]u8 = undefined;
+                    const text = std.fmt.bufPrint(&buffer, "{d}", .{integer}) catch return false;
+                    break :integer_match indexPredicatePatternMatch(text, 0, predicate.comparison_text, 1, if (glob) '*' else '%', if (glob) '?' else '_', !glob, if (glob) 0 else @intCast(predicate.comparison_value));
+                },
                 else => return false,
             };
-            const glob = predicate.operation == .text_glob or predicate.operation == .text_not_glob;
-            const matches = indexPredicatePatternMatch(text, 0, predicate.comparison_text, 1, if (glob) '*' else '%', if (glob) '?' else '_', !glob, if (glob) 0 else @intCast(predicate.comparison_value));
             return if (predicate.operation == .text_like or predicate.operation == .text_glob) matches else !matches;
         },
         .text_between, .text_not_between => {
