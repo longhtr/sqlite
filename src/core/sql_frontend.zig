@@ -5870,6 +5870,11 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         explicit_column_collation = true;
         position.* += 2;
     }
+    if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_isnull or token_list[position.*].typ == tokens.tk_notnull)) {
+        const is_not_null = token_list[position.*].typ == tokens.tk_notnull;
+        position.* += 1;
+        return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (is_not_null) .is_not_null else .is_null };
+    }
     const text_not_between = position.* < token_list.len and token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_between;
     if (!boolean_negated and text_column and text_collation != null and position.* < token_list.len and (token_list[position.*].typ == tokens.tk_between or text_not_between)) {
         position.* += if (text_not_between) 2 else 1;
