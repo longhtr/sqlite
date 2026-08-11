@@ -4592,7 +4592,8 @@ const SignedFloatIndexOperand = struct { value: f64, consumed: usize };
 fn resolveSignedFloatIndexOperand(token_list: []const Token, position: usize) ?SignedFloatIndexOperand {
     if (position >= token_list.len) return null;
     const negative = token_list[position].typ == tokens.tk_minus;
-    const literal_position = position + @intFromBool(negative);
+    const signed = negative or token_list[position].typ == tokens.tk_plus;
+    const literal_position = position + @intFromBool(signed);
     if (literal_position >= token_list.len or token_list[literal_position].typ != tokens.tk_float) return null;
     var value = std.fmt.parseFloat(f64, token_list[literal_position].text) catch return null;
     if (negative) value = -value;
@@ -4602,7 +4603,8 @@ fn resolveSignedFloatIndexOperand(token_list: []const Token, position: usize) ?S
 fn resolveSignedIndexOperand(token_list: []const Token, position: usize) ?SignedIndexOperand {
     if (position >= token_list.len) return null;
     const negative = token_list[position].typ == tokens.tk_minus;
-    const literal_position = position + @intFromBool(negative);
+    const signed = negative or token_list[position].typ == tokens.tk_plus;
+    const literal_position = position + @intFromBool(signed);
     if (literal_position >= token_list.len or token_list[literal_position].typ != tokens.tk_integer) return null;
     var value = std.fmt.parseInt(i64, token_list[literal_position].text, 10) catch return null;
     if (negative) value = -value;
@@ -6083,7 +6085,9 @@ fn resolveIndexIsSuffix(token_list: []const Token, position: usize) IndexIsSuffi
 
 fn resolveIndexPredicateFloat(token_list: []const Token, position: *usize) error{Syntax}!f64 {
     const negative = position.* < token_list.len and token_list[position.*].typ == tokens.tk_minus;
-    if (negative) position.* += 1;
+    if (position.* < token_list.len and (negative or token_list[position.*].typ == tokens.tk_plus)) {
+        position.* += 1;
+    }
     if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_float) return error.Syntax;
     var value = std.fmt.parseFloat(f64, token_list[position.*].text) catch return error.Syntax;
     if (negative) value = -value;
@@ -6094,7 +6098,7 @@ fn resolveIndexPredicateFloat(token_list: []const Token, position: *usize) error
 const IndexPredicateNumeric = union(enum) { integer: i64, real: f64 };
 
 fn resolveIndexPredicateNumeric(token_list: []const Token, position: *usize) error{Syntax}!IndexPredicateNumeric {
-    const literal_position = position.* + @intFromBool(position.* < token_list.len and token_list[position.*].typ == tokens.tk_minus);
+    const literal_position = position.* + @intFromBool(position.* < token_list.len and (token_list[position.*].typ == tokens.tk_minus or token_list[position.*].typ == tokens.tk_plus));
     if (literal_position >= token_list.len) return error.Syntax;
     if (token_list[literal_position].typ == tokens.tk_float) return .{ .real = try resolveIndexPredicateFloat(token_list, position) };
     return .{ .integer = try resolveIndexPredicateInteger(token_list, position) };
@@ -6108,9 +6112,8 @@ fn indexPredicateNumericReal(numeric: IndexPredicateNumeric) f64 {
 }
 
 fn resolveIndexPredicateInteger(token_list: []const Token, position: *usize) error{Syntax}!i64 {
-    var negative = false;
-    if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_minus) {
-        negative = true;
+    const negative = position.* < token_list.len and token_list[position.*].typ == tokens.tk_minus;
+    if (position.* < token_list.len and (negative or token_list[position.*].typ == tokens.tk_plus)) {
         position.* += 1;
     }
     if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_integer) return error.Syntax;
@@ -6139,7 +6142,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         position.* += 1;
         return .{ .column_index = column_index, .integer_primary_key = columns[column_index].integer_primary_key, .operation = if (is_suffix.is_not) .is_not_null else .is_null };
     }
-    if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or (token_list[position.*].typ == tokens.tk_minus and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
+    if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or ((token_list[position.*].typ == tokens.tk_minus or token_list[position.*].typ == tokens.tk_plus) and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
         const comparison_real = try resolveIndexPredicateFloat(token_list, position);
         if (position.* >= token_list.len) return error.Syntax;
         const is_suffix = if (token_list[position.*].typ == tokens.tk_is) resolveIndexIsSuffix(token_list, position.* + 1) else IndexIsSuffix{ .is_not = false, .consumed = 0 };
@@ -6316,7 +6319,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (boolean_negated) .integer_eq else .integer_ne, .comparison_value = 0 };
     }
     if (boolean_negated or position.* >= token_list.len) return error.Syntax;
-    if (integer_column and position.* + 1 < token_list.len and (token_list[position.*].typ == tokens.tk_eq or token_list[position.*].typ == tokens.tk_ne or token_list[position.*].typ == tokens.tk_lt or token_list[position.*].typ == tokens.tk_le or token_list[position.*].typ == tokens.tk_gt or token_list[position.*].typ == tokens.tk_ge) and (token_list[position.* + 1].typ == tokens.tk_float or (token_list[position.* + 1].typ == tokens.tk_minus and position.* + 2 < token_list.len and token_list[position.* + 2].typ == tokens.tk_float))) {
+    if (integer_column and position.* + 1 < token_list.len and (token_list[position.*].typ == tokens.tk_eq or token_list[position.*].typ == tokens.tk_ne or token_list[position.*].typ == tokens.tk_lt or token_list[position.*].typ == tokens.tk_le or token_list[position.*].typ == tokens.tk_gt or token_list[position.*].typ == tokens.tk_ge) and (token_list[position.* + 1].typ == tokens.tk_float or ((token_list[position.* + 1].typ == tokens.tk_minus or token_list[position.* + 1].typ == tokens.tk_plus) and position.* + 2 < token_list.len and token_list[position.* + 2].typ == tokens.tk_float))) {
         const operation: btree.IndexPredicateOperation = switch (token_list[position.*].typ) {
             tokens.tk_eq => .real_eq,
             tokens.tk_ne => .real_ne,
@@ -6352,7 +6355,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
                 position.* += 2;
             }
             return .{ .column_index = selected, .integer_primary_key = false, .operation = if (is_not) .text_is_not else .text_is, .comparison_text = comparison_text, .text_collation = text_collation.? };
-        } else if (integer_column and position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or (token_list[position.*].typ == tokens.tk_minus and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
+        } else if (integer_column and position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or ((token_list[position.*].typ == tokens.tk_minus or token_list[position.*].typ == tokens.tk_plus) and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
             const comparison_real = try resolveIndexPredicateFloat(token_list, position);
             return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (is_not) .real_is_not else .real_is, .comparison_real = comparison_real };
         } else {
@@ -6465,9 +6468,10 @@ fn resolveIndexPredicatePrimary(token_list: []const Token, columns: []const Reso
         term_count.* += 1;
         return;
     }
-    if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or (token_list[position.*].typ == tokens.tk_minus and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
+    if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or ((token_list[position.*].typ == tokens.tk_minus or token_list[position.*].typ == tokens.tk_plus) and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
         const negative = token_list[position.*].typ == tokens.tk_minus;
-        const literal_position = position.* + @intFromBool(negative);
+        const signed = negative or token_list[position.*].typ == tokens.tk_plus;
+        const literal_position = position.* + @intFromBool(signed);
         const probe_position = literal_position + 1;
         if (probe_position == token_list.len or token_list[probe_position].typ == tokens.tk_and or token_list[probe_position].typ == tokens.tk_or or token_list[probe_position].typ == tokens.tk_rp) {
             var constant = std.fmt.parseFloat(f64, token_list[literal_position].text) catch return error.Syntax;
@@ -6478,7 +6482,7 @@ fn resolveIndexPredicatePrimary(token_list: []const Token, columns: []const Reso
             return;
         }
     }
-    if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_integer or (token_list[position.*].typ == tokens.tk_minus and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_integer))) {
+    if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_integer or ((token_list[position.*].typ == tokens.tk_minus or token_list[position.*].typ == tokens.tk_plus) and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_integer))) {
         var probe_position = position.*;
         const constant = try resolveIndexPredicateInteger(token_list, &probe_position);
         if (probe_position == token_list.len or token_list[probe_position].typ == tokens.tk_and or token_list[probe_position].typ == tokens.tk_or or token_list[probe_position].typ == tokens.tk_rp) {

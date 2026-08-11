@@ -291,7 +291,7 @@ int main(void){
   int additive_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE additive_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int additive_expression_first_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(1,20)",0,0,0);
   int additive_expression_second_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(2,10)",0,0,0);
-  int additive_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX additive_expression_index ON additive_expression_data((value+-5))",0,0,0);
+  int additive_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX additive_expression_index ON additive_expression_data((value + +5))",0,0,0);
   int additive_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(3,20)",0,0,0);
   int additive_expression_update_rc=sqlite3_exec(clone,"UPDATE additive_expression_data SET value=20 WHERE id=2",0,0,0);
   sqlite3_int64 additive_expression_count=-1;
@@ -734,8 +734,8 @@ int main(void){
   int float_not_between_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX float_not_between_expression_index ON float_range_expression_data(value NOT BETWEEN -1.5 AND 10.5)",0,0,0);
   int float_in_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX float_in_expression_index ON float_range_expression_data(value IN (-1.5,5.5))",0,0,0);
   int float_not_in_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX float_not_in_expression_index ON float_range_expression_data(value NOT IN (-1.5,5.5))",0,0,0);
-  int mixed_between_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX mixed_between_expression_index ON float_range_expression_data(value BETWEEN -1 AND 10.5)",0,0,0);
-  int mixed_in_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX mixed_in_expression_index ON float_range_expression_data(value IN (-1,5.5))",0,0,0);
+  int mixed_between_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX mixed_between_expression_index ON float_range_expression_data(value BETWEEN -1 AND +10.5)",0,0,0);
+  int mixed_in_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX mixed_in_expression_index ON float_range_expression_data(value IN (-1,+5.5))",0,0,0);
   printf("mixed-float-range-expression-index\t%d\t%d\n",mixed_between_expression_index_rc,mixed_in_expression_index_rc);
   int float_range_expression_second_rc=sqlite3_exec(clone,"INSERT INTO float_range_expression_data VALUES(2,6)",0,0,0);
   int float_range_expression_update_rc=sqlite3_exec(clone,"UPDATE float_range_expression_data SET value=-2 WHERE id=2",0,0,0);
@@ -862,7 +862,7 @@ int main(void){
   int partial_range_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_range_data",0,0,0);
   printf("partial-range-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\n",partial_range_table_rc,partial_range_index_rc,partial_range_outside_rc,partial_range_inside_rc,partial_range_duplicate_rc,partial_range_enter_conflict_rc,partial_range_delete_rc,partial_range_enter_rc,partial_range_count_rc,(long long)partial_range_count,partial_range_drop_rc);
   int partial_float_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_float_data(id INTEGER PRIMARY KEY,marker INTEGER,value INTEGER)",0,0,0);
-  int partial_float_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_float_index ON partial_float_data(value) WHERE marker>1.5",0,0,0);
+  int partial_float_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_float_index ON partial_float_data(value) WHERE marker>+1.5",0,0,0);
   int partial_float_reverse_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_reverse_index ON partial_float_data(value) WHERE 1.5<marker",0,0,0);
   int partial_float_eq_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_eq_index ON partial_float_data(value) WHERE marker=1.5",0,0,0);
   int partial_float_ne_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_ne_index ON partial_float_data(value) WHERE marker!=1.5",0,0,0);
