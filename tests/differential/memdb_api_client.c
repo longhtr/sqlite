@@ -406,6 +406,12 @@ int main(void){
   int mod_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX mod_expression_index ON binary_math_expression_data(mod(value,3))",0,0,0);
   int atan2_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX atan2_expression_index ON binary_math_expression_data(atan2(value,3))",0,0,0);
   int binary_log_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX binary_log_expression_index ON binary_math_expression_data(log(value,8))",0,0,0);
+  int reverse_pow_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reverse_pow_expression_index ON binary_math_expression_data(pow(3,value))",0,0,0);
+  int reverse_power_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reverse_power_expression_index ON binary_math_expression_data(power(3,value))",0,0,0);
+  int reverse_mod_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reverse_mod_expression_index ON binary_math_expression_data(mod(9,value))",0,0,0);
+  int reverse_atan2_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reverse_atan2_expression_index ON binary_math_expression_data(atan2(3,value))",0,0,0);
+  int reverse_log_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reverse_log_expression_index ON binary_math_expression_data(log(2,value))",0,0,0);
+  printf("reverse-binary-math-index\t%d\t%d\t%d\t%d\t%d\n",reverse_pow_expression_index_rc,reverse_power_expression_index_rc,reverse_mod_expression_index_rc,reverse_atan2_expression_index_rc,reverse_log_expression_index_rc);
   int binary_math_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO binary_math_expression_data VALUES(2,2)",0,0,0);
   int binary_math_expression_second_rc=sqlite3_exec(clone,"INSERT INTO binary_math_expression_data VALUES(2,4)",0,0,0);
   int binary_math_mod_duplicate_rc=sqlite3_exec(clone,"INSERT INTO binary_math_expression_data VALUES(3,5)",0,0,0);

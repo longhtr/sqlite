@@ -50,7 +50,7 @@ pub const IndexRangeComparison = struct { low: i64, high: i64, is_not: bool };
 pub const IndexMembership = struct { first: i64, second: i64, is_not: bool };
 pub const IndexSubstring = struct { start: i64, count: ?i64 };
 pub const IndexBinaryMath = enum { power, modulo, arc_tangent_two, logarithm };
-pub const IndexBinaryMathExpression = struct { operation: IndexBinaryMath, operand: i64 };
+pub const IndexBinaryMathExpression = struct { operation: IndexBinaryMath, operand: i64, column_first: bool };
 pub const IndexUnaryMath = enum {
     square_root,
     exponential,
@@ -243,12 +243,14 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
                     .real => |real| real,
                     else => unreachable,
                 };
-                const operand: f64 = @floatFromInt(expression.operand);
+                const constant: f64 = @floatFromInt(expression.operand);
+                const left = if (expression.column_first) input else constant;
+                const right = if (expression.column_first) constant else input;
                 const result = switch (expression.operation) {
-                    .power => std.math.pow(f64, input, operand),
-                    .modulo => @rem(input, operand),
-                    .arc_tangent_two => std.math.atan2(input, operand),
-                    .logarithm => if (input <= 0 or input == 1 or operand <= 0) std.math.nan(f64) else @log(operand) / @log(input),
+                    .power => std.math.pow(f64, left, right),
+                    .modulo => @rem(left, right),
+                    .arc_tangent_two => std.math.atan2(left, right),
+                    .logarithm => if (left <= 0 or left == 1 or right <= 0) std.math.nan(f64) else @log(right) / @log(left),
                 };
                 break :numeric_result if (std.math.isNan(result)) .null_ else .{ .real = result };
             },

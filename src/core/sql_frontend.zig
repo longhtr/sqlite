@@ -4598,10 +4598,10 @@ fn resolveUnaryMathIndexOperation(name: []const u8) ?btree.IndexUnaryMath {
     return null;
 }
 
-const BinaryMathIndexExpression = struct { column_name: []const u8, operation: btree.IndexBinaryMath, operand: i64, consumed: usize };
+const BinaryMathIndexExpression = struct { column_name: []const u8, operation: btree.IndexBinaryMath, operand: i64, column_first: bool, consumed: usize };
 
 fn resolveBinaryMathIndexExpression(token_list: []const Token, position: usize) ?BinaryMathIndexExpression {
-    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 2].typ != tokens.tk_id or token_list[position + 3].typ != tokens.tk_comma) return null;
+    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or token_list[position + 1].typ != tokens.tk_lp) return null;
     const operation: btree.IndexBinaryMath = if (std.ascii.eqlIgnoreCase(token_list[position].text, "pow") or std.ascii.eqlIgnoreCase(token_list[position].text, "power"))
         .power
     else if (std.ascii.eqlIgnoreCase(token_list[position].text, "mod"))
@@ -4612,10 +4612,16 @@ fn resolveBinaryMathIndexExpression(token_list: []const Token, position: usize) 
         .logarithm
     else
         return null;
-    const operand = resolveSignedIndexOperand(token_list, position + 4) orelse return null;
-    const end_position = position + 4 + operand.consumed;
-    if (end_position >= token_list.len or token_list[end_position].typ != tokens.tk_rp) return null;
-    return .{ .column_name = token_list[position + 2].text, .operation = operation, .operand = operand.value, .consumed = end_position + 1 - position };
+    if (token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_comma) {
+        const operand = resolveSignedIndexOperand(token_list, position + 4) orelse return null;
+        const end_position = position + 4 + operand.consumed;
+        if (end_position >= token_list.len or token_list[end_position].typ != tokens.tk_rp) return null;
+        return .{ .column_name = token_list[position + 2].text, .operation = operation, .operand = operand.value, .column_first = true, .consumed = end_position + 1 - position };
+    }
+    const operand = resolveSignedIndexOperand(token_list, position + 2) orelse return null;
+    const comma_position = position + 2 + operand.consumed;
+    if (comma_position + 2 >= token_list.len or token_list[comma_position].typ != tokens.tk_comma or token_list[comma_position + 1].typ != tokens.tk_id or token_list[comma_position + 2].typ != tokens.tk_rp) return null;
+    return .{ .column_name = token_list[comma_position + 1].text, .operation = operation, .operand = operand.value, .column_first = false, .consumed = comma_position + 3 - position };
 }
 
 const MinMaxIndexExpression = struct { column_name: []const u8, comparison: i64, maximum: bool, consumed: usize };
@@ -4685,7 +4691,7 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var start = position;
         if (if (schema_is_index) resolveBinaryMathIndexExpression(parsed.tokens, position) else null) |binary_math_expression| {
             scan_expression = true;
-            index_transform = .{ .binary_math = .{ .operation = binary_math_expression.operation, .operand = binary_math_expression.operand } };
+            index_transform = .{ .binary_math = .{ .operation = binary_math_expression.operation, .operand = binary_math_expression.operand, .column_first = binary_math_expression.column_first } };
             name = binary_math_expression.column_name;
         } else if (schema_is_index and position + 3 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and resolveUnaryMathIndexOperation(parsed.tokens[position].text) != null and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_rp) {
             scan_expression = true;
@@ -9249,7 +9255,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         var transform: btree.IndexTransform = .identity;
         var column_name: []const u8 = undefined;
         if (resolveBinaryMathIndexExpression(token_list, position)) |binary_math_expression| {
-            transform = .{ .binary_math = .{ .operation = binary_math_expression.operation, .operand = binary_math_expression.operand } };
+            transform = .{ .binary_math = .{ .operation = binary_math_expression.operation, .operand = binary_math_expression.operand, .column_first = binary_math_expression.column_first } };
             column_name = binary_math_expression.column_name;
             position += binary_math_expression.consumed;
         } else if (position + 3 < token_list.len and token_list[position].typ == tokens.tk_id and resolveUnaryMathIndexOperation(token_list[position].text) != null and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_rp) {
