@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-final-operation-array-transfer",
   "title": "VDBE finalized operation-array ownership transfer",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeTakeOpArray is the unique no-copy ownership boundary that finalizes labels/metadata and detaches the operation allocation from its builder Vdbe for subprogram ownership. Its preconditions, outputs and nulling mutation are atomic.",
@@ -77,7 +77,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation; source rejects sticky OOM. Preceding builder/fixup OOM paths are covered by dependency traces.",

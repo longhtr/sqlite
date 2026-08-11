@@ -77,7 +77,7 @@
     {
       "id": "vdbe-final-operation-array-transfer",
       "path": "upstream/atomic-units/vdbe-final-operation-array-transfer.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-final-label-fixup-and-program-flags",
