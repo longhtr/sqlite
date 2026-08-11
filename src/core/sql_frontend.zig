@@ -6338,13 +6338,20 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         const literal_position = operation_position + 1;
         if (literal_position >= token_list.len or token_list[literal_position].typ != tokens.tk_string) return error.Syntax;
         position.* = literal_position + 1;
+        var escape: i64 = 0;
+        if (is_like and position.* + 1 < token_list.len and token_list[position.*].typ == tokens.tk_escape) {
+            const escape_literal = token_list[position.* + 1].text;
+            if (token_list[position.* + 1].typ != tokens.tk_string or escape_literal.len != 3 or escape_literal[0] != '\'' or escape_literal[2] != '\'' or escape_literal[1] >= 0x80) return error.Syntax;
+            escape = escape_literal[1];
+            position.* += 2;
+        }
         const operation: btree.IndexPredicateOperation = if (is_glob)
             if (text_not_pattern) .text_not_glob else .text_glob
         else if (text_not_pattern)
             .text_not_like
         else
             .text_like;
-        return .{ .column_index = selected, .integer_primary_key = false, .operation = operation, .comparison_text = token_list[literal_position].text };
+        return .{ .column_index = selected, .integer_primary_key = false, .operation = operation, .comparison_value = escape, .comparison_text = token_list[literal_position].text };
     }
     const text_not_between = position.* < token_list.len and token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_between;
     if (!boolean_negated and text_column and text_collation != null and position.* < token_list.len and (token_list[position.*].typ == tokens.tk_between or text_not_between)) {

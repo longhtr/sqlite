@@ -747,29 +747,31 @@ fn indexPredicateGlobClass(input: u8, literal: []const u8, position: usize) ?Ind
     return null;
 }
 
-fn indexPredicatePatternMatch(value: []const u8, value_position: usize, literal: []const u8, literal_position: usize, match_all: u8, match_one: u8, no_case: bool) bool {
-    const pattern = indexPredicateLiteralByte(literal, literal_position) orelse return value_position == value.len;
-    if (match_all == '*' and pattern.byte == '[') {
+fn indexPredicatePatternMatch(value: []const u8, value_position: usize, literal: []const u8, literal_position: usize, match_all: u8, match_one: u8, no_case: bool, escape: u8) bool {
+    var pattern = indexPredicateLiteralByte(literal, literal_position) orelse return value_position == value.len;
+    const escaped = escape != 0 and pattern.byte == escape;
+    if (escaped) pattern = indexPredicateLiteralByte(literal, pattern.next) orelse return false;
+    if (!escaped and match_all == '*' and pattern.byte == '[') {
         if (value_position == value.len) return false;
         const class = indexPredicateGlobClass(value[value_position], literal, pattern.next) orelse return false;
-        return class.matches and indexPredicatePatternMatch(value, value_position + 1, literal, class.next, match_all, match_one, no_case);
+        return class.matches and indexPredicatePatternMatch(value, value_position + 1, literal, class.next, match_all, match_one, no_case, escape);
     }
-    if (pattern.byte == match_all) {
+    if (!escaped and pattern.byte == match_all) {
         var probe = value_position;
         while (true) {
-            if (indexPredicatePatternMatch(value, probe, literal, pattern.next, match_all, match_one, no_case)) return true;
+            if (indexPredicatePatternMatch(value, probe, literal, pattern.next, match_all, match_one, no_case, escape)) return true;
             if (probe == value.len) return false;
             probe = indexPredicateUtf8Next(value, probe);
         }
     }
-    if (pattern.byte == match_one) {
+    if (!escaped and pattern.byte == match_one) {
         if (value_position == value.len) return false;
-        return indexPredicatePatternMatch(value, indexPredicateUtf8Next(value, value_position), literal, pattern.next, match_all, match_one, no_case);
+        return indexPredicatePatternMatch(value, indexPredicateUtf8Next(value, value_position), literal, pattern.next, match_all, match_one, no_case, escape);
     }
     if (value_position == value.len) return false;
     const value_byte = value[value_position];
     const equal = value_byte == pattern.byte or (no_case and value_byte < 0x80 and pattern.byte < 0x80 and std.ascii.toLower(value_byte) == std.ascii.toLower(pattern.byte));
-    return equal and indexPredicatePatternMatch(value, value_position + 1, literal, pattern.next, match_all, match_one, no_case);
+    return equal and indexPredicatePatternMatch(value, value_position + 1, literal, pattern.next, match_all, match_one, no_case, escape);
 }
 
 fn indexPredicateTextOrder(value: []const u8, literal: []const u8, collation: IndexPredicateTextCollation) ?std.math.Order {
@@ -815,7 +817,7 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
                 else => return false,
             };
             const glob = predicate.operation == .text_glob or predicate.operation == .text_not_glob;
-            const matches = indexPredicatePatternMatch(text, 0, predicate.comparison_text, 1, if (glob) '*' else '%', if (glob) '?' else '_', !glob);
+            const matches = indexPredicatePatternMatch(text, 0, predicate.comparison_text, 1, if (glob) '*' else '%', if (glob) '?' else '_', !glob, if (glob) 0 else @intCast(predicate.comparison_value));
             return if (predicate.operation == .text_like or predicate.operation == .text_glob) matches else !matches;
         },
         .text_between, .text_not_between => {
