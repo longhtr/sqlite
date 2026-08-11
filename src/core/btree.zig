@@ -550,7 +550,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     };
 }
 
-pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, real_eq, real_ne, real_lt, real_le, real_gt, real_ge, real_is, real_is_not, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not, text_lt, text_le, text_gt, text_ge, text_between, text_not_between };
+pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, real_eq, real_ne, real_lt, real_le, real_gt, real_ge, real_is, real_is_not, real_between, real_not_between, real_in, real_not_in, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not, text_lt, text_le, text_gt, text_ge, text_between, text_not_between };
 
 pub const IndexPredicateTextCollation = enum { binary, nocase, rtrim };
 
@@ -561,6 +561,7 @@ pub const IndexPredicateTerm = struct {
     comparison_value: i64 = 0,
     comparison_value_high: i64 = 0,
     comparison_real: f64 = 0,
+    comparison_real_high: f64 = 0,
     comparison_text: []const u8 = "",
     comparison_text_high: []const u8 = "",
     text_collation: IndexPredicateTextCollation = .binary,
@@ -688,6 +689,23 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
             };
             const between = orders[0] != .lt and orders[1] != .gt;
             return if (predicate.operation == .integer_between) between else !between;
+        },
+        .real_in, .real_not_in => {
+            const matches = switch (value) {
+                .integer => |integer| @as(f64, @floatFromInt(integer)) == predicate.comparison_real or @as(f64, @floatFromInt(integer)) == predicate.comparison_real_high,
+                .real => |real| real == predicate.comparison_real or real == predicate.comparison_real_high,
+                else => return false,
+            };
+            return if (predicate.operation == .real_in) matches else !matches;
+        },
+        .real_between, .real_not_between => {
+            const real = switch (value) {
+                .integer => |integer| @as(f64, @floatFromInt(integer)),
+                .real => |number| number,
+                else => return false,
+            };
+            const between = real >= predicate.comparison_real and real <= predicate.comparison_real_high;
+            return if (predicate.operation == .real_between) between else !between;
         },
         .real_is, .real_is_not => {
             const matches = switch (value) {

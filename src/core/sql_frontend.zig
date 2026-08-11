@@ -6152,6 +6152,15 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
             position.* += if (not_in) 2 else 1;
             if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_lp) return error.Syntax;
             position.* += 1;
+            if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or (token_list[position.*].typ == tokens.tk_minus and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
+                const first_real = try resolveIndexPredicateFloat(token_list, position);
+                if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_comma) return error.Syntax;
+                position.* += 1;
+                const second_real = try resolveIndexPredicateFloat(token_list, position);
+                if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_rp) return error.Syntax;
+                position.* += 1;
+                return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (not_in) .real_not_in else .real_in, .comparison_real = first_real, .comparison_real_high = second_real };
+            }
             const first_value = try resolveIndexPredicateInteger(token_list, position);
             if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_comma) return error.Syntax;
             position.* += 1;
@@ -6163,6 +6172,13 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         const not_between = token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_between;
         if (token_list[position.*].typ == tokens.tk_between or not_between) {
             position.* += if (not_between) 2 else 1;
+            if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or (token_list[position.*].typ == tokens.tk_minus and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
+                const low_real = try resolveIndexPredicateFloat(token_list, position);
+                if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_and) return error.Syntax;
+                position.* += 1;
+                const high_real = try resolveIndexPredicateFloat(token_list, position);
+                return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (not_between) .real_not_between else .real_between, .comparison_real = low_real, .comparison_real_high = high_real };
+            }
             const low = try resolveIndexPredicateInteger(token_list, position);
             if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_and) return error.Syntax;
             position.* += 1;
