@@ -3612,6 +3612,7 @@ fn jsonVirtualRowid(pointer: ?*anyopaque, output: *i64) ResultCode {
 const json_virtual_source_template: vdbe.VirtualSource = .{ .context = null, .open = jsonVirtualOpen, .close = jsonVirtualClose, .filter = jsonVirtualFilter, .next = jsonVirtualNext, .eof = jsonVirtualEof, .column = jsonVirtualColumn, .rowid = jsonVirtualRowid };
 
 const TransactionOperation = enum { begin, commit, rollback };
+const ReindexTarget = enum { index, table, collation };
 
 const ProgramAction = union(enum) {
     attach_database: struct { connection: *Connection, filename: []const u8, name: []const u8 },
@@ -3622,7 +3623,7 @@ const ProgramAction = union(enum) {
     virtual_drop: struct { connection: *Connection, schema_name: []const u8, name: []const u8 },
     drop: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
     drop_index: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
-    reindex: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, table: bool },
+    reindex: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, target: ReindexTarget },
     insert: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, column_count: usize, integer_primary_key: ?usize, replace: bool, conflict_ignore: bool },
     update: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, target_column: usize, target_integer_primary_key: bool, foreign_key_old_mask: u32 },
     delete: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, foreign_key_old_mask: u32 },
@@ -5644,6 +5645,98 @@ fn reindexTableIndexes(connection: *Connection, database: *btree.Database, table
         matched = true;
     }
     return if (matched) .ok else .error_;
+}
+
+const IndexCollationMatchOutcome = struct { result: ResultCode, matches: bool = false };
+
+fn indexSchemaUsesCollation(connection: *Connection, database: *btree.Database, sql: []const u8, wanted: []const u8) IndexCollationMatchOutcome {
+    const index_columns = resolveColumns(connection.allocator, sql) catch |err| return .{ .result = if (err == error.OutOfMemory) .no_memory else .corrupt };
+    defer {
+        connection.allocator.free(index_columns.columns);
+        connection.allocator.free(index_columns.tokens);
+        connection.allocator.free(index_columns.source);
+    }
+    var on_position: usize = 0;
+    while (on_position < index_columns.tokens.len and index_columns.tokens[on_position].typ != tokens.tk_on) : (on_position += 1) {}
+    if (on_position + 1 >= index_columns.tokens.len or index_columns.tokens[on_position + 1].typ != tokens.tk_id) return .{ .result = .corrupt };
+    const table_outcome = database.schemaTable(index_columns.tokens[on_position + 1].text);
+    if (table_outcome.result != .ok) return .{ .result = table_outcome.result };
+    var table = table_outcome.table.?;
+    defer table.deinit();
+    const table_columns = resolveColumns(connection.allocator, table.sql) catch |err| return .{ .result = if (err == error.OutOfMemory) .no_memory else .corrupt };
+    defer {
+        connection.allocator.free(table_columns.columns);
+        connection.allocator.free(table_columns.tokens);
+        connection.allocator.free(table_columns.source);
+    }
+    for (index_columns.columns) |index_column| {
+        const column_index = resolvedColumnIndex(table_columns.columns, index_column.name) orelse return .{ .result = .corrupt };
+        const effective = if (index_column.explicit_collation) index_column.collation else table_columns.columns[column_index].collation;
+        if (std.ascii.eqlIgnoreCase(effective, wanted)) return .{ .result = .ok, .matches = true };
+    }
+    return .{ .result = .ok };
+}
+
+fn reindexCollationDatabase(connection: *Connection, database: *btree.Database, collation_name: []const u8) ResultCode {
+    const opened = database.openCursor(1, .table);
+    if (opened.result != .ok) return opened.result;
+    var cursor = opened.cursor.?;
+    defer cursor.deinit();
+    for (cursor.entries.items) |entry| {
+        const decoded = btree.decodeRecord(connection.allocator, entry.payload);
+        if (decoded.result != .ok) return decoded.result;
+        var record = decoded.record.?;
+        defer record.deinit();
+        if (record.values.len < 5) continue;
+        const object_type = schemaEntryText(record.values[0]) orelse continue;
+        const name = schemaEntryText(record.values[1]) orelse continue;
+        const sql = schemaEntryText(record.values[4]) orelse continue;
+        if (!std.ascii.eqlIgnoreCase(object_type, "index")) continue;
+        const matches = indexSchemaUsesCollation(connection, database, sql, collation_name);
+        if (matches.result != .ok) return matches.result;
+        if (!matches.matches) continue;
+        const refilled = reindexSecondaryIndex(connection, database, name);
+        if (refilled != .ok) return refilled;
+    }
+    return .ok;
+}
+
+fn reindexCollationInDatabase(connection: *Connection, database: *btree.Database, name: []const u8) ResultCode {
+    const enlisted = enlistTransactionDatabase(connection, database);
+    if (enlisted != .ok) return enlisted;
+    const begun = database.beginStatementBatch();
+    if (begun != .ok) return begun;
+    var batch_active = true;
+    defer if (batch_active) {
+        _ = database.rollbackStatementBatch();
+    };
+    const refilled = reindexCollationDatabase(connection, database, name);
+    if (refilled != .ok) return refilled;
+    const committed = database.commitStatementBatch();
+    batch_active = false;
+    return committed;
+}
+
+fn reindexCollationConnection(connection: *Connection, name: []const u8) ResultCode {
+    if (connection.database) |database| {
+        const result = reindexCollationInDatabase(connection, database, name);
+        if (result != .ok) return result;
+    }
+    if (connection.temp_database) |temporary| {
+        if (temporary.database) |*database| {
+            const result = reindexCollationInDatabase(connection, database, name);
+            if (result != .ok) return result;
+        }
+    }
+    if (connection.attachments) |*attachments| {
+        for (attachments.databases.items[2..]) |attached| {
+            const located = locateDatabase(connection, attached.name);
+            if (located.result != .ok) return located.result;
+            const result = reindexCollationInDatabase(connection, located.database.?, name);
+            if (result != .ok) return result;
+        }
+    }
+    return .ok;
 }
 
 fn clearForeignKeyActionAllocations(connection: *Connection) void {
@@ -8163,6 +8256,10 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
         .reindex => |action| blk: {
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
+            if (action.target == .collation) {
+                const refilled = reindexCollationConnection(action.connection, action.name);
+                break :blk action.connection.afterWrite(refilled, null, action.schema_name, action.name, 0);
+            }
             const enlisted = enlistTransactionDatabase(action.connection, action.database);
             if (enlisted != .ok) break :blk enlisted;
             const begin = action.database.beginStatementBatch();
@@ -8171,7 +8268,11 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             defer if (batch_active) {
                 _ = action.database.rollbackStatementBatch();
             };
-            const refilled = if (action.table) reindexTableIndexes(action.connection, action.database, action.name) else reindexSecondaryIndex(action.connection, action.database, action.name);
+            const refilled = switch (action.target) {
+                .index => reindexSecondaryIndex(action.connection, action.database, action.name),
+                .table => reindexTableIndexes(action.connection, action.database, action.name),
+                .collation => unreachable,
+            };
             if (refilled != .ok) break :blk refilled;
             const committed = action.database.commitStatementBatch();
             batch_active = false;
@@ -8768,7 +8869,7 @@ fn compileReindex(connection: *Connection, source: [:0]u8, token_list: []const T
     const located = locateIndexWithDatabase(connection, index_name, requested_schema);
     var database: *btree.Database = undefined;
     var schema_name: []const u8 = undefined;
-    var table_target = false;
+    var target: ReindexTarget = .index;
     if (located.result == .ok) {
         database = located.database.?;
         schema_name = located.schema_name;
@@ -8776,15 +8877,25 @@ fn compileReindex(connection: *Connection, source: [:0]u8, token_list: []const T
         schema_index.deinit();
     } else if (located.result == .not_found) {
         const table = locateTableWithDatabase(connection, index_name, requested_schema);
-        if (table.result != .ok) {
+        if (table.result == .ok) {
+            database = table.database.?;
+            schema_name = table.schema_name;
+            var schema_table = table.table.?;
+            schema_table.deinit();
+            target = .table;
+        } else if (table.result == .not_found and requested_schema == null and indexCollation(connection, index_name) != null) {
+            const main = locateDatabase(connection, null);
+            if (main.result != .ok) {
+                allocator.free(source);
+                return .{ .result = main.result, .consumed = consumed };
+            }
+            database = main.database.?;
+            schema_name = "main";
+            target = .collation;
+        } else {
             allocator.free(source);
             return .{ .result = if (table.result == .not_found) .error_ else table.result, .consumed = consumed };
         }
-        database = table.database.?;
-        schema_name = table.schema_name;
-        var schema_table = table.table.?;
-        schema_table.deinit();
-        table_target = true;
     } else {
         allocator.free(source);
         return .{ .result = located.result, .consumed = consumed };
@@ -8802,7 +8913,7 @@ fn compileReindex(connection: *Connection, source: [:0]u8, token_list: []const T
     const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
     instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
     instructions[1] = .{ .opcode = .halt };
-    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .reindex = .{ .connection = connection, .database = database, .schema_name = schema_name, .name = index_name, .table = table_target } }, .program = .{ .instructions = instructions, .register_count = 1 } };
+    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .reindex = .{ .connection = connection, .database = database, .schema_name = schema_name, .name = index_name, .target = target } }, .program = .{ .instructions = instructions, .register_count = 1 } };
     owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
     owner.program.functions = owner.functions[0..];
     const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
