@@ -46,6 +46,7 @@ pub const IndexComparisonOperation = enum { eq, ne, lt, le, gt, ge };
 pub const IndexComparison = struct { operation: IndexComparisonOperation, value: i64 };
 pub const IndexIsComparison = struct { value: i64, is_not: bool };
 pub const IndexRangeComparison = struct { low: i64, high: i64, is_not: bool };
+pub const IndexMembership = struct { first: i64, second: i64, is_not: bool };
 pub const IndexTransform = union(enum) {
     identity,
     numeric_negate,
@@ -66,6 +67,7 @@ pub const IndexTransform = union(enum) {
     integer_compare: IndexComparison,
     integer_is: IndexIsComparison,
     integer_between: IndexRangeComparison,
+    integer_in: IndexMembership,
 };
 
 fn numericIndexValue(value: Value) Value {
@@ -169,6 +171,18 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
         .integer_bit_or => |mask| .{ .integer = (integerIndexValue(numeric) orelse return .null_) | mask },
         .integer_shift_left => |amount| .{ .integer = shiftIndexInteger(integerIndexValue(numeric) orelse return .null_, amount, true) },
         .integer_shift_right => |amount| .{ .integer = shiftIndexInteger(integerIndexValue(numeric) orelse return .null_, amount, false) },
+        .integer_in => |membership| switch (numeric) {
+            .null_ => .null_,
+            .integer => |integer| {
+                const matches = integer == membership.first or integer == membership.second;
+                return .{ .integer = @intFromBool(if (membership.is_not) !matches else matches) };
+            },
+            .real => |real| {
+                const matches = real == @as(f64, @floatFromInt(membership.first)) or real == @as(f64, @floatFromInt(membership.second));
+                return .{ .integer = @intFromBool(if (membership.is_not) !matches else matches) };
+            },
+            .text, .blob => unreachable,
+        },
         .integer_between => |comparison| switch (numeric) {
             .null_ => .null_,
             .integer => |integer| {

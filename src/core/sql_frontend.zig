@@ -4509,6 +4509,22 @@ fn isTableConstraintStart(token_type: u16) bool {
         token_type == tokens.tk_foreign;
 }
 
+const IntegerInIndexExpression = struct { first: i64, second: i64, is_not: bool, consumed: usize };
+
+fn resolveIntegerInIndexExpression(token_list: []const Token, position: usize) ?IntegerInIndexExpression {
+    if (position >= token_list.len) return null;
+    const is_not = token_list[position].typ == tokens.tk_not;
+    const in_position = position + @intFromBool(is_not);
+    if (in_position + 1 >= token_list.len or token_list[in_position].typ != tokens.tk_in or token_list[in_position + 1].typ != tokens.tk_lp) return null;
+    const first = resolveSignedIndexOperand(token_list, in_position + 2) orelse return null;
+    const comma_position = in_position + 2 + first.consumed;
+    if (comma_position >= token_list.len or token_list[comma_position].typ != tokens.tk_comma) return null;
+    const second = resolveSignedIndexOperand(token_list, comma_position + 1) orelse return null;
+    const close_position = comma_position + 1 + second.consumed;
+    if (close_position >= token_list.len or token_list[close_position].typ != tokens.tk_rp) return null;
+    return .{ .first = first.value, .second = second.value, .is_not = is_not, .consumed = close_position + 1 - position };
+}
+
 const IntegerBetweenIndexExpression = struct { low: i64, high: i64, is_not: bool, consumed: usize };
 
 fn resolveIntegerBetweenIndexExpression(token_list: []const Token, position: usize) ?IntegerBetweenIndexExpression {
@@ -4702,6 +4718,14 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
                 if (operand_position + resolved_operand.consumed == position) {
                     scan_expression = true;
                     index_transform = .{ .integer_is = .{ .value = resolved_operand.value, .is_not = is_not } };
+                }
+            }
+        }
+        if (schema_is_index and !scan_expression) {
+            if (resolveIntegerInIndexExpression(parsed.tokens, start + 1)) |in_expression| {
+                if (start + 1 + in_expression.consumed == position) {
+                    scan_expression = true;
+                    index_transform = .{ .integer_in = .{ .first = in_expression.first, .second = in_expression.second, .is_not = in_expression.is_not } };
                 }
             }
         }
@@ -9179,6 +9203,15 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             .identity => true,
             else => false,
         }) {
+            if (resolveIntegerInIndexExpression(token_list, position)) |in_expression| {
+                transform = .{ .integer_in = .{ .first = in_expression.first, .second = in_expression.second, .is_not = in_expression.is_not } };
+                position += in_expression.consumed;
+            }
+        }
+        if (switch (transform) {
+            .identity => true,
+            else => false,
+        }) {
             if (resolveIntegerBetweenIndexExpression(token_list, position)) |between_expression| {
                 transform = .{ .integer_between = .{ .low = between_expression.low, .high = between_expression.high, .is_not = between_expression.is_not } };
                 position += between_expression.consumed;
@@ -9306,7 +9339,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         };
         const transformed = switch (specified_transforms.items[selected_position]) {
             .identity, .is_null, .is_not_null, .null_coalesce_integer => false,
-            .numeric_negate, .numeric_abs, .numeric_not, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_compare, .integer_is, .integer_between => true,
+            .numeric_negate, .numeric_abs, .numeric_not, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_compare, .integer_is, .integer_between, .integer_in => true,
         };
         if (transformed and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
             allocator.free(source);
