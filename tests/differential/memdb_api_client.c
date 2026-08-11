@@ -485,6 +485,11 @@ int main(void){
   int trim_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX trim_expression_index ON trim_expression_data(trim(value))",0,0,0);
   int ltrim_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX ltrim_expression_index ON trim_expression_data(ltrim(value))",0,0,0);
   int rtrim_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX rtrim_expression_index ON trim_expression_data(rtrim(value))",0,0,0);
+  int trim_null_second_index_rc=sqlite3_exec(clone,"CREATE INDEX trim_null_second_index ON trim_expression_data(trim(value,NULL))",0,0,0);
+  int trim_null_first_index_rc=sqlite3_exec(clone,"CREATE INDEX trim_null_first_index ON trim_expression_data(trim(NULL,value))",0,0,0);
+  int ltrim_null_second_index_rc=sqlite3_exec(clone,"CREATE INDEX ltrim_null_second_index ON trim_expression_data(ltrim(value,NULL))",0,0,0);
+  int rtrim_null_first_index_rc=sqlite3_exec(clone,"CREATE INDEX rtrim_null_first_index ON trim_expression_data(rtrim(NULL,value))",0,0,0);
+  printf("trim-null-expression-index\t%d\t%d\t%d\t%d\n",trim_null_second_index_rc,trim_null_first_index_rc,ltrim_null_second_index_rc,rtrim_null_first_index_rc);
   int trim_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO trim_expression_data VALUES(2,'alpha')",0,0,0);
   int trim_expression_second_rc=sqlite3_exec(clone,"INSERT INTO trim_expression_data VALUES(2,' beta ')",0,0,0);
   int trim_expression_update_rc=sqlite3_exec(clone,"UPDATE trim_expression_data SET value='alpha ' WHERE id=2",0,0,0);
