@@ -4509,6 +4509,23 @@ fn isTableConstraintStart(token_type: u16) bool {
         token_type == tokens.tk_foreign;
 }
 
+const IfnullIndexExpression = struct {
+    column_name: []const u8,
+    replacement: i64,
+    consumed: usize,
+};
+
+fn resolveIfnullIndexExpression(token_list: []const Token, position: usize) ?IfnullIndexExpression {
+    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or !std.ascii.eqlIgnoreCase(token_list[position].text, "ifnull") or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 2].typ != tokens.tk_id or token_list[position + 3].typ != tokens.tk_comma) return null;
+    var literal_position = position + 4;
+    const negative = token_list[literal_position].typ == tokens.tk_minus;
+    if (negative) literal_position += 1;
+    if (literal_position >= token_list.len or token_list[literal_position].typ != tokens.tk_integer or literal_position + 1 >= token_list.len or token_list[literal_position + 1].typ != tokens.tk_rp) return null;
+    var replacement = std.fmt.parseInt(i64, token_list[literal_position].text, 10) catch return null;
+    if (negative) replacement = -replacement;
+    return .{ .column_name = token_list[position + 2].text, .replacement = replacement, .consumed = literal_position + 2 - position };
+}
+
 fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { source: [:0]u8, tokens: []Token, columns: []ResolvedColumn } {
     const source = try allocator.dupeZ(u8, sql);
     errdefer allocator.free(source);
@@ -4547,10 +4564,10 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var index_transform: btree.IndexTransform = .identity;
         var name: []const u8 = undefined;
         var start = position;
-        if (schema_is_index and position + 5 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "ifnull") and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_comma and parsed.tokens[position + 4].typ == tokens.tk_integer and parsed.tokens[position + 5].typ == tokens.tk_rp) {
+        if (if (schema_is_index) resolveIfnullIndexExpression(parsed.tokens, position) else null) |ifnull_expression| {
             scan_expression = true;
-            index_transform = .{ .null_coalesce_integer = std.fmt.parseInt(i64, parsed.tokens[position + 4].text, 10) catch return error.Syntax };
-            name = parsed.tokens[position + 2].text;
+            index_transform = .{ .null_coalesce_integer = ifnull_expression.replacement };
+            name = ifnull_expression.column_name;
         } else if (schema_is_index and position + 3 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "abs") and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_rp) {
             scan_expression = true;
             index_transform = .numeric_abs;
@@ -8998,14 +9015,10 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if (wrapped_expression) position += 1;
         var transform: btree.IndexTransform = .identity;
         var column_name: []const u8 = undefined;
-        if (position + 5 < token_list.len and token_list[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(token_list[position].text, "ifnull") and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_comma and token_list[position + 4].typ == tokens.tk_integer and token_list[position + 5].typ == tokens.tk_rp) {
-            const replacement = std.fmt.parseInt(i64, token_list[position + 4].text, 10) catch {
-                allocator.free(source);
-                return .{ .result = .error_, .consumed = consumed };
-            };
-            transform = .{ .null_coalesce_integer = replacement };
-            column_name = token_list[position + 2].text;
-            position += 6;
+        if (resolveIfnullIndexExpression(token_list, position)) |ifnull_expression| {
+            transform = .{ .null_coalesce_integer = ifnull_expression.replacement };
+            column_name = ifnull_expression.column_name;
+            position += ifnull_expression.consumed;
         } else if (position + 3 < token_list.len and token_list[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(token_list[position].text, "abs") and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_rp) {
             transform = .numeric_abs;
             column_name = token_list[position + 2].text;

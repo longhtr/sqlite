@@ -324,8 +324,8 @@ int main(void){
   printf("absolute-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",absolute_expression_table_rc,absolute_expression_first_rc,absolute_expression_index_rc,absolute_expression_conflict_rc,absolute_expression_second_rc,absolute_expression_update_rc,absolute_expression_count_rc,(long long)absolute_expression_count,absolute_expression_reindex_rc,absolute_expression_drop_rc);
   int ifnull_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE ifnull_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int ifnull_expression_first_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(1,NULL)",0,0,0);
-  int ifnull_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX ifnull_expression_index ON ifnull_expression_data(ifnull(value,0))",0,0,0);
-  int ifnull_expression_conflict_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(2,0)",0,0,0);
+  int ifnull_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX ifnull_expression_index ON ifnull_expression_data(ifnull(value,-1))",0,0,0);
+  int ifnull_expression_conflict_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(2,-1)",0,0,0);
   int ifnull_expression_second_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(2,1)",0,0,0);
   int ifnull_expression_update_rc=sqlite3_exec(clone,"UPDATE ifnull_expression_data SET value=NULL WHERE id=2",0,0,0);
   sqlite3_int64 ifnull_expression_count=-1;
