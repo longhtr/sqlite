@@ -67,7 +67,7 @@
     {
       "id": "vdbe-connection-change-expiration-and-access-metadata",
       "path": "upstream/atomic-units/vdbe-connection-change-expiration-and-access-metadata.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-creation-connection-linkage-and-parse-ownership",

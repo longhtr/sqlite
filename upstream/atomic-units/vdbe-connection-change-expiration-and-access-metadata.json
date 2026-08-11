@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-connection-change-expiration-and-access-metadata",
   "title": "VDBE connection changes, statement expiration, and metadata access",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These source helpers are the small connection/statement metadata boundary: publish connection changes, opt a statement into change counting, expire all linked statements with immediate/advisory strength, expose db/preparation flags, and reset the step result. They operate on the same exact linked Vdbe state.",
@@ -117,7 +117,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation or OOM behavior.",
