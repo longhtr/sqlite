@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-immediate-and-deferred-foreign-key-commit-guards",
   "title": "VDBE immediate and deferred foreign-key commit guards",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These guards convert outstanding immediate or connection-deferred foreign-key counts into the exact VDBE constraint state, abort policy, fixed error message, and prepare-mode-dependent return code used by halt/commit.",
@@ -99,7 +99,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Deterministic no-lookaside message-allocation failure preserves rc/action/return while publishing null and sticky OOM.",

@@ -47,7 +47,7 @@
     {
       "id": "vdbe-immediate-and-deferred-foreign-key-commit-guards",
       "path": "upstream/atomic-units/vdbe-immediate-and-deferred-foreign-key-commit-guards.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-label-resolution-progress-and-reuse",
