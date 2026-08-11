@@ -4684,6 +4684,23 @@ fn resolveBinaryMathIndexExpression(token_list: []const Token, position: usize) 
     return .{ .column_name = token_list[comma_position + 1].text, .operation = operation, .operand = operand.value, .column_first = false, .consumed = comma_position + 3 - position };
 }
 
+const RealMinMaxIndexExpression = struct { column_name: []const u8, comparison: f64, maximum: bool, column_first: bool, consumed: usize };
+
+fn resolveRealMinMaxIndexExpression(token_list: []const Token, position: usize) ?RealMinMaxIndexExpression {
+    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "min") and !std.ascii.eqlIgnoreCase(token_list[position].text, "max")) or token_list[position + 1].typ != tokens.tk_lp) return null;
+    const maximum = std.ascii.eqlIgnoreCase(token_list[position].text, "max");
+    if (token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_comma) {
+        const comparison = resolveSignedFloatIndexOperand(token_list, position + 4) orelse return null;
+        const end_position = position + 4 + comparison.consumed;
+        if (end_position >= token_list.len or token_list[end_position].typ != tokens.tk_rp) return null;
+        return .{ .column_name = token_list[position + 2].text, .comparison = comparison.value, .maximum = maximum, .column_first = true, .consumed = end_position + 1 - position };
+    }
+    const comparison = resolveSignedFloatIndexOperand(token_list, position + 2) orelse return null;
+    const comma_position = position + 2 + comparison.consumed;
+    if (comma_position + 2 >= token_list.len or token_list[comma_position].typ != tokens.tk_comma or token_list[comma_position + 1].typ != tokens.tk_id or token_list[comma_position + 2].typ != tokens.tk_rp) return null;
+    return .{ .column_name = token_list[comma_position + 1].text, .comparison = comparison.value, .maximum = maximum, .column_first = false, .consumed = comma_position + 3 - position };
+}
+
 const MinMaxIndexExpression = struct { column_name: []const u8, comparison: i64, maximum: bool, column_first: bool, consumed: usize };
 
 fn resolveMinMaxIndexExpression(token_list: []const Token, position: usize) ?MinMaxIndexExpression {
@@ -4928,6 +4945,10 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             scan_expression = true;
             index_transform = .{ .unary_math = resolveUnaryMathIndexOperation(parsed.tokens[position].text).? };
             name = parsed.tokens[position + 2].text;
+        } else if (if (schema_is_index) resolveRealMinMaxIndexExpression(parsed.tokens, position) else null) |real_min_max_expression| {
+            scan_expression = true;
+            index_transform = if (real_min_max_expression.maximum) .{ .scalar_max_real = .{ .comparison = real_min_max_expression.comparison, .column_first = real_min_max_expression.column_first } } else .{ .scalar_min_real = .{ .comparison = real_min_max_expression.comparison, .column_first = real_min_max_expression.column_first } };
+            name = real_min_max_expression.column_name;
         } else if (if (schema_is_index) resolveMinMaxIndexExpression(parsed.tokens, position) else null) |min_max_expression| {
             scan_expression = true;
             index_transform = if (min_max_expression.maximum) .{ .scalar_max_integer = .{ .comparison = min_max_expression.comparison, .column_first = min_max_expression.column_first } } else .{ .scalar_min_integer = .{ .comparison = min_max_expression.comparison, .column_first = min_max_expression.column_first } };
@@ -9808,6 +9829,10 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             transform = .{ .unary_math = resolveUnaryMathIndexOperation(token_list[position].text).? };
             column_name = token_list[position + 2].text;
             position += 4;
+        } else if (resolveRealMinMaxIndexExpression(token_list, position)) |real_min_max_expression| {
+            transform = if (real_min_max_expression.maximum) .{ .scalar_max_real = .{ .comparison = real_min_max_expression.comparison, .column_first = real_min_max_expression.column_first } } else .{ .scalar_min_real = .{ .comparison = real_min_max_expression.comparison, .column_first = real_min_max_expression.column_first } };
+            column_name = real_min_max_expression.column_name;
+            position += real_min_max_expression.consumed;
         } else if (resolveMinMaxIndexExpression(token_list, position)) |min_max_expression| {
             transform = if (min_max_expression.maximum) .{ .scalar_max_integer = .{ .comparison = min_max_expression.comparison, .column_first = min_max_expression.column_first } } else .{ .scalar_min_integer = .{ .comparison = min_max_expression.comparison, .column_first = min_max_expression.column_first } };
             column_name = min_max_expression.column_name;
@@ -10061,7 +10086,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         };
         const numeric_transform = switch (specified_transforms.items[selected_position]) {
             .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .constant_null, .constant_integer, .null_coalesce_integer, .null_if_integer, .reverse_null_if_integer => false,
-            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .real_compare, .real_arithmetic, .real_is, .integer_is, .integer_between, .real_between, .integer_in, .real_in, .scalar_min_integer, .scalar_max_integer, .unary_math, .binary_math => true,
+            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .real_compare, .real_arithmetic, .real_is, .integer_is, .integer_between, .real_between, .integer_in, .real_in, .scalar_min_integer, .scalar_max_integer, .scalar_min_real, .scalar_max_real, .unary_math, .binary_math => true,
         };
         if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
             allocator.free(source);

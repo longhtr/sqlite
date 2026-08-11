@@ -56,6 +56,7 @@ pub const IndexMembership = struct { first: i64, second: i64, is_not: bool };
 pub const IndexRealMembership = struct { first: f64, second: f64, is_not: bool };
 pub const IndexSubstring = struct { start: i64, count: ?i64 };
 pub const IndexScalarMinMax = struct { comparison: i64, column_first: bool };
+pub const IndexScalarMinMaxReal = struct { comparison: f64, column_first: bool };
 pub const IndexBinaryMath = enum { power, modulo, arc_tangent_two, logarithm };
 pub const IndexBinaryMathExpression = struct { operation: IndexBinaryMath, operand: i64, column_first: bool };
 pub const IndexUnaryMath = enum {
@@ -110,6 +111,8 @@ pub const IndexTransform = union(enum) {
     reverse_null_if_integer: i64,
     scalar_min_integer: IndexScalarMinMax,
     scalar_max_integer: IndexScalarMinMax,
+    scalar_min_real: IndexScalarMinMaxReal,
+    scalar_max_real: IndexScalarMinMaxReal,
     integer_add: i64,
     integer_reverse_subtract: i64,
     integer_multiply: i64,
@@ -406,6 +409,18 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .real => |real| if (real == @as(f64, @floatFromInt(comparison))) .null_ else .{ .integer = comparison },
             .null_, .text, .blob => .{ .integer = comparison },
         },
+        .scalar_min_real => |expression| return switch (value) {
+            .null_ => .null_,
+            .integer => |integer| if (if (expression.column_first) @as(f64, @floatFromInt(integer)) < expression.comparison else @as(f64, @floatFromInt(integer)) <= expression.comparison) value else .{ .real = expression.comparison },
+            .real => |real| if (if (expression.column_first) real < expression.comparison else real <= expression.comparison) value else .{ .real = expression.comparison },
+            .text, .blob => .{ .real = expression.comparison },
+        },
+        .scalar_max_real => |expression| return switch (value) {
+            .null_ => .null_,
+            .integer => |integer| if (if (expression.column_first) @as(f64, @floatFromInt(integer)) >= expression.comparison else @as(f64, @floatFromInt(integer)) > expression.comparison) value else .{ .real = expression.comparison },
+            .real => |real| if (if (expression.column_first) real >= expression.comparison else real > expression.comparison) value else .{ .real = expression.comparison },
+            .text, .blob => value,
+        },
         .scalar_min_integer => |expression| return switch (value) {
             .null_ => .null_,
             .integer => |integer| if (if (expression.column_first) integer < expression.comparison else integer <= expression.comparison) value else .{ .integer = expression.comparison },
@@ -422,7 +437,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     }
     const numeric = numericIndexValue(value);
     return switch (transform) {
-        .identity, .is_null, .is_not_null, .constant_null, .constant_integer, .null_coalesce_integer, .null_if_integer, .reverse_null_if_integer, .scalar_min_integer, .scalar_max_integer, .substring => unreachable,
+        .identity, .is_null, .is_not_null, .constant_null, .constant_integer, .null_coalesce_integer, .null_if_integer, .reverse_null_if_integer, .scalar_min_integer, .scalar_max_integer, .scalar_min_real, .scalar_max_real, .substring => unreachable,
         .numeric_negate => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = -integer },
