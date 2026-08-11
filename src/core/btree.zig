@@ -52,6 +52,7 @@ pub const IndexTransform = union(enum) {
     numeric_negate,
     numeric_abs,
     numeric_sign,
+    storage_type,
     numeric_not,
     integer_bit_not,
     is_null,
@@ -116,6 +117,13 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .null_ => 0,
             else => 1,
         } },
+        .storage_type => return .{ .text = switch (value) {
+            .null_ => "null",
+            .integer => "integer",
+            .real => "real",
+            .text => "text",
+            .blob => "blob",
+        } },
         .null_coalesce_integer => |replacement| return switch (value) {
             .null_ => .{ .integer = replacement },
             else => value,
@@ -137,6 +145,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .real => |real| .{ .real = @abs(real) },
             .text, .blob => unreachable,
         },
+        .storage_type => unreachable,
         .numeric_sign => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = if (integer < 0) -1 else if (integer > 0) 1 else 0 },
