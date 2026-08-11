@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-allocator-state-representations",
   "title": "Global allocator configuration, limits, mutex, and method-table state representations",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the complete private mem0 identities and the Sqlite3Config identities directly read by the admitted global allocation core. They consolidate into the process-lifetime Manager owner.",
@@ -203,7 +203,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No representation allocation; backend initialization failure leaves started false.",
     "io_crash_concurrency": "No I/O. Manager mutex protects allocator/status state, but source mutex subsystem integration remains open.",
@@ -259,5 +259,14 @@
       "upstream/sqlite/test/pcache2.test observes static page-cache status consumers; configuration misuse timing is covered by config tests",
       "Project memory.zig state/default tests and infrastructure differential inspect consolidated state but are not durable promotion receipts"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "bd18fa57be897913c65922f6e7734047d8e11da1da54d2f3cf7e147d9c3ed3c7",
+      "zig_scope_sha256": "02a8e29c785c04f8092055f9e81a7deb8371220f77af86afa053e4a2dee22079"
+    }
+  ]
 }

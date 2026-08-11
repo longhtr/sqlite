@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "profile-release-memory-noop",
   "title": "Pinned-profile sqlite3_release_memory no-op",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "The pinned profile omits SQLITE_ENABLE_MEMORY_MANAGEMENT, making sqlite3_release_memory an unconditional result-zero no-op used both publicly and by allocator alarm handoff.",
@@ -95,7 +95,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No allocation; exact no-op remains valid under OOM.",
     "io_crash_concurrency": "No I/O or internal lock. Allocator caller lock handoff is separately assigned.",
@@ -120,5 +120,14 @@
   },
   "known_blockers": [
     "Translation, current-tree trace receipts, final public API ownership, and subsystem assurance remain separate promotions."
+  ],
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "bb4aba4feeec4f952cd92a5832c8af30f158b8ef2af7e407a6464bb76d5d73a2",
+      "zig_scope_sha256": "f6e13a1fc252d29c7a18d174637b8adfa61e313ad52a6320a03e87ad36779379"
+    }
   ]
 }

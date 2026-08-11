@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-status-primitives",
   "title": "Global status value, increment, decrement, and highwater primitives",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the complete status.c state identities and four lock-assuming primitives used directly by the global allocation core. Manager now uses the source ten-slot current/highwater model rather than allocator-specific counters.",
@@ -185,7 +185,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No allocation and no OOM path.",
     "io_crash_concurrency": "No I/O. Allocator and page-cache slots use distinct source-corresponding mutex identities; concurrent status differential remains open.",
@@ -244,5 +244,14 @@
       "upstream/sqlite/test/misc7.test covers invalid public status operation boundaries; public misuse behavior is outside this primitive unit",
       "Project memory.zig status primitive tests and infrastructure differential cover selected numeric transitions but are not durable promotion receipts"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "567211cef70273195c2590ab69c0dd4832d295ab56aceb795dc0dba2e5e50838",
+      "zig_scope_sha256": "9abe8fa3c118810f3b69cdde8448c047a57baedf322f47b4a6d8baf6ebe8d545"
+    }
+  ]
 }

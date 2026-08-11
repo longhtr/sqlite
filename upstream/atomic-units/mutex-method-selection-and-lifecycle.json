@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "mutex-method-selection-and-lifecycle",
   "title": "Configured/default/no-op mutex method selection and lifecycle",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These functions select configured, pthread, or no-op mutex methods, publish allocation last across a memory barrier, invoke xMutexInit/xMutexEnd, and expose the profile concrete method tables.",
@@ -156,7 +156,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No allocation by lifecycle itself; configured callback failure and dynamic mutex OOM are covered in dependencies.",
     "io_crash_concurrency": "No I/O. Publication uses seq_cst ordering and concurrent initialization is tested; formal weak-memory review remains open.",
@@ -215,5 +215,14 @@
       "upstream/sqlite/test/thread001.test through thread005.test exercise concurrent process/connection use after default method selection",
       "Project global/mutex tests and infrastructure differential cover configured-table copying, callback results, 100 lifecycle cycles, and concurrent initialization; durable receipts remain a later gate"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "118b928f7c936b34d9166e5d088f6eb6956e77d2bf895a6fcd47bb23befcdd7b",
+      "zig_scope_sha256": "e58a970580a60cc007f909fbe13dd6e51848a138b91b1a9a234acf990df90e58"
+    }
+  ]
 }

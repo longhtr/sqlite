@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-allocator-init-shutdown",
   "title": "Global allocator default-method selection, initialization, and shutdown",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These three functions select the pinned default mem1 backend, initialize allocator mutex/backend/page-cache configuration, clear mem0 on failure, and shut down/reset allocator state. They are the immediate lifecycle closure required before the global allocation core.",
@@ -102,7 +102,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Injected initialization failure clears allocator-local state; mutex-allocation OOM integration remains open.",
     "io_crash_concurrency": "No I/O. Top-level concurrent initialization and mutex lifecycle remain blocking.",
@@ -158,5 +158,14 @@
       "upstream/sqlite/test/mutex2.test exercises initialization failures and continuation across subsystem boundaries",
       "Project memory/global tests and infrastructure differential cover configured/default callbacks, invalid static page settings, failure clearing, cycles, and retry; receipts remain later"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "a033982efa5a70954a3e3b72578795797715064eb433afa151dd7b104ff990f2",
+      "zig_scope_sha256": "fe3ea8898419144a95904d8151112e6019c7f22ccf3d43e7d8a4a53fe94c9a7d"
+    }
+  ]
 }

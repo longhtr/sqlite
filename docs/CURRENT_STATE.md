@@ -15,7 +15,8 @@ Incomplete and unsafe for production data. Reusable source-corresponding slices 
 | Behavioral inventory | 25,930 blocks in 2,457 functions |
 | Atomic-unit dossiers total | 47 |
 | Admission-ready dossiers | 47 |
-| Source-translated atomic units | 47 |
+| Source-translated atomic units | 35 |
+| Internal-trace-equivalent atomic units | 12 |
 | Historical mechanical function claims | 1,738; 0 completion credit |
 | Active batch and durable checkpoints | 1 entries; 0 checkpoints |
 | Exact internal layouts | 69 |

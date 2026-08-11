@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "pthread-mutex-enter-leave-core",
   "title": "Pinned pthread mutex representation and nullable enter/leave dispatch",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the active pthread mutex storage/initializer identities and complete concrete plus public-wrapper enter/leave functions used by STATIC_MEM allocator locking.",
@@ -141,7 +141,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No allocation in this unit.",
     "io_crash_concurrency": "No I/O. Contention and alarm release/reacquire are tested; exhaustive scheduler/interleaving evidence remains open.",
@@ -198,5 +198,14 @@
       "upstream/sqlite/test/thread001.test through thread005.test and thread1.test/thread2.test exercise shared-handle, independent-handle, contention, and cross-thread continuation",
       "Project mutex.zig recursive/null/configured/contention tests and the infrastructure differential isolate callback dispatch and pthread synchronization; they are not yet durable promotion receipts"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "a139f791b56c063413ee266bc0efc41767447096954b786a9c6268de176b95ab",
+      "zig_scope_sha256": "7e9c236baaf4630a98a7cf1714a6179ddcd1b7ce35649a9305e6b5682c57f1fd"
+    }
+  ]
 }

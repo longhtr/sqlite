@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "mutex-static-and-dynamic-allocation",
   "title": "Core-mutex gating and pthread static/dynamic mutex allocation",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These configuration fields and two complete allocation functions form the internal sqlite3MutexAlloc closure used to acquire STATIC_MEM and also preserve dynamic fast/recursive allocation and OOM semantics.",
@@ -125,7 +125,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "All deterministic dynamic allocation failure positions are tested sticky and one-shot. Static identities allocate no heap.",
     "io_crash_concurrency": "No I/O. Static identity and contended recursive operation are tested; process-wide initialization races remain open.",
@@ -183,5 +183,14 @@
       "upstream/sqlite/test/thread001.test through thread005.test exercise contended default mutex behavior",
       "Project mutex/memory tests and infrastructure differential cover all kinds, configured dispatch, recursive behavior, STATIC_MEM sharing, and deterministic OOM; durable receipts remain later"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "e31075d76db84502a5684cb4612270bf1fba243bcf5aec7fdf9fe2ef4dd373e7",
+      "zig_scope_sha256": "b616712bf49dce759f059498c97d808994f08a2c7631c145109e86d4d8dbf723"
+    }
+  ]
 }

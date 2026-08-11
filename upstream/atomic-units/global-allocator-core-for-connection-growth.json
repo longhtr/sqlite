@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-allocator-core-for-connection-growth",
   "title": "Global allocator, size, free, realloc, statistics, and alarm core",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These six malloc.c functions are the immediate global allocator closure beneath connection heap fallback and reallocation. They combine method-table calls, rounding, statistics, soft/hard alarms, and allocator ownership.",
@@ -157,7 +157,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Manager tests cover one-shot/sticky allocation and realloc failures; the C/Zig trace covers hard-limit rejection with old-pointer and byte preservation.",
     "io_crash_concurrency": "No I/O. The matched configured-mutex trace proves exact STATIC_MEM release/reacquire around the no-op release-memory alarm; broader global allocator concurrency assurance remains separate.",
@@ -215,5 +215,14 @@
       "upstream/sqlite/test/memsubsys1.test/memsubsys2.test observe current/highwater/count and alarm behavior",
       "Project memory tests and infrastructure differential compare exact callbacks, rounded sizes, counters, hard-limit rejection, alarm lock events, old bytes, and continuation; receipts remain later"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "9dd069f90ba97f32762c36d3d9c4b3f101f9fd34899bb3976b1ba1d4b28c3e1d",
+      "zig_scope_sha256": "9c3cb44fc9f1fa91ebeb86e3cbe1ae699b29f167d9ede365fbe18fb4512eadcf"
+    }
+  ]
 }

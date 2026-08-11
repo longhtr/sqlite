@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "pcache-pgroup-cross-cache-lru-and-limits",
   "title": "PCache PGroup cross-cache LRU, limits, and recycling",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These source responsibilities jointly own PGroup-wide maximum/minimum/pinned/purgeable accounting, cache registration, recyclable-page LRU membership, cross-cache buffer recycling, soft-create admission, limit enforcement, shrink, and page counts. Native unified mode now shares one intrusive LRU and exact page buffer across caches. The dossier also owns the PCache1/PgHdr1/PGroup fields that directly carry these semantics; static/bulk allocation-only fields remain with their allocation unit.",
@@ -619,7 +619,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Cache-owner allocation failure returns null before hash allocation. Initial 256-bucket failure destroys that owner and leaves Cache unavailable so Pager returns NOMEM; later doubling failure is benign and preserves old buckets.",
     "io_crash_concurrency": "No I/O. Unified mode is selected only when core mutexes are disabled; broader configured/memory-management mutex profiles are out of selected scope.",
@@ -680,5 +680,14 @@
       "The 787-line C/Zig PCache differential compares group counts, LRU ends, page ownership/identity, hash state, allocation class/status, results, and continuation",
       "Pager and Cache.create tests establish production pointer ownership, first-versus-second allocation failure, initial-hash cleanup, and upper-cache use; complete dirty/stress/reference trace closure remains an integration blocker"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build pcache-differential",
+      "result_owner": "upstream/evidence/pcache-differential.txt",
+      "result_sha256": "86fdfb488bedc8265ef5fce8ecfec4dcb2a76eb69f4f406f759e35c76640c6f7",
+      "source_scope_sha256": "b3b148ceea4996d59ada3f5a2711670f4282ca181b6cb054d16003a5fc4481f7",
+      "zig_scope_sha256": "088a45fbf5942574bf23dc4921b00c775d4d8887c3ee257b2bcacac4c4b10810"
+    }
+  ]
 }

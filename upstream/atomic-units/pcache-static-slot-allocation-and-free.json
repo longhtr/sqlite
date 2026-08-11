@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "pcache-static-slot-allocation-and-free",
   "title": "PCache bulk/static/heap page allocation, free, and status accounting",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These functions initialize per-cache bulk pages, allocate page objects from bulk-local storage or configured process slots before one contiguous Manager fallback, classify static versus heap pressure, update source status slots, and return or release each storage class in source order.",
@@ -220,7 +220,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "One-shot bulk OOM is benign and falls through to ordinary Manager allocation; sticky process OOM leaves Memory/PCache status and Cache ownership unchanged; hash rollback is leak-free.",
     "io_crash_concurrency": "No I/O. STATIC_PMEM protects slot pressure and STATIC_MEM protects heap pressure; sixteen-thread allocation restoration passes and exact C/Zig pressure selection is differential-tested.",
@@ -277,5 +277,14 @@
       "Project page-cache tests cover direct and Cache slot use, bulk count/KiB/cap/preference/release, benign bulk OOM, sticky overflow OOM, pressure selection, hash rollback, status restoration, and sixteen concurrent allocations",
       "The PCache differential compares storage identity/class, counters, pressure, LRU interactions, event order, and continuation; PGroup coupling is owned by the dependent dossier"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build pcache-differential",
+      "result_owner": "upstream/evidence/pcache-differential.txt",
+      "result_sha256": "86fdfb488bedc8265ef5fce8ecfec4dcb2a76eb69f4f406f759e35c76640c6f7",
+      "source_scope_sha256": "f7e50d143bf1e1a1f05bc206db154ff2798e153092ef3d83a64ddc0f199452ae",
+      "zig_scope_sha256": "1443ecc03831d24a4f19d11cd765fd0d8a503904b661e60c84deec52401ed551"
+    }
+  ]
 }

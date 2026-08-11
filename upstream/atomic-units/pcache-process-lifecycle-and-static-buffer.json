@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "pcache-process-lifecycle-and-static-buffer",
   "title": "Default/configured PCache lifecycle and pcache1 static buffer setup",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the process PCache method owner, active pcache1 lifecycle/static-buffer state, default selection, init/shutdown, and post-OS buffer setup executed by sqlite3_initialize/shutdown.",
@@ -310,7 +310,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Lifecycle allocates no heap. Per-page and custom callback OOM remain outside scope.",
     "io_crash_concurrency": "No I/O. Global serialization and static mutex mode are tested; per-cache contention remains outside scope.",
@@ -367,5 +367,14 @@
       "upstream/sqlite/test/memsubsys1.test and memsubsys2.test observe page-cache status and static storage",
       "Project page_cache/global tests and infrastructure differential cover mode, rounding, reserve, free-list topology, late failure/retry, and shutdown; receipts remain later"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "7a80cb6019f2bd34ad00d8599efb928bccaba78d165461194d655d4d2ef264ad",
+      "zig_scope_sha256": "3601ca19920b6fcdbe62117bdecf8f83123967f0230d4584266094d3315a89fe"
+    }
+  ]
 }
