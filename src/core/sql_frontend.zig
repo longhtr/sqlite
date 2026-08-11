@@ -4528,7 +4528,7 @@ fn resolveSignedIndexOperand(token_list: []const Token, position: usize) ?Signed
 }
 
 fn resolveIfnullIndexExpression(token_list: []const Token, position: usize) ?IfnullIndexExpression {
-    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or !std.ascii.eqlIgnoreCase(token_list[position].text, "ifnull") or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 2].typ != tokens.tk_id or token_list[position + 3].typ != tokens.tk_comma) return null;
+    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "ifnull") and !std.ascii.eqlIgnoreCase(token_list[position].text, "coalesce")) or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 2].typ != tokens.tk_id or token_list[position + 3].typ != tokens.tk_comma) return null;
     var literal_position = position + 4;
     const negative = token_list[literal_position].typ == tokens.tk_minus;
     if (negative) literal_position += 1;
