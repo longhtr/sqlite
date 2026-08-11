@@ -538,6 +538,9 @@ int main(void){
   int substring_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX substring_expression_index ON substring_expression_data(substr(value,2,3))",0,0,0);
   int substring_alias_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX substring_alias_index ON substring_expression_data(substring(value,-3))",0,0,0);
   int substring_negative_count_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX substring_negative_count_index ON substring_expression_data(substr(value,4,-2))",0,0,0);
+  int substring_float_offset_index_rc=sqlite3_exec(clone,"CREATE INDEX substring_float_offset_index ON substring_expression_data(substr(value,+1.5,3.5))",0,0,0);
+  int substring_float_null_index_rc=sqlite3_exec(clone,"CREATE INDEX substring_float_null_index ON substring_expression_data(substr(value,1.5,NULL))",0,0,0);
+  printf("substring-float-expression-index\t%d\t%d\n",substring_float_offset_index_rc,substring_float_null_index_rc);
   int substring_null_start_index_rc=sqlite3_exec(clone,"CREATE INDEX substring_null_start_index ON substring_expression_data(substr(value,NULL))",0,0,0);
   int substring_null_value_index_rc=sqlite3_exec(clone,"CREATE INDEX substring_null_value_index ON substring_expression_data(substring(NULL,value))",0,0,0);
   int substring_null_count_index_rc=sqlite3_exec(clone,"CREATE INDEX substring_null_count_index ON substring_expression_data(substr(value,2,NULL))",0,0,0);

@@ -4621,6 +4621,17 @@ fn resolveSignedNumericIndexOperand(token_list: []const Token, position: usize) 
     return .{ .value = @floatFromInt(operand.value), .consumed = operand.consumed };
 }
 
+const SignedOffsetIndexOperand = struct { value: i64, consumed: usize };
+
+fn resolveSignedOffsetIndexOperand(token_list: []const Token, position: usize) ?SignedOffsetIndexOperand {
+    if (resolveSignedIndexOperand(token_list, position)) |operand| {
+        return .{ .value = operand.value, .consumed = operand.consumed };
+    }
+    const operand = resolveSignedFloatIndexOperand(token_list, position) orelse return null;
+    if (!std.math.isFinite(operand.value) or operand.value < -9223372036854775808.0 or operand.value >= 9223372036854775808.0) return null;
+    return .{ .value = @intFromFloat(operand.value), .consumed = operand.consumed };
+}
+
 const NullBinaryFunctionIndexExpression = struct { column_name: []const u8, constant_null: bool, consumed: usize };
 
 fn resolveNullBinaryFunctionIndexExpression(token_list: []const Token, position: usize) ?NullBinaryFunctionIndexExpression {
@@ -4895,7 +4906,7 @@ fn resolveNullSubstringIndexExpression(token_list: []const Token, position: usiz
         } else if (token_list[cursor].typ == tokens.tk_null) {
             have_null = true;
             cursor += 1;
-        } else if (resolveSignedIndexOperand(token_list, cursor)) |operand| {
+        } else if (resolveSignedNumericIndexOperand(token_list, cursor)) |operand| {
             cursor += operand.consumed;
         } else {
             return null;
@@ -4937,12 +4948,12 @@ const SubstringIndexExpression = struct { column_name: []const u8, start: i64, c
 
 fn resolveSubstringIndexExpression(token_list: []const Token, position: usize) ?SubstringIndexExpression {
     if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "substr") and !std.ascii.eqlIgnoreCase(token_list[position].text, "substring")) or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 2].typ != tokens.tk_id or token_list[position + 3].typ != tokens.tk_comma) return null;
-    const start = resolveSignedIndexOperand(token_list, position + 4) orelse return null;
+    const start = resolveSignedOffsetIndexOperand(token_list, position + 4) orelse return null;
     var end_position = position + 4 + start.consumed;
     if (end_position >= token_list.len) return null;
     var count: ?i64 = null;
     if (token_list[end_position].typ == tokens.tk_comma) {
-        const resolved_count = resolveSignedIndexOperand(token_list, end_position + 1) orelse return null;
+        const resolved_count = resolveSignedOffsetIndexOperand(token_list, end_position + 1) orelse return null;
         count = resolved_count.value;
         end_position += 1 + resolved_count.consumed;
     }
