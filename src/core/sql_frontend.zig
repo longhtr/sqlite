@@ -4647,6 +4647,21 @@ fn resolveReversedIntegerIndexExpression(token_list: []const Token, position: us
         return .{ .column_name = token_list[column_position].text, .transform = .{ .integer_is = .{ .value = operand.value, .is_not = is_suffix.is_not } }, .consumed = column_position + 1 - position };
     }
     if (token_list[operation_position + 1].typ != tokens.tk_id) return null;
+    const arithmetic: ?btree.IndexTransform = switch (token_list[operation_position].typ) {
+        tokens.tk_plus => .{ .integer_add = operand.value },
+        tokens.tk_minus => .{ .integer_reverse_subtract = operand.value },
+        tokens.tk_star => .{ .integer_multiply = operand.value },
+        tokens.tk_slash => .{ .integer_reverse_divide = operand.value },
+        tokens.tk_rem => .{ .integer_reverse_remainder = operand.value },
+        tokens.tk_bitand => .{ .integer_bit_and = operand.value },
+        tokens.tk_bitor => .{ .integer_bit_or = operand.value },
+        tokens.tk_lshift => .{ .integer_reverse_shift_left = operand.value },
+        tokens.tk_rshift => .{ .integer_reverse_shift_right = operand.value },
+        else => null,
+    };
+    if (arithmetic) |transform| {
+        return .{ .column_name = token_list[operation_position + 1].text, .transform = transform, .consumed = operation_position + 2 - position };
+    }
     const operation: btree.IndexComparisonOperation = switch (token_list[operation_position].typ) {
         tokens.tk_eq => .eq,
         tokens.tk_ne => .ne,
@@ -9694,7 +9709,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         };
         const numeric_transform = switch (specified_transforms.items[selected_position]) {
             .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .null_coalesce_integer, .null_if_integer => false,
-            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_compare, .integer_is, .integer_between, .integer_in, .scalar_min_integer, .scalar_max_integer, .unary_math, .binary_math => true,
+            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .integer_is, .integer_between, .integer_in, .scalar_min_integer, .scalar_max_integer, .unary_math, .binary_math => true,
         };
         if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
             allocator.free(source);

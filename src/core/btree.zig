@@ -101,13 +101,18 @@ pub const IndexTransform = union(enum) {
     scalar_min_integer: i64,
     scalar_max_integer: i64,
     integer_add: i64,
+    integer_reverse_subtract: i64,
     integer_multiply: i64,
     integer_divide: i64,
+    integer_reverse_divide: i64,
     integer_remainder: i64,
+    integer_reverse_remainder: i64,
     integer_bit_and: i64,
     integer_bit_or: i64,
     integer_shift_left: i64,
     integer_shift_right: i64,
+    integer_reverse_shift_left: i64,
+    integer_reverse_shift_right: i64,
     integer_compare: IndexComparison,
     integer_is: IndexIsComparison,
     integer_between: IndexRangeComparison,
@@ -438,6 +443,12 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .real => |real| .{ .real = real + @as(f64, @floatFromInt(addition)) },
             .text, .blob => unreachable,
         },
+        .integer_reverse_subtract => |minuend| switch (numeric) {
+            .null_ => .null_,
+            .integer => |integer| .{ .integer = std.math.sub(i64, minuend, integer) catch return .{ .real = @as(f64, @floatFromInt(minuend)) - @as(f64, @floatFromInt(integer)) } },
+            .real => |real| .{ .real = @as(f64, @floatFromInt(minuend)) - real },
+            .text, .blob => unreachable,
+        },
         .integer_multiply => |factor| switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = std.math.mul(i64, integer, factor) catch return .{ .real = @as(f64, @floatFromInt(integer)) * @as(f64, @floatFromInt(factor)) } },
@@ -450,16 +461,29 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .real => |real| .{ .real = real / @as(f64, @floatFromInt(divisor)) },
             .text, .blob => unreachable,
         },
+        .integer_reverse_divide => |dividend| switch (numeric) {
+            .null_ => .null_,
+            .integer => |divisor| if (divisor == 0) .null_ else if (dividend == std.math.minInt(i64) and divisor == -1) .{ .real = -@as(f64, @floatFromInt(dividend)) } else .{ .integer = @divTrunc(dividend, divisor) },
+            .real => |divisor| if (divisor == 0) .null_ else .{ .real = @as(f64, @floatFromInt(dividend)) / divisor },
+            .text, .blob => unreachable,
+        },
         .integer_remainder => |divisor| if (divisor == 0) .null_ else switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = if (integer == std.math.minInt(i64) and divisor == -1) 0 else @rem(integer, divisor) },
             .real => .{ .real = @floatFromInt(@rem(integerIndexValue(numeric).?, if (divisor == -1) 1 else divisor)) },
             .text, .blob => unreachable,
         },
+        .integer_reverse_remainder => |dividend| remainder: {
+            const divisor = integerIndexValue(numeric) orelse break :remainder .null_;
+            if (divisor == 0) break :remainder .null_;
+            break :remainder .{ .integer = if (dividend == std.math.minInt(i64) and divisor == -1) 0 else @rem(dividend, divisor) };
+        },
         .integer_bit_and => |mask| .{ .integer = (integerIndexValue(numeric) orelse return .null_) & mask },
         .integer_bit_or => |mask| .{ .integer = (integerIndexValue(numeric) orelse return .null_) | mask },
         .integer_shift_left => |amount| .{ .integer = shiftIndexInteger(integerIndexValue(numeric) orelse return .null_, amount, true) },
         .integer_shift_right => |amount| .{ .integer = shiftIndexInteger(integerIndexValue(numeric) orelse return .null_, amount, false) },
+        .integer_reverse_shift_left => |integer| .{ .integer = shiftIndexInteger(integer, integerIndexValue(numeric) orelse return .null_, true) },
+        .integer_reverse_shift_right => |integer| .{ .integer = shiftIndexInteger(integer, integerIndexValue(numeric) orelse return .null_, false) },
         .integer_in => |membership| switch (numeric) {
             .null_ => .null_,
             .integer => |integer| {
