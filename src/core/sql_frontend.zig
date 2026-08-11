@@ -4860,6 +4860,25 @@ fn resolveReversedIntegerIndexExpression(token_list: []const Token, position: us
     return .{ .column_name = token_list[operation_position + 1].text, .transform = .{ .integer_compare = .{ .operation = operation, .value = operand.value } }, .consumed = operation_position + 2 - position };
 }
 
+const PatternIndexExpression = struct { column_name: []const u8, transform: btree.IndexTransform, consumed: usize };
+
+fn resolvePatternIndexExpression(token_list: []const Token, position: usize) ?PatternIndexExpression {
+    if (position + 2 >= token_list.len or token_list[position].typ != tokens.tk_id) return null;
+    const is_not = token_list[position + 1].typ == tokens.tk_not;
+    const operation_position = position + 1 + @intFromBool(is_not);
+    if (operation_position + 1 >= token_list.len or token_list[operation_position].typ != tokens.tk_like_kw or token_list[operation_position + 1].typ != tokens.tk_string) return null;
+    const glob = std.ascii.eqlIgnoreCase(token_list[operation_position].text, "glob");
+    if (!glob and !std.ascii.eqlIgnoreCase(token_list[operation_position].text, "like")) return null;
+    const pattern = token_list[operation_position + 1].text;
+    var end_position = operation_position + 2;
+    var escape: u8 = 0;
+    if (!glob and end_position + 1 < token_list.len and token_list[end_position].typ == tokens.tk_escape and token_list[end_position + 1].typ == tokens.tk_string) {
+        escape = resolveAsciiEscapeLiteral(token_list[end_position + 1].text) orelse return null;
+        end_position += 2;
+    }
+    return .{ .column_name = token_list[position].text, .transform = .{ .text_pattern = .{ .pattern = pattern, .escape = escape, .glob = glob, .is_not = is_not } }, .consumed = end_position - position };
+}
+
 const NullOperatorIndexExpression = struct { column_name: []const u8, consumed: usize };
 
 fn resolveNullOperatorIndexExpression(token_list: []const Token, position: usize) ?NullOperatorIndexExpression {
@@ -5017,7 +5036,11 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var index_transform: btree.IndexTransform = .identity;
         var name: []const u8 = undefined;
         var start = position;
-        if (if (schema_is_index) resolveNullOperatorIndexExpression(parsed.tokens, position) else null) |null_operator_expression| {
+        if (if (schema_is_index) resolvePatternIndexExpression(parsed.tokens, position) else null) |pattern_expression| {
+            scan_expression = true;
+            index_transform = pattern_expression.transform;
+            name = pattern_expression.column_name;
+        } else if (if (schema_is_index) resolveNullOperatorIndexExpression(parsed.tokens, position) else null) |null_operator_expression| {
             scan_expression = true;
             index_transform = .constant_null;
             name = null_operator_expression.column_name;
@@ -9989,7 +10012,11 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if (wrapped_expression) position += 1;
         var transform: btree.IndexTransform = .identity;
         var column_name: []const u8 = undefined;
-        if (resolveNullOperatorIndexExpression(token_list, position)) |null_operator_expression| {
+        if (resolvePatternIndexExpression(token_list, position)) |pattern_expression| {
+            transform = pattern_expression.transform;
+            column_name = pattern_expression.column_name;
+            position += pattern_expression.consumed;
+        } else if (resolveNullOperatorIndexExpression(token_list, position)) |null_operator_expression| {
             transform = .constant_null;
             column_name = null_operator_expression.column_name;
             position += null_operator_expression.consumed;
@@ -10274,10 +10301,17 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             return .{ .result = .error_, .consumed = consumed };
         };
         const numeric_transform = switch (specified_transforms.items[selected_position]) {
-            .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .constant_null, .constant_integer, .constant_real, .null_coalesce_integer, .null_coalesce_real, .null_if_integer, .null_if_real, .reverse_null_if_integer, .reverse_null_if_real => false,
+            .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .text_pattern, .substring, .is_null, .is_not_null, .constant_null, .constant_integer, .constant_real, .null_coalesce_integer, .null_coalesce_real, .null_if_integer, .null_if_real, .reverse_null_if_integer, .reverse_null_if_real => false,
             .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .real_compare, .real_arithmetic, .real_is, .integer_is, .integer_between, .real_between, .integer_in, .real_in, .scalar_min_integer, .scalar_max_integer, .scalar_min_real, .scalar_max_real, .unary_math, .binary_math => true,
         };
         if (numeric_transform and !resolved.columns[selected].integer_primary_key and !isNumericDeclaredType(resolved.columns[selected].declared_type)) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        if ((switch (specified_transforms.items[selected_position]) {
+            .text_pattern => true,
+            else => false,
+        }) and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER") and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "TEXT")) {
             allocator.free(source);
             return .{ .result = .error_, .consumed = consumed };
         }

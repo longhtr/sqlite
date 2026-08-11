@@ -80,6 +80,7 @@ pub const IndexUnaryMath = enum {
     radians,
     degrees,
 };
+pub const IndexPatternExpression = struct { pattern: []const u8, escape: u8 = 0, glob: bool = false, is_not: bool = false };
 pub const IndexTransform = union(enum) {
     identity,
     numeric_negate,
@@ -99,6 +100,7 @@ pub const IndexTransform = union(enum) {
     text_ltrim,
     text_rtrim,
     concat_single,
+    text_pattern: IndexPatternExpression,
     substring: IndexSubstring,
     numeric_not,
     integer_bit_not,
@@ -262,6 +264,19 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             else => 1,
         } },
         .substring => |substring| return substringIndexValue(value, substring),
+        .text_pattern => |expression| {
+            const matches = switch (value) {
+                .null_ => return .null_,
+                .text => |text| indexPredicatePatternMatch(text, 0, expression.pattern, 1, if (expression.glob) '*' else '%', if (expression.glob) '?' else '_', !expression.glob, expression.escape),
+                .integer => |integer| integer_match: {
+                    var buffer: [32]u8 = undefined;
+                    const text = std.fmt.bufPrint(&buffer, "{d}", .{integer}) catch return .null_;
+                    break :integer_match indexPredicatePatternMatch(text, 0, expression.pattern, 1, if (expression.glob) '*' else '%', if (expression.glob) '?' else '_', !expression.glob, expression.escape);
+                },
+                .real, .blob => return .null_,
+            };
+            return .{ .integer = @intFromBool(if (expression.is_not) !matches else matches) };
+        },
         .binary_math => |expression| return switch (value) {
             .null_ => .null_,
             .integer, .real => numeric_result: {
@@ -479,7 +494,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             if (std.math.isNan(real) or real < -4_503_599_627_370_496.0 or real > 4_503_599_627_370_496.0) break :rounded .{ .real = real };
             break :rounded .{ .real = @floatFromInt(@as(i64, @intFromFloat(real + if (real < 0) @as(f64, -0.5) else @as(f64, 0.5)))) };
         },
-        .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .numeric_ceil, .numeric_floor, .numeric_trunc, .unary_math, .binary_math => unreachable,
+        .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .text_pattern, .numeric_ceil, .numeric_floor, .numeric_trunc, .unary_math, .binary_math => unreachable,
         .numeric_sign => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = if (integer < 0) -1 else if (integer > 0) 1 else 0 },
