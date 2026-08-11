@@ -113,6 +113,41 @@ int main(void){
   int temporary_drop_rc=sqlite3_exec(clone,"DROP TABLE t",0,0,0);
   int temporary_main_after_drop_rc=query_value(clone,"SELECT x FROM t",&temporary_main_after_drop);
   printf("temporary\t%d\t%d\t%d\t%lld\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%lld\n",temporary_create_rc,temporary_insert_rc,temporary_query_rc,(long long)temporary_value,temporary_main_query_rc,(long long)temporary_main_value,temporary_update_rc,temporary_update_query_rc,(long long)temporary_after_update,temporary_delete_rc,temporary_count_rc,(long long)temporary_count,temporary_drop_rc,temporary_main_after_drop_rc,(long long)temporary_main_after_drop);
+  int transaction_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
+  int transaction_insert_rollback_rc=sqlite3_exec(clone,"INSERT INTO main.t VALUES(43)",0,0,0);
+  int transaction_active=sqlite3_get_autocommit(clone);
+  sqlite3_int64 transaction_before_rollback_count=-1,transaction_after_rollback_count=-1,transaction_after_commit_count=-1;
+  int transaction_before_rollback_rc=query_value(clone,"SELECT count(*) FROM main.t",&transaction_before_rollback_count);
+  int transaction_rollback_rc=sqlite3_exec(clone,"ROLLBACK",0,0,0);
+  int transaction_rollback_autocommit=sqlite3_get_autocommit(clone);
+  int transaction_after_rollback_rc=query_value(clone,"SELECT count(*) FROM main.t",&transaction_after_rollback_count);
+  int transaction_second_begin_rc=sqlite3_exec(clone,"BEGIN TRANSACTION",0,0,0);
+  int transaction_insert_commit_rc=sqlite3_exec(clone,"INSERT INTO main.t VALUES(44)",0,0,0);
+  int transaction_commit_rc=sqlite3_exec(clone,"COMMIT",0,0,0);
+  int transaction_commit_autocommit=sqlite3_get_autocommit(clone);
+  int transaction_after_commit_rc=query_value(clone,"SELECT count(*) FROM main.t",&transaction_after_commit_count);
+  printf("transaction\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%d\t%lld\n",transaction_begin_rc,transaction_insert_rollback_rc,transaction_active,transaction_before_rollback_rc,(long long)transaction_before_rollback_count,transaction_rollback_rc,transaction_rollback_autocommit,transaction_after_rollback_rc,(long long)transaction_after_rollback_count,transaction_second_begin_rc,transaction_insert_commit_rc,transaction_commit_rc,transaction_commit_autocommit,transaction_after_commit_rc,(long long)transaction_after_commit_count);
+#ifdef NATIVE_ENGINE
+  int deferred_fk_config_rc=zig_sqlite3_db_config_flag(clone,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
+#else
+  int deferred_fk_config_rc=sqlite3_db_config(clone,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
+#endif
+  int deferred_parent_create_rc=sqlite3_exec(clone,"CREATE TABLE deferred_parent(id INTEGER PRIMARY KEY)",0,0,0);
+  int deferred_child_create_rc=sqlite3_exec(clone,"CREATE TABLE deferred_child(id INTEGER PRIMARY KEY,parent_id REFERENCES deferred_parent(id) DEFERRABLE INITIALLY DEFERRED)",0,0,0);
+  int deferred_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
+  int deferred_child_insert_rc=sqlite3_exec(clone,"INSERT INTO deferred_child VALUES(1,9)",0,0,0);
+  int deferred_failed_commit_rc=sqlite3_exec(clone,"COMMIT",0,0,0);
+  int deferred_failed_commit_autocommit=sqlite3_get_autocommit(clone);
+  int deferred_parent_insert_rc=sqlite3_exec(clone,"INSERT INTO deferred_parent VALUES(9)",0,0,0);
+  int deferred_commit_rc=sqlite3_exec(clone,"COMMIT",0,0,0);
+  int deferred_commit_autocommit=sqlite3_get_autocommit(clone);
+  int deferred_delete_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
+  int deferred_parent_delete_rc=sqlite3_exec(clone,"DELETE FROM deferred_parent WHERE id=9",0,0,0);
+  int deferred_delete_rollback_rc=sqlite3_exec(clone,"ROLLBACK",0,0,0);
+  sqlite3_int64 deferred_parent_count=-1,deferred_child_count=-1;
+  int deferred_parent_query_rc=query_value(clone,"SELECT count(*) FROM deferred_parent",&deferred_parent_count);
+  int deferred_child_query_rc=query_value(clone,"SELECT count(*) FROM deferred_child",&deferred_child_count);
+  printf("deferred-fk\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%lld\n",deferred_fk_config_rc,deferred_parent_create_rc,deferred_child_create_rc,deferred_begin_rc,deferred_child_insert_rc,deferred_failed_commit_rc,deferred_failed_commit_autocommit,deferred_parent_insert_rc,deferred_commit_rc,deferred_commit_autocommit,deferred_delete_begin_rc,deferred_parent_delete_rc,deferred_delete_rollback_rc,deferred_parent_query_rc,(long long)deferred_parent_count,deferred_child_query_rc,(long long)deferred_child_count);
   int attach_rc=sqlite3_exec(attached,"ATTACH ':memory:' AS aux",0,0,0);
   unsigned char *attached_image=sqlite3_serialize(source,"main",&size,0);
   int attached_deserialize_rc=sqlite3_deserialize(attached,"aux",attached_image,size,size,SQLITE_DESERIALIZE_FREEONCLOSE|SQLITE_DESERIALIZE_RESIZEABLE);
@@ -191,6 +226,21 @@ int main(void){
   sqlite3_exec(attached,"DROP TABLE aux.action_restrict",0,0,0);
   sqlite3_exec(attached,"DROP TABLE aux.action_cascade",0,0,0);
   sqlite3_exec(attached,"DROP TABLE aux.action_parent",0,0,0);
+
+  int attached_deferred_parent_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.deferred_parent(id INTEGER PRIMARY KEY)",0,0,0);
+  int attached_deferred_child_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.deferred_child(id INTEGER PRIMARY KEY,parent_id REFERENCES deferred_parent(id) DEFERRABLE INITIALLY DEFERRED)",0,0,0);
+  int attached_deferred_begin_rc=sqlite3_exec(attached,"BEGIN",0,0,0);
+  int attached_deferred_child_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.deferred_child VALUES(1,9)",0,0,0);
+  int attached_deferred_failed_commit_rc=sqlite3_exec(attached,"COMMIT",0,0,0);
+  int attached_deferred_failed_commit_autocommit=sqlite3_get_autocommit(attached);
+  int attached_deferred_parent_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.deferred_parent VALUES(9)",0,0,0);
+  int attached_deferred_commit_rc=sqlite3_exec(attached,"COMMIT",0,0,0);
+  int attached_deferred_commit_autocommit=sqlite3_get_autocommit(attached);
+  sqlite3_int64 attached_deferred_child_count=-1;
+  int attached_deferred_query_rc=query_value(attached,"SELECT count(*) FROM aux.deferred_child",&attached_deferred_child_count);
+  printf("attached-deferred-fk\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\n",attached_deferred_parent_create_rc,attached_deferred_child_create_rc,attached_deferred_begin_rc,attached_deferred_child_insert_rc,attached_deferred_failed_commit_rc,attached_deferred_failed_commit_autocommit,attached_deferred_parent_insert_rc,attached_deferred_commit_rc,attached_deferred_commit_autocommit,attached_deferred_query_rc,(long long)attached_deferred_child_count);
+  sqlite3_exec(attached,"DROP TABLE aux.deferred_child",0,0,0);
+  sqlite3_exec(attached,"DROP TABLE aux.deferred_parent",0,0,0);
 
   int attached_blob_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.blobs(id INTEGER PRIMARY KEY,payload BLOB)",0,0,0);
   int attached_blob_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.blobs VALUES(1,x'01020304')",0,0,0);

@@ -259,6 +259,8 @@ pub const Connection = struct {
     last_insert_rowid: i64 = 0,
     changes: i64 = 0,
     total_changes: i64 = 0,
+    explicit_transaction: bool = false,
+    transaction_databases: std.ArrayList(*btree.Database) = .empty,
     interrupted: bool = false,
     busy_callback: ?*const fn (?*anyopaque, c_int) callconv(.c) c_int = null,
     busy_context: ?*anyopaque = null,
@@ -389,6 +391,10 @@ pub const Connection = struct {
             self.allocator.free(allocation);
         }
         self.foreign_key_action_allocations.deinit(self.allocator);
+        for (self.transaction_databases.items) |database| {
+            _ = database.rollbackMutationBatch();
+        }
+        self.transaction_databases.deinit(self.allocator);
         if (self.lookaside_allocator) |*allocator| allocator.deinit();
         for (self.extension_handles.items) |handle| {
             _ = dlclose(handle);
@@ -492,6 +498,7 @@ pub const Connection = struct {
     }
 
     fn beforeWrite(self: *Connection) ResultCode {
+        if (self.explicit_transaction) return .ok;
         if (self.commit_callback) |callback| if (callback(self.commit_context) != 0) {
             if (self.rollback_callback) |rollback| rollback(self.rollback_context);
             return .constraint;
@@ -507,6 +514,7 @@ pub const Connection = struct {
                 defer self.allocator.free(schema);
                 callback(self.update_context, code, schema.ptr, name.ptr, rowid);
             };
+            if (self.explicit_transaction) return .ok;
             const wal_result = doWalCallbacks(self);
             if (wal_result != .ok) return wal_result;
         } else if (self.rollback_callback) |callback| callback(self.rollback_context);
@@ -1533,6 +1541,7 @@ pub export fn sqlite3_db_readonly(pointer: ?*sqlite3, database_name: ?[*:0]const
 /// Source `sqlite3_get_autocommit()`: autocommit is disabled precisely while
 /// the native pager owns a write transaction.
 fn getAutocommit(connection: *Connection) c_int {
+    if (connection.explicit_transaction) return 0;
     const database = connection.database orelse return 1;
     return switch (database.pager.state) {
         .writer_locked, .writer_cache_modified, .writer_database_modified, .writer_finished => 0,
@@ -3556,6 +3565,8 @@ fn jsonVirtualRowid(pointer: ?*anyopaque, output: *i64) ResultCode {
 }
 const json_virtual_source_template: vdbe.VirtualSource = .{ .context = null, .open = jsonVirtualOpen, .close = jsonVirtualClose, .filter = jsonVirtualFilter, .next = jsonVirtualNext, .eof = jsonVirtualEof, .column = jsonVirtualColumn, .rowid = jsonVirtualRowid };
 
+const TransactionOperation = enum { begin, commit, rollback };
+
 const ProgramAction = union(enum) {
     attach_database: struct { connection: *Connection, filename: []const u8, name: []const u8 },
     detach_database: struct { connection: *Connection, name: []const u8 },
@@ -3568,6 +3579,7 @@ const ProgramAction = union(enum) {
     delete: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, foreign_key_old_mask: u32 },
     vacuum: struct { connection: *Connection },
     analyze: struct { connection: *Connection, table_name: ?[]const u8 },
+    transaction: struct { connection: *Connection, operation: TransactionOperation },
 };
 
 const Owner = struct {
@@ -5093,7 +5105,7 @@ fn lookupForeignKeyParent(
     return .{ .result = .ok };
 }
 
-fn checkChildForeignKeyParents(connection: *Connection, database: *btree.Database, table_name: []const u8, rowid: i64, values: []const btree.Value) ResultCode {
+fn checkChildForeignKeyParentsMode(connection: *Connection, database: *btree.Database, table_name: []const u8, rowid: i64, values: []const btree.Value, allow_deferred: bool) ResultCode {
     if (connection.database_configuration[2] == 0) return .ok;
     const child_schema_outcome = database.schemaTable(table_name);
     if (child_schema_outcome.result != .ok) return child_schema_outcome.result;
@@ -5124,9 +5136,16 @@ fn checkChildForeignKeyParents(connection: *Connection, database: *btree.Databas
         const same_table = std.ascii.eqlIgnoreCase(table_name, key.parent_table);
         const lookup = lookupForeignKeyParent(connection, database, key.parent_table, parent_schema.root_page, parent_columns.columns, parent_indices, values, mappings, if (same_table) rowid else null);
         if (lookup.result != .ok) return lookup.result;
-        if (!lookup.found) return ResultCode.fromC(ResultCode.constraint.toC() | (3 << 8));
+        if (!lookup.found) {
+            if (allow_deferred and key.deferred and connection.explicit_transaction) continue;
+            return ResultCode.fromC(ResultCode.constraint.toC() | (3 << 8));
+        }
     }
     return .ok;
+}
+
+fn checkChildForeignKeyParents(connection: *Connection, database: *btree.Database, table_name: []const u8, rowid: i64, values: []const btree.Value) ResultCode {
+    return checkChildForeignKeyParentsMode(connection, database, table_name, rowid, values, true);
 }
 
 fn childRowMatchesParent(
@@ -5491,6 +5510,7 @@ fn processParentForeignKeys(
             if (rowids.items.len == 0) continue;
             const action = if (new_values == null) key.on_delete else key.on_update;
             if (!apply_actions) {
+                if (action == .no_action and key.deferred and connection.explicit_transaction) continue;
                 if (action == .no_action or action == .restrict) return ResultCode.fromC(ResultCode.constraint.toC() | (3 << 8));
                 continue;
             }
@@ -7386,10 +7406,101 @@ fn runAnalyze(connection: *Connection, table_name: ?[]const u8) ResultCode {
     return reloadAnalysis(connection);
 }
 
+fn enlistTransactionDatabase(connection: *Connection, database: *btree.Database) ResultCode {
+    if (!connection.explicit_transaction) return .ok;
+    for (connection.transaction_databases.items) |existing| {
+        if (existing == database) {
+            return .ok;
+        }
+    }
+    const begun = database.beginMutationBatch();
+    if (begun != .ok) return begun;
+    connection.transaction_databases.append(connection.allocator, database) catch {
+        _ = database.rollbackMutationBatch();
+        return .no_memory;
+    };
+    return .ok;
+}
+
+fn validateDeferredForeignKeys(connection: *Connection, database: *btree.Database) ResultCode {
+    if (connection.database_configuration[2] == 0) return .ok;
+    const opened_schema = database.openCursor(1, .table);
+    if (opened_schema.result != .ok) return opened_schema.result;
+    var schema_cursor = opened_schema.cursor.?;
+    defer schema_cursor.deinit();
+    for (schema_cursor.entries.items) |schema_entry| {
+        const decoded_schema = btree.decodeRecord(connection.allocator, schema_entry.payload);
+        if (decoded_schema.result != .ok) return decoded_schema.result;
+        var schema_record = decoded_schema.record.?;
+        defer schema_record.deinit();
+        if (schema_record.values.len < 5) continue;
+        const object_type = schemaEntryText(schema_record.values[0]) orelse continue;
+        if (!std.mem.eql(u8, object_type, "table")) continue;
+        const table_name = schemaEntryText(schema_record.values[1]) orelse continue;
+        const root_page = schemaEntryRoot(schema_record.values[3]) orelse continue;
+        const opened_table = database.openCursor(root_page, .table);
+        if (opened_table.result != .ok) return opened_table.result;
+        var table_cursor = opened_table.cursor.?;
+        defer table_cursor.deinit();
+        for (table_cursor.entries.items) |entry| {
+            const rowid = entry.rowid orelse return .corrupt;
+            const decoded = btree.decodeRecord(connection.allocator, entry.payload);
+            if (decoded.result != .ok) return decoded.result;
+            var record = decoded.record.?;
+            defer record.deinit();
+            const checked = checkChildForeignKeyParentsMode(connection, database, table_name, rowid, record.values, false);
+            if (checked != .ok) return checked;
+        }
+    }
+    return .ok;
+}
+
+fn finishExplicitTransaction(connection: *Connection, rollback: bool) ResultCode {
+    if (!connection.explicit_transaction) return .error_;
+    if (!rollback) {
+        for (connection.transaction_databases.items) |database| {
+            const checked = validateDeferredForeignKeys(connection, database);
+            if (checked != .ok) return checked;
+        }
+        if (connection.commit_callback) |callback| {
+            if (callback(connection.commit_context) != 0) {
+                _ = finishExplicitTransaction(connection, true);
+                return .constraint;
+            }
+        }
+    }
+    var result: ResultCode = .ok;
+    for (connection.transaction_databases.items) |database| {
+        const current = if (rollback) database.rollbackMutationBatch() else database.commitMutationBatch();
+        if (result == .ok and current != .ok) {
+            result = current;
+        }
+    }
+    connection.transaction_databases.clearRetainingCapacity();
+    connection.explicit_transaction = false;
+    if (rollback) {
+        if (connection.rollback_callback) |callback| callback(connection.rollback_context);
+        return if (result == .ok) .ok else result;
+    }
+    if (result == .ok) {
+        return doWalCallbacks(connection);
+    }
+    return result;
+}
+
 fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *vdbe.Mem, allocator: std.mem.Allocator) ResultCode {
     const owner: *Owner = @ptrCast(@alignCast(context orelse return .misuse));
     vdbe.vdbe_mem.setNull(output);
     return switch (owner.action orelse return .misuse) {
+        .transaction => |action| switch (action.operation) {
+            .begin => blk: {
+                if (action.connection.explicit_transaction) break :blk .error_;
+                action.connection.explicit_transaction = true;
+                break :blk .ok;
+            },
+            .commit => finishExplicitTransaction(action.connection, false),
+            .rollback => finishExplicitTransaction(action.connection, true),
+        },
         .attach_database => |action| blk: {
             const attachments = ensureAttachmentCatalog(action.connection) catch break :blk .no_memory;
             attachment_runtime.attachFunction(attachments, action.filename, action.name) catch |failure| break :blk switch (failure) {
@@ -7581,6 +7692,8 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             defer {
                 if (batch_active) _ = database.rollbackMutationBatch();
             }
+            const enlisted = enlistTransactionDatabase(action.connection, database);
+            if (enlisted != .ok) break :blk enlisted;
             const cleared = dropTableForeignKeyActions(action.connection, database, action.schema_name, action.name);
             if (cleared != .ok) break :blk cleared;
             const dropped = database.dropSchemaTable(action.name, action.if_exists);
@@ -7620,6 +7733,8 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             if (action.target_column >= record.values.len) break :blk .corrupt;
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
+            const enlisted = enlistTransactionDatabase(action.connection, database);
+            if (enlisted != .ok) break :blk enlisted;
             const begin = database.beginMutationBatch();
             if (begin != .ok) break :blk begin;
             var batch_active = true;
@@ -7686,6 +7801,8 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             if (!foreignKeyOldValuesAvailable(action.foreign_key_old_mask, record.values.len)) break :blk .corrupt;
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
+            const enlisted = enlistTransactionDatabase(action.connection, database);
+            if (enlisted != .ok) break :blk enlisted;
             const begin = database.beginMutationBatch();
             if (begin != .ok) break :blk begin;
             var batch_active = true;
@@ -7738,6 +7855,8 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             }
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
+            const enlisted = enlistTransactionDatabase(action.connection, database);
+            if (enlisted != .ok) break :blk enlisted;
             const begin = database.beginMutationBatch();
             if (begin != .ok) break :blk begin;
             var batch_active = true;
@@ -7880,6 +7999,47 @@ fn compileVirtualSchema(connection: *Connection, source: [:0]u8, token_list: []c
     instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
     instructions[1] = .{ .opcode = .halt };
     owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .virtual_create = .{ .connection = connection, .schema_name = schema_name, .name = table_name, .module_name = module_name } }, .program = .{ .instructions = instructions, .register_count = 1 } };
+    owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
+    owner.program.functions = owner.functions[0..];
+    const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
+        Owner.destroy(allocator, owner);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    prepared.adoptOwner(owner, Owner.destroy);
+    prepared.markWritable();
+    return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+}
+
+/// Bounded source `sqlite3BeginTransaction()`/`sqlite3EndTransaction()` owner.
+fn compileTransaction(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
+    const allocator = connection.allocator;
+    const first = token_list[0].typ;
+    const operation: TransactionOperation = if (first == tokens.tk_begin) .begin else if (first == tokens.tk_rollback) .rollback else .commit;
+    var position: usize = 1;
+    if (operation == .begin and position < token_list.len and (token_list[position].typ == tokens.tk_deferred or token_list[position].typ == tokens.tk_immediate or token_list[position].typ == tokens.tk_exclusive)) {
+        position += 1;
+    }
+    if (position < token_list.len and token_list[position].typ == tokens.tk_transaction) {
+        position += 1;
+    }
+    if (position != token_list.len) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const owner = allocator.create(Owner) catch {
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const instructions = allocator.alloc(vdbe.Instruction, 2) catch {
+        allocator.destroy(owner);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const parameters = allocator.alloc(statement.ParameterMetadata, 0) catch unreachable;
+    const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
+    instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
+    instructions[1] = .{ .opcode = .halt };
+    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .transaction = .{ .connection = connection, .operation = operation } }, .program = .{ .instructions = instructions, .register_count = 1 } };
     owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
     owner.program.functions = owner.functions[0..];
     const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
@@ -8800,6 +8960,8 @@ fn compile(connection: *Connection, source_bytes: []const u8) CompileOutcome {
     }
     if (tokenized.tokens[0].typ == tokens.tk_attach or tokenized.tokens[0].typ == tokens.tk_detach)
         return compileAttachment(connection, source, tokenized.tokens, tokenized.consumed);
+    if (tokenized.tokens[0].typ == tokens.tk_begin or tokenized.tokens[0].typ == tokens.tk_commit or tokenized.tokens[0].typ == tokens.tk_end or tokenized.tokens[0].typ == tokens.tk_rollback)
+        return compileTransaction(connection, source, tokenized.tokens, tokenized.consumed);
     if (tokenized.tokens[0].typ == tokens.tk_analyze)
         return compileAnalyze(connection, source, tokenized.tokens, tokenized.consumed);
     if (tokenized.tokens[0].typ == tokens.tk_pragma or tokenized.tokens[0].typ == tokens.tk_vacuum or
