@@ -49,7 +49,9 @@ pub const IndexRealComparison = struct { operation: IndexComparisonOperation, va
 pub const IndexIsComparison = struct { value: i64, is_not: bool };
 pub const IndexRealIsComparison = struct { value: f64, is_not: bool };
 pub const IndexRangeComparison = struct { low: i64, high: i64, is_not: bool };
+pub const IndexRealRangeComparison = struct { low: f64, high: f64, is_not: bool };
 pub const IndexMembership = struct { first: i64, second: i64, is_not: bool };
+pub const IndexRealMembership = struct { first: f64, second: f64, is_not: bool };
 pub const IndexSubstring = struct { start: i64, count: ?i64 };
 pub const IndexScalarMinMax = struct { comparison: i64, column_first: bool };
 pub const IndexBinaryMath = enum { power, modulo, arc_tangent_two, logarithm };
@@ -124,7 +126,9 @@ pub const IndexTransform = union(enum) {
     real_is: IndexRealIsComparison,
     integer_is: IndexIsComparison,
     integer_between: IndexRangeComparison,
+    real_between: IndexRealRangeComparison,
     integer_in: IndexMembership,
+    real_in: IndexRealMembership,
 };
 
 fn numericIndexValue(value: Value) Value {
@@ -499,6 +503,19 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
         .integer_shift_right => |amount| .{ .integer = shiftIndexInteger(integerIndexValue(numeric) orelse return .null_, amount, false) },
         .integer_reverse_shift_left => |integer| .{ .integer = shiftIndexInteger(integer, integerIndexValue(numeric) orelse return .null_, true) },
         .integer_reverse_shift_right => |integer| .{ .integer = shiftIndexInteger(integer, integerIndexValue(numeric) orelse return .null_, false) },
+        .real_in => |membership| switch (numeric) {
+            .null_ => .null_,
+            .integer => |integer| {
+                const real: f64 = @floatFromInt(integer);
+                const matches = real == membership.first or real == membership.second;
+                return .{ .integer = @intFromBool(if (membership.is_not) !matches else matches) };
+            },
+            .real => |real| {
+                const matches = real == membership.first or real == membership.second;
+                return .{ .integer = @intFromBool(if (membership.is_not) !matches else matches) };
+            },
+            .text, .blob => unreachable,
+        },
         .integer_in => |membership| switch (numeric) {
             .null_ => .null_,
             .integer => |integer| {
@@ -508,6 +525,19 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .real => |real| {
                 const matches = real == @as(f64, @floatFromInt(membership.first)) or real == @as(f64, @floatFromInt(membership.second));
                 return .{ .integer = @intFromBool(if (membership.is_not) !matches else matches) };
+            },
+            .text, .blob => unreachable,
+        },
+        .real_between => |comparison| switch (numeric) {
+            .null_ => .null_,
+            .integer => |integer| {
+                const real: f64 = @floatFromInt(integer);
+                const between = real >= comparison.low and real <= comparison.high;
+                return .{ .integer = @intFromBool(if (comparison.is_not) !between else between) };
+            },
+            .real => |real| {
+                const between = real >= comparison.low and real <= comparison.high;
+                return .{ .integer = @intFromBool(if (comparison.is_not) !between else between) };
             },
             .text, .blob => unreachable,
         },

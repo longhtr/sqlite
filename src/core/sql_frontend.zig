@@ -4539,6 +4539,36 @@ fn resolveIntegerBetweenIndexExpression(token_list: []const Token, position: usi
     return .{ .low = low.value, .high = high.value, .is_not = is_not, .consumed = and_position + 1 + high.consumed - position };
 }
 
+const RealInIndexExpression = struct { first: f64, second: f64, is_not: bool, consumed: usize };
+
+fn resolveRealInIndexExpression(token_list: []const Token, position: usize) ?RealInIndexExpression {
+    if (position >= token_list.len) return null;
+    const is_not = token_list[position].typ == tokens.tk_not;
+    const in_position = position + @intFromBool(is_not);
+    if (in_position + 1 >= token_list.len or token_list[in_position].typ != tokens.tk_in or token_list[in_position + 1].typ != tokens.tk_lp) return null;
+    const first = resolveSignedFloatIndexOperand(token_list, in_position + 2) orelse return null;
+    const comma_position = in_position + 2 + first.consumed;
+    if (comma_position >= token_list.len or token_list[comma_position].typ != tokens.tk_comma) return null;
+    const second = resolveSignedFloatIndexOperand(token_list, comma_position + 1) orelse return null;
+    const close_position = comma_position + 1 + second.consumed;
+    if (close_position >= token_list.len or token_list[close_position].typ != tokens.tk_rp) return null;
+    return .{ .first = first.value, .second = second.value, .is_not = is_not, .consumed = close_position + 1 - position };
+}
+
+const RealBetweenIndexExpression = struct { low: f64, high: f64, is_not: bool, consumed: usize };
+
+fn resolveRealBetweenIndexExpression(token_list: []const Token, position: usize) ?RealBetweenIndexExpression {
+    if (position >= token_list.len) return null;
+    const is_not = token_list[position].typ == tokens.tk_not;
+    const between_position = position + @intFromBool(is_not);
+    if (between_position >= token_list.len or token_list[between_position].typ != tokens.tk_between) return null;
+    const low = resolveSignedFloatIndexOperand(token_list, between_position + 1) orelse return null;
+    const and_position = between_position + 1 + low.consumed;
+    if (and_position >= token_list.len or token_list[and_position].typ != tokens.tk_and) return null;
+    const high = resolveSignedFloatIndexOperand(token_list, and_position + 1) orelse return null;
+    return .{ .low = low.value, .high = high.value, .is_not = is_not, .consumed = and_position + 1 + high.consumed - position };
+}
+
 const IfnullIndexExpression = struct {
     column_name: []const u8,
     replacement: i64,
@@ -5031,10 +5061,26 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             }
         }
         if (schema_is_index and !scan_expression) {
+            if (resolveRealInIndexExpression(parsed.tokens, start + 1)) |in_expression| {
+                if (start + 1 + in_expression.consumed == position) {
+                    scan_expression = true;
+                    index_transform = .{ .real_in = .{ .first = in_expression.first, .second = in_expression.second, .is_not = in_expression.is_not } };
+                }
+            }
+        }
+        if (schema_is_index and !scan_expression) {
             if (resolveIntegerInIndexExpression(parsed.tokens, start + 1)) |in_expression| {
                 if (start + 1 + in_expression.consumed == position) {
                     scan_expression = true;
                     index_transform = .{ .integer_in = .{ .first = in_expression.first, .second = in_expression.second, .is_not = in_expression.is_not } };
+                }
+            }
+        }
+        if (schema_is_index and !scan_expression) {
+            if (resolveRealBetweenIndexExpression(parsed.tokens, start + 1)) |between_expression| {
+                if (start + 1 + between_expression.consumed == position) {
+                    scan_expression = true;
+                    index_transform = .{ .real_between = .{ .low = between_expression.low, .high = between_expression.high, .is_not = between_expression.is_not } };
                 }
             }
         }
@@ -9838,9 +9884,27 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             .identity => true,
             else => false,
         }) {
+            if (resolveRealInIndexExpression(token_list, position)) |in_expression| {
+                transform = .{ .real_in = .{ .first = in_expression.first, .second = in_expression.second, .is_not = in_expression.is_not } };
+                position += in_expression.consumed;
+            }
+        }
+        if (switch (transform) {
+            .identity => true,
+            else => false,
+        }) {
             if (resolveIntegerInIndexExpression(token_list, position)) |in_expression| {
                 transform = .{ .integer_in = .{ .first = in_expression.first, .second = in_expression.second, .is_not = in_expression.is_not } };
                 position += in_expression.consumed;
+            }
+        }
+        if (switch (transform) {
+            .identity => true,
+            else => false,
+        }) {
+            if (resolveRealBetweenIndexExpression(token_list, position)) |between_expression| {
+                transform = .{ .real_between = .{ .low = between_expression.low, .high = between_expression.high, .is_not = between_expression.is_not } };
+                position += between_expression.consumed;
             }
         }
         if (switch (transform) {
@@ -9983,7 +10047,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         };
         const numeric_transform = switch (specified_transforms.items[selected_position]) {
             .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .constant_null, .constant_integer, .null_coalesce_integer, .null_if_integer, .reverse_null_if_integer => false,
-            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .real_compare, .real_is, .integer_is, .integer_between, .integer_in, .scalar_min_integer, .scalar_max_integer, .unary_math, .binary_math => true,
+            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .real_compare, .real_is, .integer_is, .integer_between, .real_between, .integer_in, .real_in, .scalar_min_integer, .scalar_max_integer, .unary_math, .binary_math => true,
         };
         if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
             allocator.free(source);
