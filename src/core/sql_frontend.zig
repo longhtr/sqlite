@@ -4812,6 +4812,23 @@ fn resolveReversedIntegerIndexExpression(token_list: []const Token, position: us
     return .{ .column_name = token_list[operation_position + 1].text, .transform = .{ .integer_compare = .{ .operation = operation, .value = operand.value } }, .consumed = operation_position + 2 - position };
 }
 
+const NullOperatorIndexExpression = struct { column_name: []const u8, consumed: usize };
+
+fn resolveNullOperatorIndexExpression(token_list: []const Token, position: usize) ?NullOperatorIndexExpression {
+    if (position + 2 >= token_list.len) return null;
+    switch (token_list[position + 1].typ) {
+        tokens.tk_plus, tokens.tk_minus, tokens.tk_star, tokens.tk_slash, tokens.tk_rem, tokens.tk_bitand, tokens.tk_bitor, tokens.tk_lshift, tokens.tk_rshift, tokens.tk_concat, tokens.tk_eq, tokens.tk_ne, tokens.tk_lt, tokens.tk_le, tokens.tk_gt, tokens.tk_ge => {},
+        else => return null,
+    }
+    if (token_list[position].typ == tokens.tk_id and token_list[position + 2].typ == tokens.tk_null) {
+        return .{ .column_name = token_list[position].text, .consumed = 3 };
+    }
+    if (token_list[position].typ == tokens.tk_null and token_list[position + 2].typ == tokens.tk_id) {
+        return .{ .column_name = token_list[position + 2].text, .consumed = 3 };
+    }
+    return null;
+}
+
 const ConcatIndexExpression = struct { column_name: []const u8, constant_null: bool = false, consumed: usize };
 
 fn resolveConcatIndexExpression(token_list: []const Token, position: usize) ?ConcatIndexExpression {
@@ -4952,7 +4969,11 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var index_transform: btree.IndexTransform = .identity;
         var name: []const u8 = undefined;
         var start = position;
-        if (if (schema_is_index) resolveConcatIndexExpression(parsed.tokens, position) else null) |concat_expression| {
+        if (if (schema_is_index) resolveNullOperatorIndexExpression(parsed.tokens, position) else null) |null_operator_expression| {
+            scan_expression = true;
+            index_transform = .constant_null;
+            name = null_operator_expression.column_name;
+        } else if (if (schema_is_index) resolveConcatIndexExpression(parsed.tokens, position) else null) |concat_expression| {
             scan_expression = true;
             index_transform = if (concat_expression.constant_null) .constant_null else .concat_single;
             name = concat_expression.column_name;
@@ -9856,7 +9877,11 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if (wrapped_expression) position += 1;
         var transform: btree.IndexTransform = .identity;
         var column_name: []const u8 = undefined;
-        if (resolveConcatIndexExpression(token_list, position)) |concat_expression| {
+        if (resolveNullOperatorIndexExpression(token_list, position)) |null_operator_expression| {
+            transform = .constant_null;
+            column_name = null_operator_expression.column_name;
+            position += null_operator_expression.consumed;
+        } else if (resolveConcatIndexExpression(token_list, position)) |concat_expression| {
             transform = if (concat_expression.constant_null) .constant_null else .concat_single;
             column_name = concat_expression.column_name;
             position += concat_expression.consumed;
