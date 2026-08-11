@@ -10,6 +10,7 @@ const std = @import("std");
 const OneShotFailAllocator = @import("testing_one_shot_allocator.zig").OneShotFailAllocator;
 const pager_module = @import("pager.zig");
 const record_compare = @import("internal/record_compare.zig");
+const utf = @import("utf.zig");
 const Pager = pager_module.Pager;
 const ResultCode = @import("result_code.zig").ResultCode;
 pub const vfs = pager_module.vfs;
@@ -55,6 +56,7 @@ pub const IndexTransform = union(enum) {
     storage_type,
     octet_length,
     text_length,
+    unicode_value,
     numeric_not,
     integer_bit_not,
     is_null,
@@ -119,6 +121,12 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .null_ => 0,
             else => 1,
         } },
+        .unicode_value => return switch (value) {
+            .null_ => .null_,
+            .text => |text| if (text.len == 0 or text[0] == 0) .null_ else .{ .integer = @intCast(utf.readBounded(text).value) },
+            .blob => |blob| if (blob.len == 0 or blob[0] == 0) .null_ else .{ .integer = @intCast(utf.readBounded(blob).value) },
+            .integer, .real => .null_,
+        },
         .text_length => return switch (value) {
             .null_ => .null_,
             .text => |text| result: {
@@ -173,7 +181,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .real => |real| .{ .real = @abs(real) },
             .text, .blob => unreachable,
         },
-        .storage_type, .octet_length, .text_length => unreachable,
+        .storage_type, .octet_length, .text_length, .unicode_value => unreachable,
         .numeric_sign => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = if (integer < 0) -1 else if (integer > 0) 1 else 0 },
