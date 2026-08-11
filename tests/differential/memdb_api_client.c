@@ -705,6 +705,10 @@ int main(void){
   int partial_explicit_collation_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_explicit_collation_data(id INTEGER PRIMARY KEY,status TEXT,value INTEGER)",0,0,0);
   int partial_explicit_nocase_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_explicit_nocase_index ON partial_explicit_collation_data(value) WHERE status COLLATE NOCASE='active'",0,0,0);
   int partial_explicit_rtrim_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_explicit_rtrim_index ON partial_explicit_collation_data(value) WHERE status COLLATE RTRIM='ready'",0,0,0);
+  int partial_explicit_in_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_explicit_in_index ON partial_explicit_collation_data(value) WHERE status COLLATE NOCASE IN ('active','pending')",0,0,0);
+  int partial_explicit_between_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_explicit_between_index ON partial_explicit_collation_data(value) WHERE status COLLATE NOCASE BETWEEN 'a' AND 'z'",0,0,0);
+  int partial_explicit_is_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_explicit_is_index ON partial_explicit_collation_data(value) WHERE status COLLATE NOCASE IS 'active'",0,0,0);
+  printf("partial-explicit-composite-collation-index\t%d\t%d\t%d\n",partial_explicit_in_index_rc,partial_explicit_between_index_rc,partial_explicit_is_index_rc);
   int partial_explicit_reversed_nocase_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_explicit_reversed_nocase_index ON partial_explicit_collation_data(value) WHERE 'active'=status COLLATE NOCASE",0,0,0);
   int partial_explicit_reversed_rtrim_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_explicit_reversed_rtrim_index ON partial_explicit_collation_data(value) WHERE 'ready'=status COLLATE RTRIM",0,0,0);
   int partial_explicit_literal_nocase_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_explicit_literal_nocase_index ON partial_explicit_collation_data(value) WHERE status='active' COLLATE NOCASE",0,0,0);
