@@ -157,7 +157,7 @@
     {
       "command": "zig build vdbe-builder-differential",
       "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
-      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "result_sha256": "a8e9d4a382c3a2ad65f23f67b9e4324e329a8a68bd4843b468f9cf0fa723cae4",
       "source_scope_sha256": "a607eff96d38c5f6771203baf24c5ee96739a1eda5e04153e3303e8728ca09e6",
       "zig_scope_sha256": "77dac97f28b06edb1f21a519e505567675859f6c11faede75b3dd9ff2dc98cc6"
     }

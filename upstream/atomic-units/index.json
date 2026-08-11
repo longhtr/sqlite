@@ -238,6 +238,11 @@
       "id": "vdbe-statement-metadata-columns-bindings-and-vlist",
       "path": "upstream/atomic-units/vdbe-statement-metadata-columns-bindings-and-vlist.json",
       "status": "internal-trace-equivalent"
+    },
+    {
+      "id": "vdbe-text-binding-and-unbind",
+      "path": "upstream/atomic-units/vdbe-text-binding-and-unbind.json",
+      "status": "internal-trace-equivalent"
     }
   ]
 }

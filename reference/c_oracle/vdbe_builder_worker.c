@@ -11,8 +11,10 @@ static int progressReturn = 0;
 static int progressCalls = 0;
 static int vtabDisconnectCalls = 0;
 static int moduleDestroyCalls = 0;
+static int bindDestructorCalls = 0;
 static int testVtabDisconnect(sqlite3_vtab *p){ (void)p; vtabDisconnectCalls++; return SQLITE_OK; }
 static void testModuleDestroy(void *p){ (void)p; moduleDestroyCalls++; }
+static void testBindDestructor(void *p){ (void)p; bindDestructorCalls++; }
 static VdbeOp *detachedOperations = 0;
 static int detachedOperationCount = 0;
 static int progressCallback(void *p){ (void)p; progressCalls++; return progressReturn; }
@@ -265,8 +267,21 @@ int main(int argc, char **argv){
       if(c) sqlite3VdbeMemSetInt64(&made->aVar[b-1],c); else sqlite3VdbeMemSetNull(&made->aVar[b-1]);
       printf("%s\t%d\tBIND\t%d\t%d\t%d\t%d\n",zCase,seq++,a,b,made->aVar[b-1].flags,c); continue;
     }
+    if( strcmp(command,"BINDTEXT")==0 ){
+      Vdbe *made; Mem *cell; int mode; void (*xDel)(void*)=SQLITE_TRANSIENT;
+      sscanf(line,"%*s %d %d %d %63s",&a,&b,&mode,name); made=createParse[a].pVdbe; if(!made)return 17;
+      bindDestructorCalls=0;
+      if(mode==1) xDel=testBindDestructor;
+      if(mode==2){ xDel=testBindDestructor; made->eVdbeState=VDBE_RUN_STATE; }
+      if(mode==3){ made->prepFlags |= SQLITE_PREPARE_SAVESQL; made->expmask |= b>=32 ? 0x80000000 : (u32)1<<(b-1); }
+      c=bindText((sqlite3_stmt*)made,b,name,(i64)strlen(name),xDel,SQLITE_UTF8);
+      if(mode==2) made->eVdbeState=VDBE_READY_STATE;
+      cell=&made->aVar[(b>=1 && b<=made->nVar)?b-1:0];
+      printf("%s\t%d\tBINDTEXT\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",zCase,seq++,a,b,mode,c,cell->flags,cell->n,cell->enc,made->expired,db->errCode,db->mallocFailed,bindDestructorCalls,cell->z&&memcmp(cell->z,name,strlen(name))==0);
+      continue;
+    }
     if( strcmp(command,"BOUND")==0 ){
-      Vdbe *made; sqlite3_value *value; sscanf(line,"%*s %d %d",&a,&b); made=createParse[a].pVdbe; if(!made)return 17;
+      Vdbe *made; sqlite3_value *value; sscanf(line,"%*s %d %d",&a,&b); made=createParse[a].pVdbe; if(!made)return 18;
       value=sqlite3VdbeGetBoundValue(made,b,SQLITE_AFF_INTEGER);
       printf("%s\t%d\tBOUND\t%d\t%d\t%d\t%d\t%lld\t%d\n",zCase,seq++,a,b,value!=0,value?((Mem*)value)->flags:-1,value?(long long)((Mem*)value)->u.i:0,db->mallocFailed);
       sqlite3ValueFree(value); continue;

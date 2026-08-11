@@ -9,17 +9,17 @@ Incomplete and unsafe for production data. Reusable source-corresponding slices 
 | Fact | Current value |
 |---|---:|
 | Active source entities | 6,752 active |
-| Historical reviewed-or-later classifications | 2,113 |
+| Historical reviewed-or-later classifications | 2,115 |
 | Inventoried, unpromoted entities | 0 |
 | Unmapped entities | 3,875 |
 | Behavioral inventory | 25,930 blocks in 2,457 functions |
-| Atomic-unit dossiers total | 47 |
-| Admission-ready dossiers | 47 |
+| Atomic-unit dossiers total | 48 |
+| Admission-ready dossiers | 48 |
 | Source-translated atomic units | 0 |
-| Internal-trace-equivalent atomic units | 28 |
+| Internal-trace-equivalent atomic units | 29 |
 | Subsystem-integrated atomic units | 19 |
 | Historical mechanical function claims | 1,738; 0 completion credit |
-| Active batch and durable checkpoints | 1 entries; 0 checkpoints |
+| Active batch and durable checkpoints | 3 entries; 0 checkpoints |
 | Exact internal layouts | 69 |
 | Purposeful tools | 111 purposeful Python scripts |
 | Bounded opcode mappings | 107/190; 0 integrated |
@@ -48,7 +48,7 @@ Pinned source/profile/toolchain, inventories, generated Lemon/opcode artifacts, 
 
 ## Immediate blockers
 
-1. Open the first dependency-closed net-new production translation batch against the 47 reviewed dossiers; the 1,738 historical mechanical claims are formally retired and retain zero completion credit.
+1. Grow the active dependency-closed net-new production translation batch to its checkpoint threshold; the 1,738 historical mechanical claims remain retired with zero completion credit.
 2. Complete global/runtime and recursive AST/schema/VDBE ownership.
 3. Connect concrete Lemon/compiler/planner owners and retire the handwritten frontend.
 4. Replace reconstructed B-tree mutation and bounded pager/WAL ownership with source algorithms.

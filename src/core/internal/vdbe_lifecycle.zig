@@ -421,26 +421,6 @@ pub fn valueFromList(iterator: *ValueListIterator, next: bool) c_int {
     return result_ok;
 }
 
-/// Source `vdbeUnbind()`.
-pub fn unbind(machine: *types.Vdbe, zero_based_index: u32) c_int {
-    const db = machine.db orelse return result_misuse;
-    if (machine.eVdbeState != types.vdbe_state.ready) {
-        db.errCode = result_misuse;
-        return result_misuse;
-    }
-    if (zero_based_index >= machine.nVar) {
-        db.errCode = result_range;
-        return result_range;
-    }
-    const variable = &machine.aVar.?[zero_based_index];
-    vdbe_mem.release(variable);
-    variable.flags = types.mem_flag.null_;
-    db.errCode = result_ok;
-    const bit: u32 = if (zero_based_index >= 31) 0x8000_0000 else @as(u32, 1) << @intCast(zero_based_index);
-    if (machine.expmask & bit != 0) machine.flags.expired = 1;
-    return result_ok;
-}
-
 /// Source `allocateCursor()`.
 pub fn allocateCursor(machine: *types.Vdbe, cursor_index: c_int, field_count: c_int, cursor_type: u8) ?*types.VdbeCursor {
     if (cursor_index < 0 or cursor_index >= machine.nCursor or field_count < 0) return null;
@@ -510,22 +490,12 @@ fn testExecuteDone(_: ?*anyopaque, _: *types.Vdbe) c_int {
     return result_done;
 }
 
-test "checkpoint batch VDBE unbind expiry and inner step lifecycle" {
+test "checkpoint batch VDBE inner step lifecycle" {
     var db = std.mem.zeroes(types.Sqlite3);
     db.errMask = std.math.maxInt(c_int);
-    var variable = std.mem.zeroes(types.Mem);
-    variable.flags = types.mem_flag.integer;
-    variable.u.i = 42;
     var machine = std.mem.zeroes(types.Vdbe);
     machine.db = &db;
     machine.eVdbeState = types.vdbe_state.ready;
-    machine.nVar = 1;
-    machine.aVar = @as(*[1]types.Mem, &variable);
-    machine.expmask = 1;
-    try std.testing.expectEqual(result_ok, unbind(&machine, 0));
-    try std.testing.expectEqual(types.mem_flag.null_, variable.flags);
-    try std.testing.expectEqual(@as(u2, 1), machine.flags.expired);
-    machine.flags.expired = 0;
     try std.testing.expectEqual(result_done, stepMachine(&machine, testExecuteDone, null));
     try std.testing.expectEqual(types.vdbe_state.run, machine.eVdbeState);
     try std.testing.expectEqual(@as(c_int, 1), db.nVdbeActive);

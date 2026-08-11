@@ -409,7 +409,6 @@ comptime {
     _ = &internal_vdbe_lifecycle.notPureFunction;
     _ = &internal_vdbe_lifecycle.stepMachine;
     _ = &internal_vdbe_lifecycle.valueFromList;
-    _ = &internal_vdbe_lifecycle.unbind;
     _ = &internal_vdbe_lifecycle.allocateCursor;
     _ = &internal_vdbe_lifecycle.columnFromOverflow;
     _ = &internal_vdbe_lifecycle.logAbort;

@@ -15,6 +15,24 @@
       "atomic_unit_id": "pcache-pgroup-cross-cache-lru-and-limits",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::vdbeUnbind::line-1660",
+      "source_sha256": "407ab57214d8c94fc54a8b8d123cc040e88ba5eb574da2415c2a32bc85485483",
+      "zig_declaration_id": "src/core/internal/vdbe_api.zig::function::unbind",
+      "zig_declaration_sha256": "01d1c19f173c0695367305b004847def4c08f461c76182a22c4031c8bcc66e2a",
+      "atomic_unit_id": "vdbe-text-binding-and-unbind",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::bindText::line-1702",
+      "source_sha256": "877d7fc7f385d24b3c450f7f010a5ef5d9365b259a5782664a2631e583138d4a",
+      "zig_declaration_id": "src/core/internal/vdbe_api.zig::function::bindText",
+      "zig_declaration_sha256": "4ddfd938a503f0872a7d39667533a8dcf669fcd9d3dff0ef69c18dab47d32dc8",
+      "atomic_unit_id": "vdbe-text-binding-and-unbind",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

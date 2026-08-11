@@ -16,6 +16,7 @@ const result_range: c_int = 25;
 const result_io_error_no_memory: c_int = 10 | (12 << 8);
 const statement_status_memory_used: c_int = 99;
 const utf8: u8 = 1;
+const utf8_terminated: u8 = 16;
 const utf16_native: u8 = if (@import("builtin").target.cpu.arch.endian() == .little) 2 else 3;
 
 fn enterConnection(connection: *types.Sqlite3) void {
@@ -85,6 +86,94 @@ pub fn clearBindings(machine: *types.Vdbe) c_int {
     if (machine.expmask != 0) machine.flags.expired = 1;
     leaveConnection(connection);
     return 0;
+}
+
+/// Source `vdbeUnbind()`. Success deliberately returns with the connection
+/// mutex held so the binding setter can replace the now-NULL value atomically.
+pub fn unbind(machine_optional: ?*types.Vdbe, variable_index: u32) c_int {
+    if (vdbeSafetyNotNull(machine_optional)) return result_misuse;
+    const machine = machine_optional.?;
+    const connection = machine.db.?;
+    enterConnection(connection);
+    if (machine.eVdbeState != types.vdbe_state.ready) {
+        setConnectionError(connection, result_misuse);
+        leaveConnection(connection);
+        public_api.zig_sqlite3_log_message(result_misuse, "bind on a busy prepared statement");
+        return result_misuse;
+    }
+    if (variable_index >= @as(u32, @intCast(machine.nVar))) {
+        setConnectionError(connection, result_range);
+        leaveConnection(connection);
+        return result_range;
+    }
+    const variables = machine.aVar.?;
+    const variable = &variables[variable_index];
+    vdbe_mem.release(variable);
+    variable.flags = types.mem_flag.null_;
+    connection.errCode = 0;
+    std.debug.assert(machine.prepFlags & types.prepare_save_sql != 0 or machine.expmask == 0);
+    const mask: u32 = if (variable_index >= 31) 0x8000_0000 else mask: {
+        const shift: u5 = @intCast(variable_index);
+        break :mask @as(u32, 1) << shift;
+    };
+    if (machine.expmask != 0 and machine.expmask & mask != 0) {
+        machine.flags.expired = 1;
+    }
+    return 0;
+}
+
+fn disposeBindingInput(connection: ?*types.Sqlite3, source: ?[*]const u8, ownership: vdbe_mem.StringOwnership) void {
+    const pointer = source orelse return;
+    switch (ownership) {
+        .static, .transient => {},
+        .dynamic => db_allocator.free(connection, @ptrCast(@constCast(pointer))),
+        .custom => |destructor| destructor(@ptrCast(@constCast(pointer))),
+    }
+}
+
+/// Source `bindText()`: bind text or blob bytes with source ownership,
+/// encoding conversion, plan expiration, API-exit OOM normalization, and
+/// destructor consumption on pre-bind failure.
+pub fn bindText(
+    machine: ?*types.Vdbe,
+    one_based_index: c_int,
+    source: ?[*]const u8,
+    length: i64,
+    ownership: vdbe_mem.StringOwnership,
+    encoding: u8,
+) c_int {
+    const variable_index: u32 = @bitCast(one_based_index -% 1);
+    var result = unbind(machine, variable_index);
+    if (result == 0) {
+        const active = machine.?;
+        const connection = active.db.?;
+        std.debug.assert(active.aVar != null and one_based_index > 0 and one_based_index <= active.nVar);
+        if (source != null) {
+            const variable = &active.aVar.?[@intCast(variable_index)];
+            if (encoding == utf8) {
+                result = vdbe_mem.setText(variable, source, length, ownership);
+            } else if (encoding == utf8_terminated) {
+                result = vdbe_mem.setText(variable, source, length, ownership);
+                variable.flags |= types.mem_flag.terminated;
+            } else {
+                result = vdbe_mem.setStr(variable, source, length, encoding, ownership);
+                if (encoding == 0) {
+                    variable.enc = connection.enc;
+                }
+            }
+            if (result == 0 and encoding != 0) {
+                result = vdbe_mem.changeEncoding(variable, connection.enc);
+            }
+            if (result != 0) {
+                setConnectionError(connection, result);
+                result = apiExit(connection, result);
+            }
+        }
+        leaveConnection(connection);
+    } else if (ownership != .static and ownership != .transient) {
+        disposeBindingInput(if (machine) |active| active.db else null, source, ownership);
+    }
+    return result;
 }
 
 pub fn columnCount(machine_optional: ?*const types.Vdbe) c_int {

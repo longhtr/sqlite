@@ -11,12 +11,16 @@ const types = builder.types;
 const ProgressState = struct { result: c_int = 0, calls: usize = 0 };
 var vtab_disconnect_calls: c_int = 0;
 var module_destroy_calls: c_int = 0;
+var bind_destructor_calls: c_int = 0;
 fn testVtabDisconnect(_: ?*types.PublicVtab) callconv(.c) c_int {
     vtab_disconnect_calls += 1;
     return 0;
 }
 fn testModuleDestroy(_: ?*anyopaque) callconv(.c) void {
     module_destroy_calls += 1;
+}
+fn testBindDestructor(_: ?*anyopaque) callconv(.c) void {
+    bind_destructor_calls += 1;
 }
 fn progressCallback(raw: ?*anyopaque) callconv(.c) c_int {
     const state: *ProgressState = @ptrCast(@alignCast(raw.?));
@@ -146,6 +150,7 @@ pub fn main(init: std.process.Init) !void {
     var db = std.mem.zeroes(types.Sqlite3);
     db.aLimit[0] = 1_000_000_000;
     db.aLimit[5] = 250_000_000;
+    db.enc = 1;
     db.eOpenState = types.connection_state_open;
     db.errByteOffset = -1;
     var lookaside_storage: [4800 + types.lookaside_small]u8 align(8) = undefined;
@@ -494,6 +499,33 @@ pub fn main(init: std.process.Init) !void {
             const cell = &made.aVar.?[@intCast(variable - 1)];
             if (value != 0) vdbe_mem.setInt64(cell, value) else vdbe_mem.setNull(cell);
             std.debug.print("{s}\t{d}\tBIND\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, owner_index, variable, cell.flags, value });
+            sequence += 1;
+            continue;
+        }
+        if (std.mem.eql(u8, command, "BINDTEXT")) {
+            const owner_index = try parseInt(try next(&tokens));
+            const variable = try parseInt(try next(&tokens));
+            const mode = try parseInt(try next(&tokens));
+            const text = try next(&tokens);
+            const made: *types.Vdbe = @ptrCast(@alignCast(create_parse[@intCast(owner_index)].pVdbe.?));
+            bind_destructor_calls = 0;
+            const ownership: vdbe_mem.StringOwnership = if (mode == 1 or mode == 2) .{ .custom = testBindDestructor } else .transient;
+            if (mode == 2) {
+                made.eVdbeState = types.vdbe_state.run;
+            }
+            if (mode == 3) {
+                made.prepFlags |= types.prepare_save_sql;
+                const bit: u5 = @intCast(@min(variable - 1, 31));
+                made.expmask |= @as(u32, 1) << bit;
+            }
+            const result = api.bindText(made, variable, text.ptr, @intCast(text.len), ownership, 1);
+            if (mode == 2) {
+                made.eVdbeState = types.vdbe_state.ready;
+            }
+            const cell_index: usize = if (variable >= 1 and variable <= made.nVar) @intCast(variable - 1) else 0;
+            const cell = &made.aVar.?[cell_index];
+            const same_text = cell.z != null and cell.n == text.len and std.mem.eql(u8, cell.z.?[0..text.len], text);
+            std.debug.print("{s}\t{d}\tBINDTEXT\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, owner_index, variable, mode, result, cell.flags, cell.n, cell.enc, made.flags.expired, db.errCode, db.mallocFailed, bind_destructor_calls, @intFromBool(same_text) });
             sequence += 1;
             continue;
         }

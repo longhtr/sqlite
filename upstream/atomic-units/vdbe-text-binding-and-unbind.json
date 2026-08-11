@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-text-binding-and-unbind",
+  "title": "VDBE text/blob binding and atomic variable unbind",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "vdbeUnbind and bindText form the allocation-aware source boundary for replacing one prepared-statement variable. Unbind validates statement state and index, releases the old Mem owner, records plan expiration, and deliberately retains the connection mutex for bindText to install, convert, or reject the replacement atomically.",
+    "source_files": [
+      {
+        "path": "src/vdbeapi.c",
+        "sha256": "233846129dc649ec3d1ae321612ee8833c937ee775766eb8e39deda07a6b19a6"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeapi.c::function::vdbeUnbind::line-1660",
+      "src/vdbeapi.c::function::bindText::line-1702"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeapi.c::function::vdbeUnbind::behavior::if::line-1662-column-3::ordinal-0",
+      "src/vdbeapi.c::function::vdbeUnbind::behavior::return::line-1663-column-5::ordinal-0",
+      "src/vdbeapi.c::function::vdbeUnbind::behavior::if::line-1666-column-3::ordinal-0",
+      "src/vdbeapi.c::function::vdbeUnbind::behavior::return::line-1671-column-5::ordinal-0",
+      "src/vdbeapi.c::function::vdbeUnbind::behavior::if::line-1673-column-3::ordinal-0",
+      "src/vdbeapi.c::function::vdbeUnbind::behavior::return::line-1676-column-5::ordinal-0",
+      "src/vdbeapi.c::function::vdbeUnbind::behavior::assert::line-1692-column-3::ordinal-0",
+      "src/vdbeapi.c::function::vdbeUnbind::behavior::if::line-1693-column-3::ordinal-0",
+      "src/vdbeapi.c::function::vdbeUnbind::behavior::conditional::line-1693-column-39::ordinal-0",
+      "src/vdbeapi.c::function::vdbeUnbind::behavior::return::line-1696-column-3::ordinal-0",
+      "src/vdbeapi.c::function::bindText::behavior::if::line-1715-column-3::ordinal-0",
+      "src/vdbeapi.c::function::bindText::behavior::assert::line-1716-column-5::ordinal-0",
+      "src/vdbeapi.c::function::bindText::behavior::if::line-1717-column-5::ordinal-0",
+      "src/vdbeapi.c::function::bindText::behavior::if::line-1719-column-7::ordinal-0",
+      "src/vdbeapi.c::function::bindText::behavior::if::line-1721-column-13::ordinal-0",
+      "src/vdbeapi.c::function::bindText::behavior::assert::line-1725-column-9::ordinal-0",
+      "src/vdbeapi.c::function::bindText::behavior::if::line-1734-column-9::ordinal-0",
+      "src/vdbeapi.c::function::bindText::behavior::if::line-1736-column-7::ordinal-0",
+      "src/vdbeapi.c::function::bindText::behavior::if::line-1739-column-7::ordinal-0",
+      "src/vdbeapi.c::function::bindText::behavior::if::line-1745-column-9::ordinal-0",
+      "src/vdbeapi.c::function::bindText::behavior::return::line-1748-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Public sqlite3_bind_* entry points other than their shared text/blob core",
+      "Result-value invalid-input destructor handling",
+      "Statement step/reset/finalize lifecycle",
+      "General Mem string implementation"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-builder-state-representations",
+      "connection-allocation-for-vdbe-growth",
+      "vdbe-statement-metadata-columns-bindings-and-vlist"
+    ],
+    "external_source_responsibilities": [
+      "Source-equivalent Mem release, set-text/set-string, encoding conversion, and API-exit OOM normalization"
+    ],
+    "caller_closure": "The complete private unbind and shared text/blob binding bodies are assigned. Typed public bind entry points and source-layout public statement ownership remain follow-on units."
+  },
+  "contracts": {
+    "inputs": [
+      "Nullable source-layout Vdbe, one-based variable index, nullable bytes, signed byte length, ownership strategy, and encoding"
+    ],
+    "outputs": [
+      "MISUSE, RANGE, NOMEM/TOOBIG, or OK with the selected aVar value replaced and encoded"
+    ],
+    "ownership": "Successful unbind consumes the old Mem owner. Successful static input remains borrowed, transient input is copied, and dynamic/custom input ownership transfers. Failure before binding consumes only dynamic/custom incoming ownership.",
+    "state_and_results": "Only READY statements bind. Out-of-range and busy paths publish connection errors and unlock. Successful unbind leaves the mutex held, nulls the variable, clears errCode, and expires plans selected by expmask; bindText always releases the retained mutex.",
+    "locks_callbacks_io": "The connection mutex spans successful unbind through replacement and encoding conversion. A custom input destructor may run on failure or later Mem release. No I/O.",
+    "failure_and_continuation": "Allocation or conversion failure leaves the variable NULL, normalizes sticky OOM through sqlite3ApiExit, and releases the mutex. Busy/range failures preserve the old binding and permit later retry."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeapi.c::function::vdbeUnbind::line-1660",
+      "relation": "source-variable-unbind-to-native-operation",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::unbind"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::bindText::line-1702",
+      "relation": "source-text-blob-bind-core-to-native-operation",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::bindText"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "C destructor sentinels are represented by the existing typed StringOwnership union.",
+    "The signed one-based C index is wrapped and bitcast to the source u32 unbind index so non-positive values follow the RANGE path without an invalid Zig cast.",
+    "Busy-statement logging preserves the source misuse event with a fixed message; SQL text formatting remains the public logging layer's responsibility."
+  ],
+  "oracle": {
+    "protocol": "The shared VDBE builder worker packages two variables and compares successful transient UTF-8 replacement, RANGE and busy custom-destructor consumption, expmask expiration, and deterministic transient-copy OOM. C and Zig emit exact result, Mem flags/length/encoding/content, expiration, connection error/OOM, and destructor-count observations.",
+    "internal_observations": [
+      "result code and connection errCode",
+      "binding Mem flags, length, encoding, and bytes",
+      "busy/range preservation and custom destructor count",
+      "expmask expiration",
+      "OOM normalization and NULL continuation"
+    ],
+    "normalization": "All values, flags, bytes, results, and counts are exact; allocation addresses are not compared."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "The worker disables lookaside and fails transient-copy allocation, comparing NOMEM, NULL binding, cleared sticky OOM, and continuation.",
+    "io_crash_concurrency": "No I/O. Source connection-mutex retention and release order are preserved; broader concurrent API misuse remains public-owner work.",
+    "malformed_input": "Null statement, busy statement, non-positive/wide indices, null data, signed lengths, and encoding contracts follow source validation boundaries; the differential covers busy and RANGE.",
+    "continuation": "Busy/RANGE retain the old value; successful and failed replacement remain clearable/rebindable.",
+    "performance": "Constant-time variable lookup plus the source Mem copy/conversion cost.",
+    "commands": [
+      "zig build vdbe-builder-differential",
+      "zig build vdbe-mem-differential -j1",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_api.zig source-layout statement binding layer",
+    "native_call_path": "The source-layout native worker calls unbind and bindText against exact Vdbe/aVar/Sqlite3 owners. Public statement exports still use the bounded statement owner.",
+    "bounded_owner_retired": "No. Port the typed sqlite3_bind_* wrappers and switch public statement ownership."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires public bind/statement integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Port the remaining typed public binding setters against source-layout Vdbe.",
+    "Switch public prepared-statement ownership and step/reset/finalize to source-layout Vdbe.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeapi.c:1630-1750 was reviewed completely for the bind section preamble, full vdbeUnbind and bindText bodies, mutex/error/expiration ownership, destructor failure behavior, encoding branches, and adjacent public blob wrappers",
+      "src/core/internal/vdbe_api.zig unbind/bindText and vdbe_mem release/string/encoding helpers were reviewed with exact Vdbe/Sqlite3/Mem fields"
+    ],
+    "callers": [
+      "All public text, blob, pointer, zeroblob, numeric, NULL, and value bind APIs call vdbeUnbind directly or through bindText",
+      "Planner reprepare consumes expmask/expired; clear/reset/finalize consume resulting aVar owners",
+      "Public wrappers and source statement lifecycle remain outside this private-core unit"
+    ],
+    "callees": [
+      "vdbeUnbind validates statement safety/READY/index, enters the connection mutex, releases and NULLs aVar, clears errCode, and applies the saturated expmask bit while retaining the mutex on success",
+      "bindText delegates UTF-8/terminated/general encoding ownership to Mem setters, converts non-blob text to the connection encoding, publishes/API-normalizes errors, and releases the retained mutex",
+      "Dynamic/custom input is consumed when unbind fails; static/transient input remains caller-owned on pre-bind failure"
+    ],
+    "assertions_branches_cleanup": [
+      "All 21 active behavior IDs cover safety, busy/range returns, plan-mask saturation, null-data short circuit, three encoding families, conversion/error cleanup, destructor failure ownership, and final return",
+      "The successful unbind mutex handoff is paired with exactly one bindText leave on every subsequent branch",
+      "The old value is released exactly once before replacement and failed allocation leaves a source-shaped NULL cell"
+    ],
+    "upstream_tests": [
+      "Upstream bind, bindxfer, reprepare, misuse, UTF, blob, destructor, OOM, reset, and finalize suites exercise this boundary",
+      "Project VDBE builder differential compares successful, range, busy, expiration, and OOM binding transitions; VDBE Mem differential covers delegated ownership and encoding"
+    ]
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a8e9d4a382c3a2ad65f23f67b9e4324e329a8a68bd4843b468f9cf0fa723cae4",
+      "source_scope_sha256": "18ba5ac5266e0031388594f19ea410c919fbf25de607032c8cd6172c7487d696",
+      "zig_scope_sha256": "bd634818c93ca5f843a908a56cdd791883b34eb2a67bcde6a1db851a1ccd0184"
+    }
+  ]
+}
