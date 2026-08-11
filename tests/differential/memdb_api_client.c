@@ -338,9 +338,12 @@ int main(void){
   int reversed_bitor_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_bitor_index ON reversed_arithmetic_data(10|value)",0,0,0);
   int reversed_left_shift_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_left_shift_index ON reversed_arithmetic_data(10<<value)",0,0,0);
   int reversed_right_shift_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_right_shift_index ON reversed_arithmetic_data(10>>value)",0,0,0);
+  int reversed_subtract_overflow_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_subtract_overflow_index ON reversed_arithmetic_data(9223372036854775807-value)",0,0,0);
   int reversed_arithmetic_duplicate_rc=sqlite3_exec(clone,"INSERT INTO reversed_arithmetic_data VALUES(2,2)",0,0,0);
   int reversed_arithmetic_second_rc=sqlite3_exec(clone,"INSERT INTO reversed_arithmetic_data VALUES(2,3)",0,0,0);
   int reversed_arithmetic_zero_rc=sqlite3_exec(clone,"INSERT INTO reversed_arithmetic_data VALUES(3,0)",0,0,0);
+  int reversed_arithmetic_negative_rc=sqlite3_exec(clone,"INSERT INTO reversed_arithmetic_data VALUES(4,-1)",0,0,0);
+  printf("reversed-arithmetic-boundary\t%d\t%d\n",reversed_subtract_overflow_index_rc,reversed_arithmetic_negative_rc);
   int reversed_arithmetic_update_rc=sqlite3_exec(clone,"UPDATE reversed_arithmetic_data SET value=2 WHERE id=2",0,0,0);
   sqlite3_int64 reversed_arithmetic_count=-1;
   int reversed_arithmetic_count_rc=query_value(clone,"SELECT count(*) FROM reversed_arithmetic_data",&reversed_arithmetic_count);
