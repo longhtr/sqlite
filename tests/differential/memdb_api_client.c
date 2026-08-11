@@ -393,6 +393,18 @@ int main(void){
   int trim_expression_reindex_rc=sqlite3_exec(clone,"REINDEX trim_expression_index",0,0,0);
   int trim_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE trim_expression_data",0,0,0);
   printf("trim-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",trim_expression_table_rc,trim_expression_first_rc,trim_expression_index_rc,ltrim_expression_index_rc,rtrim_expression_index_rc,trim_expression_duplicate_rc,trim_expression_second_rc,trim_expression_update_rc,trim_expression_count_rc,(long long)trim_expression_count,trim_expression_reindex_rc,trim_expression_drop_rc);
+  int substring_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE substring_expression_data(id INTEGER PRIMARY KEY,value TEXT)",0,0,0);
+  int substring_expression_first_rc=sqlite3_exec(clone,"INSERT INTO substring_expression_data VALUES(1,'abcdef')",0,0,0);
+  int substring_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX substring_expression_index ON substring_expression_data(substr(value,2,3))",0,0,0);
+  int substring_alias_index_rc=sqlite3_exec(clone,"CREATE INDEX substring_alias_index ON substring_expression_data(substring(value,-3))",0,0,0);
+  int substring_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO substring_expression_data VALUES(2,'xbcdz')",0,0,0);
+  int substring_expression_second_rc=sqlite3_exec(clone,"INSERT INTO substring_expression_data VALUES(2,'uvwxyz')",0,0,0);
+  int substring_expression_update_rc=sqlite3_exec(clone,"UPDATE substring_expression_data SET value='xbcdz' WHERE id=2",0,0,0);
+  sqlite3_int64 substring_expression_count=-1;
+  int substring_expression_count_rc=query_value(clone,"SELECT count(*) FROM substring_expression_data",&substring_expression_count);
+  int substring_expression_reindex_rc=sqlite3_exec(clone,"REINDEX substring_expression_index",0,0,0);
+  int substring_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE substring_expression_data",0,0,0);
+  printf("substring-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",substring_expression_table_rc,substring_expression_first_rc,substring_expression_index_rc,substring_alias_index_rc,substring_expression_duplicate_rc,substring_expression_second_rc,substring_expression_update_rc,substring_expression_count_rc,(long long)substring_expression_count,substring_expression_reindex_rc,substring_expression_drop_rc);
   int ifnull_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE ifnull_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int ifnull_expression_first_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(1,NULL)",0,0,0);
   int ifnull_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX ifnull_expression_index ON ifnull_expression_data(ifnull(value,-1))",0,0,0);

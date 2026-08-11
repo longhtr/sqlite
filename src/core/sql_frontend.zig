@@ -4569,6 +4569,23 @@ fn resolveIfnullIndexExpression(token_list: []const Token, position: usize) ?Ifn
     return .{ .column_name = token_list[position + 2].text, .replacement = replacement, .null_if = std.ascii.eqlIgnoreCase(token_list[position].text, "nullif"), .consumed = literal_position + 2 - position };
 }
 
+const SubstringIndexExpression = struct { column_name: []const u8, start: i64, count: ?i64, consumed: usize };
+
+fn resolveSubstringIndexExpression(token_list: []const Token, position: usize) ?SubstringIndexExpression {
+    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "substr") and !std.ascii.eqlIgnoreCase(token_list[position].text, "substring")) or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 2].typ != tokens.tk_id or token_list[position + 3].typ != tokens.tk_comma) return null;
+    const start = resolveSignedIndexOperand(token_list, position + 4) orelse return null;
+    var end_position = position + 4 + start.consumed;
+    if (end_position >= token_list.len) return null;
+    var count: ?i64 = null;
+    if (token_list[end_position].typ == tokens.tk_comma) {
+        const resolved_count = resolveSignedIndexOperand(token_list, end_position + 1) orelse return null;
+        count = resolved_count.value;
+        end_position += 1 + resolved_count.consumed;
+    }
+    if (end_position >= token_list.len or token_list[end_position].typ != tokens.tk_rp) return null;
+    return .{ .column_name = token_list[position + 2].text, .start = start.value, .count = count, .consumed = end_position + 1 - position };
+}
+
 fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { source: [:0]u8, tokens: []Token, columns: []ResolvedColumn } {
     const source = try allocator.dupeZ(u8, sql);
     errdefer allocator.free(source);
@@ -4607,7 +4624,11 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var index_transform: btree.IndexTransform = .identity;
         var name: []const u8 = undefined;
         var start = position;
-        if (if (schema_is_index) resolveIfnullIndexExpression(parsed.tokens, position) else null) |ifnull_expression| {
+        if (if (schema_is_index) resolveSubstringIndexExpression(parsed.tokens, position) else null) |substring_expression| {
+            scan_expression = true;
+            index_transform = .{ .substring = .{ .start = substring_expression.start, .count = substring_expression.count } };
+            name = substring_expression.column_name;
+        } else if (if (schema_is_index) resolveIfnullIndexExpression(parsed.tokens, position) else null) |ifnull_expression| {
             scan_expression = true;
             index_transform = if (ifnull_expression.null_if) .{ .null_if_integer = ifnull_expression.replacement } else .{ .null_coalesce_integer = ifnull_expression.replacement };
             name = ifnull_expression.column_name;
@@ -9156,7 +9177,11 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if (wrapped_expression) position += 1;
         var transform: btree.IndexTransform = .identity;
         var column_name: []const u8 = undefined;
-        if (resolveIfnullIndexExpression(token_list, position)) |ifnull_expression| {
+        if (resolveSubstringIndexExpression(token_list, position)) |substring_expression| {
+            transform = .{ .substring = .{ .start = substring_expression.start, .count = substring_expression.count } };
+            column_name = substring_expression.column_name;
+            position += substring_expression.consumed;
+        } else if (resolveIfnullIndexExpression(token_list, position)) |ifnull_expression| {
             transform = if (ifnull_expression.null_if) .{ .null_if_integer = ifnull_expression.replacement } else .{ .null_coalesce_integer = ifnull_expression.replacement };
             column_name = ifnull_expression.column_name;
             position += ifnull_expression.consumed;
@@ -9355,7 +9380,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             return .{ .result = .error_, .consumed = consumed };
         };
         const numeric_transform = switch (specified_transforms.items[selected_position]) {
-            .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .is_null, .is_not_null, .null_coalesce_integer, .null_if_integer => false,
+            .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .substring, .is_null, .is_not_null, .null_coalesce_integer, .null_if_integer => false,
             .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_not, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_compare, .integer_is, .integer_between, .integer_in => true,
         };
         if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
@@ -9363,7 +9388,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             return .{ .result = .error_, .consumed = consumed };
         }
         if ((switch (specified_transforms.items[selected_position]) {
-            .octet_length, .text_length, .unicode_value => true,
+            .octet_length, .text_length, .unicode_value, .substring => true,
             else => false,
         }) and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "TEXT") and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "BLOB")) {
             allocator.free(source);

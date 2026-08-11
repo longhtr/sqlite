@@ -48,6 +48,7 @@ pub const IndexComparison = struct { operation: IndexComparisonOperation, value:
 pub const IndexIsComparison = struct { value: i64, is_not: bool };
 pub const IndexRangeComparison = struct { low: i64, high: i64, is_not: bool };
 pub const IndexMembership = struct { first: i64, second: i64, is_not: bool };
+pub const IndexSubstring = struct { start: i64, count: ?i64 };
 pub const IndexTransform = union(enum) {
     identity,
     numeric_negate,
@@ -61,6 +62,7 @@ pub const IndexTransform = union(enum) {
     text_trim,
     text_ltrim,
     text_rtrim,
+    substring: IndexSubstring,
     numeric_not,
     integer_bit_not,
     is_null,
@@ -115,6 +117,81 @@ fn shiftIndexInteger(integer: i64, amount: i64, shift_left: bool) i64 {
     return @bitCast(bits << shift);
 }
 
+fn nextUtf8Index(input: []const u8, position: usize) usize {
+    var next = position + 1;
+    if (input[position] >= 0xc0) {
+        while (next < input.len and (input[next] & 0xc0) == 0x80) {
+            next += 1;
+        }
+    }
+    return next;
+}
+
+fn substringIndexValue(value: Value, substring: IndexSubstring) Value {
+    if (switch (value) {
+        .null_ => true,
+        else => false,
+    }) return .null_;
+    const blob = switch (value) {
+        .blob => true,
+        else => false,
+    };
+    const input = switch (value) {
+        .text => |text| text,
+        .blob => |bytes| bytes,
+        .null_ => unreachable,
+        .integer, .real => return .null_,
+    };
+    const input_end = if (blob) input.len else std.mem.indexOfScalar(u8, input, 0) orelse input.len;
+    var start = substring.start;
+    var count = substring.count orelse std.math.maxInt(i64);
+    var logical_length: i64 = @intCast(input_end);
+    if (!blob and start < 0) {
+        logical_length = 0;
+        var scan: usize = 0;
+        while (scan < input_end) : (logical_length += 1) {
+            scan = nextUtf8Index(input[0..input_end], scan);
+        }
+    }
+    if (start < 0) {
+        start += logical_length;
+        if (start < 0) {
+            if (count < 0) {
+                count = 0;
+            } else {
+                count += start;
+            }
+            start = 0;
+        }
+    } else if (start > 0) {
+        start -= 1;
+    } else if (count > 0) {
+        count -= 1;
+    }
+    if (count < 0) {
+        count = if (count < -start) start else -count;
+        start -= count;
+    }
+    if (blob) {
+        if (start >= logical_length) return .{ .blob = input[0..0] };
+        const begin: usize = @intCast(start);
+        const available: i64 = logical_length - start;
+        const bounded_count = @min(count, available);
+        return .{ .blob = input[begin .. begin + @as(usize, @intCast(@max(bounded_count, 0)))] };
+    }
+    var begin: usize = 0;
+    var remaining_start = start;
+    while (begin < input_end and remaining_start > 0) : (remaining_start -= 1) {
+        begin = nextUtf8Index(input[0..input_end], begin);
+    }
+    var end = begin;
+    var remaining_count = count;
+    while (end < input_end and remaining_count > 0) : (remaining_count -= 1) {
+        end = nextUtf8Index(input[0..input_end], end);
+    }
+    return .{ .text = input[begin..end] };
+}
+
 pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     switch (transform) {
         .identity => return value,
@@ -126,6 +203,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .null_ => 0,
             else => 1,
         } },
+        .substring => |substring| return substringIndexValue(value, substring),
         .text_trim, .text_ltrim, .text_rtrim => return switch (value) {
             .null_ => .null_,
             .text, .blob => |input| trimmed: {
@@ -203,7 +281,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     }
     const numeric = numericIndexValue(value);
     return switch (transform) {
-        .identity, .is_null, .is_not_null, .null_coalesce_integer, .null_if_integer => unreachable,
+        .identity, .is_null, .is_not_null, .null_coalesce_integer, .null_if_integer, .substring => unreachable,
         .numeric_negate => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = -integer },
