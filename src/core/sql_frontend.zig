@@ -4562,13 +4562,13 @@ fn resolveSignedIndexOperand(token_list: []const Token, position: usize) ?Signed
 const NullBinaryFunctionIndexExpression = struct { column_name: []const u8, constant_null: bool, consumed: usize };
 
 fn resolveNullBinaryFunctionIndexExpression(token_list: []const Token, position: usize) ?NullBinaryFunctionIndexExpression {
-    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "ifnull") and !std.ascii.eqlIgnoreCase(token_list[position].text, "coalesce") and !std.ascii.eqlIgnoreCase(token_list[position].text, "nullif") and !std.ascii.eqlIgnoreCase(token_list[position].text, "min") and !std.ascii.eqlIgnoreCase(token_list[position].text, "max")) or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 3].typ != tokens.tk_comma or token_list[position + 5].typ != tokens.tk_rp) return null;
+    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "ifnull") and !std.ascii.eqlIgnoreCase(token_list[position].text, "coalesce") and !std.ascii.eqlIgnoreCase(token_list[position].text, "nullif") and !std.ascii.eqlIgnoreCase(token_list[position].text, "min") and !std.ascii.eqlIgnoreCase(token_list[position].text, "max") and !std.ascii.eqlIgnoreCase(token_list[position].text, "pow") and !std.ascii.eqlIgnoreCase(token_list[position].text, "power") and !std.ascii.eqlIgnoreCase(token_list[position].text, "mod") and !std.ascii.eqlIgnoreCase(token_list[position].text, "atan2") and !std.ascii.eqlIgnoreCase(token_list[position].text, "log")) or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 3].typ != tokens.tk_comma or token_list[position + 5].typ != tokens.tk_rp) return null;
     const null_first = token_list[position + 2].typ == tokens.tk_null and token_list[position + 4].typ == tokens.tk_id;
     const null_second = token_list[position + 2].typ == tokens.tk_id and token_list[position + 4].typ == tokens.tk_null;
     if (!null_first and !null_second) return null;
     return .{
         .column_name = token_list[if (null_first) position + 4 else position + 2].text,
-        .constant_null = std.ascii.eqlIgnoreCase(token_list[position].text, "min") or std.ascii.eqlIgnoreCase(token_list[position].text, "max") or (null_first and std.ascii.eqlIgnoreCase(token_list[position].text, "nullif")),
+        .constant_null = std.ascii.eqlIgnoreCase(token_list[position].text, "min") or std.ascii.eqlIgnoreCase(token_list[position].text, "max") or std.ascii.eqlIgnoreCase(token_list[position].text, "pow") or std.ascii.eqlIgnoreCase(token_list[position].text, "power") or std.ascii.eqlIgnoreCase(token_list[position].text, "mod") or std.ascii.eqlIgnoreCase(token_list[position].text, "atan2") or std.ascii.eqlIgnoreCase(token_list[position].text, "log") or (null_first and std.ascii.eqlIgnoreCase(token_list[position].text, "nullif")),
         .consumed = 6,
     };
 }

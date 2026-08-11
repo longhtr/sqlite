@@ -435,7 +435,12 @@ int main(void){
   int reverse_mod_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reverse_mod_expression_index ON binary_math_expression_data(mod(9,value))",0,0,0);
   int reverse_atan2_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reverse_atan2_expression_index ON binary_math_expression_data(atan2(3,value))",0,0,0);
   int reverse_log_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reverse_log_expression_index ON binary_math_expression_data(log(2,value))",0,0,0);
-  printf("reverse-binary-math-index\t%d\t%d\t%d\t%d\t%d\n",reverse_pow_expression_index_rc,reverse_power_expression_index_rc,reverse_mod_expression_index_rc,reverse_atan2_expression_index_rc,reverse_log_expression_index_rc);
+  int pow_null_first_index_rc=sqlite3_exec(clone,"CREATE INDEX pow_null_first_index ON binary_math_expression_data(pow(NULL,value))",0,0,0);
+  int power_null_second_index_rc=sqlite3_exec(clone,"CREATE INDEX power_null_second_index ON binary_math_expression_data(power(value,NULL))",0,0,0);
+  int mod_null_first_index_rc=sqlite3_exec(clone,"CREATE INDEX mod_null_first_index ON binary_math_expression_data(mod(NULL,value))",0,0,0);
+  int atan2_null_second_index_rc=sqlite3_exec(clone,"CREATE INDEX atan2_null_second_index ON binary_math_expression_data(atan2(value,NULL))",0,0,0);
+  int log_null_first_index_rc=sqlite3_exec(clone,"CREATE INDEX log_null_first_index ON binary_math_expression_data(log(NULL,value))",0,0,0);
+  printf("reverse-binary-math-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",reverse_pow_expression_index_rc,reverse_power_expression_index_rc,reverse_mod_expression_index_rc,reverse_atan2_expression_index_rc,reverse_log_expression_index_rc,pow_null_first_index_rc,power_null_second_index_rc,mod_null_first_index_rc,atan2_null_second_index_rc,log_null_first_index_rc);
   int binary_math_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO binary_math_expression_data VALUES(2,2)",0,0,0);
   int binary_math_expression_second_rc=sqlite3_exec(clone,"INSERT INTO binary_math_expression_data VALUES(2,4)",0,0,0);
   int binary_math_mod_duplicate_rc=sqlite3_exec(clone,"INSERT INTO binary_math_expression_data VALUES(3,5)",0,0,0);
