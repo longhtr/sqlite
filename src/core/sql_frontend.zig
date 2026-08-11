@@ -4628,7 +4628,7 @@ fn resolveSignedNumericIndexOperand(token_list: []const Token, position: usize) 
     return .{ .value = @floatFromInt(operand.value), .consumed = operand.consumed };
 }
 
-const SignedOffsetIndexOperand = struct { value: i64, consumed: usize };
+const SignedOffsetIndexOperand = SignedIndexOperand;
 
 fn resolveSignedOffsetIndexOperand(token_list: []const Token, position: usize) ?SignedOffsetIndexOperand {
     if (resolveSignedIndexOperand(token_list, position)) |operand| {
@@ -4812,7 +4812,7 @@ fn resolveReversedRealIndexExpression(token_list: []const Token, position: usize
 const ReversedIntegerIndexExpression = struct { column_name: []const u8, transform: btree.IndexTransform, consumed: usize };
 
 fn resolveReversedIntegerIndexExpression(token_list: []const Token, position: usize) ?ReversedIntegerIndexExpression {
-    const operand = resolveSignedIndexOperand(token_list, position) orelse return null;
+    const operand = resolveSignedOffsetIndexOperand(token_list, position) orelse return null;
     const operation_position = position + operand.consumed;
     if (operation_position + 1 >= token_list.len) return null;
     if (token_list[operation_position].typ == tokens.tk_is) {
@@ -5229,8 +5229,8 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
                 }
             }
         }
-        if (schema_is_index and start + 2 < position and (parsed.tokens[start + 1].typ == tokens.tk_plus or parsed.tokens[start + 1].typ == tokens.tk_minus or parsed.tokens[start + 1].typ == tokens.tk_star or parsed.tokens[start + 1].typ == tokens.tk_slash or parsed.tokens[start + 1].typ == tokens.tk_rem or parsed.tokens[start + 1].typ == tokens.tk_bitand or parsed.tokens[start + 1].typ == tokens.tk_bitor or parsed.tokens[start + 1].typ == tokens.tk_lshift or parsed.tokens[start + 1].typ == tokens.tk_rshift or parsed.tokens[start + 1].typ == tokens.tk_eq or parsed.tokens[start + 1].typ == tokens.tk_ne or parsed.tokens[start + 1].typ == tokens.tk_lt or parsed.tokens[start + 1].typ == tokens.tk_le or parsed.tokens[start + 1].typ == tokens.tk_gt or parsed.tokens[start + 1].typ == tokens.tk_ge)) {
-            if (resolveSignedIndexOperand(parsed.tokens, start + 2)) |resolved_operand| {
+        if (schema_is_index and !scan_expression and start + 2 < position and (parsed.tokens[start + 1].typ == tokens.tk_plus or parsed.tokens[start + 1].typ == tokens.tk_minus or parsed.tokens[start + 1].typ == tokens.tk_star or parsed.tokens[start + 1].typ == tokens.tk_slash or parsed.tokens[start + 1].typ == tokens.tk_rem or parsed.tokens[start + 1].typ == tokens.tk_bitand or parsed.tokens[start + 1].typ == tokens.tk_bitor or parsed.tokens[start + 1].typ == tokens.tk_lshift or parsed.tokens[start + 1].typ == tokens.tk_rshift or parsed.tokens[start + 1].typ == tokens.tk_eq or parsed.tokens[start + 1].typ == tokens.tk_ne or parsed.tokens[start + 1].typ == tokens.tk_lt or parsed.tokens[start + 1].typ == tokens.tk_le or parsed.tokens[start + 1].typ == tokens.tk_gt or parsed.tokens[start + 1].typ == tokens.tk_ge)) {
+            if (resolveSignedOffsetIndexOperand(parsed.tokens, start + 2)) |resolved_operand| {
                 if (start + 2 + resolved_operand.consumed == position) {
                     var operand = resolved_operand.value;
                     scan_expression = true;
@@ -10097,7 +10097,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             .identity => true,
             else => false,
         }) and position < token_list.len and (token_list[position].typ == tokens.tk_plus or token_list[position].typ == tokens.tk_minus or token_list[position].typ == tokens.tk_star or token_list[position].typ == tokens.tk_slash or token_list[position].typ == tokens.tk_rem or token_list[position].typ == tokens.tk_bitand or token_list[position].typ == tokens.tk_bitor or token_list[position].typ == tokens.tk_lshift or token_list[position].typ == tokens.tk_rshift or token_list[position].typ == tokens.tk_eq or token_list[position].typ == tokens.tk_ne or token_list[position].typ == tokens.tk_lt or token_list[position].typ == tokens.tk_le or token_list[position].typ == tokens.tk_gt or token_list[position].typ == tokens.tk_ge)) {
-            if (resolveSignedIndexOperand(token_list, position + 1)) |resolved_operand| {
+            if (resolveSignedOffsetIndexOperand(token_list, position + 1)) |resolved_operand| {
                 var operand = resolved_operand.value;
                 if (token_list[position].typ == tokens.tk_eq or token_list[position].typ == tokens.tk_ne or token_list[position].typ == tokens.tk_lt or token_list[position].typ == tokens.tk_le or token_list[position].typ == tokens.tk_gt or token_list[position].typ == tokens.tk_ge) {
                     const operation: btree.IndexComparisonOperation = switch (token_list[position].typ) {

@@ -202,7 +202,7 @@
     "reviewed_coverage_percent": 31.29,
     "source_dependency_file_units": 85,
     "unresolved_legacy_target_references": 402,
-    "zig_declaration_inventory": 13380
+    "zig_declaration_inventory": 13378
   },
   "translation_tracking": {
     "active_batch_entries": 0,
