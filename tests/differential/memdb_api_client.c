@@ -844,10 +844,10 @@ int main(void){
   int partial_float_is_not_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_is_not_index ON partial_float_data(value) WHERE marker IS NOT -1.5",0,0,0);
   int partial_float_reversed_is_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_reversed_is_index ON partial_float_data(value) WHERE 1.5 IS marker",0,0,0);
   int partial_float_distinct_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_distinct_index ON partial_float_data(value) WHERE -1.5 IS DISTINCT FROM marker",0,0,0);
-  int partial_float_between_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_between_index ON partial_float_data(value) WHERE marker BETWEEN -1.5 AND 2.5",0,0,0);
+  int partial_float_between_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_between_index ON partial_float_data(value) WHERE marker BETWEEN -1 AND 2.5",0,0,0);
   int partial_float_not_between_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_not_between_index ON partial_float_data(value) WHERE marker NOT BETWEEN -1.5 AND 2.5",0,0,0);
   int partial_float_in_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_in_index ON partial_float_data(value) WHERE marker IN (-1.5,2.5)",0,0,0);
-  int partial_float_not_in_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_not_in_index ON partial_float_data(value) WHERE marker NOT IN (-1.5,2.5)",0,0,0);
+  int partial_float_not_in_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_not_in_index ON partial_float_data(value) WHERE marker NOT IN (-1,2.5)",0,0,0);
   printf("partial-float-is-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",partial_float_is_index_rc,partial_float_is_not_index_rc,partial_float_reversed_is_index_rc,partial_float_distinct_index_rc,partial_float_between_index_rc,partial_float_not_between_index_rc,partial_float_in_index_rc,partial_float_not_in_index_rc);
   int partial_float_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_float_data VALUES(1,1,7)",0,0,0);
   int partial_float_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_float_data VALUES(2,2,7)",0,0,0);

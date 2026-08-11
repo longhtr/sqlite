@@ -6062,6 +6062,22 @@ fn resolveIndexPredicateFloat(token_list: []const Token, position: *usize) error
     return value;
 }
 
+const IndexPredicateNumeric = union(enum) { integer: i64, real: f64 };
+
+fn resolveIndexPredicateNumeric(token_list: []const Token, position: *usize) error{Syntax}!IndexPredicateNumeric {
+    const literal_position = position.* + @intFromBool(position.* < token_list.len and token_list[position.*].typ == tokens.tk_minus);
+    if (literal_position >= token_list.len) return error.Syntax;
+    if (token_list[literal_position].typ == tokens.tk_float) return .{ .real = try resolveIndexPredicateFloat(token_list, position) };
+    return .{ .integer = try resolveIndexPredicateInteger(token_list, position) };
+}
+
+fn indexPredicateNumericReal(numeric: IndexPredicateNumeric) f64 {
+    return switch (numeric) {
+        .integer => |integer| @floatFromInt(integer),
+        .real => |real| real,
+    };
+}
+
 fn resolveIndexPredicateInteger(token_list: []const Token, position: *usize) error{Syntax}!i64 {
     var negative = false;
     if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_minus) {
@@ -6322,38 +6338,42 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
             position.* += if (not_in) 2 else 1;
             if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_lp) return error.Syntax;
             position.* += 1;
-            if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or (token_list[position.*].typ == tokens.tk_minus and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
-                const first_real = try resolveIndexPredicateFloat(token_list, position);
-                if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_comma) return error.Syntax;
-                position.* += 1;
-                const second_real = try resolveIndexPredicateFloat(token_list, position);
-                if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_rp) return error.Syntax;
-                position.* += 1;
-                return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (not_in) .real_not_in else .real_in, .comparison_real = first_real, .comparison_real_high = second_real };
-            }
-            const first_value = try resolveIndexPredicateInteger(token_list, position);
+            const first_numeric = try resolveIndexPredicateNumeric(token_list, position);
             if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_comma) return error.Syntax;
             position.* += 1;
-            const second_value = try resolveIndexPredicateInteger(token_list, position);
+            const second_numeric = try resolveIndexPredicateNumeric(token_list, position);
             if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_rp) return error.Syntax;
             position.* += 1;
-            return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (not_in) .integer_not_in else .integer_in, .comparison_value = first_value, .comparison_value_high = second_value };
+            const have_real = switch (first_numeric) {
+                .real => true,
+                .integer => false,
+            } or switch (second_numeric) {
+                .real => true,
+                .integer => false,
+            };
+            if (have_real) {
+                return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (not_in) .real_not_in else .real_in, .comparison_real = indexPredicateNumericReal(first_numeric), .comparison_real_high = indexPredicateNumericReal(second_numeric) };
+            }
+            return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (not_in) .integer_not_in else .integer_in, .comparison_value = first_numeric.integer, .comparison_value_high = second_numeric.integer };
         }
         const not_between = token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_between;
         if (token_list[position.*].typ == tokens.tk_between or not_between) {
             position.* += if (not_between) 2 else 1;
-            if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or (token_list[position.*].typ == tokens.tk_minus and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
-                const low_real = try resolveIndexPredicateFloat(token_list, position);
-                if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_and) return error.Syntax;
-                position.* += 1;
-                const high_real = try resolveIndexPredicateFloat(token_list, position);
-                return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (not_between) .real_not_between else .real_between, .comparison_real = low_real, .comparison_real_high = high_real };
-            }
-            const low = try resolveIndexPredicateInteger(token_list, position);
+            const low_numeric = try resolveIndexPredicateNumeric(token_list, position);
             if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_and) return error.Syntax;
             position.* += 1;
-            const high = try resolveIndexPredicateInteger(token_list, position);
-            return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (not_between) .integer_not_between else .integer_between, .comparison_value = low, .comparison_value_high = high };
+            const high_numeric = try resolveIndexPredicateNumeric(token_list, position);
+            const have_real = switch (low_numeric) {
+                .real => true,
+                .integer => false,
+            } or switch (high_numeric) {
+                .real => true,
+                .integer => false,
+            };
+            if (have_real) {
+                return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (not_between) .real_not_between else .real_between, .comparison_real = indexPredicateNumericReal(low_numeric), .comparison_real_high = indexPredicateNumericReal(high_numeric) };
+            }
+            return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (not_between) .integer_not_between else .integer_between, .comparison_value = low_numeric.integer, .comparison_value_high = high_numeric.integer };
         }
         operation = switch (token_list[position.*].typ) {
             tokens.tk_eq => .integer_eq,
