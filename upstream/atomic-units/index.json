@@ -42,7 +42,7 @@
     {
       "id": "vdbe-operation-append-core",
       "path": "upstream/atomic-units/vdbe-operation-append-core.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-immediate-and-deferred-foreign-key-commit-guards",

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-operation-append-core",
   "title": "VDBE operation-array growth and fixed-operand append core",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These eight mutually coupled vdbeaux.c routines implement the smallest operation-array append state machine: geometric growth, allocator-reported capacity, fixed P1/P2/P3 initialization, and P4_INT32 insertion.",
@@ -162,7 +162,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Native and differential traces cover initial growth-limit OOM, reached one-shot and sticky growth allocation failures, sticky persistence across machine reset, preservation of the existing operation array, and continuation after explicit fault/OOM clear.",
