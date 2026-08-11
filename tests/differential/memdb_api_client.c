@@ -602,7 +602,9 @@ int main(void){
   int partial_null_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_null_index ON partial_null_data(value) WHERE marker IS NULL",0,0,0);
   int partial_null_reversed_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_null_reversed_index ON partial_null_data(value) WHERE NULL IS marker",0,0,0);
   int partial_not_null_reversed_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_null_reversed_index ON partial_null_data(value) WHERE NULL IS NOT marker",0,0,0);
-  printf("partial-null-reversed-index\t%d\t%d\n",partial_null_reversed_index_rc,partial_not_null_reversed_index_rc);
+  int partial_null_distinct_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_null_distinct_index ON partial_null_data(value) WHERE NULL IS DISTINCT FROM marker",0,0,0);
+  int partial_null_not_distinct_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_null_not_distinct_index ON partial_null_data(value) WHERE marker IS NOT DISTINCT FROM NULL",0,0,0);
+  printf("partial-null-reversed-index\t%d\t%d\t%d\t%d\n",partial_null_reversed_index_rc,partial_not_null_reversed_index_rc,partial_null_distinct_index_rc,partial_null_not_distinct_index_rc);
   int partial_null_first_rc=sqlite3_exec(clone,"INSERT INTO partial_null_data VALUES(1,NULL,7)",0,0,0);
   int partial_null_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_null_data VALUES(2,1,7)",0,0,0);
   int partial_null_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_null_data VALUES(3,NULL,7)",0,0,0);
@@ -865,7 +867,12 @@ int main(void){
   int partial_reversed_text_is_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_reversed_text_is_index ON partial_reversed_data(value) WHERE 'm' IS status",0,0,0);
   int partial_reversed_integer_is_not_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_reversed_integer_is_not_index ON partial_reversed_data(value) WHERE 5 IS NOT marker",0,0,0);
   int partial_reversed_text_is_not_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_reversed_text_is_not_index ON partial_reversed_data(value) WHERE 'm' IS NOT status",0,0,0);
-  printf("partial-reversed-is-index\t%d\t%d\t%d\t%d\n",partial_reversed_integer_is_index_rc,partial_reversed_text_is_index_rc,partial_reversed_integer_is_not_index_rc,partial_reversed_text_is_not_index_rc);
+  int partial_integer_distinct_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_integer_distinct_index ON partial_reversed_data(value) WHERE marker IS DISTINCT FROM 5",0,0,0);
+  int partial_reversed_integer_distinct_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_reversed_integer_distinct_index ON partial_reversed_data(value) WHERE 5 IS DISTINCT FROM marker",0,0,0);
+  int partial_integer_not_distinct_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_integer_not_distinct_index ON partial_reversed_data(value) WHERE marker IS NOT DISTINCT FROM 5",0,0,0);
+  int partial_text_distinct_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_text_distinct_index ON partial_reversed_data(value) WHERE status IS DISTINCT FROM 'm'",0,0,0);
+  int partial_reversed_text_not_distinct_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_reversed_text_not_distinct_index ON partial_reversed_data(value) WHERE 'm' IS NOT DISTINCT FROM status",0,0,0);
+  printf("partial-reversed-is-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",partial_reversed_integer_is_index_rc,partial_reversed_text_is_index_rc,partial_reversed_integer_is_not_index_rc,partial_reversed_text_is_not_index_rc,partial_integer_distinct_index_rc,partial_reversed_integer_distinct_index_rc,partial_integer_not_distinct_index_rc,partial_text_distinct_index_rc,partial_reversed_text_not_distinct_index_rc);
   int partial_reversed_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_reversed_data VALUES(1,20,1,'a')",0,0,0);
   int partial_reversed_integer_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_reversed_data VALUES(2,20,10,'a')",0,0,0);
   int partial_reversed_integer_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_reversed_data VALUES(3,20,20,'a')",0,0,0);

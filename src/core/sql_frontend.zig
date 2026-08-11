@@ -5728,6 +5728,17 @@ fn indexCollation(connection: *Connection, name: []const u8) ?btree.IndexCollati
     return registeredIndexCollation(connection, name);
 }
 
+const IndexIsSuffix = struct { is_not: bool, consumed: usize };
+
+fn resolveIndexIsSuffix(token_list: []const Token, position: usize) IndexIsSuffix {
+    if (position < token_list.len and token_list[position].typ == tokens.tk_not) {
+        if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_distinct and token_list[position + 2].typ == tokens.tk_from) return .{ .is_not = false, .consumed = 3 };
+        return .{ .is_not = true, .consumed = 1 };
+    }
+    if (position + 1 < token_list.len and token_list[position].typ == tokens.tk_distinct and token_list[position + 1].typ == tokens.tk_from) return .{ .is_not = true, .consumed = 2 };
+    return .{ .is_not = false, .consumed = 0 };
+}
+
 fn resolveIndexPredicateInteger(token_list: []const Token, position: *usize) error{Syntax}!i64 {
     var negative = false;
     if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_minus) {
@@ -5746,8 +5757,8 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         position.* += 1;
         if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_is) return error.Syntax;
         position.* += 1;
-        const is_not = position.* < token_list.len and token_list[position.*].typ == tokens.tk_not;
-        if (is_not) position.* += 1;
+        const is_suffix = resolveIndexIsSuffix(token_list, position.*);
+        position.* += is_suffix.consumed;
         if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_id) return error.Syntax;
         var selected: ?usize = null;
         for (columns, 0..) |column, index| {
@@ -5758,13 +5769,13 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         }
         const column_index = selected orelse return error.Syntax;
         position.* += 1;
-        return .{ .column_index = column_index, .integer_primary_key = columns[column_index].integer_primary_key, .operation = if (is_not) .is_not_null else .is_null };
+        return .{ .column_index = column_index, .integer_primary_key = columns[column_index].integer_primary_key, .operation = if (is_suffix.is_not) .is_not_null else .is_null };
     }
     if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_integer or token_list[position.*].typ == tokens.tk_minus)) {
         const comparison_value = try resolveIndexPredicateInteger(token_list, position);
         if (position.* >= token_list.len) return error.Syntax;
-        const is_not = token_list[position.*].typ == tokens.tk_is and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_not;
-        const column_position = position.* + 1 + @intFromBool(is_not);
+        const is_suffix = if (token_list[position.*].typ == tokens.tk_is) resolveIndexIsSuffix(token_list, position.* + 1) else IndexIsSuffix{ .is_not = false, .consumed = 0 };
+        const column_position = position.* + 1 + is_suffix.consumed;
         if (column_position >= token_list.len or token_list[column_position].typ != tokens.tk_id) return error.Syntax;
         const operation: btree.IndexPredicateOperation = switch (token_list[position.*].typ) {
             tokens.tk_eq => .integer_eq,
@@ -5773,7 +5784,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
             tokens.tk_le => .integer_ge,
             tokens.tk_gt => .integer_lt,
             tokens.tk_ge => .integer_le,
-            tokens.tk_is => if (is_not) .integer_is_not else .integer_is,
+            tokens.tk_is => if (is_suffix.is_not) .integer_is_not else .integer_is,
             else => return error.Syntax,
         };
         position.* = column_position;
@@ -5799,8 +5810,8 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
             position.* += 2;
         }
         if (position.* >= token_list.len) return error.Syntax;
-        const is_not = token_list[position.*].typ == tokens.tk_is and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_not;
-        const column_position = position.* + 1 + @intFromBool(is_not);
+        const is_suffix = if (token_list[position.*].typ == tokens.tk_is) resolveIndexIsSuffix(token_list, position.* + 1) else IndexIsSuffix{ .is_not = false, .consumed = 0 };
+        const column_position = position.* + 1 + is_suffix.consumed;
         if (column_position >= token_list.len or token_list[column_position].typ != tokens.tk_id) return error.Syntax;
         const operation: btree.IndexPredicateOperation = switch (token_list[position.*].typ) {
             tokens.tk_eq => .text_eq,
@@ -5809,7 +5820,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
             tokens.tk_le => .text_ge,
             tokens.tk_gt => .text_lt,
             tokens.tk_ge => .text_le,
-            tokens.tk_is => if (is_not) .text_is_not else .text_is,
+            tokens.tk_is => if (is_suffix.is_not) .text_is_not else .text_is,
             else => return error.Syntax,
         };
         position.* = column_position;
@@ -5907,8 +5918,9 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
     var comparison_value: i64 = 0;
     if (token_list[position.*].typ == tokens.tk_is) {
         position.* += 1;
-        const is_not = position.* < token_list.len and token_list[position.*].typ == tokens.tk_not;
-        if (is_not) position.* += 1;
+        const is_suffix = resolveIndexIsSuffix(token_list, position.*);
+        const is_not = is_suffix.is_not;
+        position.* += is_suffix.consumed;
         if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_null) {
             operation = if (is_not) .is_not_null else .is_null;
             position.* += 1;
