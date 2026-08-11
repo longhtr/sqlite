@@ -4509,6 +4509,20 @@ fn isTableConstraintStart(token_type: u16) bool {
         token_type == tokens.tk_foreign;
 }
 
+const IntegerBetweenIndexExpression = struct { low: i64, high: i64, is_not: bool, consumed: usize };
+
+fn resolveIntegerBetweenIndexExpression(token_list: []const Token, position: usize) ?IntegerBetweenIndexExpression {
+    if (position >= token_list.len) return null;
+    const is_not = token_list[position].typ == tokens.tk_not;
+    const between_position = position + @intFromBool(is_not);
+    if (between_position >= token_list.len or token_list[between_position].typ != tokens.tk_between) return null;
+    const low = resolveSignedIndexOperand(token_list, between_position + 1) orelse return null;
+    const and_position = between_position + 1 + low.consumed;
+    if (and_position >= token_list.len or token_list[and_position].typ != tokens.tk_and) return null;
+    const high = resolveSignedIndexOperand(token_list, and_position + 1) orelse return null;
+    return .{ .low = low.value, .high = high.value, .is_not = is_not, .consumed = and_position + 1 + high.consumed - position };
+}
+
 const IfnullIndexExpression = struct {
     column_name: []const u8,
     replacement: i64,
@@ -4688,6 +4702,14 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
                 if (operand_position + resolved_operand.consumed == position) {
                     scan_expression = true;
                     index_transform = .{ .integer_is = .{ .value = resolved_operand.value, .is_not = is_not } };
+                }
+            }
+        }
+        if (schema_is_index and !scan_expression) {
+            if (resolveIntegerBetweenIndexExpression(parsed.tokens, start + 1)) |between_expression| {
+                if (start + 1 + between_expression.consumed == position) {
+                    scan_expression = true;
+                    index_transform = .{ .integer_between = .{ .low = between_expression.low, .high = between_expression.high, .is_not = between_expression.is_not } };
                 }
             }
         }
@@ -9153,6 +9175,15 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
                 }
             }
         }
+        if (switch (transform) {
+            .identity => true,
+            else => false,
+        }) {
+            if (resolveIntegerBetweenIndexExpression(token_list, position)) |between_expression| {
+                transform = .{ .integer_between = .{ .low = between_expression.low, .high = between_expression.high, .is_not = between_expression.is_not } };
+                position += between_expression.consumed;
+            }
+        }
         if ((switch (transform) {
             .identity => true,
             else => false,
@@ -9275,7 +9306,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         };
         const transformed = switch (specified_transforms.items[selected_position]) {
             .identity, .is_null, .is_not_null, .null_coalesce_integer => false,
-            .numeric_negate, .numeric_abs, .numeric_not, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_compare, .integer_is => true,
+            .numeric_negate, .numeric_abs, .numeric_not, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_compare, .integer_is, .integer_between => true,
         };
         if (transformed and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
             allocator.free(source);

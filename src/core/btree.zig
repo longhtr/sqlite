@@ -45,6 +45,7 @@ pub const IndexSortOrder = enum { ascending, descending };
 pub const IndexComparisonOperation = enum { eq, ne, lt, le, gt, ge };
 pub const IndexComparison = struct { operation: IndexComparisonOperation, value: i64 };
 pub const IndexIsComparison = struct { value: i64, is_not: bool };
+pub const IndexRangeComparison = struct { low: i64, high: i64, is_not: bool };
 pub const IndexTransform = union(enum) {
     identity,
     numeric_negate,
@@ -64,6 +65,7 @@ pub const IndexTransform = union(enum) {
     integer_shift_right: i64,
     integer_compare: IndexComparison,
     integer_is: IndexIsComparison,
+    integer_between: IndexRangeComparison,
 };
 
 fn numericIndexValue(value: Value) Value {
@@ -172,6 +174,18 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
         .integer_shift_right => |amount| switch (numeric) {
             .integer => |integer| .{ .integer = shiftIndexInteger(integer, amount, false) },
             else => .null_,
+        },
+        .integer_between => |comparison| switch (numeric) {
+            .null_ => .null_,
+            .integer => |integer| {
+                const between = integer >= comparison.low and integer <= comparison.high;
+                return .{ .integer = @intFromBool(if (comparison.is_not) !between else between) };
+            },
+            .real => |real| {
+                const between = real >= @as(f64, @floatFromInt(comparison.low)) and real <= @as(f64, @floatFromInt(comparison.high));
+                return .{ .integer = @intFromBool(if (comparison.is_not) !between else between) };
+            },
+            .text, .blob => unreachable,
         },
         .integer_is => |comparison| {
             const matches = switch (numeric) {
