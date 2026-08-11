@@ -286,6 +286,17 @@ int main(void){
   int negative_expression_reindex_rc=sqlite3_exec(clone,"REINDEX negative_expression_index",0,0,0);
   int negative_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE negative_expression_data",0,0,0);
   printf("negative-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",negative_expression_table_rc,negative_expression_first_rc,negative_expression_second_rc,negative_expression_index_rc,negative_expression_duplicate_rc,negative_expression_update_rc,negative_expression_count_rc,(long long)negative_expression_count,negative_expression_reindex_rc,negative_expression_drop_rc);
+  int additive_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE additive_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
+  int additive_expression_first_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(1,20)",0,0,0);
+  int additive_expression_second_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(2,10)",0,0,0);
+  int additive_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX additive_expression_index ON additive_expression_data(value+5)",0,0,0);
+  int additive_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(3,20)",0,0,0);
+  int additive_expression_update_rc=sqlite3_exec(clone,"UPDATE additive_expression_data SET value=20 WHERE id=2",0,0,0);
+  sqlite3_int64 additive_expression_count=-1;
+  int additive_expression_count_rc=query_value(clone,"SELECT count(*) FROM additive_expression_data",&additive_expression_count);
+  int additive_expression_reindex_rc=sqlite3_exec(clone,"REINDEX additive_expression_index",0,0,0);
+  int additive_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE additive_expression_data",0,0,0);
+  printf("additive-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",additive_expression_table_rc,additive_expression_first_rc,additive_expression_second_rc,additive_expression_index_rc,additive_expression_duplicate_rc,additive_expression_update_rc,additive_expression_count_rc,(long long)additive_expression_count,additive_expression_reindex_rc,additive_expression_drop_rc);
   int partial_table_create_rc=sqlite3_exec(clone,"CREATE TABLE partial_index_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int partial_null_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(1,NULL)",0,0,0);
   int partial_value_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(2,20)",0,0,0);

@@ -42,7 +42,11 @@ pub const IndexCollation = union(enum) {
     custom: struct { context: ?*anyopaque, callback: IndexCollationCallback },
 };
 pub const IndexSortOrder = enum { ascending, descending };
-pub const IndexTransform = enum { identity, numeric_negate };
+pub const IndexTransform = union(enum) {
+    identity,
+    numeric_negate,
+    integer_add: i64,
+};
 
 pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     return switch (transform) {
@@ -51,6 +55,12 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .null_ => .null_,
             .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = -integer },
             .real => |real| .{ .real = -real },
+            .text, .blob => .null_,
+        },
+        .integer_add => |addition| switch (value) {
+            .null_ => .null_,
+            .integer => |integer| .{ .integer = std.math.add(i64, integer, addition) catch return .{ .real = @as(f64, @floatFromInt(integer)) + @as(f64, @floatFromInt(addition)) } },
+            .real => |real| .{ .real = real + @as(f64, @floatFromInt(addition)) },
             .text, .blob => .null_,
         },
     };
