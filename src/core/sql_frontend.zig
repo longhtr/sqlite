@@ -5926,7 +5926,10 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
     }
     if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or (token_list[position.*].typ == tokens.tk_minus and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
         const comparison_real = try resolveIndexPredicateFloat(token_list, position);
-        if (position.* + 1 >= token_list.len or token_list[position.* + 1].typ != tokens.tk_id) return error.Syntax;
+        if (position.* >= token_list.len) return error.Syntax;
+        const is_suffix = if (token_list[position.*].typ == tokens.tk_is) resolveIndexIsSuffix(token_list, position.* + 1) else IndexIsSuffix{ .is_not = false, .consumed = 0 };
+        const column_position = position.* + 1 + is_suffix.consumed;
+        if (column_position >= token_list.len or token_list[column_position].typ != tokens.tk_id) return error.Syntax;
         const operation: btree.IndexPredicateOperation = switch (token_list[position.*].typ) {
             tokens.tk_eq => .real_eq,
             tokens.tk_ne => .real_ne,
@@ -5934,9 +5937,10 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
             tokens.tk_le => .real_ge,
             tokens.tk_gt => .real_lt,
             tokens.tk_ge => .real_le,
+            tokens.tk_is => if (is_suffix.is_not) .real_is_not else .real_is,
             else => return error.Syntax,
         };
-        position.* += 1;
+        position.* = column_position;
         var selected: ?usize = null;
         for (columns, 0..) |column, index| {
             if (std.ascii.eqlIgnoreCase(column.name, token_list[position.*].text)) {
@@ -6133,6 +6137,9 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
                 position.* += 2;
             }
             return .{ .column_index = selected, .integer_primary_key = false, .operation = if (is_not) .text_is_not else .text_is, .comparison_text = comparison_text, .text_collation = text_collation.? };
+        } else if (integer_column and position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or (token_list[position.*].typ == tokens.tk_minus and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
+            const comparison_real = try resolveIndexPredicateFloat(token_list, position);
+            return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (is_not) .real_is_not else .real_is, .comparison_real = comparison_real };
         } else {
             if (!integer_column) return error.Syntax;
             operation = if (is_not) .integer_is_not else .integer_is;

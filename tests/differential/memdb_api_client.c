@@ -767,6 +767,11 @@ int main(void){
   int partial_float_ne_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_ne_index ON partial_float_data(value) WHERE marker!=1.5",0,0,0);
   int partial_float_le_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_le_index ON partial_float_data(value) WHERE marker<=-1.5",0,0,0);
   int partial_float_ge_reverse_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_ge_reverse_index ON partial_float_data(value) WHERE -1.5>=marker",0,0,0);
+  int partial_float_is_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_is_index ON partial_float_data(value) WHERE marker IS 1.5",0,0,0);
+  int partial_float_is_not_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_is_not_index ON partial_float_data(value) WHERE marker IS NOT -1.5",0,0,0);
+  int partial_float_reversed_is_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_reversed_is_index ON partial_float_data(value) WHERE 1.5 IS marker",0,0,0);
+  int partial_float_distinct_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_distinct_index ON partial_float_data(value) WHERE -1.5 IS DISTINCT FROM marker",0,0,0);
+  printf("partial-float-is-index\t%d\t%d\t%d\t%d\n",partial_float_is_index_rc,partial_float_is_not_index_rc,partial_float_reversed_is_index_rc,partial_float_distinct_index_rc);
   int partial_float_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_float_data VALUES(1,1,7)",0,0,0);
   int partial_float_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_float_data VALUES(2,2,7)",0,0,0);
   int partial_float_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_float_data VALUES(3,3,7)",0,0,0);
