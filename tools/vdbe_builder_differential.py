@@ -39,8 +39,8 @@ def main() -> None:
     difference = mismatch(oracle, native)
     if difference is not None:
         raise SystemExit(f"vdbe-builder-differential: mismatch at {difference}")
-    if len(oracle) != 383:
-        raise SystemExit(f"vdbe-builder-differential: expected 383 observations, got {len(oracle)}")
+    if len(oracle) != 392:
+        raise SystemExit(f"vdbe-builder-differential: expected 392 observations, got {len(oracle)}")
 
     mutated = native.copy()
     fields = mutated[0].split("\t")
@@ -49,7 +49,7 @@ def main() -> None:
     if mismatch(oracle, mutated) is None:
         raise SystemExit("vdbe-builder-differential: capacity mutation escaped comparison")
     print(
-        "vdbe-builder-differential: 383 statement metadata/column/text-binding/binding/VList/OOM, unpacked-record allocation/decode/OOM, record serial decode/length, foreign-key guards/OOM, Btree usage/lock-mask, control-flow wrapper, virtual-table error import/OOM, bound-value/varmask/OOM, result-column ownership/OOM, connection/statement-metadata, SQL-save/reprepare-swap, subprogram-link, P4 attachment/replacement/VTab/leaf-owner, KeyInfo-reference, creation/linking/OOM, MakeReady/tail-reuse/OOM, compact-list/transfer, access/mutation, append, growth, operand, capacity, label/fixup, "
+        "vdbe-builder-differential: 392 statement metadata/column/text-binding/typed-binding/binding/VList/OOM, unpacked-record allocation/decode/OOM, record serial decode/length, foreign-key guards/OOM, Btree usage/lock-mask, control-flow wrapper, virtual-table error import/OOM, bound-value/varmask/OOM, result-column ownership/OOM, connection/statement-metadata, SQL-save/reprepare-swap, subprogram-link, P4 attachment/replacement/VTab/leaf-owner, KeyInfo-reference, creation/linking/OOM, MakeReady/tail-reuse/OOM, compact-list/transfer, access/mutation, append, growth, operand, capacity, label/fixup, "
         "reader/write, virtual-table argument, progress/interrupt, reusable, reached-limit/one-shot/sticky-OOM, "
         "continuation, and mutation-guard observations match"
     )

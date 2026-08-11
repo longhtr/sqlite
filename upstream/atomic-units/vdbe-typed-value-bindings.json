@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-typed-value-bindings",
+  "title": "VDBE numeric, null, pointer, value, and zero-blob bindings",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These seven binding operations form the source-layout typed-value layer above vdbeUnbind: they atomically install scalar, pointer, copied Mem, and zero-filled blob representations while preserving destructor, mutex, range, expiration, and API-exit behavior.",
+    "source_files": [
+      {
+        "path": "src/vdbeapi.c",
+        "sha256": "233846129dc649ec3d1ae321612ee8833c937ee775766eb8e39deda07a6b19a6"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeapi.c::function::sqlite3_bind_double::line-1777",
+      "src/vdbeapi.c::function::sqlite3_bind_int64::line-1791",
+      "src/vdbeapi.c::function::sqlite3_bind_null::line-1802",
+      "src/vdbeapi.c::function::sqlite3_bind_pointer::line-1812",
+      "src/vdbeapi.c::function::sqlite3_bind_value::line-1866",
+      "src/vdbeapi.c::function::sqlite3_bind_zeroblob::line-1900",
+      "src/vdbeapi.c::function::sqlite3_bind_zeroblob64::line-1915"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeapi.c::function::sqlite3_bind_double::behavior::if::line-1781-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_double::behavior::assert::line-1782-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_double::behavior::return::line-1786-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_int64::behavior::if::line-1795-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_int64::behavior::assert::line-1796-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_int64::behavior::return::line-1800-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_null::behavior::if::line-1806-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_null::behavior::assert::line-1807-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_null::behavior::return::line-1810-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_pointer::behavior::if::line-1822-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_pointer::behavior::assert::line-1823-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_pointer::behavior::if::line-1826-column-9::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_pointer::behavior::return::line-1829-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::switch::line-1868-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::case::line-1869-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::break::line-1871-column-7::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::case::line-1873-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::assert::line-1874-column-7::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::conditional::line-1876-column-11::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::break::line-1878-column-7::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::case::line-1880-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::if::line-1881-column-7::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::break::line-1886-column-7::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::case::line-1888-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::break::line-1891-column-7::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::default::line-1893-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::break::line-1895-column-7::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_value::behavior::return::line-1898-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_zeroblob::behavior::if::line-1904-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_zeroblob::behavior::assert::line-1905-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_zeroblob::behavior::return::line-1913-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_zeroblob64::behavior::if::line-1922-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_zeroblob64::behavior::assert::line-1925-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_bind_zeroblob64::behavior::return::line-1930-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Text/blob wrapper entry points already covered by the adjacent bindText unit",
+      "Public bounded Statement ownership and exported ABI dispatch",
+      "Statement step, reset, and finalize lifecycle"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-statement-metadata-columns-bindings-and-vlist",
+      "vdbe-text-binding-and-unbind"
+    ],
+    "external_source_responsibilities": [
+      "Source-equivalent Mem scalar, pointer, zero-blob, and transient string setters"
+    ],
+    "caller_closure": "The complete seven selected source bodies are assigned. The trivial sqlite3_bind_int forwarding wrapper and public ABI owner switch remain outside this unit."
+  },
+  "contracts": {
+    "inputs": [
+      "Nullable source-layout Vdbe, one-based variable index, scalar/pointer/Mem value, destructor metadata, or zero-blob length"
+    ],
+    "outputs": [
+      "MISUSE, RANGE, TOOBIG, NOMEM, or OK with one source Mem variable atomically replaced"
+    ],
+    "ownership": "Unbind releases the previous value. Pointer ownership transfers on success and its destructor runs on rejection or later replacement. bindValue transiently copies text/blob input. Zero blobs retain only logical length.",
+    "state_and_results": "READY/range checks and expmask expiration come from vdbeUnbind. Scalar setters preserve source storage flags. The 64-bit zero-blob wrapper keeps the old binding when the length exceeds SQLITE_LIMIT_LENGTH and normalizes through sqlite3ApiExit.",
+    "locks_callbacks_io": "The connection recursive mutex remains held from successful unbind through replacement. Pointer destructors may execute on failed or later replacement. No I/O.",
+    "failure_and_continuation": "Busy/range/too-big paths preserve the old value where source does. Successful replacement, destructor release, and subsequent rebinding remain valid."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_double::line-1777",
+      "relation": "source-double-bind-to-native-operation",
+      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindDouble"]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_int64::line-1791",
+      "relation": "source-int64-bind-to-native-operation",
+      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindInt64"]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_null::line-1802",
+      "relation": "source-null-bind-to-native-operation",
+      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindNull"]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_pointer::line-1812",
+      "relation": "source-pointer-bind-to-native-operation",
+      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindPointer"]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_value::line-1866",
+      "relation": "source-value-storage-switch-to-native-operation",
+      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindValue"]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_zeroblob::line-1900",
+      "relation": "source-zero-blob-bind-to-native-operation",
+      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindZeroBlob"]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_zeroblob64::line-1915",
+      "relation": "source-wide-zero-blob-limit-to-native-operation",
+      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindZeroBlob64"]
+    }
+  ],
+  "representation_differences": [
+    "The existing typed StringOwnership and pointer-destructor function types replace C destructor sentinels.",
+    "Each one-based signed index is wrapped and bitcast to the source unsigned zero-based index so invalid values take the RANGE path without a Zig cast trap.",
+    "The source Mem union is retained exactly; the differential normalizes only pointer addresses and compares scalar union payload bits."
+  ],
+  "oracle": {
+    "protocol": "The shared VDBE builder worker binds double, signed integer, NULL, destructor-owned pointer, direct zero blob, Mem zero blob, and over-limit 64-bit zero blob values through pinned C and Zig source-layout owners. It compares exact results, Mem flags/encoding/length/subtype/destructor presence, destructor count, and scalar payload bits.",
+    "internal_observations": [
+      "result code and exact Mem storage flags",
+      "double bit pattern, signed integer bits, and zero-blob logical length",
+      "pointer subtype/destructor installation and exactly-once replacement destruction",
+      "wide-length TOOBIG preservation of the existing variable"
+    ],
+    "normalization": "Pointer addresses are not emitted; all result, flag, encoding, length, subtype, destructor, and payload observations are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "Transient-copy OOM remains covered by the adjacent bindText unit; these selected scalar/pointer/zero setters allocate no replacement payload.",
+    "io_crash_concurrency": "No I/O. Recursive connection-mutex handoff is shared with the exact vdbeUnbind dependency.",
+    "malformed_input": "Busy and RANGE validation is inherited from vdbeUnbind; the differential covers a negative value widened to the over-limit u64 zero-blob boundary.",
+    "continuation": "Pointer replacement runs its destructor once; over-limit zero-blob preserves the old value; later operations continue.",
+    "performance": "Constant-time variable lookup and storage-class dispatch; zero blobs do not materialize their logical payload.",
+    "commands": [
+      "zig build vdbe-builder-differential -j2",
+      "zig build vdbe-mem-differential -j1",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_api.zig source-layout statement binding layer",
+    "native_call_path": "The source-layout worker calls all seven operations against exact Vdbe/aVar/Sqlite3 owners. Exported sqlite3_bind_* APIs still dispatch through the bounded Statement owner.",
+    "bounded_owner_retired": "No. Switch public prepared statements and exported typed bind APIs to source-layout Vdbe before integration credit."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires public statement integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Port or remap the trivial text/blob/int wrappers as part of the public ABI owner switch.",
+    "Switch public prepared-statement ownership and step/reset/finalize to source-layout Vdbe.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeapi.c:1748-1931 was reviewed completely for all adjacent typed binding bodies, assertions, mutex handoff, destructor failure handling, storage-class switch, zero-blob limit, and API-exit behavior",
+      "src/core/internal/vdbe_api.zig and vdbe_mem.zig scalar/pointer/string/zero-blob setters were reviewed with exact Vdbe/Sqlite3/Mem fields"
+    ],
+    "callers": [
+      "Public sqlite3_bind_double/int64/null/pointer/value/zeroblob/zeroblob64 entry points are direct API callers",
+      "sqlite3_bind_int forwards to int64; text/blob wrappers remain in the adjacent bindText source unit",
+      "Prepared execution, reset, clear, and finalize consume the installed aVar values"
+    ],
+    "callees": [
+      "vdbeUnbind validates READY/index, enters and deliberately retains the connection mutex, releases the old value, and applies expiration",
+      "Mem scalar, pointer, zero-blob, and transient string operations preserve source ownership and storage flags",
+      "sqlite3ApiExit masks or normalizes the wide zero-blob result before the outer recursive mutex leave"
+    ],
+    "assertions_branches_cleanup": [
+      "All 34 active behavior IDs cover successful unbind assertions, pointer rejection cleanup, the full five-storage-class value switch, and the wide-length guard",
+      "Each successful unbind has exactly one corresponding mutex leave after replacement",
+      "Pointer ownership transfers exactly once and zero-blob payloads remain logical rather than allocated"
+    ],
+    "upstream_tests": [
+      "Upstream bind, bindxfer, pointer, zeroblob, value, misuse, limit, destructor, reset, and finalize suites exercise these APIs",
+      "Project VDBE builder differential compares seven typed-binding transitions in a 392-observation source-layout trace; Mem differential covers delegated setters"
+    ]
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential -j2",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "941a516f2e84e0395643d5657be308725614e1ed2b16b4724e9622858e6c1a64",
+      "source_scope_sha256": "062fe1ad1cfceb72fa827752fc666277acdbd4dff35668a2faaaafb76407b04f",
+      "zig_scope_sha256": "4b08a459ffb397bcddba8a644c66a7bf2af2c27991845d1acffb15a9c4238b6e"
+    }
+  ]
+}

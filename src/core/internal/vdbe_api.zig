@@ -11,6 +11,7 @@ pub const types = @import("vdbe_types.zig");
 
 const result_error: c_int = 1;
 const result_no_memory: c_int = 7;
+const result_too_big: c_int = 18;
 const result_misuse: c_int = 21;
 const result_range: c_int = 25;
 const result_io_error_no_memory: c_int = 10 | (12 << 8);
@@ -174,6 +175,110 @@ pub fn bindText(
         disposeBindingInput(if (machine) |active| active.db else null, source, ownership);
     }
     return result;
+}
+
+/// Source `sqlite3_bind_double()` against the source-layout Vdbe owner.
+pub fn bindDouble(machine: ?*types.Vdbe, one_based_index: c_int, value: f64) c_int {
+    const variable_index: u32 = @bitCast(one_based_index -% 1);
+    const result = unbind(machine, variable_index);
+    if (result == 0) {
+        const active = machine.?;
+        std.debug.assert(active.aVar != null and one_based_index > 0 and one_based_index <= active.nVar);
+        vdbe_mem.setDouble(&active.aVar.?[variable_index], value);
+        leaveConnection(active.db.?);
+    }
+    return result;
+}
+
+/// Source `sqlite3_bind_int64()` against the source-layout Vdbe owner.
+pub fn bindInt64(machine: ?*types.Vdbe, one_based_index: c_int, value: i64) c_int {
+    const variable_index: u32 = @bitCast(one_based_index -% 1);
+    const result = unbind(machine, variable_index);
+    if (result == 0) {
+        const active = machine.?;
+        std.debug.assert(active.aVar != null and one_based_index > 0 and one_based_index <= active.nVar);
+        vdbe_mem.setInt64(&active.aVar.?[variable_index], value);
+        leaveConnection(active.db.?);
+    }
+    return result;
+}
+
+/// Source `sqlite3_bind_null()` against the source-layout Vdbe owner.
+pub fn bindNull(machine: ?*types.Vdbe, one_based_index: c_int) c_int {
+    const variable_index: u32 = @bitCast(one_based_index -% 1);
+    const result = unbind(machine, variable_index);
+    if (result == 0) {
+        const active = machine.?;
+        std.debug.assert(active.aVar != null and one_based_index > 0 and one_based_index <= active.nVar);
+        leaveConnection(active.db.?);
+    }
+    return result;
+}
+
+/// Source `sqlite3_bind_pointer()` including destructor consumption when the
+/// statement cannot accept the pointer.
+pub fn bindPointer(
+    machine: ?*types.Vdbe,
+    one_based_index: c_int,
+    pointer: ?*anyopaque,
+    pointer_type: ?[*:0]const u8,
+    destructor: ?*const fn (?*anyopaque) callconv(.c) void,
+) c_int {
+    const variable_index: u32 = @bitCast(one_based_index -% 1);
+    const result = unbind(machine, variable_index);
+    if (result == 0) {
+        const active = machine.?;
+        std.debug.assert(active.aVar != null and one_based_index > 0 and one_based_index <= active.nVar);
+        vdbe_mem.setPointer(&active.aVar.?[variable_index], pointer, pointer_type, destructor);
+        leaveConnection(active.db.?);
+    } else if (destructor) |destroy| {
+        destroy(pointer);
+    }
+    return result;
+}
+
+/// Source `sqlite3_bind_zeroblob()` against the source-layout Vdbe owner.
+pub fn bindZeroBlob(machine: ?*types.Vdbe, one_based_index: c_int, length: c_int) c_int {
+    const variable_index: u32 = @bitCast(one_based_index -% 1);
+    const result = unbind(machine, variable_index);
+    if (result == 0) {
+        const active = machine.?;
+        std.debug.assert(active.aVar != null and one_based_index > 0 and one_based_index <= active.nVar);
+        vdbe_mem.setZeroBlob(&active.aVar.?[variable_index], length);
+        leaveConnection(active.db.?);
+    }
+    return result;
+}
+
+/// Source `sqlite3_bind_zeroblob64()`, including the outer recursive mutex
+/// scope and API-exit normalization.
+pub fn bindZeroBlob64(machine: ?*types.Vdbe, one_based_index: c_int, length: u64) c_int {
+    const active = machine orelse return result_misuse;
+    const connection = active.db.?;
+    enterConnection(connection);
+    var result = if (length > @as(u64, @intCast(connection.aLimit[0])))
+        result_too_big
+    else
+        bindZeroBlob(active, one_based_index, @intCast(length));
+    result = apiExit(connection, result);
+    leaveConnection(connection);
+    return result;
+}
+
+/// Source `sqlite3_bind_value()`: preserve the source storage-class switch,
+/// integer-real conversion, zero-blob representation, and transient copy.
+pub fn bindValue(machine: ?*types.Vdbe, one_based_index: c_int, value: *const types.Mem) c_int {
+    return switch (vdbe_mem.valueType(value)) {
+        1 => bindInt64(machine, one_based_index, value.u.i),
+        2 => bindDouble(machine, one_based_index, if (value.flags & types.mem_flag.real != 0) value.u.r else @floatFromInt(value.u.i)),
+        4 => if (value.flags & types.mem_flag.zero != 0)
+            bindZeroBlob(machine, one_based_index, value.u.nZero)
+        else
+            bindText(machine, one_based_index, value.z, value.n, .transient, 0),
+        3 => bindText(machine, one_based_index, value.z, value.n, .transient, value.enc),
+        5 => bindNull(machine, one_based_index),
+        else => unreachable,
+    };
 }
 
 pub fn columnCount(machine_optional: ?*const types.Vdbe) c_int {

@@ -33,6 +33,33 @@
       "atomic_unit_id": "vdbe-text-binding-and-unbind",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_pointer::line-1812",
+      "source_sha256": "6886a55723072ac96a7d411875bde843d2b574af7b9c5971b00f8dafc078b1f4",
+      "zig_declaration_id": "src/core/internal/vdbe_api.zig::function::bindPointer",
+      "zig_declaration_sha256": "cc2173e7f42a911439580ab24529067807e159dcef29f2cefbf1d6f1872c27b0",
+      "atomic_unit_id": "vdbe-typed-value-bindings",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_value::line-1866",
+      "source_sha256": "0e26867af7ad57f5c791fe69b9dcb69675c22b191bffb38f4f7fc2250db22eeb",
+      "zig_declaration_id": "src/core/internal/vdbe_api.zig::function::bindValue",
+      "zig_declaration_sha256": "c8d02e0c6c22274346866624661ff17ab80e94d67c864f2526fb1d303478b316",
+      "atomic_unit_id": "vdbe-typed-value-bindings",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_zeroblob64::line-1915",
+      "source_sha256": "eab5ac3deb24efe4c466fd21261bba4728a93f131a395aa15ce5957a1d511592",
+      "zig_declaration_id": "src/core/internal/vdbe_api.zig::function::bindZeroBlob64",
+      "zig_declaration_sha256": "3a2a06f6c225a6d39f0d693df6285c981ab54f8e9495572126fb991983a99de6",
+      "atomic_unit_id": "vdbe-typed-value-bindings",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

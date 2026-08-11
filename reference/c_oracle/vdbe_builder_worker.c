@@ -280,6 +280,22 @@ int main(int argc, char **argv){
       printf("%s\t%d\tBINDTEXT\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",zCase,seq++,a,b,mode,c,cell->flags,cell->n,cell->enc,made->expired,db->errCode,db->mallocFailed,bindDestructorCalls,cell->z&&memcmp(cell->z,name,strlen(name))==0);
       continue;
     }
+    if( strcmp(command,"BINDTYPED")==0 ){
+      Vdbe *made; Mem *cell; Mem value; u64 payload=0; int mode;
+      sscanf(line,"%*s %d %d %d %d",&a,&b,&mode,&d); made=createParse[a].pVdbe; if(!made)return 18;
+      memset(&value,0,sizeof(value)); value.db=db; value.flags=MEM_Null;
+      if(mode==0) c=sqlite3_bind_double((sqlite3_stmt*)made,b,(double)d+0.5);
+      else if(mode==1) c=sqlite3_bind_int64((sqlite3_stmt*)made,b,(i64)d);
+      else if(mode==2) c=sqlite3_bind_null((sqlite3_stmt*)made,b);
+      else if(mode==3) c=sqlite3_bind_pointer((sqlite3_stmt*)made,b,&bindDestructorCalls,"bind-test",testBindDestructor);
+      else if(mode==4) c=sqlite3_bind_zeroblob((sqlite3_stmt*)made,b,d);
+      else if(mode==5) c=sqlite3_bind_zeroblob64((sqlite3_stmt*)made,b,(u64)(i64)d);
+      else{ sqlite3VdbeMemSetZeroBlob(&value,d); c=sqlite3_bind_value((sqlite3_stmt*)made,b,&value); }
+      cell=&made->aVar[(b>=1 && b<=made->nVar)?b-1:0];
+      if(cell->flags&MEM_Real) memcpy(&payload,&cell->u.r,8); else if(cell->flags&MEM_Int) memcpy(&payload,&cell->u.i,8); else if(cell->flags&MEM_Zero) payload=(u64)cell->u.nZero;
+      printf("%s\t%d\tBINDTYPED\t%d\t%d\t%d\t%d\t%d\t%d\t%u\t%d\t%d\t%d\t%d\t%llu\n",zCase,seq++,a,b,mode,d,c,cell->flags,(unsigned)cell->enc,cell->n,cell->eSubtype,cell->xDel!=0,bindDestructorCalls,(unsigned long long)payload);
+      sqlite3VdbeMemRelease(&value); continue;
+    }
     if( strcmp(command,"BOUND")==0 ){
       Vdbe *made; sqlite3_value *value; sscanf(line,"%*s %d %d",&a,&b); made=createParse[a].pVdbe; if(!made)return 18;
       value=sqlite3VdbeGetBoundValue(made,b,SQLITE_AFF_INTEGER);

@@ -151,6 +151,7 @@ pub fn main(init: std.process.Init) !void {
     db.aLimit[0] = 1_000_000_000;
     db.aLimit[5] = 250_000_000;
     db.enc = 1;
+    db.errMask = 0xff;
     db.eOpenState = types.connection_state_open;
     db.errByteOffset = -1;
     var lookaside_storage: [4800 + types.lookaside_small]u8 align(8) = undefined;
@@ -526,6 +527,43 @@ pub fn main(init: std.process.Init) !void {
             const cell = &made.aVar.?[cell_index];
             const same_text = cell.z != null and cell.n == text.len and std.mem.eql(u8, cell.z.?[0..text.len], text);
             std.debug.print("{s}\t{d}\tBINDTEXT\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, owner_index, variable, mode, result, cell.flags, cell.n, cell.enc, made.flags.expired, db.errCode, db.mallocFailed, bind_destructor_calls, @intFromBool(same_text) });
+            sequence += 1;
+            continue;
+        }
+        if (std.mem.eql(u8, command, "BINDTYPED")) {
+            const owner_index = try parseInt(try next(&tokens));
+            const variable = try parseInt(try next(&tokens));
+            const mode = try parseInt(try next(&tokens));
+            const binding_input = try parseInt(try next(&tokens));
+            const made: *types.Vdbe = @ptrCast(@alignCast(create_parse[@intCast(owner_index)].pVdbe.?));
+            var value = std.mem.zeroes(types.Mem);
+            value.db = &db;
+            value.flags = types.mem_flag.null_;
+            const result = switch (mode) {
+                0 => api.bindDouble(made, variable, @as(f64, @floatFromInt(binding_input)) + 0.5),
+                1 => api.bindInt64(made, variable, binding_input),
+                2 => api.bindNull(made, variable),
+                3 => api.bindPointer(made, variable, @ptrCast(&bind_destructor_calls), "bind-test", testBindDestructor),
+                4 => api.bindZeroBlob(made, variable, binding_input),
+                5 => api.bindZeroBlob64(made, variable, @bitCast(@as(i64, binding_input))),
+                6 => result: {
+                    vdbe_mem.setZeroBlob(&value, binding_input);
+                    break :result api.bindValue(made, variable, &value);
+                },
+                else => unreachable,
+            };
+            const cell_index: usize = if (variable >= 1 and variable <= made.nVar) @intCast(variable - 1) else 0;
+            const cell = &made.aVar.?[cell_index];
+            const payload: u64 = if (cell.flags & types.mem_flag.real != 0)
+                @bitCast(cell.u.r)
+            else if (cell.flags & types.mem_flag.integer != 0)
+                @bitCast(cell.u.i)
+            else if (cell.flags & types.mem_flag.zero != 0)
+                @intCast(cell.u.nZero)
+            else
+                0;
+            std.debug.print("{s}\t{d}\tBINDTYPED\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, owner_index, variable, mode, binding_input, result, cell.flags, cell.enc, cell.n, cell.eSubtype, @intFromBool(cell.xDel != null), bind_destructor_calls, payload });
+            vdbe_mem.release(&value);
             sequence += 1;
             continue;
         }

@@ -243,6 +243,11 @@
       "id": "vdbe-text-binding-and-unbind",
       "path": "upstream/atomic-units/vdbe-text-binding-and-unbind.json",
       "status": "internal-trace-equivalent"
+    },
+    {
+      "id": "vdbe-typed-value-bindings",
+      "path": "upstream/atomic-units/vdbe-typed-value-bindings.json",
+      "status": "internal-trace-equivalent"
     }
   ]
 }
