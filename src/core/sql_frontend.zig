@@ -5402,16 +5402,27 @@ const IndexMutationRow = struct {
     values: []const btree.Value,
 };
 
-fn indexCollation(connection: *Connection, name: []const u8) ?btree.IndexCollation {
-    if (std.ascii.eqlIgnoreCase(name, "BINARY")) return .binary;
-    if (std.ascii.eqlIgnoreCase(name, "NOCASE")) return .nocase;
-    if (std.ascii.eqlIgnoreCase(name, "RTRIM")) return .rtrim;
+fn registeredIndexCollation(connection: *Connection, name: []const u8) ?btree.IndexCollation {
     for (connection.collations.items) |collation| {
         if (collation.encoding & 7 == 1 and std.ascii.eqlIgnoreCase(collation.name, name)) {
             return .{ .custom = .{ .context = collation.auxiliary, .callback = collation.compare } };
         }
     }
     return null;
+}
+
+fn indexCollation(connection: *Connection, name: []const u8) ?btree.IndexCollation {
+    if (std.ascii.eqlIgnoreCase(name, "BINARY")) return .binary;
+    if (std.ascii.eqlIgnoreCase(name, "NOCASE")) return .nocase;
+    if (std.ascii.eqlIgnoreCase(name, "RTRIM")) return .rtrim;
+    if (registeredIndexCollation(connection, name)) |collation| return collation;
+    const needed = connection.collation_needed_callback orelse return null;
+    if (name.len > 255) return null;
+    var terminated: [256]u8 = undefined;
+    @memcpy(terminated[0..name.len], name);
+    terminated[name.len] = 0;
+    needed(connection.collation_needed_context, toOpaque(connection), 1, @ptrCast(&terminated));
+    return registeredIndexCollation(connection, name);
 }
 
 fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedColumn) error{Syntax}!?btree.IndexPredicate {
@@ -5433,7 +5444,7 @@ fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedCol
         operation = .is_null;
     } else if (position + 5 == token_list.len and token_list[position + 2].typ == tokens.tk_is and token_list[position + 3].typ == tokens.tk_not and token_list[position + 4].typ == tokens.tk_null) {
         operation = .is_not_null;
-    } else if (position + 4 == token_list.len and token_list[position + 3].typ == tokens.tk_integer and (columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER"))) {
+    } else if ((position + 4 == token_list.len or (position + 5 == token_list.len and token_list[position + 3].typ == tokens.tk_minus)) and (columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER"))) {
         operation = switch (token_list[position + 2].typ) {
             tokens.tk_eq => .integer_eq,
             tokens.tk_ne => .integer_ne,
@@ -5443,7 +5454,10 @@ fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedCol
             tokens.tk_ge => .integer_ge,
             else => return error.Syntax,
         };
-        comparison_value = std.fmt.parseInt(i64, token_list[position + 3].text, 10) catch return error.Syntax;
+        const literal_position = if (position + 4 == token_list.len) position + 3 else position + 4;
+        if (token_list[literal_position].typ != tokens.tk_integer) return error.Syntax;
+        comparison_value = std.fmt.parseInt(i64, token_list[literal_position].text, 10) catch return error.Syntax;
+        if (literal_position != position + 3) comparison_value = -comparison_value;
     } else {
         return error.Syntax;
     }

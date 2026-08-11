@@ -71,6 +71,11 @@ static int reverse_collation(void *context,int left_size,const void *left_pointe
   return left_size<right_size ? 1 : left_size>right_size ? -1 : 0;
 }
 
+static void needed_collation(void *context,sqlite3 *db,int encoding,const char *name){
+  (void)context;
+  if(encoding==SQLITE_UTF8 && strcmp(name,"LAZY_REVERSE")==0) sqlite3_create_collation(db,name,SQLITE_UTF8,0,reverse_collation);
+}
+
 static int query_text_initials(sqlite3 *db, const char *sql, int *count, int *first, int *last){
   sqlite3_stmt *statement = 0;
   int rc = sqlite3_prepare_v2(db, sql, -1, &statement, 0);
@@ -274,13 +279,13 @@ int main(void){
   int partial_null_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_null_data",0,0,0);
   printf("partial-null-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\n",partial_null_table_rc,partial_null_index_rc,partial_null_first_rc,partial_null_outside_rc,partial_null_duplicate_rc,partial_null_enter_conflict_rc,partial_null_delete_rc,partial_null_enter_rc,partial_null_count_rc,(long long)partial_null_count,partial_null_drop_rc);
   int partial_range_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_range_data(id INTEGER PRIMARY KEY,marker INTEGER,value INTEGER)",0,0,0);
-  int partial_range_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_range_index ON partial_range_data(value) WHERE marker >= 10",0,0,0);
-  int partial_range_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_range_data VALUES(1,5,7)",0,0,0);
-  int partial_range_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_range_data VALUES(2,10,7)",0,0,0);
-  int partial_range_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_range_data VALUES(3,11,7)",0,0,0);
-  int partial_range_enter_conflict_rc=sqlite3_exec(clone,"UPDATE partial_range_data SET marker=12 WHERE id=1",0,0,0);
+  int partial_range_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_range_index ON partial_range_data(value) WHERE marker >= -10",0,0,0);
+  int partial_range_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_range_data VALUES(1,-20,7)",0,0,0);
+  int partial_range_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_range_data VALUES(2,-10,7)",0,0,0);
+  int partial_range_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_range_data VALUES(3,-9,7)",0,0,0);
+  int partial_range_enter_conflict_rc=sqlite3_exec(clone,"UPDATE partial_range_data SET marker=-8 WHERE id=1",0,0,0);
   int partial_range_delete_rc=sqlite3_exec(clone,"DELETE FROM partial_range_data WHERE id=2",0,0,0);
-  int partial_range_enter_rc=sqlite3_exec(clone,"UPDATE partial_range_data SET marker=12 WHERE id=1",0,0,0);
+  int partial_range_enter_rc=sqlite3_exec(clone,"UPDATE partial_range_data SET marker=-8 WHERE id=1",0,0,0);
   sqlite3_int64 partial_range_count=-1;
   int partial_range_count_rc=query_value(clone,"SELECT count(*) FROM partial_range_data",&partial_range_count);
   int partial_range_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_range_data",0,0,0);
@@ -340,6 +345,15 @@ int main(void){
   int custom_collation_after_query_rc=query_text_initials(clone,"SELECT value FROM custom_collation_data INDEXED BY custom_collation_index",&custom_collation_after_count,&custom_collation_after_first,&custom_collation_after_last);
   int custom_collation_drop_rc=sqlite3_exec(clone,"DROP TABLE custom_collation_data",0,0,0);
   printf("custom-collated-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",custom_collation_register_rc,custom_collation_table_rc,custom_collation_first_rc,custom_collation_second_rc,custom_collation_third_rc,custom_collation_index_rc,custom_collation_query_rc,custom_collation_count,custom_collation_first_initial,custom_collation_last_initial,custom_collation_insert_rc,custom_collation_after_query_rc,custom_collation_after_count,custom_collation_after_first,custom_collation_after_last,custom_collation_drop_rc);
+  int needed_collation_register_rc=sqlite3_collation_needed(clone,0,needed_collation);
+  int needed_collation_table_rc=sqlite3_exec(clone,"CREATE TABLE needed_collation_data(id INTEGER PRIMARY KEY,value TEXT)",0,0,0);
+  int needed_collation_first_rc=sqlite3_exec(clone,"INSERT INTO needed_collation_data VALUES(1,'a')",0,0,0);
+  int needed_collation_second_rc=sqlite3_exec(clone,"INSERT INTO needed_collation_data VALUES(2,'c')",0,0,0);
+  int needed_collation_index_rc=sqlite3_exec(clone,"CREATE INDEX needed_collation_index ON needed_collation_data(value COLLATE LAZY_REVERSE)",0,0,0);
+  int needed_collation_count=-1,needed_collation_first=-1,needed_collation_last=-1;
+  int needed_collation_query_rc=query_text_initials(clone,"SELECT value FROM needed_collation_data INDEXED BY needed_collation_index",&needed_collation_count,&needed_collation_first,&needed_collation_last);
+  int needed_collation_drop_rc=sqlite3_exec(clone,"DROP TABLE needed_collation_data",0,0,0);
+  printf("needed-collated-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",needed_collation_register_rc,needed_collation_table_rc,needed_collation_first_rc,needed_collation_second_rc,needed_collation_index_rc,needed_collation_query_rc,needed_collation_count,needed_collation_first,needed_collation_last,needed_collation_drop_rc);
 #ifdef NATIVE_ENGINE
   int deferred_fk_config_rc=zig_sqlite3_db_config_flag(clone,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
 #else
