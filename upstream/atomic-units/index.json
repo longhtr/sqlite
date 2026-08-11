@@ -92,7 +92,7 @@
     {
       "id": "vdbe-virtual-table-error-message-import",
       "path": "upstream/atomic-units/vdbe-virtual-table-error-message-import.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "virtual-table-and-module-reference-ownership",

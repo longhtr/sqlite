@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-virtual-table-error-message-import",
   "title": "Virtual-table global-to-connection error-message import",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VtabImportErrmsg crosses allocator domains: it conditionally consumes sqlite3_vtab.zErrMsg from the global allocator, replaces the Vdbe connection-owned error, and clears the virtual-table owner even when duplication fails.",
@@ -73,7 +73,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Deterministic no-lookaside duplication OOM verifies null destination, sticky OOM, and unconditional source-owner consumption.",
