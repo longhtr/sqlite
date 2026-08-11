@@ -4512,6 +4512,7 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
     errdefer allocator.free(parsed.tokens);
     var columns = std.ArrayList(ResolvedColumn).empty;
     errdefer columns.deinit(allocator);
+    const schema_is_index = parsed.tokens.len > 1 and parsed.tokens[0].typ == tokens.tk_create and (parsed.tokens[1].typ == tokens.tk_index or parsed.tokens[1].typ == tokens.tk_unique);
     var position: usize = 0;
     while (position < parsed.tokens.len and parsed.tokens[position].typ != tokens.tk_lp) : (position += 1) {}
     if (position == parsed.tokens.len) return error.Syntax;
@@ -4535,6 +4536,11 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
                 position += 1;
             }
             continue;
+        }
+        var scan_expression = false;
+        if (schema_is_index and parsed.tokens[position].typ == tokens.tk_plus and position + 1 < parsed.tokens.len and parsed.tokens[position + 1].typ == tokens.tk_id) {
+            scan_expression = true;
+            position += 1;
         }
         if (parsed.tokens[position].typ != tokens.tk_id) return error.Syntax;
         const name = parsed.tokens[position].text;
@@ -4614,7 +4620,7 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
                 generated_virtual = storage_position >= position or parsed.tokens[storage_position].typ == tokens.tk_virtual or !std.ascii.eqlIgnoreCase(parsed.tokens[storage_position].text, "stored");
             }
         }
-        try columns.append(allocator, .{ .name = name, .declared_type = declared_type, .collation = collation, .explicit_collation = explicit_collation, .descending = descending, .record_index = record_index, .integer_primary_key = primary and std.ascii.eqlIgnoreCase(declared_type, "INTEGER"), .primary_key = primary, .unique = unique or primary, .not_null = not_null, .default_start = default_start, .default_end = default_end, .generated_start = generated_start, .generated_end = generated_end, .generated_virtual = generated_virtual, .scan_expression = false });
+        try columns.append(allocator, .{ .name = name, .declared_type = declared_type, .collation = collation, .explicit_collation = explicit_collation, .descending = descending, .record_index = record_index, .integer_primary_key = primary and std.ascii.eqlIgnoreCase(declared_type, "INTEGER"), .primary_key = primary, .unique = unique or primary, .not_null = not_null, .default_start = default_start, .default_end = default_end, .generated_start = generated_start, .generated_end = generated_end, .generated_virtual = generated_virtual, .scan_expression = scan_expression });
         if (!generated_virtual) {
             record_index += 1;
         }
@@ -4967,6 +4973,10 @@ fn locateForeignKeyIndex(
         if (partial != null) continue;
         var matches = true;
         for (mappings, index_columns.columns, 0..) |mapping, index_column, index| {
+            if (index_column.scan_expression) {
+                matches = false;
+                break;
+            }
             const parent_name = mapping.parent_column orelse {
                 matches = false;
                 break;
@@ -8570,6 +8580,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
     var specified_sort_orders = std.ArrayList(btree.IndexSortOrder).empty;
     defer specified_sort_orders.deinit(allocator);
     while (true) {
+        if (position < token_list.len and token_list[position].typ == tokens.tk_plus) position += 1;
         if (position >= token_list.len or token_list[position].typ != tokens.tk_id) {
             allocator.free(source);
             return .{ .result = .error_, .consumed = consumed };

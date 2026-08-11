@@ -259,6 +259,16 @@ int main(void){
   int index_collision_name_drop_rc=sqlite3_exec(clone,"DROP TABLE index_collision_name",0,0,0);
   int index_collision_source_drop_rc=sqlite3_exec(clone,"DROP TABLE index_collision_source",0,0,0);
   printf("index-name-collision\t%d\t%d\t%d\t%d\t%d\n",index_collision_source_rc,index_collision_name_rc,index_collision_create_rc,index_collision_name_drop_rc,index_collision_source_drop_rc);
+  int expression_table_rc=sqlite3_exec(clone,"CREATE TABLE expression_index_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
+  int expression_first_rc=sqlite3_exec(clone,"INSERT INTO expression_index_data VALUES(1,20)",0,0,0);
+  int expression_second_rc=sqlite3_exec(clone,"INSERT INTO expression_index_data VALUES(2,10)",0,0,0);
+  int expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX expression_identity_index ON expression_index_data(+value)",0,0,0);
+  int expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO expression_index_data VALUES(3,20)",0,0,0);
+  sqlite3_int64 expression_count=-1;
+  int expression_count_rc=query_value(clone,"SELECT count(*) FROM expression_index_data",&expression_count);
+  int expression_update_conflict_rc=sqlite3_exec(clone,"UPDATE expression_index_data SET value=20 WHERE id=2",0,0,0);
+  int expression_drop_rc=sqlite3_exec(clone,"DROP TABLE expression_index_data",0,0,0);
+  printf("identity-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",expression_table_rc,expression_first_rc,expression_second_rc,expression_index_rc,expression_duplicate_rc,expression_count_rc,(long long)expression_count,expression_update_conflict_rc,expression_drop_rc);
   int partial_table_create_rc=sqlite3_exec(clone,"CREATE TABLE partial_index_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int partial_null_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(1,NULL)",0,0,0);
   int partial_value_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(2,20)",0,0,0);
