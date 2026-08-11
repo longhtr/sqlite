@@ -730,7 +730,8 @@ pub const Database = struct {
             var view = record.record.?;
             defer view.deinit();
             if (view.values.len >= 2 and schemaTextEqual(view.values[1], name)) {
-                return if (if_not_exists) .ok else .error_;
+                const existing_is_index = view.values.len >= 1 and schemaTextEqual(view.values[0], "index");
+                return if (if_not_exists and existing_is_index) .ok else .error_;
             }
         }
 

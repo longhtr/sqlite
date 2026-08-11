@@ -253,6 +253,12 @@ int main(void){
   int index_reuse_table_rc=sqlite3_exec(clone,"CREATE TABLE index_reuse(id INTEGER PRIMARY KEY,value)",0,0,0);
   int index_name_reuse_rc=sqlite3_exec(clone,"CREATE INDEX idx_index_data_value ON index_reuse(value)",0,0,0);
   printf("secondary-index-drop\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",index_drop_rollback_begin_rc,index_drop_rollback_drop_rc,index_drop_rollback_rc,index_drop_rollback_query_rc,index_drop_rollback_count,(long long)index_drop_rollback_first,(long long)index_drop_rollback_last,index_drop_begin_rc,index_drop_rc,index_drop_commit_rc,index_missing_query_rc,index_recreate_rc,index_table_drop_rc,index_reuse_table_rc,index_name_reuse_rc);
+  int index_collision_source_rc=sqlite3_exec(clone,"CREATE TABLE index_collision_source(id INTEGER PRIMARY KEY)",0,0,0);
+  int index_collision_name_rc=sqlite3_exec(clone,"CREATE TABLE index_collision_name(id INTEGER PRIMARY KEY)",0,0,0);
+  int index_collision_create_rc=sqlite3_exec(clone,"CREATE INDEX IF NOT EXISTS index_collision_name ON index_collision_source(id)",0,0,0);
+  int index_collision_name_drop_rc=sqlite3_exec(clone,"DROP TABLE index_collision_name",0,0,0);
+  int index_collision_source_drop_rc=sqlite3_exec(clone,"DROP TABLE index_collision_source",0,0,0);
+  printf("index-name-collision\t%d\t%d\t%d\t%d\t%d\n",index_collision_source_rc,index_collision_name_rc,index_collision_create_rc,index_collision_name_drop_rc,index_collision_source_drop_rc);
   int partial_table_create_rc=sqlite3_exec(clone,"CREATE TABLE partial_index_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int partial_null_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(1,NULL)",0,0,0);
   int partial_value_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(2,20)",0,0,0);
