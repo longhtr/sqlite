@@ -3640,6 +3640,7 @@ const Owner = struct {
     action: ?ProgramAction = null,
     indices: []usize = &.{},
     index_collations: []btree.IndexCollation = &.{},
+    index_sort_orders: []btree.IndexSortOrder = &.{},
     functions: [1]vdbe.Function = undefined,
     dynamic_functions: []vdbe.Function = &.{},
     dynamic_collations: []vdbe.Collation = &.{},
@@ -3659,6 +3660,7 @@ const Owner = struct {
         allocator.free(self.columns);
         allocator.free(self.indices);
         allocator.free(self.index_collations);
+        allocator.free(self.index_sort_orders);
         allocator.free(self.dynamic_functions);
         allocator.free(self.dynamic_collations);
         allocator.free(self.virtual_sources);
@@ -4482,6 +4484,7 @@ const ResolvedColumn = struct {
     declared_type: []const u8,
     collation: []const u8,
     explicit_collation: bool,
+    descending: bool,
     record_index: usize,
     integer_primary_key: bool,
     primary_key: bool,
@@ -4551,6 +4554,7 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var not_null = false;
         var collation: []const u8 = "BINARY";
         var explicit_collation = false;
+        var descending = false;
         var default_start: ?usize = null;
         var default_end = position;
         var generated_start: ?usize = null;
@@ -4563,6 +4567,9 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             }
             if (parsed.tokens[index].typ == tokens.tk_unique) {
                 unique = true;
+            }
+            if (parsed.tokens[index].typ == tokens.tk_desc) {
+                descending = true;
             }
             if (index + 1 < position and parsed.tokens[index].typ == tokens.tk_not and parsed.tokens[index + 1].typ == tokens.tk_null) {
                 not_null = true;
@@ -4606,7 +4613,7 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
                 generated_virtual = storage_position >= position or parsed.tokens[storage_position].typ == tokens.tk_virtual or !std.ascii.eqlIgnoreCase(parsed.tokens[storage_position].text, "stored");
             }
         }
-        try columns.append(allocator, .{ .name = name, .declared_type = declared_type, .collation = collation, .explicit_collation = explicit_collation, .record_index = record_index, .integer_primary_key = primary and std.ascii.eqlIgnoreCase(declared_type, "INTEGER"), .primary_key = primary, .unique = unique or primary, .not_null = not_null, .default_start = default_start, .default_end = default_end, .generated_start = generated_start, .generated_end = generated_end, .generated_virtual = generated_virtual, .scan_expression = false });
+        try columns.append(allocator, .{ .name = name, .declared_type = declared_type, .collation = collation, .explicit_collation = explicit_collation, .descending = descending, .record_index = record_index, .integer_primary_key = primary and std.ascii.eqlIgnoreCase(declared_type, "INTEGER"), .primary_key = primary, .unique = unique or primary, .not_null = not_null, .default_start = default_start, .default_end = default_end, .generated_start = generated_start, .generated_end = generated_end, .generated_virtual = generated_virtual, .scan_expression = false });
         if (!generated_virtual) {
             record_index += 1;
         }
@@ -5486,6 +5493,8 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
         defer connection.allocator.free(selected);
         const selected_collations = connection.allocator.alloc(btree.IndexCollation, index_columns.columns.len) catch return .no_memory;
         defer connection.allocator.free(selected_collations);
+        const selected_sort_orders = connection.allocator.alloc(btree.IndexSortOrder, index_columns.columns.len) catch return .no_memory;
+        defer connection.allocator.free(selected_sort_orders);
         var integer_primary_key_position: ?usize = null;
         for (index_columns.columns, 0..) |index_column, selected_position| {
             var found: ?usize = null;
@@ -5500,6 +5509,7 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
             const table_column = table_columns.columns[selected[selected_position]];
             const collation_name = if (index_column.explicit_collation) index_column.collation else table_column.collation;
             selected_collations[selected_position] = indexCollation(collation_name) orelse return .error_;
+            selected_sort_orders[selected_position] = if (index_column.descending) .descending else .ascending;
         }
         if (old_row) |row| {
             const matches = indexPredicateRowMatches(predicate, row) catch return .corrupt;
@@ -5529,7 +5539,7 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
                 key_values[selected.len] = .{ .integer = row.rowid };
                 const payload = btree.encodeRecord(connection.allocator, key_values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
                 defer connection.allocator.free(payload);
-                const inserted = if (unique) database.insertUniqueIndexWithCollations(root_page, payload, selected.len, selected_collations) else database.insertIndexWithCollations(root_page, payload, selected_collations);
+                const inserted = if (unique) database.insertUniqueIndexWithKeyInfo(root_page, payload, selected.len, selected_collations, selected_sort_orders) else database.insertIndexWithKeyInfo(root_page, payload, selected_collations, selected_sort_orders);
                 if (inserted != .ok) return inserted;
             }
         }
@@ -7138,6 +7148,7 @@ fn scanExpressionColumn(source: []const u8, token_list: []const Token, start: us
         .declared_type = "",
         .collation = "BINARY",
         .explicit_collation = false,
+        .descending = false,
         .record_index = 0,
         .integer_primary_key = false,
         .primary_key = false,
@@ -8000,7 +8011,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                     _ = database.rollbackStatementBatch();
                 }
             }
-            const created = database.createSchemaIndex(action.name, action.table_name, action.sql, action.table_root, owner.indices, action.integer_primary_key_position, owner.index_collations, action.predicate, action.unique, action.if_not_exists);
+            const created = database.createSchemaIndex(action.name, action.table_name, action.sql, action.table_root, owner.indices, action.integer_primary_key_position, owner.index_collations, owner.index_sort_orders, action.predicate, action.unique, action.if_not_exists);
             if (created != .ok) break :blk created;
             const committed = database.commitStatementBatch();
             batch_active = false;
@@ -8450,6 +8461,8 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
     defer column_names.deinit(allocator);
     var specified_collations = std.ArrayList(?[]const u8).empty;
     defer specified_collations.deinit(allocator);
+    var specified_sort_orders = std.ArrayList(btree.IndexSortOrder).empty;
+    defer specified_sort_orders.deinit(allocator);
     while (true) {
         if (position >= token_list.len or token_list[position].typ != tokens.tk_id) {
             allocator.free(source);
@@ -8473,9 +8486,15 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             allocator.free(source);
             return .{ .result = .no_memory, .consumed = consumed };
         };
+        var sort_order: btree.IndexSortOrder = .ascending;
         if (position < token_list.len and (token_list[position].typ == tokens.tk_asc or token_list[position].typ == tokens.tk_desc)) {
+            sort_order = if (token_list[position].typ == tokens.tk_desc) .descending else .ascending;
             position += 1;
         }
+        specified_sort_orders.append(allocator, sort_order) catch {
+            allocator.free(source);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
         if (position < token_list.len and token_list[position].typ == tokens.tk_comma) {
             position += 1;
             continue;
@@ -8551,7 +8570,14 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         allocator.free(source);
         return .{ .result = .no_memory, .consumed = consumed };
     };
+    const owned_sort_orders = specified_sort_orders.toOwnedSlice(allocator) catch {
+        allocator.free(owned_collations);
+        allocator.free(owned_indices);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
     const owner = allocator.create(Owner) catch {
+        allocator.free(owned_sort_orders);
         allocator.free(owned_collations);
         allocator.free(owned_indices);
         allocator.free(source);
@@ -8559,6 +8585,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
     };
     const instructions = allocator.alloc(vdbe.Instruction, 2) catch {
         allocator.destroy(owner);
+        allocator.free(owned_sort_orders);
         allocator.free(owned_collations);
         allocator.free(owned_indices);
         allocator.free(source);
@@ -8575,6 +8602,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         .columns = columns,
         .indices = owned_indices,
         .index_collations = owned_collations,
+        .index_sort_orders = owned_sort_orders,
         .action = .{ .create_index = .{
             .connection = connection,
             .database = located.database.?,

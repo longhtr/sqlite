@@ -295,6 +295,29 @@ int main(void){
   int collated_rtrim_duplicate_rc=sqlite3_exec(clone,"INSERT INTO collated_rtrim VALUES(2,'x ')",0,0,0);
   int collated_rtrim_drop_rc=sqlite3_exec(clone,"DROP TABLE collated_rtrim",0,0,0);
   printf("collated-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",collated_table_rc,collated_insert_b_rc,collated_insert_a_rc,collated_insert_c_rc,collated_index_rc,collated_query_rc,collated_count,(long long)collated_first,(long long)collated_last,collated_drop_rc,collated_unique_table_rc,collated_unique_index_rc,collated_unique_first_rc,collated_unique_duplicate_rc,collated_unique_drop_rc,collated_rtrim_table_rc,collated_rtrim_index_rc,collated_rtrim_first_rc,collated_rtrim_duplicate_rc,collated_rtrim_drop_rc);
+  int descending_table_rc=sqlite3_exec(clone,"CREATE TABLE descending_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
+  int descending_insert_first_rc=sqlite3_exec(clone,"INSERT INTO descending_data VALUES(1,10)",0,0,0);
+  int descending_insert_second_rc=sqlite3_exec(clone,"INSERT INTO descending_data VALUES(2,30)",0,0,0);
+  int descending_insert_third_rc=sqlite3_exec(clone,"INSERT INTO descending_data VALUES(3,20)",0,0,0);
+  int descending_index_rc=sqlite3_exec(clone,"CREATE INDEX descending_value ON descending_data(value DESC)",0,0,0);
+  int descending_count=-1,descending_after_count=-1;
+  sqlite3_int64 descending_first=-1,descending_last=-1,descending_after_first=-1,descending_after_last=-1;
+  int descending_query_rc=query_scan(clone,"SELECT value FROM descending_data INDEXED BY descending_value",&descending_count,&descending_first,&descending_last);
+  int descending_insert_rc=sqlite3_exec(clone,"INSERT INTO descending_data VALUES(4,40)",0,0,0);
+  int descending_update_rc=sqlite3_exec(clone,"UPDATE descending_data SET value=5 WHERE id=3",0,0,0);
+  int descending_delete_rc=sqlite3_exec(clone,"DELETE FROM descending_data WHERE id=2",0,0,0);
+  int descending_after_query_rc=query_scan(clone,"SELECT value FROM descending_data INDEXED BY descending_value",&descending_after_count,&descending_after_first,&descending_after_last);
+  int descending_drop_rc=sqlite3_exec(clone,"DROP TABLE descending_data",0,0,0);
+  int mixed_table_rc=sqlite3_exec(clone,"CREATE TABLE mixed_order_data(id INTEGER PRIMARY KEY,a INTEGER,b INTEGER)",0,0,0);
+  int mixed_first_rc=sqlite3_exec(clone,"INSERT INTO mixed_order_data VALUES(1,1,9)",0,0,0);
+  int mixed_second_rc=sqlite3_exec(clone,"INSERT INTO mixed_order_data VALUES(2,2,8)",0,0,0);
+  int mixed_third_rc=sqlite3_exec(clone,"INSERT INTO mixed_order_data VALUES(3,2,3)",0,0,0);
+  int mixed_index_rc=sqlite3_exec(clone,"CREATE INDEX mixed_order_index ON mixed_order_data(a DESC,b ASC)",0,0,0);
+  int mixed_count=-1;
+  sqlite3_int64 mixed_first=-1,mixed_last=-1;
+  int mixed_query_rc=query_scan(clone,"SELECT b FROM mixed_order_data INDEXED BY mixed_order_index",&mixed_count,&mixed_first,&mixed_last);
+  int mixed_drop_rc=sqlite3_exec(clone,"DROP TABLE mixed_order_data",0,0,0);
+  printf("descending-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\n",descending_table_rc,descending_insert_first_rc,descending_insert_second_rc,descending_insert_third_rc,descending_index_rc,descending_query_rc,descending_count,(long long)descending_first,(long long)descending_last,descending_insert_rc,descending_update_rc,descending_delete_rc,descending_after_query_rc,descending_after_count,(long long)descending_after_first,(long long)descending_after_last,descending_drop_rc,mixed_table_rc,mixed_first_rc,mixed_second_rc,mixed_third_rc,mixed_index_rc,mixed_query_rc,mixed_count,(long long)mixed_first,(long long)mixed_last,mixed_drop_rc);
 #ifdef NATIVE_ENGINE
   int deferred_fk_config_rc=zig_sqlite3_db_config_flag(clone,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
 #else

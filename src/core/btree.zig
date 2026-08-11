@@ -34,6 +34,7 @@ pub const Value = union(enum) {
 };
 
 pub const IndexCollation = enum { binary, nocase, rtrim };
+pub const IndexSortOrder = enum { ascending, descending };
 
 pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge };
 
@@ -674,9 +675,9 @@ pub const Database = struct {
     /// Bounded source `sqlite3CreateIndex()`/`sqlite3RefillIndex()` path for
     /// an ordinary application-defined index. Existing matching table rows
     /// are encoded with their trailing rowid before schema publication.
-    pub fn createSchemaIndex(self: *Database, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_indices: []const usize, integer_primary_key_position: ?usize, collations: []const IndexCollation, predicate: ?IndexPredicate, unique: bool, if_not_exists: bool) ResultCode {
+    pub fn createSchemaIndex(self: *Database, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_indices: []const usize, integer_primary_key_position: ?usize, collations: []const IndexCollation, sort_orders: []const IndexSortOrder, predicate: ?IndexPredicate, unique: bool, if_not_exists: bool) ResultCode {
         if (!self.writable) return .read_only;
-        if (name.len == 0 or table_name.len == 0 or sql.len == 0 or column_indices.len == 0 or collations.len != column_indices.len) return .misuse;
+        if (name.len == 0 or table_name.len == 0 or sql.len == 0 or column_indices.len == 0 or collations.len != column_indices.len or sort_orders.len != column_indices.len) return .misuse;
         const table_opened = self.openCursor(table_root, .table);
         if (table_opened.result != .ok) return table_opened.result;
         var table_cursor = table_opened.cursor.?;
@@ -792,7 +793,7 @@ pub const Database = struct {
         if (rc == .ok) {
             self.declared_pages = planner.next_page;
             for (index_payloads.items) |payload| {
-                rc = if (unique) self.insertUniqueIndexWithCollations(root_page, payload, column_indices.len, collations) else self.insertIndexWithCollations(root_page, payload, collations);
+                rc = if (unique) self.insertUniqueIndexWithKeyInfo(root_page, payload, column_indices.len, collations, sort_orders) else self.insertIndexWithKeyInfo(root_page, payload, collations, sort_orders);
                 if (rc != .ok) break;
             }
         }
@@ -1270,6 +1271,11 @@ pub const Database = struct {
     }
 
     pub fn insertIndexWithCollations(self: *Database, root_page: u32, payload: []const u8, collations: []const IndexCollation) ResultCode {
+        return self.insertIndexWithKeyInfo(root_page, payload, collations, &.{});
+    }
+
+    pub fn insertIndexWithKeyInfo(self: *Database, root_page: u32, payload: []const u8, collations: []const IndexCollation, sort_orders: []const IndexSortOrder) ResultCode {
+        if (sort_orders.len != 0 and sort_orders.len != collations.len) return .misuse;
         if (!self.writable) return .read_only;
         const opened = self.openCursor(root_page, .index);
         if (opened.result != .ok) return opened.result;
@@ -1277,7 +1283,7 @@ pub const Database = struct {
         defer cursor.deinit();
         var position: usize = 0;
         while (position < cursor.entries.items.len) : (position += 1) {
-            const compared = compareIndexRecordPayloads(self.allocator, cursor.entries.items[position].payload, payload, collations);
+            const compared = compareIndexRecordPayloads(self.allocator, cursor.entries.items[position].payload, payload, collations, sort_orders);
             if (compared.result != .ok) return compared.result;
             if (compared.order != .lt) break;
         }
@@ -1296,14 +1302,19 @@ pub const Database = struct {
     }
 
     pub fn insertUniqueIndexWithCollations(self: *Database, root_page: u32, payload: []const u8, key_count: usize, collations: []const IndexCollation) ResultCode {
+        return self.insertUniqueIndexWithKeyInfo(root_page, payload, key_count, collations, &.{});
+    }
+
+    pub fn insertUniqueIndexWithKeyInfo(self: *Database, root_page: u32, payload: []const u8, key_count: usize, collations: []const IndexCollation, sort_orders: []const IndexSortOrder) ResultCode {
         if (collations.len != 0 and collations.len != key_count) return .misuse;
+        if (sort_orders.len != 0 and sort_orders.len != key_count) return .misuse;
         const candidate_outcome = decodeRecord(self.allocator, payload);
         if (candidate_outcome.result != .ok) return candidate_outcome.result;
         var candidate = candidate_outcome.record.?;
         defer candidate.deinit();
         if (key_count == 0 or candidate.values.len <= key_count) return .corrupt;
         for (candidate.values[0..key_count]) |value| {
-            if (value == .null_) return self.insertIndexWithCollations(root_page, payload, collations);
+            if (value == .null_) return self.insertIndexWithKeyInfo(root_page, payload, collations, sort_orders);
         }
         const opened = self.openCursor(root_page, .index);
         if (opened.result != .ok) return opened.result;
@@ -1325,7 +1336,7 @@ pub const Database = struct {
             }
             if (matches) return .constraint;
         }
-        return self.insertIndexWithCollations(root_page, payload, collations);
+        return self.insertIndexWithKeyInfo(root_page, payload, collations, sort_orders);
     }
 
     pub fn deleteIndex(self: *Database, root_page: u32, payload: []const u8) ResultCode {
@@ -1381,7 +1392,7 @@ fn indexValueEqual(left: Value, right: Value, collation: IndexCollation) bool {
     return compareIndexValues(left, right, collation) == .eq;
 }
 
-fn compareIndexRecordPayloads(allocator: std.mem.Allocator, left_payload: []const u8, right_payload: []const u8, collations: []const IndexCollation) CompareOutcome {
+fn compareIndexRecordPayloads(allocator: std.mem.Allocator, left_payload: []const u8, right_payload: []const u8, collations: []const IndexCollation, sort_orders: []const IndexSortOrder) CompareOutcome {
     const left_outcome = decodeRecord(allocator, left_payload);
     if (left_outcome.result != .ok) return .{ .result = left_outcome.result };
     var left = left_outcome.record.?;
@@ -1393,7 +1404,14 @@ fn compareIndexRecordPayloads(allocator: std.mem.Allocator, left_payload: []cons
     const count = @min(left.values.len, right.values.len);
     for (left.values[0..count], right.values[0..count], 0..) |left_value, right_value, index| {
         const collation: IndexCollation = if (index < collations.len) collations[index] else .binary;
-        const order = compareIndexValues(left_value, right_value, collation);
+        var order = compareIndexValues(left_value, right_value, collation);
+        if (index < sort_orders.len and sort_orders[index] == .descending) {
+            order = switch (order) {
+                .lt => .gt,
+                .eq => .eq,
+                .gt => .lt,
+            };
+        }
         if (order != .eq) return .{ .result = .ok, .order = order };
     }
     return .{ .result = .ok, .order = std.math.order(left.values.len, right.values.len) };
