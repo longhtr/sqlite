@@ -889,7 +889,7 @@ int main(void){
   int partial_range_count_rc=query_value(clone,"SELECT count(*) FROM partial_range_data",&partial_range_count);
   int partial_range_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_range_data",0,0,0);
   printf("partial-range-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\n",partial_range_table_rc,partial_range_index_rc,partial_range_outside_rc,partial_range_inside_rc,partial_range_duplicate_rc,partial_range_enter_conflict_rc,partial_range_delete_rc,partial_range_enter_rc,partial_range_count_rc,(long long)partial_range_count,partial_range_drop_rc);
-  int partial_float_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_float_data(id INTEGER PRIMARY KEY,marker REAL,value INTEGER)",0,0,0);
+  int partial_float_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_float_data(id INTEGER PRIMARY KEY,marker NUMERIC,value INTEGER)",0,0,0);
   int partial_float_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_float_index ON partial_float_data(value) WHERE marker>+1.5",0,0,0);
   int partial_float_reverse_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_reverse_index ON partial_float_data(value) WHERE 1.5<marker",0,0,0);
   int partial_float_eq_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_eq_index ON partial_float_data(value) WHERE marker=1.5",0,0,0);

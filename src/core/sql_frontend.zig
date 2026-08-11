@@ -6204,7 +6204,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
             }
         }
         const column_index = selected orelse return error.Syntax;
-        if (!columns[column_index].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "INTEGER") and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "REAL")) return error.Syntax;
+        if (!columns[column_index].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "INTEGER") and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "REAL") and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "NUMERIC")) return error.Syntax;
         position.* += 1;
         return .{ .column_index = column_index, .integer_primary_key = columns[column_index].integer_primary_key, .operation = operation, .comparison_real = comparison_real };
     }
@@ -6233,7 +6233,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
             }
         }
         const column_index = selected orelse return error.Syntax;
-        if (!columns[column_index].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "INTEGER") and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "REAL")) return error.Syntax;
+        if (!columns[column_index].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "INTEGER") and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "REAL") and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "NUMERIC")) return error.Syntax;
         position.* += 1;
         return .{ .column_index = column_index, .integer_primary_key = columns[column_index].integer_primary_key, .operation = operation, .comparison_value = comparison_value };
     }
@@ -6297,7 +6297,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
     }
     const selected = column_index orelse return error.Syntax;
     position.* += 1;
-    const integer_column = columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER") or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "REAL");
+    const integer_column = columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER") or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "REAL") or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "NUMERIC");
     const text_column = std.ascii.eqlIgnoreCase(columns[selected].declared_type, "TEXT");
     var text_collation: ?btree.IndexPredicateTextCollation = if (std.ascii.eqlIgnoreCase(columns[selected].collation, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "RTRIM")) .rtrim else null;
     var explicit_column_collation = false;
@@ -10210,7 +10210,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .constant_null, .constant_integer, .constant_real, .null_coalesce_integer, .null_coalesce_real, .null_if_integer, .null_if_real, .reverse_null_if_integer, .reverse_null_if_real => false,
             .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .real_compare, .real_arithmetic, .real_is, .integer_is, .integer_between, .real_between, .integer_in, .real_in, .scalar_min_integer, .scalar_max_integer, .scalar_min_real, .scalar_max_real, .unary_math, .binary_math => true,
         };
-        if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER") and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "REAL")) {
+        if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER") and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "REAL") and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "NUMERIC")) {
             allocator.free(source);
             return .{ .result = .error_, .consumed = consumed };
         }
