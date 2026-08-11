@@ -392,6 +392,18 @@ int main(void){
   int ifnull_expression_reindex_rc=sqlite3_exec(clone,"REINDEX ifnull_expression_index",0,0,0);
   int ifnull_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE ifnull_expression_data",0,0,0);
   printf("ifnull-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",ifnull_expression_table_rc,ifnull_expression_first_rc,ifnull_expression_index_rc,coalesce_expression_index_rc,ifnull_expression_conflict_rc,ifnull_expression_second_rc,ifnull_expression_update_rc,ifnull_expression_count_rc,(long long)ifnull_expression_count,ifnull_expression_reindex_rc,ifnull_expression_drop_rc);
+  int nullif_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE nullif_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
+  int nullif_expression_first_rc=sqlite3_exec(clone,"INSERT INTO nullif_expression_data VALUES(1,-1)",0,0,0);
+  int nullif_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX nullif_expression_index ON nullif_expression_data(nullif(value,-1))",0,0,0);
+  int nullif_expression_second_rc=sqlite3_exec(clone,"INSERT INTO nullif_expression_data VALUES(2,2)",0,0,0);
+  int nullif_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO nullif_expression_data VALUES(3,2)",0,0,0);
+  int nullif_expression_null_rc=sqlite3_exec(clone,"INSERT INTO nullif_expression_data VALUES(3,-1)",0,0,0);
+  int nullif_expression_update_rc=sqlite3_exec(clone,"UPDATE nullif_expression_data SET value=2 WHERE id=3",0,0,0);
+  sqlite3_int64 nullif_expression_count=-1;
+  int nullif_expression_count_rc=query_value(clone,"SELECT count(*) FROM nullif_expression_data",&nullif_expression_count);
+  int nullif_expression_reindex_rc=sqlite3_exec(clone,"REINDEX nullif_expression_index",0,0,0);
+  int nullif_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE nullif_expression_data",0,0,0);
+  printf("nullif-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",nullif_expression_table_rc,nullif_expression_first_rc,nullif_expression_index_rc,nullif_expression_second_rc,nullif_expression_duplicate_rc,nullif_expression_null_rc,nullif_expression_update_rc,nullif_expression_count_rc,(long long)nullif_expression_count,nullif_expression_reindex_rc,nullif_expression_drop_rc);
   int null_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE null_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int null_expression_first_rc=sqlite3_exec(clone,"INSERT INTO null_expression_data VALUES(1,NULL)",0,0,0);
   int null_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX null_expression_index ON null_expression_data(value IS NULL)",0,0,0);

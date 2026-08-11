@@ -63,6 +63,7 @@ pub const IndexTransform = union(enum) {
     is_null,
     is_not_null,
     null_coalesce_integer: i64,
+    null_if_integer: i64,
     integer_add: i64,
     integer_multiply: i64,
     integer_divide: i64,
@@ -165,11 +166,16 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .null_ => .{ .integer = replacement },
             else => value,
         },
+        .null_if_integer => |comparison| return switch (value) {
+            .integer => |integer| if (integer == comparison) .null_ else value,
+            .real => |real| if (real == @as(f64, @floatFromInt(comparison))) .null_ else value,
+            .null_, .text, .blob => value,
+        },
         else => {},
     }
     const numeric = numericIndexValue(value);
     return switch (transform) {
-        .identity, .is_null, .is_not_null, .null_coalesce_integer => unreachable,
+        .identity, .is_null, .is_not_null, .null_coalesce_integer, .null_if_integer => unreachable,
         .numeric_negate => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = -integer },
