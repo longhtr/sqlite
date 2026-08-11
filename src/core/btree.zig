@@ -44,6 +44,7 @@ pub const IndexCollation = union(enum) {
 pub const IndexSortOrder = enum { ascending, descending };
 pub const IndexComparisonOperation = enum { eq, ne, lt, le, gt, ge };
 pub const IndexComparison = struct { operation: IndexComparisonOperation, value: i64 };
+pub const IndexIsComparison = struct { value: i64, is_not: bool };
 pub const IndexTransform = union(enum) {
     identity,
     numeric_negate,
@@ -61,6 +62,7 @@ pub const IndexTransform = union(enum) {
     integer_shift_left: i64,
     integer_shift_right: i64,
     integer_compare: IndexComparison,
+    integer_is: IndexIsComparison,
 };
 
 fn numericIndexValue(value: Value) Value {
@@ -163,6 +165,14 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
         .integer_shift_right => |amount| switch (numeric) {
             .integer => |integer| .{ .integer = shiftIndexInteger(integer, amount, false) },
             else => .null_,
+        },
+        .integer_is => |comparison| {
+            const matches = switch (numeric) {
+                .integer => |integer| integer == comparison.value,
+                .real => |real| real == @as(f64, @floatFromInt(comparison.value)),
+                else => false,
+            };
+            return .{ .integer = @intFromBool(if (comparison.is_not) !matches else matches) };
         },
         .integer_compare => |comparison| switch (numeric) {
             .null_ => .null_,
