@@ -69,6 +69,15 @@
       "atomic_unit_id": "vdbe-statement-explain-mode",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::doWalCallbacks::line-745",
+      "source_sha256": "4e2fd3bab983723c699c9b461b4e906c17a804c4be4538b36725507016c3f373",
+      "zig_declaration_id": "src/core/internal/vdbe_api.zig::function::doWalCallbacks",
+      "zig_declaration_sha256": "2b9ac570c26573650386a07a9dfead3bbafc612cfbecd3013885d8a46d7949ec",
+      "atomic_unit_id": "vdbe-post-commit-wal-callback-dispatch",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

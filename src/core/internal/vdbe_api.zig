@@ -52,6 +52,63 @@ pub fn apiExit(connection: *types.Sqlite3, result: c_int) c_int {
     return 0;
 }
 
+pub const WalFrameCountFunction = *const fn (*types.Btree) c_int;
+
+/// Source `doWalCallbacks()`. The frame-count operation owns the source
+/// Btree-enter/pager-callback/Btree-leave sequence until those exact owners
+/// are connected to the source-layout Btree representation.
+pub fn doWalCallbacks(connection: *types.Sqlite3, frame_count: WalFrameCountFunction) c_int {
+    var result: c_int = 0;
+    const databases = connection.aDb orelse return result;
+    for (databases[0..@intCast(connection.nDb)]) |*database| {
+        const btree = database.pBt orelse continue;
+        const entries = frame_count(btree);
+        if (entries > 0 and connection.xWalCallback != null and result == 0) {
+            result = connection.xWalCallback.?(connection.pWalArg, connection, database.zDbSName, entries);
+        }
+    }
+    return result;
+}
+
+test "source WAL callbacks scan every Btree and stop hooks after error" {
+    const Harness = struct {
+        var frame_calls: c_int = 0;
+        var hook_calls: c_int = 0;
+        var last_entries: c_int = 0;
+
+        fn frameCount(btree: *types.Btree) c_int {
+            frame_calls += 1;
+            return btree.sharable;
+        }
+
+        fn walHook(_: ?*anyopaque, _: ?*types.Sqlite3, _: ?[*:0]const u8, entries: c_int) callconv(.c) c_int {
+            hook_calls += 1;
+            last_entries = entries;
+            return 17;
+        }
+    };
+    Harness.frame_calls = 0;
+    Harness.hook_calls = 0;
+    Harness.last_entries = 0;
+    var first = std.mem.zeroes(types.Btree);
+    first.sharable = 2;
+    var second = std.mem.zeroes(types.Btree);
+    second.sharable = 3;
+    var databases = [_]types.Db{
+        .{ .zDbSName = "main", .pBt = &first, .safety_level = 0, .bSyncSet = 0, .pSchema = null },
+        .{ .zDbSName = "temp", .pBt = null, .safety_level = 0, .bSyncSet = 0, .pSchema = null },
+        .{ .zDbSName = "aux", .pBt = &second, .safety_level = 0, .bSyncSet = 0, .pSchema = null },
+    };
+    var connection = std.mem.zeroes(types.Sqlite3);
+    connection.aDb = &databases;
+    connection.nDb = databases.len;
+    connection.xWalCallback = Harness.walHook;
+    try std.testing.expectEqual(@as(c_int, 17), doWalCallbacks(&connection, Harness.frameCount));
+    try std.testing.expectEqual(@as(c_int, 2), Harness.frame_calls);
+    try std.testing.expectEqual(@as(c_int, 1), Harness.hook_calls);
+    try std.testing.expectEqual(@as(c_int, 2), Harness.last_entries);
+}
+
 pub fn vdbeSafety(machine: *types.Vdbe) bool {
     if (machine.db != null) return false;
     public_api.zig_sqlite3_log_message(result_misuse, "API called with finalized prepared statement");

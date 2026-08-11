@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-post-commit-wal-callback-dispatch",
+  "title": "VDBE post-commit WAL callback dispatch",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "doWalCallbacks is the post-commit connection-level loop that samples every attached Btree's committed WAL frame count and invokes the registered hook only while prior hooks remain successful.",
+    "source_files": [{"path": "src/vdbeapi.c", "sha256": "233846129dc649ec3d1ae321612ee8833c937ee775766eb8e39deda07a6b19a6"}],
+    "source_entity_ids": ["src/vdbeapi.c::function::doWalCallbacks::line-745"],
+    "behavioral_block_ids": [
+      "src/vdbeapi.c::function::doWalCallbacks::behavior::for::line-749-column-3::ordinal-0",
+      "src/vdbeapi.c::function::doWalCallbacks::behavior::if::line-751-column-5::ordinal-0",
+      "src/vdbeapi.c::function::doWalCallbacks::behavior::if::line-756-column-7::ordinal-0",
+      "src/vdbeapi.c::function::doWalCallbacks::behavior::return::line-764-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Pager WAL callback frame counting", "Btree mutex implementation", "Commit and checkpoint execution", "Public sqlite3_wal_hook registration"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": ["btree-sharability-and-vdbe-usage-lock-masks", "vdbe-builder-state-representations"],
+    "external_source_responsibilities": ["The source Btree-enter, sqlite3PagerWalCallback, and Btree-leave sequence for each attached Btree"],
+    "caller_closure": "The complete post-commit database loop and hook-result gate are assigned. The named frame-count operation owns the exact per-Btree lock/pager sequence until source-layout pager integration."
+  },
+  "contracts": {
+    "inputs": ["Source-layout Sqlite3 with attached Db/Btree entries and a frame-count operation owning per-Btree locking"],
+    "outputs": ["The first non-OK WAL-hook result, or OK after scanning all attached databases"],
+    "ownership": "No ownership transfer. Connection, Db names, Btrees, and hook context remain borrowed.",
+    "state_and_results": "Every non-null Btree is sampled even after an earlier hook fails. Hooks run only for positive frame counts, when registered, and while the accumulated result remains OK.",
+    "locks_callbacks_io": "The injected frame-count operation owns Btree enter/pager callback/leave. User WAL hooks run after that lock scope, exactly as source. Pager I/O remains delegated.",
+    "failure_and_continuation": "The first hook error suppresses later hooks without suppressing later frame-count cleanup/sampling; that error is returned unchanged."
+  },
+  "mappings": [{
+    "source_entity_id": "src/vdbeapi.c::function::doWalCallbacks::line-745",
+    "relation": "source-post-commit-wal-hook-loop-to-native-operation",
+    "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::doWalCallbacks"]
+  }],
+  "representation_differences": [
+    "The source Btree-enter/Pager-WAL-callback/Btree-leave triplet is represented by a named frame-count operation until the source-layout Btree points at the native pager owner.",
+    "The exact Sqlite3, Db, Btree, callback, argument, and schema-name fields remain source-layout representations."
+  ],
+  "oracle": {
+    "protocol": "A native source-layout unit trace uses three attached Db entries, including a null Btree, two positive frame counts, and a first-hook error. It verifies that both Btrees are sampled, only the first hook runs, and the first error is returned.",
+    "internal_observations": ["per-Btree frame-count calls", "hook call count and first frame count", "first hook result propagation"],
+    "normalization": "Pointers are not compared; counts and result codes are exact. A pinned-C WAL/pager trace remains pending."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No local allocation.",
+    "io_crash_concurrency": "Pager I/O and Btree lock evidence remain external; source callback ordering is translated.",
+    "malformed_input": "Null Btree slots and absent hooks are accepted source states.",
+    "continuation": "Later Btrees are still sampled after the first hook error.",
+    "performance": "One linear pass over connection.nDb with at most one frame sample and hook per attached Btree.",
+    "commands": ["zig build wal-differential", "zig build internal-vdbe-layout-test"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_api.zig source-layout post-commit statement API layer",
+    "native_call_path": "The source-layout loop and native unit path are implemented; VDBE commit and exact pager frame-count integration remain pending.",
+    "bounded_owner_retired": "No. The bounded frontend retains its separate WAL callback path."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pager/Btree integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect source-layout Btree/Pager WAL frame counting and commit callers.", "Add a pinned-C multi-database WAL hook trace.", "Retire the bounded frontend WAL callback owner.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeapi.c:731-766 was reviewed completely for result setup, attached-database iteration, Btree lock/pager callback ordering, positive-frame and first-error hook gates, and return",
+      "src/core/internal/vdbe_types.zig Sqlite3/Db/Btree callback fields and current WAL/Btree owners were reviewed for the exact representation boundary"
+    ],
+    "callers": ["sqlite3Step invokes doWalCallbacks after successful commit completion", "The bounded frontend has a separate reconstructed callback loop that remains outside this source-layout unit"],
+    "callees": ["sqlite3BtreeEnter/sqlite3PagerWalCallback/sqlite3BtreeLeave are one named operation", "xWalCallback receives pWalArg, connection, exact zDbSName, and positive frame count"],
+    "assertions_branches_cleanup": ["All four active behavior IDs cover full iteration, nullable Btree, callback gate, and return", "An error suppresses subsequent user callbacks but never skips per-Btree sampling", "The Btree lock is released before every user callback in the required injected operation"],
+    "upstream_tests": ["Upstream walhook, wal, attach, commit, and hook-error tests cover the source path", "Project native source-layout unit trace covers null slots, positive counts, first-error suppression, and continued sampling"]
+  },
+  "evidence_receipts": []
+}
