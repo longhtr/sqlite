@@ -5954,6 +5954,19 @@ fn resolveIndexPredicatePrimary(token_list: []const Token, columns: []const Reso
         return;
     }
     if (term_count.* == 8) return error.Syntax;
+    if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or (token_list[position.*].typ == tokens.tk_minus and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
+        const negative = token_list[position.*].typ == tokens.tk_minus;
+        const literal_position = position.* + @intFromBool(negative);
+        const probe_position = literal_position + 1;
+        if (probe_position == token_list.len or token_list[probe_position].typ == tokens.tk_and or token_list[probe_position].typ == tokens.tk_or or token_list[probe_position].typ == tokens.tk_rp) {
+            var constant = std.fmt.parseFloat(f64, token_list[literal_position].text) catch return error.Syntax;
+            if (negative) constant = -constant;
+            position.* = probe_position;
+            try appendIndexPredicateNode(predicate, node_count, .{ .constant = constant != 0 and !std.math.isNan(constant) });
+            term_count.* += 1;
+            return;
+        }
+    }
     if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_integer or token_list[position.*].typ == tokens.tk_minus)) {
         var probe_position = position.*;
         const constant = try resolveIndexPredicateInteger(token_list, &probe_position);
