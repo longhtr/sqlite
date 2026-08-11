@@ -660,7 +660,11 @@ int main(void){
   int reversed_is_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_is_expression_index ON is_expression_data(1 IS value)",0,0,0);
   int reversed_is_distinct_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_is_distinct_expression_index ON is_expression_data(1 IS DISTINCT FROM value)",0,0,0);
   int reversed_is_not_distinct_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_is_not_distinct_expression_index ON is_expression_data(1 IS NOT DISTINCT FROM value)",0,0,0);
-  printf("reversed-is-expression-index\t%d\t%d\t%d\n",reversed_is_expression_index_rc,reversed_is_distinct_expression_index_rc,reversed_is_not_distinct_expression_index_rc);
+  int float_is_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX float_is_expression_index ON is_expression_data(value IS 1.5)",0,0,0);
+  int float_is_not_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX float_is_not_expression_index ON is_expression_data(value IS NOT -1.5)",0,0,0);
+  int reversed_float_is_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_float_is_expression_index ON is_expression_data(1.5 IS value)",0,0,0);
+  int reversed_float_distinct_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_float_distinct_expression_index ON is_expression_data(-1.5 IS DISTINCT FROM value)",0,0,0);
+  printf("reversed-is-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",reversed_is_expression_index_rc,reversed_is_distinct_expression_index_rc,reversed_is_not_distinct_expression_index_rc,float_is_expression_index_rc,float_is_not_expression_index_rc,reversed_float_is_expression_index_rc,reversed_float_distinct_expression_index_rc);
   int is_expression_second_rc=sqlite3_exec(clone,"INSERT INTO is_expression_data VALUES(2,1)",0,0,0);
   int is_expression_false_duplicate_rc=sqlite3_exec(clone,"INSERT INTO is_expression_data VALUES(3,2)",0,0,0);
   int is_expression_true_duplicate_rc=sqlite3_exec(clone,"INSERT INTO is_expression_data VALUES(3,1)",0,0,0);

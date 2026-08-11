@@ -47,6 +47,7 @@ pub const IndexComparisonOperation = enum { eq, ne, lt, le, gt, ge };
 pub const IndexComparison = struct { operation: IndexComparisonOperation, value: i64 };
 pub const IndexRealComparison = struct { operation: IndexComparisonOperation, value: f64 };
 pub const IndexIsComparison = struct { value: i64, is_not: bool };
+pub const IndexRealIsComparison = struct { value: f64, is_not: bool };
 pub const IndexRangeComparison = struct { low: i64, high: i64, is_not: bool };
 pub const IndexMembership = struct { first: i64, second: i64, is_not: bool };
 pub const IndexSubstring = struct { start: i64, count: ?i64 };
@@ -120,6 +121,7 @@ pub const IndexTransform = union(enum) {
     integer_reverse_shift_right: i64,
     integer_compare: IndexComparison,
     real_compare: IndexRealComparison,
+    real_is: IndexRealIsComparison,
     integer_is: IndexIsComparison,
     integer_between: IndexRangeComparison,
     integer_in: IndexMembership,
@@ -520,6 +522,14 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
                 return .{ .integer = @intFromBool(if (comparison.is_not) !between else between) };
             },
             .text, .blob => unreachable,
+        },
+        .real_is => |comparison| {
+            const matches = switch (numeric) {
+                .integer => |integer| @as(f64, @floatFromInt(integer)) == comparison.value,
+                .real => |real| real == comparison.value,
+                else => false,
+            };
+            return .{ .integer = @intFromBool(if (comparison.is_not) !matches else matches) };
         },
         .integer_is => |comparison| {
             const matches = switch (numeric) {
