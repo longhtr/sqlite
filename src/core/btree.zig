@@ -666,7 +666,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     };
 }
 
-pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, real_eq, real_ne, real_lt, real_le, real_gt, real_ge, real_is, real_is_not, real_between, real_not_between, real_in, real_not_in, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not, text_lt, text_le, text_gt, text_ge, text_between, text_not_between, text_like, text_not_like };
+pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, real_eq, real_ne, real_lt, real_le, real_gt, real_ge, real_is, real_is_not, real_between, real_not_between, real_in, real_not_in, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not, text_lt, text_le, text_gt, text_ge, text_between, text_not_between, text_like, text_not_like, text_glob, text_not_glob };
 
 pub const IndexPredicateTextCollation = enum { binary, nocase, rtrim };
 
@@ -712,24 +712,24 @@ fn indexPredicateUtf8Next(value: []const u8, position: usize) usize {
     return @min(value.len, position + length);
 }
 
-fn indexPredicateLikeMatch(value: []const u8, value_position: usize, literal: []const u8, literal_position: usize) bool {
+fn indexPredicatePatternMatch(value: []const u8, value_position: usize, literal: []const u8, literal_position: usize, match_all: u8, match_one: u8, no_case: bool) bool {
     const pattern = indexPredicateLiteralByte(literal, literal_position) orelse return value_position == value.len;
-    if (pattern.byte == '%') {
+    if (pattern.byte == match_all) {
         var probe = value_position;
         while (true) {
-            if (indexPredicateLikeMatch(value, probe, literal, pattern.next)) return true;
+            if (indexPredicatePatternMatch(value, probe, literal, pattern.next, match_all, match_one, no_case)) return true;
             if (probe == value.len) return false;
             probe = indexPredicateUtf8Next(value, probe);
         }
     }
-    if (pattern.byte == '_') {
+    if (pattern.byte == match_one) {
         if (value_position == value.len) return false;
-        return indexPredicateLikeMatch(value, indexPredicateUtf8Next(value, value_position), literal, pattern.next);
+        return indexPredicatePatternMatch(value, indexPredicateUtf8Next(value, value_position), literal, pattern.next, match_all, match_one, no_case);
     }
     if (value_position == value.len) return false;
     const value_byte = value[value_position];
-    const equal = value_byte == pattern.byte or (value_byte < 0x80 and pattern.byte < 0x80 and std.ascii.toLower(value_byte) == std.ascii.toLower(pattern.byte));
-    return equal and indexPredicateLikeMatch(value, value_position + 1, literal, pattern.next);
+    const equal = value_byte == pattern.byte or (no_case and value_byte < 0x80 and pattern.byte < 0x80 and std.ascii.toLower(value_byte) == std.ascii.toLower(pattern.byte));
+    return equal and indexPredicatePatternMatch(value, value_position + 1, literal, pattern.next, match_all, match_one, no_case);
 }
 
 fn indexPredicateTextOrder(value: []const u8, literal: []const u8, collation: IndexPredicateTextCollation) ?std.math.Order {
@@ -769,13 +769,14 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
             .null_ => false,
             else => true,
         },
-        .text_like, .text_not_like => {
+        .text_like, .text_not_like, .text_glob, .text_not_glob => {
             const text = switch (value) {
                 .text => |text| text,
                 else => return false,
             };
-            const matches = indexPredicateLikeMatch(text, 0, predicate.comparison_text, 1);
-            return if (predicate.operation == .text_like) matches else !matches;
+            const glob = predicate.operation == .text_glob or predicate.operation == .text_not_glob;
+            const matches = indexPredicatePatternMatch(text, 0, predicate.comparison_text, 1, if (glob) '*' else '%', if (glob) '?' else '_', !glob);
+            return if (predicate.operation == .text_like or predicate.operation == .text_glob) matches else !matches;
         },
         .text_between, .text_not_between => {
             const text = switch (value) {
