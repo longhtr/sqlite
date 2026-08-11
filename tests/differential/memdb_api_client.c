@@ -306,6 +306,24 @@ int main(void){
   int unique_parent_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.unique_parent",0,0,0);
   printf("attached-unique-index-fk\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\n",unique_parent_create_rc,unique_parent_index_rc,unique_child_create_rc,unique_parent_insert_rc,unique_parent_duplicate_rc,unique_child_insert_rc,unique_child_invalid_rc,unique_parent_update_rc,unique_child_query_rc,(long long)unique_child_value,unique_parent_delete_rc,unique_child_count_rc,(long long)unique_child_count,unique_child_drop_rc,unique_parent_drop_rc);
 
+  int multi_parent_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.multi_parent(id INTEGER PRIMARY KEY,a INTEGER,b INTEGER)",0,0,0);
+  int multi_parent_index_rc=sqlite3_exec(attached,"CREATE UNIQUE INDEX aux.idx_multi_parent_ab ON multi_parent(a,b)",0,0,0);
+  int multi_child_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.multi_child(id INTEGER PRIMARY KEY,x INTEGER,y INTEGER,FOREIGN KEY(x,y) REFERENCES multi_parent(a,b) ON UPDATE CASCADE ON DELETE CASCADE)",0,0,0);
+  int multi_parent_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.multi_parent VALUES(1,1,2)",0,0,0);
+  int multi_parent_duplicate_rc=sqlite3_exec(attached,"INSERT INTO aux.multi_parent VALUES(2,1,2)",0,0,0);
+  int multi_child_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.multi_child VALUES(1,1,2)",0,0,0);
+  int multi_child_invalid_rc=sqlite3_exec(attached,"INSERT INTO aux.multi_child VALUES(2,1,9)",0,0,0);
+  int multi_parent_update_rc=sqlite3_exec(attached,"UPDATE aux.multi_parent SET a=3 WHERE id=1",0,0,0);
+  sqlite3_int64 multi_child_value=-1,multi_child_count=-1,multi_index_first=-1,multi_index_last=-1;
+  int multi_child_query_rc=query_value(attached,"SELECT x FROM aux.multi_child",&multi_child_value);
+  int multi_index_count=-1;
+  int multi_index_query_rc=query_scan(attached,"SELECT a FROM aux.multi_parent INDEXED BY idx_multi_parent_ab",&multi_index_count,&multi_index_first,&multi_index_last);
+  int multi_parent_delete_rc=sqlite3_exec(attached,"DELETE FROM aux.multi_parent WHERE id=1",0,0,0);
+  int multi_child_count_rc=query_value(attached,"SELECT count(*) FROM aux.multi_child",&multi_child_count);
+  int multi_child_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.multi_child",0,0,0);
+  int multi_parent_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.multi_parent",0,0,0);
+  printf("attached-multi-index-fk\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\t%lld\t%d\t%d\t%lld\t%d\t%d\n",multi_parent_create_rc,multi_parent_index_rc,multi_child_create_rc,multi_parent_insert_rc,multi_parent_duplicate_rc,multi_child_insert_rc,multi_child_invalid_rc,multi_parent_update_rc,multi_child_query_rc,(long long)multi_child_value,multi_index_query_rc,multi_index_count,(long long)multi_index_first,(long long)multi_index_last,multi_parent_delete_rc,multi_child_count_rc,(long long)multi_child_count,multi_child_drop_rc,multi_parent_drop_rc);
+
   int actions_parent_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_parent(id INTEGER PRIMARY KEY)",0,0,0);
   int actions_null_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_null(id INTEGER PRIMARY KEY,parent_id REFERENCES action_parent(id) ON DELETE SET NULL ON UPDATE SET NULL)",0,0,0);
   int actions_default_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_default(id INTEGER PRIMARY KEY,parent_id DEFAULT 2 REFERENCES action_parent(id) ON DELETE SET DEFAULT ON UPDATE SET DEFAULT)",0,0,0);

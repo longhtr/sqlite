@@ -3617,7 +3617,7 @@ const ProgramAction = union(enum) {
     attach_database: struct { connection: *Connection, filename: []const u8, name: []const u8 },
     detach_database: struct { connection: *Connection, name: []const u8 },
     create: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, sql: []const u8, if_not_exists: bool },
-    create_index: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_index: usize, integer_primary_key: bool, unique: bool, if_not_exists: bool },
+    create_index: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, integer_primary_key_position: ?usize, unique: bool, if_not_exists: bool },
     virtual_create: struct { connection: *Connection, schema_name: []const u8, name: []const u8, module_name: []const u8 },
     virtual_drop: struct { connection: *Connection, schema_name: []const u8, name: []const u8 },
     drop: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
@@ -5384,7 +5384,7 @@ const IndexMutationRow = struct {
 };
 
 /// Bounded source `sqlite3GenerateIndexKey()` mutation owner for ordinary
-/// single-column indexes created by `compileIndexSchema()`.
+/// ordinary indexes created by `compileIndexSchema()`.
 fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, table_name: []const u8, old_row: ?IndexMutationRow, new_row: ?IndexMutationRow) ResultCode {
     const table_outcome = database.schemaTable(table_name);
     if (table_outcome.result != .ok) return table_outcome.result;
@@ -5417,32 +5417,46 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
             connection.allocator.free(index_columns.tokens);
             connection.allocator.free(index_columns.source);
         }
-        if (index_columns.columns.len != 1) continue;
+        if (index_columns.columns.len == 0) continue;
         const unique = index_columns.tokens.len > 1 and index_columns.tokens[0].typ == tokens.tk_create and index_columns.tokens[1].typ == tokens.tk_unique;
-        var column_index: ?usize = null;
-        var integer_primary_key = false;
-        for (table_columns.columns, 0..) |column, index| {
-            if (std.ascii.eqlIgnoreCase(column.name, index_columns.columns[0].name)) {
-                column_index = index;
-                integer_primary_key = column.integer_primary_key;
-                break;
+        const selected = connection.allocator.alloc(usize, index_columns.columns.len) catch return .no_memory;
+        defer connection.allocator.free(selected);
+        var integer_primary_key_position: ?usize = null;
+        for (index_columns.columns, 0..) |index_column, selected_position| {
+            var found: ?usize = null;
+            for (table_columns.columns, 0..) |column, index| {
+                if (std.ascii.eqlIgnoreCase(column.name, index_column.name)) {
+                    found = index;
+                    if (column.integer_primary_key) integer_primary_key_position = selected_position;
+                    break;
+                }
             }
+            selected[selected_position] = found orelse return .corrupt;
         }
-        const selected = column_index orelse return .corrupt;
         if (old_row) |row| {
-            if (selected >= row.values.len) return .corrupt;
-            const key: btree.Value = if (integer_primary_key) .{ .integer = row.rowid } else row.values[selected];
-            const payload = btree.encodeRecord(connection.allocator, &.{ key, .{ .integer = row.rowid } }) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+            const key_values = connection.allocator.alloc(btree.Value, selected.len + 1) catch return .no_memory;
+            defer connection.allocator.free(key_values);
+            for (selected, 0..) |column_index, index| {
+                if (column_index >= row.values.len) return .corrupt;
+                key_values[index] = if (integer_primary_key_position == index) .{ .integer = row.rowid } else row.values[column_index];
+            }
+            key_values[selected.len] = .{ .integer = row.rowid };
+            const payload = btree.encodeRecord(connection.allocator, key_values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
             defer connection.allocator.free(payload);
             const deleted = database.deleteIndex(root_page, payload);
             if (deleted != .ok) return if (deleted == .not_found) .corrupt else deleted;
         }
         if (new_row) |row| {
-            if (selected >= row.values.len) return .corrupt;
-            const key: btree.Value = if (integer_primary_key) .{ .integer = row.rowid } else row.values[selected];
-            const payload = btree.encodeRecord(connection.allocator, &.{ key, .{ .integer = row.rowid } }) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+            const key_values = connection.allocator.alloc(btree.Value, selected.len + 1) catch return .no_memory;
+            defer connection.allocator.free(key_values);
+            for (selected, 0..) |column_index, index| {
+                if (column_index >= row.values.len) return .corrupt;
+                key_values[index] = if (integer_primary_key_position == index) .{ .integer = row.rowid } else row.values[column_index];
+            }
+            key_values[selected.len] = .{ .integer = row.rowid };
+            const payload = btree.encodeRecord(connection.allocator, key_values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
             defer connection.allocator.free(payload);
-            const inserted = if (unique) database.insertUniqueIndex(root_page, payload, 1) else database.insertIndex(root_page, payload);
+            const inserted = if (unique) database.insertUniqueIndex(root_page, payload, selected.len) else database.insertIndex(root_page, payload);
             if (inserted != .ok) return inserted;
         }
     }
@@ -7871,7 +7885,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                     _ = database.rollbackStatementBatch();
                 }
             }
-            const created = database.createSchemaIndex(action.name, action.table_name, action.sql, action.table_root, action.column_index, action.integer_primary_key, action.unique, action.if_not_exists);
+            const created = database.createSchemaIndex(action.name, action.table_name, action.sql, action.table_root, owner.indices, action.integer_primary_key_position, action.unique, action.if_not_exists);
             if (created != .ok) break :blk created;
             const committed = database.commitStatementBatch();
             batch_active = false;
@@ -8311,15 +8325,32 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
     } else {
         position += 1;
     }
-    if (position + 4 >= token_list.len or token_list[position].typ != tokens.tk_on or token_list[position + 1].typ != tokens.tk_id or token_list[position + 2].typ != tokens.tk_lp or token_list[position + 3].typ != tokens.tk_id) {
+    if (position + 3 >= token_list.len or token_list[position].typ != tokens.tk_on or token_list[position + 1].typ != tokens.tk_id or token_list[position + 2].typ != tokens.tk_lp) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
     const table_name = token_list[position + 1].text;
-    const column_name = token_list[position + 3].text;
-    position += 4;
-    if (position < token_list.len and (token_list[position].typ == tokens.tk_asc or token_list[position].typ == tokens.tk_desc)) {
+    position += 3;
+    var column_names = std.ArrayList([]const u8).empty;
+    defer column_names.deinit(allocator);
+    while (true) {
+        if (position >= token_list.len or token_list[position].typ != tokens.tk_id) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        column_names.append(allocator, token_list[position].text) catch {
+            allocator.free(source);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
         position += 1;
+        if (position < token_list.len and (token_list[position].typ == tokens.tk_asc or token_list[position].typ == tokens.tk_desc)) {
+            position += 1;
+        }
+        if (position < token_list.len and token_list[position].typ == tokens.tk_comma) {
+            position += 1;
+            continue;
+        }
+        break;
     }
     if (position >= token_list.len or token_list[position].typ != tokens.tk_rp or position + 1 != token_list.len) {
         allocator.free(source);
@@ -8341,25 +8372,38 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         allocator.free(resolved.tokens);
         allocator.free(resolved.source);
     }
-    var column_index: ?usize = null;
-    var integer_primary_key = false;
-    for (resolved.columns, 0..) |column, index| {
-        if (std.ascii.eqlIgnoreCase(column.name, column_name)) {
-            column_index = index;
-            integer_primary_key = column.integer_primary_key;
-            break;
+    var selected_indices = std.ArrayList(usize).empty;
+    defer selected_indices.deinit(allocator);
+    var integer_primary_key_position: ?usize = null;
+    for (column_names.items, 0..) |column_name, selected_position| {
+        var found: ?usize = null;
+        for (resolved.columns, 0..) |column, index| {
+            if (std.ascii.eqlIgnoreCase(column.name, column_name)) {
+                found = index;
+                if (column.integer_primary_key) integer_primary_key_position = selected_position;
+                break;
+            }
         }
+        selected_indices.append(allocator, found orelse {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }) catch {
+            allocator.free(source);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
     }
-    if (column_index == null) {
+    const owned_indices = selected_indices.toOwnedSlice(allocator) catch {
         allocator.free(source);
-        return .{ .result = .error_, .consumed = consumed };
-    }
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
     const owner = allocator.create(Owner) catch {
+        allocator.free(owned_indices);
         allocator.free(source);
         return .{ .result = .no_memory, .consumed = consumed };
     };
     const instructions = allocator.alloc(vdbe.Instruction, 2) catch {
         allocator.destroy(owner);
+        allocator.free(owned_indices);
         allocator.free(source);
         return .{ .result = .no_memory, .consumed = consumed };
     };
@@ -8372,6 +8416,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         .instructions = instructions,
         .parameters = parameters,
         .columns = columns,
+        .indices = owned_indices,
         .action = .{ .create_index = .{
             .connection = connection,
             .database = located.database.?,
@@ -8380,8 +8425,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             .table_name = table_name,
             .sql = source,
             .table_root = table.root_page,
-            .column_index = column_index.?,
-            .integer_primary_key = integer_primary_key,
+            .integer_primary_key_position = integer_primary_key_position,
             .unique = unique,
             .if_not_exists = if_not_exists,
         } },

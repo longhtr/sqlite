@@ -634,9 +634,9 @@ pub const Database = struct {
     /// Bounded source `sqlite3CreateIndex()`/`sqlite3RefillIndex()` path for
     /// an ordinary single-column application-defined index. Existing table
     /// rows are encoded with their trailing rowid before schema publication.
-    pub fn createSchemaIndex(self: *Database, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_index: usize, integer_primary_key: bool, unique: bool, if_not_exists: bool) ResultCode {
+    pub fn createSchemaIndex(self: *Database, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_indices: []const usize, integer_primary_key_position: ?usize, unique: bool, if_not_exists: bool) ResultCode {
         if (!self.writable) return .read_only;
-        if (name.len == 0 or table_name.len == 0 or sql.len == 0) return .misuse;
+        if (name.len == 0 or table_name.len == 0 or sql.len == 0 or column_indices.len == 0) return .misuse;
         const table_opened = self.openCursor(table_root, .table);
         if (table_opened.result != .ok) return table_opened.result;
         var table_cursor = table_opened.cursor.?;
@@ -652,9 +652,14 @@ pub const Database = struct {
             if (decoded.result != .ok) return decoded.result;
             var record = decoded.record.?;
             defer record.deinit();
-            if (column_index >= record.values.len) return .corrupt;
-            const key: Value = if (integer_primary_key) .{ .integer = rowid } else record.values[column_index];
-            const payload = encodeRecord(self.allocator, &.{ key, .{ .integer = rowid } }) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+            const key_values = self.allocator.alloc(Value, column_indices.len + 1) catch return .no_memory;
+            defer self.allocator.free(key_values);
+            for (column_indices, 0..) |column_index, index| {
+                if (column_index >= record.values.len) return .corrupt;
+                key_values[index] = if (integer_primary_key_position == index) .{ .integer = rowid } else record.values[column_index];
+            }
+            key_values[column_indices.len] = .{ .integer = rowid };
+            const payload = encodeRecord(self.allocator, key_values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
             index_payloads.append(self.allocator, payload) catch {
                 self.allocator.free(payload);
                 return .no_memory;
@@ -742,7 +747,7 @@ pub const Database = struct {
         if (rc == .ok) {
             self.declared_pages = planner.next_page;
             for (index_payloads.items) |payload| {
-                rc = if (unique) self.insertUniqueIndex(root_page, payload, 1) else self.insertIndex(root_page, payload);
+                rc = if (unique) self.insertUniqueIndex(root_page, payload, column_indices.len) else self.insertIndex(root_page, payload);
                 if (rc != .ok) break;
             }
         }
