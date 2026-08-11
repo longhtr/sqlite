@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "virtual-table-and-module-reference-ownership",
   "title": "Virtual-table and module reference ownership",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VtabLock/Unlock and sqlite3VtabModuleUnref are the complete nested reference lifecycle consumed by P4_VTAB: VTable references protect disconnection, final unlock invokes xDisconnect, consumes a Module reference, runs optional module destructor, and releases both internal wrappers.",
@@ -183,7 +183,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation in assigned lifecycle; all test owners are returned exactly once.",

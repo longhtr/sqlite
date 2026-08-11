@@ -97,7 +97,7 @@
     {
       "id": "virtual-table-and-module-reference-ownership",
       "path": "upstream/atomic-units/virtual-table-and-module-reference-ownership.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-unpacked-record-allocation-and-decode",
