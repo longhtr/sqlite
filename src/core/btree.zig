@@ -712,8 +712,48 @@ fn indexPredicateUtf8Next(value: []const u8, position: usize) usize {
     return @min(value.len, position + length);
 }
 
+const IndexPredicateGlobClass = struct { matches: bool, next: usize };
+
+fn indexPredicateGlobClass(input: u8, literal: []const u8, position: usize) ?IndexPredicateGlobClass {
+    var cursor = position;
+    var invert = false;
+    if (indexPredicateLiteralByte(literal, cursor)) |first| {
+        if (first.byte == '^') {
+            invert = true;
+            cursor = first.next;
+        }
+    }
+    var seen = false;
+    var first_item = true;
+    while (indexPredicateLiteralByte(literal, cursor)) |item| {
+        if (item.byte == ']' and !first_item) return .{ .matches = seen != invert, .next = item.next };
+        first_item = false;
+        const separator = indexPredicateLiteralByte(literal, item.next);
+        if (separator != null and separator.?.byte == '-') {
+            const endpoint = indexPredicateLiteralByte(literal, separator.?.next);
+            if (endpoint != null and endpoint.?.byte != ']') {
+                if (input >= item.byte and input <= endpoint.?.byte) {
+                    seen = true;
+                }
+                cursor = endpoint.?.next;
+                continue;
+            }
+        }
+        if (input == item.byte) {
+            seen = true;
+        }
+        cursor = item.next;
+    }
+    return null;
+}
+
 fn indexPredicatePatternMatch(value: []const u8, value_position: usize, literal: []const u8, literal_position: usize, match_all: u8, match_one: u8, no_case: bool) bool {
     const pattern = indexPredicateLiteralByte(literal, literal_position) orelse return value_position == value.len;
+    if (match_all == '*' and pattern.byte == '[') {
+        if (value_position == value.len) return false;
+        const class = indexPredicateGlobClass(value[value_position], literal, pattern.next) orelse return false;
+        return class.matches and indexPredicatePatternMatch(value, value_position + 1, literal, class.next, match_all, match_one, no_case);
+    }
     if (pattern.byte == match_all) {
         var probe = value_position;
         while (true) {

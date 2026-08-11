@@ -6336,7 +6336,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         const is_glob = std.ascii.eqlIgnoreCase(token_list[operation_position].text, "glob");
         if (!is_like and !is_glob) return error.Syntax;
         const literal_position = operation_position + 1;
-        if (literal_position >= token_list.len or token_list[literal_position].typ != tokens.tk_string or (is_glob and std.mem.indexOfScalar(u8, token_list[literal_position].text, '[') != null)) return error.Syntax;
+        if (literal_position >= token_list.len or token_list[literal_position].typ != tokens.tk_string) return error.Syntax;
         position.* = literal_position + 1;
         const operation: btree.IndexPredicateOperation = if (is_glob)
             if (text_not_pattern) .text_not_glob else .text_glob
