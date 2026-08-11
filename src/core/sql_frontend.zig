@@ -4686,6 +4686,30 @@ fn resolveReversedIntegerIndexExpression(token_list: []const Token, position: us
     return .{ .column_name = token_list[operation_position + 1].text, .transform = .{ .integer_compare = .{ .operation = operation, .value = operand.value } }, .consumed = operation_position + 2 - position };
 }
 
+const ConcatIndexExpression = struct { column_name: []const u8, consumed: usize };
+
+fn resolveConcatIndexExpression(token_list: []const Token, position: usize) ?ConcatIndexExpression {
+    if (position + 3 >= token_list.len or token_list[position].typ != tokens.tk_id or !std.ascii.eqlIgnoreCase(token_list[position].text, "concat") or token_list[position + 1].typ != tokens.tk_lp) return null;
+    var cursor = position + 2;
+    var column_name: ?[]const u8 = null;
+    while (cursor < token_list.len and token_list[cursor].typ != tokens.tk_rp) {
+        if (token_list[cursor].typ == tokens.tk_id and column_name == null) {
+            column_name = token_list[cursor].text;
+        } else if (token_list[cursor].typ != tokens.tk_null) {
+            return null;
+        }
+        cursor += 1;
+        if (cursor < token_list.len and token_list[cursor].typ == tokens.tk_comma) {
+            cursor += 1;
+            if (cursor >= token_list.len or token_list[cursor].typ == tokens.tk_rp) return null;
+        } else if (cursor >= token_list.len or token_list[cursor].typ != tokens.tk_rp) {
+            return null;
+        }
+    }
+    if (cursor >= token_list.len or token_list[cursor].typ != tokens.tk_rp or column_name == null) return null;
+    return .{ .column_name = column_name.?, .consumed = cursor + 1 - position };
+}
+
 const SubstringIndexExpression = struct { column_name: []const u8, start: i64, count: ?i64, consumed: usize };
 
 fn resolveSubstringIndexExpression(token_list: []const Token, position: usize) ?SubstringIndexExpression {
@@ -4741,7 +4765,11 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var index_transform: btree.IndexTransform = .identity;
         var name: []const u8 = undefined;
         var start = position;
-        if (if (schema_is_index) resolveReversedIntegerIndexExpression(parsed.tokens, position) else null) |reversed_expression| {
+        if (if (schema_is_index) resolveConcatIndexExpression(parsed.tokens, position) else null) |concat_expression| {
+            scan_expression = true;
+            index_transform = .concat_single;
+            name = concat_expression.column_name;
+        } else if (if (schema_is_index) resolveReversedIntegerIndexExpression(parsed.tokens, position) else null) |reversed_expression| {
             scan_expression = true;
             index_transform = reversed_expression.transform;
             name = reversed_expression.column_name;
@@ -9504,7 +9532,11 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if (wrapped_expression) position += 1;
         var transform: btree.IndexTransform = .identity;
         var column_name: []const u8 = undefined;
-        if (resolveReversedIntegerIndexExpression(token_list, position)) |reversed_expression| {
+        if (resolveConcatIndexExpression(token_list, position)) |concat_expression| {
+            transform = .concat_single;
+            column_name = concat_expression.column_name;
+            position += concat_expression.consumed;
+        } else if (resolveReversedIntegerIndexExpression(token_list, position)) |reversed_expression| {
             transform = reversed_expression.transform;
             column_name = reversed_expression.column_name;
             position += reversed_expression.consumed;
