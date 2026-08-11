@@ -162,7 +162,7 @@ const Module = extern struct {
     xShadowName: ?*const anyopaque,
     xIntegrity: ?*const anyopaque,
 };
-const VirtualTable = struct { connection: *Connection, name: [:0]u8, module: *const Module, instance: *sqlite3_vtab, columns: std.ArrayList([:0]u8) = .empty };
+const VirtualTable = struct { connection: *Connection, schema_name: [:0]u8, name: [:0]u8, module: *const Module, instance: *sqlite3_vtab, columns: std.ArrayList([:0]u8) = .empty };
 const VirtualPlan = struct { table: *VirtualTable, index_number: c_int = 0, index_string: ?[:0]u8 = null };
 const VirtualHandle = struct { plan: *VirtualPlan, cursor: *sqlite3_vtab_cursor };
 const JsonVirtualPlan = struct {
@@ -354,6 +354,7 @@ pub const Connection = struct {
         for (self.virtual_tables.items) |table| {
             for (table.columns.items) |column| self.allocator.free(column);
             table.columns.deinit(self.allocator);
+            self.allocator.free(table.schema_name);
             self.allocator.free(table.name);
             self.allocator.destroy(table);
         }
@@ -3532,8 +3533,8 @@ const ProgramAction = union(enum) {
     attach_database: struct { connection: *Connection, filename: []const u8, name: []const u8 },
     detach_database: struct { connection: *Connection, name: []const u8 },
     create: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, sql: []const u8, if_not_exists: bool },
-    virtual_create: struct { connection: *Connection, name: []const u8, module_name: []const u8 },
-    virtual_drop: struct { connection: *Connection, name: []const u8 },
+    virtual_create: struct { connection: *Connection, schema_name: []const u8, name: []const u8, module_name: []const u8 },
+    virtual_drop: struct { connection: *Connection, schema_name: []const u8, name: []const u8 },
     drop: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
     insert: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, column_count: usize, integer_primary_key: ?usize, replace: bool, conflict_ignore: bool },
     update: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, target_column: usize, target_integer_primary_key: bool, foreign_key_old_mask: u32 },
@@ -6306,9 +6307,23 @@ fn compilePlannedTableScan(connection: *Connection, database: *btree.Database, s
     return .{ .result = .ok, .statement = prepared, .consumed = consumed };
 }
 
-fn compileVirtualScan(connection: *Connection, table: *VirtualTable, source: [:0]u8, token_list: []const Token, consumed: usize, from_position: usize) CompileOutcome {
+/// Source virtual-table lookup is scoped by the owning `Db` schema, so equal
+/// table names in main and an attached database retain distinct instances.
+fn virtualSchemaMatches(connection: *Connection, stored: []const u8, requested: []const u8) bool {
+    if (schemaSliceMatches(connection, stored)) return schemaSliceMatches(connection, requested);
+    return std.ascii.eqlIgnoreCase(stored, requested);
+}
+
+fn findVirtualTable(connection: *Connection, schema_name: []const u8, table_name: []const u8) ?*VirtualTable {
+    for (connection.virtual_tables.items) |table| {
+        if (virtualSchemaMatches(connection, table.schema_name, schema_name) and std.ascii.eqlIgnoreCase(table.name, table_name)) return table;
+    }
+    return null;
+}
+
+fn compileVirtualScan(connection: *Connection, table: *VirtualTable, source: [:0]u8, token_list: []const Token, consumed: usize, from_position: usize, after_table: usize) CompileOutcome {
     const allocator = connection.allocator;
-    if (from_position + 2 != token_list.len) {
+    if (after_table != token_list.len) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
@@ -6840,10 +6855,18 @@ fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
-    for (connection.virtual_tables.items) |table| {
-        if (std.ascii.eqlIgnoreCase(table.name, token_list[from_position + 1].text)) return compileVirtualScan(connection, table, source, token_list, consumed, from_position);
+    var virtual_schema_name: []const u8 = "main";
+    var virtual_table_name = token_list[from_position + 1].text;
+    var virtual_after_table = from_position + 2;
+    if (virtual_after_table + 1 < token_list.len and token_list[virtual_after_table].typ == tokens.tk_dot and token_list[virtual_after_table + 1].typ == tokens.tk_id) {
+        virtual_schema_name = virtual_table_name;
+        virtual_table_name = token_list[virtual_after_table + 1].text;
+        virtual_after_table += 2;
     }
-    if (connection.json_vtables_registered) {
+    if (findVirtualTable(connection, virtual_schema_name, virtual_table_name)) |table| {
+        return compileVirtualScan(connection, table, source, token_list, consumed, from_position, virtual_after_table);
+    }
+    if (virtual_after_table == from_position + 2 and connection.json_vtables_registered) {
         if (json_vtable.connect(token_list[from_position + 1].text)) |configuration| return compileJsonVirtualScan(connection, configuration, source, token_list, consumed, from_position);
     }
     const located_outcome = locateTableItem(connection, token_list, from_position);
@@ -7299,12 +7322,14 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             break :blk .ok;
         },
         .virtual_create => |action| blk: {
+            // Source `vtabCallConstructor()` installs the selected Db schema
+            // name as argv[1] before invoking xCreate/xConnect.
             if (action.connection.virtual_table_state == null) {
                 const state = action.connection.allocator.create(virtual_table_lifecycle.State) catch break :blk .no_memory;
                 state.* = virtual_table_lifecycle.State.init(action.connection.allocator);
                 action.connection.virtual_table_state = state;
             }
-            const lifecycle_table = virtual_table_lifecycle.beginVirtualParse(action.connection.allocator, "main", action.name, action.module_name, @intCast(action.connection.limits[2])) catch |err| break :blk if (err == error.OutOfMemory) .no_memory else .error_;
+            const lifecycle_table = virtual_table_lifecycle.beginVirtualParse(action.connection.allocator, action.schema_name, action.name, action.module_name, @intCast(action.connection.limits[2])) catch |err| break :blk if (err == error.OutOfMemory) .no_memory else .error_;
             var lifecycle_adopted = false;
             defer if (!lifecycle_adopted) {
                 lifecycle_table.deinit();
@@ -7312,10 +7337,12 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             };
             action.connection.virtual_tables.ensureUnusedCapacity(action.connection.allocator, 1) catch break :blk .no_memory;
             var registered: ?@TypeOf(action.connection.modules.items[0]) = null;
-            for (action.connection.modules.items) |module| if (std.ascii.eqlIgnoreCase(module.name, action.module_name)) {
-                registered = module;
-                break;
-            };
+            for (action.connection.modules.items) |module| {
+                if (std.ascii.eqlIgnoreCase(module.name, action.module_name)) {
+                    registered = module;
+                    break;
+                }
+            }
             const module_entry = registered orelse break :blk .error_;
             const module: *const Module = @ptrCast(@alignCast(module_entry.module));
             const raw = module.xCreate orelse module.xConnect orelse break :blk .error_;
@@ -7324,16 +7351,25 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 action.connection.allocator.free(old);
                 action.connection.vtab_declaration = null;
             }
+            const schema_name = action.connection.allocator.dupeZ(u8, action.schema_name) catch break :blk .no_memory;
+            var schema_name_adopted = false;
+            defer if (!schema_name_adopted) {
+                action.connection.allocator.free(schema_name);
+            };
             const table_name = action.connection.allocator.dupeZ(u8, action.name) catch break :blk .no_memory;
             var table_name_adopted = false;
-            defer if (!table_name_adopted) action.connection.allocator.free(table_name);
+            defer if (!table_name_adopted) {
+                action.connection.allocator.free(table_name);
+            };
             const module_name = action.connection.allocator.dupeZ(u8, action.module_name) catch break :blk .no_memory;
             defer action.connection.allocator.free(module_name);
-            const module_arguments = [_][*:0]const u8{ module_name.ptr, "main", table_name.ptr };
+            const module_arguments = [_][*:0]const u8{ module_name.ptr, schema_name.ptr, table_name.ptr };
             var instance: ?*sqlite3_vtab = null;
             var error_message: ?[*:0]u8 = null;
             const rc = ResultCode.fromC(callback(toOpaque(action.connection), module_entry.auxiliary, module_arguments.len, &module_arguments, &instance, &error_message));
-            if (error_message) |message| public_api.sqlite3_free(message);
+            if (error_message) |message| {
+                public_api.sqlite3_free(message);
+            }
             if (rc != .ok) break :blk rc;
             if (instance == null) break :blk .error_;
             const header: *VtabHeader = @ptrCast(@alignCast(instance.?));
@@ -7364,7 +7400,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 }
                 break :blk .no_memory;
             };
-            table.* = .{ .connection = action.connection, .name = table_name, .module = module, .instance = instance.? };
+            table.* = .{ .connection = action.connection, .schema_name = schema_name, .name = table_name, .module = module, .instance = instance.? };
             var failed = false;
             for (resolved.columns) |column| {
                 const copy = action.connection.allocator.dupeZ(u8, column.name) catch {
@@ -7378,7 +7414,9 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 };
             }
             if (failed) {
-                for (table.columns.items) |column| action.connection.allocator.free(column);
+                for (table.columns.items) |column| {
+                    action.connection.allocator.free(column);
+                }
                 table.columns.deinit(action.connection.allocator);
                 action.connection.allocator.destroy(table);
                 if (module.xDisconnect) |disconnect_raw| {
@@ -7388,7 +7426,9 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 break :blk .no_memory;
             }
             virtual_table_lifecycle.finishVirtualParse(action.connection.virtual_table_state.?, lifecycle_table, owner.source) catch |err| {
-                for (table.columns.items) |column| action.connection.allocator.free(column);
+                for (table.columns.items) |column| {
+                    action.connection.allocator.free(column);
+                }
                 table.columns.deinit(action.connection.allocator);
                 action.connection.allocator.destroy(table);
                 if (module.xDisconnect) |disconnect_raw| {
@@ -7399,13 +7439,16 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             };
             lifecycle_adopted = true;
             action.connection.virtual_tables.appendAssumeCapacity(table);
+            schema_name_adopted = true;
             table_name_adopted = true;
             break :blk .ok;
         },
         .virtual_drop => |action| blk: {
             var index: usize = 0;
             while (index < action.connection.virtual_tables.items.len) : (index += 1) {
-                if (!std.ascii.eqlIgnoreCase(action.connection.virtual_tables.items[index].name, action.name)) continue;
+                if (!virtualSchemaMatches(action.connection, action.connection.virtual_tables.items[index].schema_name, action.schema_name) or !std.ascii.eqlIgnoreCase(action.connection.virtual_tables.items[index].name, action.name)) {
+                    continue;
+                }
                 const table = action.connection.virtual_tables.items[index];
                 const raw = table.module.xDestroy orelse table.module.xDisconnect;
                 if (raw) |callback_raw| {
@@ -7414,8 +7457,11 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                     if (rc != .ok) break :blk rc;
                 }
                 _ = action.connection.virtual_tables.orderedRemove(index);
-                for (table.columns.items) |column| action.connection.allocator.free(column);
+                for (table.columns.items) |column| {
+                    action.connection.allocator.free(column);
+                }
                 table.columns.deinit(action.connection.allocator);
+                action.connection.allocator.free(table.schema_name);
                 action.connection.allocator.free(table.name);
                 action.connection.allocator.destroy(table);
                 break :blk .ok;
@@ -7647,7 +7693,8 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
     };
 }
 
-fn compileVirtualDrop(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
+/// Bounded `sqlite3VtabCallDestroy()` path for a schema-qualified instance.
+fn compileVirtualDrop(connection: *Connection, source: [:0]u8, consumed: usize, schema_name: []const u8, table_name: []const u8) CompileOutcome {
     const allocator = connection.allocator;
     const owner = allocator.create(Owner) catch {
         allocator.free(source);
@@ -7662,7 +7709,7 @@ fn compileVirtualDrop(connection: *Connection, source: [:0]u8, token_list: []con
     const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
     instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
     instructions[1] = .{ .opcode = .halt };
-    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .virtual_drop = .{ .connection = connection, .name = token_list[2].text } }, .program = .{ .instructions = instructions, .register_count = 1 } };
+    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .virtual_drop = .{ .connection = connection, .schema_name = schema_name, .name = table_name } }, .program = .{ .instructions = instructions, .register_count = 1 } };
     owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
     owner.program.functions = owner.functions[0..];
     const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
@@ -7674,21 +7721,51 @@ fn compileVirtualDrop(connection: *Connection, source: [:0]u8, token_list: []con
     return .{ .result = .ok, .statement = prepared, .consumed = consumed };
 }
 
+/// Bounded `sqlite3VtabBeginParse()`/`sqlite3VtabFinishParse()` path. Preserve
+/// the selected schema for constructor argv[1], duplicate detection, and drop.
 fn compileVirtualSchema(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
     const allocator = connection.allocator;
-    if (token_list.len != 6 or token_list[0].typ != tokens.tk_create or token_list[1].typ != tokens.tk_virtual or token_list[2].typ != tokens.tk_table or token_list[3].typ != tokens.tk_id or token_list[4].typ != tokens.tk_using or token_list[5].typ != tokens.tk_id) {
+    if (token_list.len != 6 and token_list.len != 8) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
-    for (connection.virtual_tables.items) |table| if (std.ascii.eqlIgnoreCase(table.name, token_list[3].text)) {
+    if (token_list[0].typ != tokens.tk_create or token_list[1].typ != tokens.tk_virtual or token_list[2].typ != tokens.tk_table or token_list[3].typ != tokens.tk_id) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
-    };
+    }
+    var schema_name: []const u8 = "main";
+    var table_name = token_list[3].text;
+    var using_position: usize = 4;
+    if (token_list.len == 8) {
+        if (token_list[4].typ != tokens.tk_dot or token_list[5].typ != tokens.tk_id) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        schema_name = table_name;
+        table_name = token_list[5].text;
+        using_position = 6;
+    }
+    if (token_list[using_position].typ != tokens.tk_using or token_list[using_position + 1].typ != tokens.tk_id) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const located_database = locateDatabase(connection, schema_name);
+    if (located_database.result != .ok) {
+        allocator.free(source);
+        return .{ .result = if (located_database.result == .not_found) .error_ else located_database.result, .consumed = consumed };
+    }
+    if (findVirtualTable(connection, schema_name, table_name) != null) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const module_name = token_list[using_position + 1].text;
     var module_found = false;
-    for (connection.modules.items) |module| if (std.ascii.eqlIgnoreCase(module.name, token_list[5].text)) {
-        module_found = true;
-        break;
-    };
+    for (connection.modules.items) |module| {
+        if (std.ascii.eqlIgnoreCase(module.name, module_name)) {
+            module_found = true;
+            break;
+        }
+    }
     if (!module_found) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
@@ -7706,7 +7783,7 @@ fn compileVirtualSchema(connection: *Connection, source: [:0]u8, token_list: []c
     const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
     instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
     instructions[1] = .{ .opcode = .halt };
-    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .virtual_create = .{ .connection = connection, .name = token_list[3].text, .module_name = token_list[5].text } }, .program = .{ .instructions = instructions, .register_count = 1 } };
+    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .virtual_create = .{ .connection = connection, .schema_name = schema_name, .name = table_name, .module_name = module_name } }, .program = .{ .instructions = instructions, .register_count = 1 } };
     owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
     owner.program.functions = owner.functions[0..];
     const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
@@ -7721,9 +7798,17 @@ fn compileVirtualSchema(connection: *Connection, source: [:0]u8, token_list: []c
 fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
     const allocator = connection.allocator;
     if (token_list.len > 1 and token_list[0].typ == tokens.tk_create and token_list[1].typ == tokens.tk_virtual) return compileVirtualSchema(connection, source, token_list, consumed);
-    if (token_list.len == 3 and token_list[0].typ == tokens.tk_drop and token_list[1].typ == tokens.tk_table and token_list[2].typ == tokens.tk_id) {
-        for (connection.virtual_tables.items) |table| {
-            if (std.ascii.eqlIgnoreCase(table.name, token_list[2].text)) return compileVirtualDrop(connection, source, token_list, consumed);
+    if ((token_list.len == 3 or token_list.len == 5) and token_list[0].typ == tokens.tk_drop and token_list[1].typ == tokens.tk_table and token_list[2].typ == tokens.tk_id) {
+        var virtual_schema_name: []const u8 = "main";
+        var virtual_table_name = token_list[2].text;
+        if (token_list.len == 5) {
+            if (token_list[3].typ == tokens.tk_dot and token_list[4].typ == tokens.tk_id) {
+                virtual_schema_name = virtual_table_name;
+                virtual_table_name = token_list[4].text;
+            }
+        }
+        if (findVirtualTable(connection, virtual_schema_name, virtual_table_name) != null) {
+            return compileVirtualDrop(connection, source, consumed, virtual_schema_name, virtual_table_name);
         }
     }
     var position: usize = 0;
