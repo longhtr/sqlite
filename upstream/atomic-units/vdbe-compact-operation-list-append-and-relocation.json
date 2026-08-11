@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-compact-operation-list-append-and-relocation",
   "title": "VDBE compact operation-list append and jump relocation",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeAddOpList consumes the generated compact VdbeOpList representation, reserves the whole batch atomically, expands every operand, and relocates positive jump P2 values by one shared insertion base. Representation and expansion behavior form one atomic unit.",
@@ -136,7 +136,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Zero-limit growth failure is reached and compared; allocator realloc failure semantics are covered by the shared append dependency trace.",

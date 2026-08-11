@@ -62,7 +62,7 @@
     {
       "id": "vdbe-compact-operation-list-append-and-relocation",
       "path": "upstream/atomic-units/vdbe-compact-operation-list-append-and-relocation.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-connection-change-expiration-and-access-metadata",
