@@ -666,7 +666,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     };
 }
 
-pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, real_eq, real_ne, real_lt, real_le, real_gt, real_ge, real_is, real_is_not, real_between, real_not_between, real_in, real_not_in, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not, text_lt, text_le, text_gt, text_ge, text_between, text_not_between };
+pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, real_eq, real_ne, real_lt, real_le, real_gt, real_ge, real_is, real_is_not, real_between, real_not_between, real_in, real_not_in, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not, text_lt, text_le, text_gt, text_ge, text_between, text_not_between, text_like, text_not_like };
 
 pub const IndexPredicateTextCollation = enum { binary, nocase, rtrim };
 
@@ -696,6 +696,41 @@ pub const IndexPredicateNode = union(enum) {
 pub const IndexPredicate = struct {
     nodes: [23]?IndexPredicateNode = .{null} ** 23,
 };
+
+const IndexPredicateLiteralByte = struct { byte: u8, next: usize };
+
+fn indexPredicateLiteralByte(literal: []const u8, position: usize) ?IndexPredicateLiteralByte {
+    if (literal.len < 2 or literal[0] != '\'' or literal[literal.len - 1] != '\'' or position >= literal.len - 1) return null;
+    const byte = literal[position];
+    const next = position + 1 + @intFromBool(byte == '\'' and position + 1 < literal.len - 1 and literal[position + 1] == '\'');
+    return .{ .byte = byte, .next = next };
+}
+
+fn indexPredicateUtf8Next(value: []const u8, position: usize) usize {
+    if (position >= value.len) return position;
+    const length: usize = if (value[position] & 0xf8 == 0xf0) 4 else if (value[position] & 0xf0 == 0xe0) 3 else if (value[position] & 0xe0 == 0xc0) 2 else 1;
+    return @min(value.len, position + length);
+}
+
+fn indexPredicateLikeMatch(value: []const u8, value_position: usize, literal: []const u8, literal_position: usize) bool {
+    const pattern = indexPredicateLiteralByte(literal, literal_position) orelse return value_position == value.len;
+    if (pattern.byte == '%') {
+        var probe = value_position;
+        while (true) {
+            if (indexPredicateLikeMatch(value, probe, literal, pattern.next)) return true;
+            if (probe == value.len) return false;
+            probe = indexPredicateUtf8Next(value, probe);
+        }
+    }
+    if (pattern.byte == '_') {
+        if (value_position == value.len) return false;
+        return indexPredicateLikeMatch(value, indexPredicateUtf8Next(value, value_position), literal, pattern.next);
+    }
+    if (value_position == value.len) return false;
+    const value_byte = value[value_position];
+    const equal = value_byte == pattern.byte or (value_byte < 0x80 and pattern.byte < 0x80 and std.ascii.toLower(value_byte) == std.ascii.toLower(pattern.byte));
+    return equal and indexPredicateLikeMatch(value, value_position + 1, literal, pattern.next);
+}
 
 fn indexPredicateTextOrder(value: []const u8, literal: []const u8, collation: IndexPredicateTextCollation) ?std.math.Order {
     if (literal.len < 2 or literal[0] != '\'' or literal[literal.len - 1] != '\'') return null;
@@ -733,6 +768,14 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
         .is_not_null => switch (value) {
             .null_ => false,
             else => true,
+        },
+        .text_like, .text_not_like => {
+            const text = switch (value) {
+                .text => |text| text,
+                else => return false,
+            };
+            const matches = indexPredicateLikeMatch(text, 0, predicate.comparison_text, 1);
+            return if (predicate.operation == .text_like) matches else !matches;
         },
         .text_between, .text_not_between => {
             const text = switch (value) {

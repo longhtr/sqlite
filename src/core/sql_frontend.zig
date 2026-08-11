@@ -6329,6 +6329,15 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         position.* += 1;
         return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (is_not_null) .is_not_null else .is_null };
     }
+    const text_not_like = position.* < token_list.len and token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_like_kw;
+    if (!boolean_negated and text_column and position.* < token_list.len and (token_list[position.*].typ == tokens.tk_like_kw or text_not_like)) {
+        const operation_position = position.* + @intFromBool(text_not_like);
+        if (!std.ascii.eqlIgnoreCase(token_list[operation_position].text, "like")) return error.Syntax;
+        const literal_position = operation_position + 1;
+        if (literal_position >= token_list.len or token_list[literal_position].typ != tokens.tk_string) return error.Syntax;
+        position.* = literal_position + 1;
+        return .{ .column_index = selected, .integer_primary_key = false, .operation = if (text_not_like) .text_not_like else .text_like, .comparison_text = token_list[literal_position].text };
+    }
     const text_not_between = position.* < token_list.len and token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_between;
     if (!boolean_negated and text_column and text_collation != null and position.* < token_list.len and (token_list[position.*].typ == tokens.tk_between or text_not_between)) {
         position.* += if (text_not_between) 2 else 1;
