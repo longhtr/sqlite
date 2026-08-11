@@ -37,7 +37,7 @@
     {
       "id": "vdbe-operation-access-mutation-and-jump-patching",
       "path": "upstream/atomic-units/vdbe-operation-access-mutation-and-jump-patching.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-operation-append-core",

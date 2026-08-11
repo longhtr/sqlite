@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-operation-access-mutation-and-jump-patching",
   "title": "VDBE operation access, operand mutation, and jump patching",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These accessors and mutators form the source builder patching interface: current/last/addressed operation access, OOM dummy fallback, exact operand changes, typeof flagging, and jump-here/pop optimization. They share one INIT-state and dummy-continuation contract.",
@@ -174,7 +174,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Sticky OOM dummy retrieval with invalid address is reached; it returns exact zero fields without touching aOp.",
