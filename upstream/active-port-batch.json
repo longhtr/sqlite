@@ -105,6 +105,15 @@
       "atomic_unit_id": "vdbe-rejected-result-value-destruction",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbetrace.c::function::findNextHostParameter::line-29",
+      "source_sha256": "d1e32cc9ecf11c0ce7b4f408542c161b1b5d6c3a7c41081ccfd4a5109962a0bd",
+      "zig_declaration_id": "src/core/statement.zig::function::findNextHostParameter",
+      "zig_declaration_sha256": "e360ac23232826db1720e5384084d74aff9602ec064fc091febeb24a868f70d1",
+      "atomic_unit_id": "vdbe-expanded-sql-host-parameter-scan",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

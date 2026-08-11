@@ -177,9 +177,9 @@ test "source WAL callbacks scan every Btree and stop hooks after error" {
     var second = std.mem.zeroes(types.Btree);
     second.sharable = 3;
     var databases = [_]types.Db{
-        .{ .zDbSName = "main", .pBt = &first, .safety_level = 0, .bSyncSet = 0, .pSchema = null },
-        .{ .zDbSName = "temp", .pBt = null, .safety_level = 0, .bSyncSet = 0, .pSchema = null },
-        .{ .zDbSName = "aux", .pBt = &second, .safety_level = 0, .bSyncSet = 0, .pSchema = null },
+        .{ .zDbSName = @constCast("main".ptr), .pBt = &first, .safety_level = 0, .bSyncSet = 0, .pSchema = null },
+        .{ .zDbSName = @constCast("temp".ptr), .pBt = null, .safety_level = 0, .bSyncSet = 0, .pSchema = null },
+        .{ .zDbSName = @constCast("aux".ptr), .pBt = &second, .safety_level = 0, .bSyncSet = 0, .pSchema = null },
     };
     var connection = std.mem.zeroes(types.Sqlite3);
     connection.aDb = &databases;
@@ -225,7 +225,7 @@ test "source profile callback publishes one elapsed interval" {
     connection.trace.xV2 = Harness.trace;
     var machine = std.mem.zeroes(types.Vdbe);
     machine.db = &connection;
-    machine.zSql = "SELECT 1";
+    machine.zSql = @constCast("SELECT 1".ptr);
     machine.startTime = 100;
     Harness.expected_machine = @ptrCast(&machine);
     invokeProfileCallback(&connection, &machine, Harness.currentTime);

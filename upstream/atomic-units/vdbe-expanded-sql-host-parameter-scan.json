@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-expanded-sql-host-parameter-scan",
+  "title": "VDBE expanded-SQL host-parameter token scan",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "findNextHostParameter is the tokenizer-backed boundary that finds the next bind parameter without mistaking quoted text, identifiers, or comments for variables, allowing expanded SQL to preserve every non-variable token byte-for-byte.",
+    "source_files": [{"path": "src/vdbetrace.c", "sha256": "96c0faddbbc08021fb3ed4d01620bff649045210791513d406f4c8a4801423a2"}],
+    "source_entity_ids": ["src/vdbetrace.c::function::findNextHostParameter::line-29"],
+    "behavioral_block_ids": [
+      "src/vdbetrace.c::function::findNextHostParameter::behavior::while::line-35-column-3::ordinal-0",
+      "src/vdbetrace.c::function::findNextHostParameter::behavior::assert::line-37-column-5::ordinal-0",
+      "src/vdbetrace.c::function::findNextHostParameter::behavior::if::line-38-column-5::ordinal-0",
+      "src/vdbetrace.c::function::findNextHostParameter::behavior::break::line-40-column-7::ordinal-0",
+      "src/vdbetrace.c::function::findNextHostParameter::behavior::return::line-45-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Parameter index resolution", "Bound-value SQL literal rendering", "Nested-execution SQL comment prefixing"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Source-faithful sqlite3GetToken implementation and generated TK_VARIABLE/TK_ILLEGAL codes"],
+    "caller_closure": "The complete private scan body is assigned and integrated into the native sqlite3_expanded_sql path. Expanded value rendering and nested-execution formatting remain separately owned."
+  },
+  "contracts": {
+    "inputs": ["NUL-terminated UTF-8 SQL at a token boundary and writable token-length output"],
+    "outputs": ["Byte count before the next TK_VARIABLE and that variable token length, or total remaining byte count and zero token length"],
+    "ownership": "SQL is borrowed and never mutated; token-length output is overwritten on every call.",
+    "state_and_results": "Every non-variable token contributes its exact tokenizer length. Scanning stops before the first variable token. Valid prepared SQL cannot produce zero-length or illegal tokens.",
+    "locks_callbacks_io": "No locks, callbacks, allocation, or I/O.",
+    "failure_and_continuation": "The source contract asserts token validity. Empty input returns zero prefix and zero token length."
+  },
+  "mappings": [{
+    "source_entity_id": "src/vdbetrace.c::function::findNextHostParameter::line-29",
+    "relation": "source-token-scan-to-native-token-scan",
+    "zig_declaration_ids": ["src/core/statement.zig::function::findNextHostParameter"]
+  }],
+  "representation_differences": ["Source i64 byte counts are represented as usize because the native caller scans an in-memory Zig sentinel slice; the profile cannot construct a slice beyond addressable memory.", "The Zig tokenizer returns a typed Result instead of writing token type through an integer pointer."],
+  "oracle": {
+    "protocol": "A native unit trace scans SQL containing variables after quoted strings and block comments, scans a following numbered variable, and scans SQL with no variables; compare prefix and token lengths exactly. Public expanded-SQL tests exercise bound substitution through this owner.",
+    "internal_observations": ["prefix byte length", "variable token byte length", "preservation of quoted/comment variable-like text"],
+    "normalization": "Pointer addresses are not compared; UTF-8 byte offsets and token lengths are exact. Pinned-C isolated scan trace remains pending."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "The scan allocates nothing; caller accumulation OOM remains caller-owned.",
+    "io_crash_concurrency": "No I/O or mutable shared state.",
+    "malformed_input": "Like source, illegal tokens violate the prepared-SQL precondition and assert in safety builds.",
+    "continuation": "Each call starts from caller-provided SQL and resets token length before scanning.",
+    "performance": "Linear in bytes before the next variable and performs one tokenizer pass.",
+    "commands": ["zig build test", "zig build public-api-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/statement.zig expanded SQL owner",
+    "native_call_path": "sqlite3_expanded_sql calls expandedSql, which repeatedly calls findNextHostParameter before resolving and rendering each binding.",
+    "bounded_owner_retired": "The bespoke quote/comment/variable scanner in expandedSql was removed; token boundary ownership now resides here."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pinned-C isolated scan trace, expanded-SQL assurance closure, and independent review."},
+  "known_blockers": ["Add isolated pinned-C token-prefix trace including Tcl-style variables and quoted identifiers.", "Close complete sqlite3VdbeExpandSql nested-execution and rendering behavior.", "Promote subsystem integration only with durable public differential evidence.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/vdbetrace.c:20-47 was reviewed completely for tokenizer loop, validity assertion, variable stop, output reset, and return", "upstream/sqlite/src/vdbetrace.c:49-191 was reviewed completely for every scanner caller assumption and expanded-SQL continuation", "src/core/tokenizer.zig get/token constants and src/core/statement.zig expanded SQL ownership were reviewed"],
+    "callers": ["sqlite3VdbeExpandSql repeatedly scans the remaining raw SQL before parameter index resolution", "Native expandedSql now uses the same tokenizer-backed scan for public sqlite3_expanded_sql"],
+    "callees": ["sqlite3GetToken/source tokenizer returns a positive token length and non-illegal token for prepared SQL", "Generated TK_VARIABLE identifies ?, ?N, :, @, $, and supported # forms according to tokenizer grammar"],
+    "assertions_branches_cleanup": ["All five active behavior IDs cover loop, token validity, variable branch, break, and return", "Token output is zeroed even for empty/no-variable input", "No allocation or cleanup is owned by this function"],
+    "upstream_tests": ["Upstream trace, expanded SQL, tokenizer, binding-name, comment, quoted-literal, and Tcl-variable suites cover this boundary", "Project native unit trace covers quoted/comment skipping, named and numbered variables, and no-variable termination"]
+  },
+  "evidence_receipts": []
+}

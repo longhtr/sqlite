@@ -278,6 +278,11 @@
       "id": "vdbe-index-record-rowid-extraction",
       "path": "upstream/atomic-units/vdbe-index-record-rowid-extraction.json",
       "status": "source-context-reviewed"
+    },
+    {
+      "id": "vdbe-expanded-sql-host-parameter-scan",
+      "path": "upstream/atomic-units/vdbe-expanded-sql-host-parameter-scan.json",
+      "status": "source-translated"
     }
   ]
 }

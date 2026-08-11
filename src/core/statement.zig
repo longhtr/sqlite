@@ -6,6 +6,7 @@ const std = @import("std");
 pub const vdbe = @import("vdbe.zig");
 const ResultCode = @import("result_code.zig").ResultCode;
 pub const public_api = @import("public_api.zig");
+const tokenizer = @import("tokenizer.zig");
 const vdbe_mem = @import("internal/vdbe_mem.zig");
 const collation = @import("internal/collation.zig");
 const vdbe_types = vdbe_mem.types;
@@ -1058,15 +1059,21 @@ fn appendExpandedValue(output: *std.ArrayList(u8), allocator: std.mem.Allocator,
     return output.append(allocator, '\'');
 }
 
-fn variableEnd(sql: []const u8, start: usize) usize {
-    if (sql[start] == '?') {
-        var end = start + 1;
-        while (end < sql.len and std.ascii.isDigit(sql[end])) : (end += 1) {}
-        return end;
+/// Source `findNextHostParameter()`: return the tokenized SQL prefix before
+/// the next host parameter and publish that parameter token's byte length.
+fn findNextHostParameter(sql: [*:0]const u8, token_length: *usize) usize {
+    token_length.* = 0;
+    var total: usize = 0;
+    while (sql[total] != 0) {
+        const result = tokenizer.get(sql + total);
+        std.debug.assert(result.length > 0 and result.token_type != tokenizer.token.tk_illegal);
+        if (result.token_type == tokenizer.token.tk_variable) {
+            token_length.* = result.length;
+            break;
+        }
+        total += result.length;
     }
-    var end = start + 1;
-    while (end < sql.len and (std.ascii.isAlphanumeric(sql[end]) or sql[end] == '_')) : (end += 1) {}
-    return end;
+    return total;
 }
 
 /// Source `sqlite3_expanded_sql()`: substitute bound values into saved SQL,
@@ -1079,74 +1086,42 @@ fn expandedSql(statement: *Statement) ?[*:0]u8 {
     var index: usize = 0;
     var next_parameter: usize = 1;
     while (index < sql.len) {
-        if (sql[index] == '\'' or sql[index] == '"' or sql[index] == '`') {
-            const quote = sql[index];
-            expanded.append(statement.allocator, quote) catch return null;
-            index += 1;
-            while (index < sql.len) {
-                expanded.append(statement.allocator, sql[index]) catch return null;
-                if (sql[index] == quote) {
-                    if (index + 1 < sql.len and sql[index + 1] == quote) {
-                        expanded.append(statement.allocator, quote) catch return null;
-                        index += 2;
-                        continue;
-                    }
-                    index += 1;
-                    break;
-                }
-                index += 1;
-            }
-            continue;
-        }
-        if (sql[index] == '-' and index + 1 < sql.len and sql[index + 1] == '-') {
-            const relative = std.mem.indexOfScalar(u8, sql[index + 2 ..], '\n');
-            const end = if (relative) |offset| index + 2 + offset else sql.len;
-            expanded.appendSlice(statement.allocator, sql[index..end]) catch return null;
-            index = end;
-            continue;
-        }
-        if (sql[index] == '/' and index + 1 < sql.len and sql[index + 1] == '*') {
-            const relative = std.mem.indexOf(u8, sql[index + 2 ..], "*/") orelse {
-                expanded.appendSlice(statement.allocator, sql[index..]) catch return null;
-                break;
-            };
-            const end = index + 2 + relative + 2;
-            expanded.appendSlice(statement.allocator, sql[index..end]) catch return null;
-            index = end;
-            continue;
-        }
-        if (sql[index] == '?' or sql[index] == ':' or sql[index] == '@' or sql[index] == '$') {
-            const end = variableEnd(sql, index);
-            const token = sql[index..end];
-            var parameter_index: ?usize = null;
-            if (token[0] == '?' and token.len > 1) {
-                parameter_index = std.fmt.parseInt(usize, token[1..], 10) catch null;
-            } else if (token.len == 1 and token[0] == '?') {
-                parameter_index = next_parameter;
-            } else {
-                for (statement.parameters, 1..) |parameter, candidate| {
-                    if (parameter.name) |name| {
-                        if (std.mem.eql(u8, name, token)) {
-                            parameter_index = candidate;
-                            break;
-                        }
+        var token_length: usize = 0;
+        const prefix_length = findNextHostParameter(@ptrCast(sql.ptr + index), &token_length);
+        expanded.appendSlice(statement.allocator, sql[index .. index + prefix_length]) catch return null;
+        index += prefix_length;
+        if (token_length == 0) break;
+
+        const end = index + token_length;
+        const token = sql[index..end];
+        var parameter_index: ?usize = null;
+        if (token[0] == '?' and token.len > 1) {
+            parameter_index = std.fmt.parseInt(usize, token[1..], 10) catch null;
+        } else if (token.len == 1 and token[0] == '?') {
+            parameter_index = next_parameter;
+        } else {
+            for (statement.parameters, 1..) |parameter, candidate| {
+                if (parameter.name) |name| {
+                    if (std.mem.eql(u8, name, token)) {
+                        parameter_index = candidate;
+                        break;
                     }
                 }
             }
-            if (parameter_index) |parameter| {
-                next_parameter = @max(next_parameter, parameter + 1);
-                if (parameter > 0 and parameter <= statement.bindings.len) {
-                    const bound_optional = getBoundValue(statement, parameter) catch return null;
-                    const bound = bound_optional orelse return null;
-                    defer freeBoundValue(statement, bound);
-                    appendExpandedValue(&expanded, statement.allocator, bound) catch return null;
-                    index = end;
-                    continue;
-                }
+        }
+        if (parameter_index) |parameter| {
+            next_parameter = @max(next_parameter, parameter + 1);
+            if (parameter > 0 and parameter <= statement.bindings.len) {
+                const bound_optional = getBoundValue(statement, parameter) catch return null;
+                const bound = bound_optional orelse return null;
+                defer freeBoundValue(statement, bound);
+                appendExpandedValue(&expanded, statement.allocator, bound) catch return null;
+                index = end;
+                continue;
             }
         }
-        expanded.append(statement.allocator, sql[index]) catch return null;
-        index += 1;
+        expanded.appendSlice(statement.allocator, token) catch return null;
+        index = end;
     }
     const allocation = public_api.sqlite3_malloc64(expanded.items.len + 1) orelse return null;
     const output: [*]u8 = @ptrCast(allocation);
@@ -1204,6 +1179,20 @@ fn testDestructor(_: ?*anyopaque) callconv(.c) void {
 }
 fn transientDestructor() Destructor {
     return @ptrFromInt(std.math.maxInt(usize));
+}
+
+test "source host parameter scan skips quoted text and comments" {
+    const sql = "SELECT '?', /* ? */ :name, ?2";
+    var token_length: usize = 99;
+    const prefix_length = findNextHostParameter(sql, &token_length);
+    try std.testing.expectEqual(@as(usize, 20), prefix_length);
+    try std.testing.expectEqual(@as(usize, 5), token_length);
+
+    const remainder: [*:0]const u8 = @ptrCast(sql.ptr + prefix_length + token_length);
+    try std.testing.expectEqual(@as(usize, 2), findNextHostParameter(remainder, &token_length));
+    try std.testing.expectEqual(@as(usize, 2), token_length);
+    try std.testing.expectEqual(@as(usize, 8), findNextHostParameter("SELECT 1", &token_length));
+    try std.testing.expectEqual(@as(usize, 0), token_length);
 }
 
 test "statement bind step columns reset clear finalize and destructors" {
