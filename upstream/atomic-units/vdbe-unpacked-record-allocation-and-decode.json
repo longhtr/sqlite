@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-unpacked-record-allocation-and-decode",
   "title": "UnpackedRecord connection allocation and record decode",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These functions allocate the contiguous UnpackedRecord/Mem workspace from the owning connection and decode a record header into bounded Mem fields using the serial-format helpers, including malformed payload nulling.",
@@ -97,7 +97,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No-lookaside first allocation failure returns null and sets sticky OOM without partial publication.",

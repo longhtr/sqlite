@@ -102,7 +102,7 @@
     {
       "id": "vdbe-unpacked-record-allocation-and-decode",
       "path": "upstream/atomic-units/vdbe-unpacked-record-allocation-and-decode.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-record-serial-type-length-and-value-decode",
