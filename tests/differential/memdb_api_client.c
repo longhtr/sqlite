@@ -400,11 +400,13 @@ int main(void){
   int substring_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO substring_expression_data VALUES(2,'xbcdz')",0,0,0);
   int substring_expression_second_rc=sqlite3_exec(clone,"INSERT INTO substring_expression_data VALUES(2,'uvwxyz')",0,0,0);
   int substring_expression_update_rc=sqlite3_exec(clone,"UPDATE substring_expression_data SET value='xbcdz' WHERE id=2",0,0,0);
+  int substring_blob_first_rc=sqlite3_exec(clone,"INSERT INTO substring_expression_data VALUES(3,x'01020304')",0,0,0);
+  int substring_blob_duplicate_rc=sqlite3_exec(clone,"INSERT INTO substring_expression_data VALUES(4,x'000203ff')",0,0,0);
   sqlite3_int64 substring_expression_count=-1;
   int substring_expression_count_rc=query_value(clone,"SELECT count(*) FROM substring_expression_data",&substring_expression_count);
   int substring_expression_reindex_rc=sqlite3_exec(clone,"REINDEX substring_expression_index",0,0,0);
   int substring_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE substring_expression_data",0,0,0);
-  printf("substring-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",substring_expression_table_rc,substring_expression_first_rc,substring_expression_index_rc,substring_alias_index_rc,substring_expression_duplicate_rc,substring_expression_second_rc,substring_expression_update_rc,substring_expression_count_rc,(long long)substring_expression_count,substring_expression_reindex_rc,substring_expression_drop_rc);
+  printf("substring-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",substring_expression_table_rc,substring_expression_first_rc,substring_expression_index_rc,substring_alias_index_rc,substring_expression_duplicate_rc,substring_expression_second_rc,substring_expression_update_rc,substring_blob_first_rc,substring_blob_duplicate_rc,substring_expression_count_rc,(long long)substring_expression_count,substring_expression_reindex_rc,substring_expression_drop_rc);
   int concat_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE concat_expression_data(id INTEGER PRIMARY KEY,value TEXT)",0,0,0);
   int concat_expression_first_rc=sqlite3_exec(clone,"INSERT INTO concat_expression_data VALUES(1,NULL)",0,0,0);
   int concat_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX concat_expression_index ON concat_expression_data(concat(value))",0,0,0);
