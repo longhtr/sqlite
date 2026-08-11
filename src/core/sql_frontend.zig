@@ -5970,6 +5970,23 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
 
 const IndexPredicateParseError = error{Syntax};
 
+fn resolveNullComparisonPredicate(token_list: []const Token, columns: []const ResolvedColumn, position: usize) ?usize {
+    if (position + 2 >= token_list.len) return null;
+    const null_first = token_list[position].typ == tokens.tk_null;
+    const column_position = if (null_first) position + 2 else position;
+    const null_position = if (null_first) position else position + 2;
+    if (token_list[column_position].typ != tokens.tk_id or token_list[null_position].typ != tokens.tk_null) return null;
+    const operation_position = position + 1;
+    switch (token_list[operation_position].typ) {
+        tokens.tk_eq, tokens.tk_ne, tokens.tk_lt, tokens.tk_le, tokens.tk_gt, tokens.tk_ge => {},
+        else => return null,
+    }
+    for (columns) |column| {
+        if (std.ascii.eqlIgnoreCase(column.name, token_list[column_position].text)) return 3;
+    }
+    return null;
+}
+
 fn appendIndexPredicateNode(predicate: *btree.IndexPredicate, node_count: *usize, node: btree.IndexPredicateNode) IndexPredicateParseError!void {
     if (node_count.* == predicate.nodes.len) return error.Syntax;
     predicate.nodes[node_count.*] = node;
@@ -5991,6 +6008,12 @@ fn resolveIndexPredicatePrimary(token_list: []const Token, columns: []const Reso
         return;
     }
     if (term_count.* == 8) return error.Syntax;
+    if (resolveNullComparisonPredicate(token_list, columns, position.*)) |consumed| {
+        position.* += consumed;
+        try appendIndexPredicateNode(predicate, node_count, .{ .constant = .null_ });
+        term_count.* += 1;
+        return;
+    }
     if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_float or (token_list[position.*].typ == tokens.tk_minus and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_float))) {
         const negative = token_list[position.*].typ == tokens.tk_minus;
         const literal_position = position.* + @intFromBool(negative);

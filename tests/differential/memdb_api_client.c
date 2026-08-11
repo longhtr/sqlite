@@ -621,7 +621,9 @@ int main(void){
   int partial_float_false_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_false_index ON partial_constant_data(value) WHERE 0.0",0,0,0);
   int partial_float_true_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_true_index ON partial_constant_data(value) WHERE -1.5",0,0,0);
   int partial_not_null_constant_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_null_constant_index ON partial_constant_data(value) WHERE NOT NULL",0,0,0);
-  printf("partial-float-constant-index\t%d\t%d\t%d\n",partial_float_false_index_rc,partial_float_true_index_rc,partial_not_null_constant_index_rc);
+  int partial_column_null_comparison_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_column_null_comparison_index ON partial_constant_data(value) WHERE value=NULL",0,0,0);
+  int partial_null_column_comparison_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_null_column_comparison_index ON partial_constant_data(value) WHERE NULL!=value",0,0,0);
+  printf("partial-float-constant-index\t%d\t%d\t%d\t%d\t%d\n",partial_float_false_index_rc,partial_float_true_index_rc,partial_not_null_constant_index_rc,partial_column_null_comparison_index_rc,partial_null_column_comparison_index_rc);
   int partial_constant_first_rc=sqlite3_exec(clone,"INSERT INTO partial_constant_data VALUES(1,7)",0,0,0);
   int partial_constant_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_constant_data VALUES(2,7)",0,0,0);
   int partial_constant_second_rc=sqlite3_exec(clone,"INSERT INTO partial_constant_data VALUES(2,8)",0,0,0);
