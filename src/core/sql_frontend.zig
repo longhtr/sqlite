@@ -5502,6 +5502,19 @@ fn indexCollation(connection: *Connection, name: []const u8) ?btree.IndexCollati
     return registeredIndexCollation(connection, name);
 }
 
+fn resolveIndexPredicateInteger(token_list: []const Token, position: *usize) error{Syntax}!i64 {
+    var negative = false;
+    if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_minus) {
+        negative = true;
+        position.* += 1;
+    }
+    if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_integer) return error.Syntax;
+    var value = std.fmt.parseInt(i64, token_list[position.*].text, 10) catch return error.Syntax;
+    if (negative) value = -value;
+    position.* += 1;
+    return value;
+}
+
 fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const ResolvedColumn, position: *usize) error{Syntax}!btree.IndexPredicateTerm {
     var boolean_negated = false;
     if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_not) {
@@ -5537,6 +5550,14 @@ fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const Resolve
         position.* += 1;
     } else {
         if (!integer_column) return error.Syntax;
+        if (token_list[position.*].typ == tokens.tk_between) {
+            position.* += 1;
+            const low = try resolveIndexPredicateInteger(token_list, position);
+            if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_and) return error.Syntax;
+            position.* += 1;
+            const high = try resolveIndexPredicateInteger(token_list, position);
+            return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = .integer_between, .comparison_value = low, .comparison_value_high = high };
+        }
         operation = switch (token_list[position.*].typ) {
             tokens.tk_eq => .integer_eq,
             tokens.tk_ne => .integer_ne,
@@ -5547,15 +5568,7 @@ fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const Resolve
             else => return error.Syntax,
         };
         position.* += 1;
-        var negative = false;
-        if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_minus) {
-            negative = true;
-            position.* += 1;
-        }
-        if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_integer) return error.Syntax;
-        comparison_value = std.fmt.parseInt(i64, token_list[position.*].text, 10) catch return error.Syntax;
-        if (negative) comparison_value = -comparison_value;
-        position.* += 1;
+        comparison_value = try resolveIndexPredicateInteger(token_list, position);
     }
     return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = operation, .comparison_value = comparison_value };
 }

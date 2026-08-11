@@ -108,13 +108,14 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     };
 }
 
-pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge };
+pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between };
 
 pub const IndexPredicateTerm = struct {
     column_index: usize,
     integer_primary_key: bool,
     operation: IndexPredicateOperation,
     comparison_value: i64 = 0,
+    comparison_value_high: i64 = 0,
 };
 
 pub const IndexPredicateCombination = enum { and_, or_ };
@@ -134,6 +135,14 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
         .is_not_null => switch (value) {
             .null_ => false,
             else => true,
+        },
+        .integer_between => {
+            const orders = switch (value) {
+                .integer => |integer| .{ std.math.order(integer, predicate.comparison_value), std.math.order(integer, predicate.comparison_value_high) },
+                .real => |real| .{ std.math.order(real, @as(f64, @floatFromInt(predicate.comparison_value))), std.math.order(real, @as(f64, @floatFromInt(predicate.comparison_value_high))) },
+                else => return false,
+            };
+            return orders[0] != .lt and orders[1] != .gt;
         },
         .integer_eq, .integer_ne, .integer_lt, .integer_le, .integer_gt, .integer_ge => {
             const order = switch (value) {

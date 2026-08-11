@@ -360,7 +360,7 @@ int main(void){
   int partial_null_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_null_data",0,0,0);
   printf("partial-null-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\n",partial_null_table_rc,partial_null_index_rc,partial_null_first_rc,partial_null_outside_rc,partial_null_duplicate_rc,partial_null_enter_conflict_rc,partial_null_delete_rc,partial_null_enter_rc,partial_null_count_rc,(long long)partial_null_count,partial_null_drop_rc);
   int partial_range_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_range_data(id INTEGER PRIMARY KEY,marker INTEGER,value INTEGER)",0,0,0);
-  int partial_range_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_range_index ON partial_range_data(value) WHERE marker >= -10",0,0,0);
+  int partial_range_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_range_index ON partial_range_data(value) WHERE marker BETWEEN -10 AND 10",0,0,0);
   int partial_range_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_range_data VALUES(1,-20,7)",0,0,0);
   int partial_range_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_range_data VALUES(2,-10,7)",0,0,0);
   int partial_range_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_range_data VALUES(3,-9,7)",0,0,0);
