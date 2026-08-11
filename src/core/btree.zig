@@ -51,6 +51,7 @@ pub const IndexTransform = union(enum) {
     identity,
     numeric_negate,
     numeric_abs,
+    numeric_sign,
     numeric_not,
     integer_bit_not,
     is_null,
@@ -134,6 +135,12 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .null_ => .null_,
             .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = if (integer < 0) -integer else integer },
             .real => |real| .{ .real = @abs(real) },
+            .text, .blob => unreachable,
+        },
+        .numeric_sign => switch (numeric) {
+            .null_ => .null_,
+            .integer => |integer| .{ .integer = if (integer < 0) -1 else if (integer > 0) 1 else 0 },
+            .real => |real| .{ .integer = if (real < 0) -1 else if (real > 0) 1 else 0 },
             .text, .blob => unreachable,
         },
         .numeric_not => switch (numeric) {
