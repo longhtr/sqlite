@@ -5742,6 +5742,56 @@ fn resolveIndexPredicateInteger(token_list: []const Token, position: *usize) err
 }
 
 fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const ResolvedColumn, position: *usize) error{Syntax}!btree.IndexPredicateTerm {
+    if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_integer or token_list[position.*].typ == tokens.tk_minus)) {
+        const comparison_value = try resolveIndexPredicateInteger(token_list, position);
+        if (position.* + 1 >= token_list.len or token_list[position.* + 1].typ != tokens.tk_id) return error.Syntax;
+        const operation: btree.IndexPredicateOperation = switch (token_list[position.*].typ) {
+            tokens.tk_eq => .integer_eq,
+            tokens.tk_ne => .integer_ne,
+            tokens.tk_lt => .integer_gt,
+            tokens.tk_le => .integer_ge,
+            tokens.tk_gt => .integer_lt,
+            tokens.tk_ge => .integer_le,
+            else => return error.Syntax,
+        };
+        position.* += 1;
+        var selected: ?usize = null;
+        for (columns, 0..) |column, index| {
+            if (std.ascii.eqlIgnoreCase(column.name, token_list[position.*].text)) {
+                selected = index;
+                break;
+            }
+        }
+        const column_index = selected orelse return error.Syntax;
+        if (!columns[column_index].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "INTEGER")) return error.Syntax;
+        position.* += 1;
+        return .{ .column_index = column_index, .integer_primary_key = columns[column_index].integer_primary_key, .operation = operation, .comparison_value = comparison_value };
+    }
+    if (position.* + 2 < token_list.len and token_list[position.*].typ == tokens.tk_string and token_list[position.* + 2].typ == tokens.tk_id) {
+        const operation: btree.IndexPredicateOperation = switch (token_list[position.* + 1].typ) {
+            tokens.tk_eq => .text_eq,
+            tokens.tk_ne => .text_ne,
+            tokens.tk_lt => .text_gt,
+            tokens.tk_le => .text_ge,
+            tokens.tk_gt => .text_lt,
+            tokens.tk_ge => .text_le,
+            else => return error.Syntax,
+        };
+        const comparison_text = token_list[position.*].text;
+        position.* += 2;
+        var selected: ?usize = null;
+        for (columns, 0..) |column, index| {
+            if (std.ascii.eqlIgnoreCase(column.name, token_list[position.*].text)) {
+                selected = index;
+                break;
+            }
+        }
+        const column_index = selected orelse return error.Syntax;
+        const text_collation: ?btree.IndexPredicateTextCollation = if (std.ascii.eqlIgnoreCase(columns[column_index].collation, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(columns[column_index].collation, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(columns[column_index].collation, "RTRIM")) .rtrim else null;
+        if (!std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "TEXT") or text_collation == null) return error.Syntax;
+        position.* += 1;
+        return .{ .column_index = column_index, .integer_primary_key = false, .operation = operation, .comparison_text = comparison_text, .text_collation = text_collation.? };
+    }
     var boolean_negated = false;
     if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_not) {
         boolean_negated = true;
