@@ -125,9 +125,8 @@ pub const IndexPredicateTerm = struct {
 pub const IndexPredicateCombination = enum { and_, or_ };
 
 pub const IndexPredicate = struct {
-    first: IndexPredicateTerm,
-    second: ?IndexPredicateTerm = null,
-    combination: IndexPredicateCombination = .and_,
+    terms: [4]?IndexPredicateTerm = .{ null, null, null, null },
+    combinations: [3]IndexPredicateCombination = .{ .and_, .and_, .and_ },
 };
 
 fn indexPredicateTextEquals(value: []const u8, literal: []const u8, collation: IndexPredicateTextCollation) bool {
@@ -206,17 +205,25 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
 }
 
 pub fn indexPredicateRecordMatches(predicate: IndexPredicate, values: []const Value, rowid: i64) ?bool {
-    if (predicate.first.column_index >= values.len) return null;
-    const first_value: Value = if (predicate.first.integer_primary_key) .{ .integer = rowid } else values[predicate.first.column_index];
-    const first_matches = indexPredicateMatches(predicate.first, first_value);
-    const second = predicate.second orelse return first_matches;
-    if (second.column_index >= values.len) return null;
-    const second_value: Value = if (second.integer_primary_key) .{ .integer = rowid } else values[second.column_index];
-    const second_matches = indexPredicateMatches(second, second_value);
-    return switch (predicate.combination) {
-        .and_ => first_matches and second_matches,
-        .or_ => first_matches or second_matches,
-    };
+    const first = predicate.terms[0] orelse return null;
+    if (first.column_index >= values.len) return null;
+    const first_value: Value = if (first.integer_primary_key) .{ .integer = rowid } else values[first.column_index];
+    var disjunction = false;
+    var conjunction = indexPredicateMatches(first, first_value);
+    for (predicate.terms[1..], 1..) |optional_term, index| {
+        const term = optional_term orelse break;
+        if (term.column_index >= values.len) return null;
+        const value: Value = if (term.integer_primary_key) .{ .integer = rowid } else values[term.column_index];
+        const matches = indexPredicateMatches(term, value);
+        switch (predicate.combinations[index - 1]) {
+            .and_ => conjunction = conjunction and matches,
+            .or_ => {
+                disjunction = disjunction or conjunction;
+                conjunction = matches;
+            },
+        }
+    }
+    return disjunction or conjunction;
 }
 
 pub const RecordView = struct {

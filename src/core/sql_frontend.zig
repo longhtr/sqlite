@@ -5627,24 +5627,26 @@ fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedCol
         }
     }
     if (wrapped_predicate) position += 1;
-    const first = try resolveIndexPredicateTerm(token_list, columns, &position);
-    var second: ?btree.IndexPredicateTerm = null;
-    var combination: btree.IndexPredicateCombination = .and_;
-    if (position < token_list.len) {
-        combination = switch (token_list[position].typ) {
+    var predicate = btree.IndexPredicate{};
+    predicate.terms[0] = try resolveIndexPredicateTerm(token_list, columns, &position);
+    var term_count: usize = 1;
+    while (position < token_list.len and (!wrapped_predicate or token_list[position].typ != tokens.tk_rp)) {
+        if (term_count == predicate.terms.len) return error.Syntax;
+        predicate.combinations[term_count - 1] = switch (token_list[position].typ) {
             tokens.tk_and => .and_,
             tokens.tk_or => .or_,
             else => return error.Syntax,
         };
         position += 1;
-        second = try resolveIndexPredicateTerm(token_list, columns, &position);
+        predicate.terms[term_count] = try resolveIndexPredicateTerm(token_list, columns, &position);
+        term_count += 1;
     }
     if (wrapped_predicate) {
         if (position >= token_list.len or token_list[position].typ != tokens.tk_rp) return error.Syntax;
         position += 1;
     }
     if (position != token_list.len) return error.Syntax;
-    return .{ .first = first, .second = second, .combination = combination };
+    return predicate;
 }
 
 fn indexPredicateRowMatches(predicate: ?btree.IndexPredicate, row: IndexMutationRow) error{Corrupt}!bool {
