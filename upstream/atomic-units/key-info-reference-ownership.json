@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "key-info-reference-ownership",
   "title": "KeyInfo reference ownership and final release",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3KeyInfoRef/Unref and the KeyInfo nRef/db owner fields are the complete intrusive reference contract used by P4_KEYINFO and unpacked records. Increment, decrement and final connection-aware free cannot be split.",
@@ -105,7 +105,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation in assigned functions; final release uses previously validated connection allocator.",

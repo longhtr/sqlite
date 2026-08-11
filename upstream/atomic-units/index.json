@@ -217,7 +217,7 @@
     {
       "id": "key-info-reference-ownership",
       "path": "upstream/atomic-units/key-info-reference-ownership.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "memdb-file-storage-locking-and-mapping",
