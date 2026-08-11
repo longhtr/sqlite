@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-record-serial-type-length-and-value-decode",
   "title": "VDBE record serial-type lengths and scalar value decode",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These helpers are the source record-format boundary that maps serial types to payload lengths and decodes NULL, signed integers, IEEE-754 values, zero/one constants, and ephemeral text/blob views into exact Mem state.",
@@ -192,7 +192,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation or OOM branch.",

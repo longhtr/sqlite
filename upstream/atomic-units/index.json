@@ -107,7 +107,7 @@
     {
       "id": "vdbe-record-serial-type-length-and-value-decode",
       "path": "upstream/atomic-units/vdbe-record-serial-type-length-and-value-decode.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-result-column-metadata-ownership",
