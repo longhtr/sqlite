@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "connection-allocation-for-vdbe-growth",
   "title": "Connection lookaside, reallocation, and OOM state for VDBE growth",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These connection-aware malloc.c routines form the direct allocation and failure closure reached by growOpArray: size measurement, two-size lookaside allocation/free, lookaside-to-heap and heap reallocation, sticky OOM, Parse propagation, and OOM clear.",
@@ -284,7 +284,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "366-observation C/Zig trace reaches limit, one-shot, and sticky allocation failures and continuation; promotion waits for dependency admission.",

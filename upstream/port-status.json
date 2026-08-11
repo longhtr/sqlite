@@ -7,8 +7,8 @@
       "internal-trace-equivalent": 0,
       "inventoried": 0,
       "scaffolded": 0,
-      "source-context-reviewed": 30,
-      "source-translated": 17,
+      "source-context-reviewed": 29,
+      "source-translated": 18,
       "subsystem-integrated": 0
     },
     "authoritative_process": "docs/ENGINEERING_PROCESS.md",
@@ -145,7 +145,7 @@
     "atomic_unit_dossiers_admission_ready": 47,
     "atomic_unit_dossiers_total": 47,
     "atomic_units_assurance_passed": 0,
-    "atomic_units_source_translated_or_later": 17,
+    "atomic_units_source_translated_or_later": 18,
     "atomic_units_subsystem_integrated_or_later": 0,
     "behavioral_blocks_assigned_to_atomic_units": 1007,
     "behavioral_blocks_inventoried": 25930,
@@ -216,8 +216,8 @@
     "historical_claim_classifications": {
       "legacy-candidate-target-resolved": 208,
       "legacy-candidate-unresolved": 162,
-      "source-context-reviewed": 77,
-      "source-translated": 29,
+      "source-context-reviewed": 71,
+      "source-translated": 35,
       "targeted-differential-passed": 76,
       "unmapped": 1186
     },

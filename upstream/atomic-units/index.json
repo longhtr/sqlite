@@ -132,7 +132,7 @@
     {
       "id": "connection-allocation-for-vdbe-growth",
       "path": "upstream/atomic-units/connection-allocation-for-vdbe-growth.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "connection-allocation-state-representations",
