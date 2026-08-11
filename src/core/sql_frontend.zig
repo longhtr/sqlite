@@ -4510,6 +4510,10 @@ fn isNumericDeclaredType(declared_type: []const u8) bool {
     return true;
 }
 
+fn isTextDeclaredType(declared_type: []const u8) bool {
+    return containsAsciiIgnoreCase(declared_type, "CHAR") or containsAsciiIgnoreCase(declared_type, "CLOB") or containsAsciiIgnoreCase(declared_type, "TEXT");
+}
+
 fn isTableConstraintStart(token_type: u16) bool {
     return token_type == tokens.tk_constraint or token_type == tokens.tk_primary or
         token_type == tokens.tk_unique or token_type == tokens.tk_check or
@@ -6232,7 +6236,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
             }
         }
         const column_index = selected orelse return error.Syntax;
-        if (!columns[column_index].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "INTEGER") and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "TEXT")) return error.Syntax;
+        if (!columns[column_index].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "INTEGER") and !isTextDeclaredType(columns[column_index].declared_type)) return error.Syntax;
         var end_position = position.* + 5;
         var escape: i64 = 0;
         if (token_list[end_position].typ == tokens.tk_comma) {
@@ -6355,7 +6359,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         }
         const column_index = selected orelse return error.Syntax;
         var text_collation: ?btree.IndexPredicateTextCollation = literal_collation orelse if (std.ascii.eqlIgnoreCase(columns[column_index].collation, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(columns[column_index].collation, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(columns[column_index].collation, "RTRIM")) .rtrim else null;
-        if (!std.ascii.eqlIgnoreCase(columns[column_index].declared_type, "TEXT") or text_collation == null) return error.Syntax;
+        if (!isTextDeclaredType(columns[column_index].declared_type) or text_collation == null) return error.Syntax;
         position.* += 1;
         if (position.* + 1 < token_list.len and token_list[position.*].typ == tokens.tk_collate) {
             const explicit_name = token_list[position.* + 1].text;
@@ -6383,7 +6387,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
     const selected = column_index orelse return error.Syntax;
     position.* += 1;
     const integer_column = columns[selected].integer_primary_key or isNumericDeclaredType(columns[selected].declared_type);
-    const text_column = std.ascii.eqlIgnoreCase(columns[selected].declared_type, "TEXT");
+    const text_column = isTextDeclaredType(columns[selected].declared_type);
     var text_collation: ?btree.IndexPredicateTextCollation = if (std.ascii.eqlIgnoreCase(columns[selected].collation, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "RTRIM")) .rtrim else null;
     var explicit_column_collation = false;
     if (text_column and position.* + 1 < token_list.len and token_list[position.*].typ == tokens.tk_collate) {
@@ -10326,21 +10330,21 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if ((switch (specified_transforms.items[selected_position]) {
             .text_pattern => true,
             else => false,
-        }) and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER") and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "TEXT")) {
+        }) and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER") and !isTextDeclaredType(resolved.columns[selected].declared_type)) {
             allocator.free(source);
             return .{ .result = .error_, .consumed = consumed };
         }
         if ((switch (specified_transforms.items[selected_position]) {
             .octet_length, .text_length, .unicode_value, .substring => true,
             else => false,
-        }) and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "TEXT") and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "BLOB")) {
+        }) and !isTextDeclaredType(resolved.columns[selected].declared_type) and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "BLOB")) {
             allocator.free(source);
             return .{ .result = .error_, .consumed = consumed };
         }
         if ((switch (specified_transforms.items[selected_position]) {
             .text_trim, .text_ltrim, .text_rtrim, .concat_single => true,
             else => false,
-        }) and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "TEXT")) {
+        }) and !isTextDeclaredType(resolved.columns[selected].declared_type)) {
             allocator.free(source);
             return .{ .result = .error_, .consumed = consumed };
         }

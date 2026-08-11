@@ -805,7 +805,7 @@ int main(void){
   int not_expression_reindex_rc=sqlite3_exec(clone,"REINDEX not_expression_index",0,0,0);
   int not_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE not_expression_data",0,0,0);
   printf("not-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",not_expression_table_rc,not_expression_first_rc,not_expression_index_rc,not_expression_second_rc,not_expression_false_duplicate_rc,not_expression_true_duplicate_rc,not_expression_count_rc,(long long)not_expression_count,not_expression_reindex_rc,not_expression_drop_rc);
-  int pattern_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE pattern_expression_data(id INTEGER PRIMARY KEY,value TEXT)",0,0,0);
+  int pattern_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE pattern_expression_data(id INTEGER PRIMARY KEY,value VARCHAR)",0,0,0);
   int pattern_expression_first_rc=sqlite3_exec(clone,"INSERT INTO pattern_expression_data VALUES(1,'Alpha')",0,0,0);
   int like_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX like_expression_index ON pattern_expression_data(value LIKE 'a%')",0,0,0);
   int not_like_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX not_like_expression_index ON pattern_expression_data(value NOT LIKE 'z%')",0,0,0);
@@ -993,7 +993,7 @@ int main(void){
   int partial_text_reindex_rc=sqlite3_exec(clone,"REINDEX partial_text_index",0,0,0);
   int partial_text_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_text_data",0,0,0);
   printf("partial-text-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",partial_text_table_rc,partial_text_index_rc,partial_text_not_index_rc,partial_text_trim_index_rc,partial_text_outside_rc,partial_text_inside_rc,partial_text_duplicate_rc,partial_text_not_duplicate_rc,partial_text_trim_duplicate_rc,partial_text_enter_conflict_rc,partial_text_delete_rc,partial_text_enter_rc,partial_text_count_rc,(long long)partial_text_count,partial_text_reindex_rc,partial_text_drop_rc);
-  int partial_like_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_like_data(id INTEGER PRIMARY KEY,marker TEXT,value INTEGER)",0,0,0);
+  int partial_like_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_like_data(id INTEGER PRIMARY KEY,marker VARCHAR,value INTEGER)",0,0,0);
   int partial_like_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_like_index ON partial_like_data(value) WHERE marker LIKE 'a%'",0,0,0);
   int partial_not_like_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_like_index ON partial_like_data(value) WHERE marker NOT LIKE '%z_'",0,0,0);
   int partial_like_escape_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_like_escape_index ON partial_like_data(value) WHERE marker LIKE 'b!_%' ESCAPE '!'",0,0,0);
