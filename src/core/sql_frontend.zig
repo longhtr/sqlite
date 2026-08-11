@@ -5617,8 +5617,16 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         position.* += 5;
         return .{ .column_index = selected, .integer_primary_key = false, .operation = if (text_not_in) .text_not_in else .text_in, .comparison_text = first_text, .comparison_text_high = second_text, .text_collation = text_collation.? };
     }
-    if (!boolean_negated and text_column and text_collation != null and position.* + 1 < token_list.len and (token_list[position.*].typ == tokens.tk_eq or token_list[position.*].typ == tokens.tk_ne) and token_list[position.* + 1].typ == tokens.tk_string) {
-        const operation: btree.IndexPredicateOperation = if (token_list[position.*].typ == tokens.tk_eq) .text_eq else .text_ne;
+    if (!boolean_negated and text_column and text_collation != null and position.* + 1 < token_list.len and (token_list[position.*].typ == tokens.tk_eq or token_list[position.*].typ == tokens.tk_ne or token_list[position.*].typ == tokens.tk_lt or token_list[position.*].typ == tokens.tk_le or token_list[position.*].typ == tokens.tk_gt or token_list[position.*].typ == tokens.tk_ge) and token_list[position.* + 1].typ == tokens.tk_string) {
+        const operation: btree.IndexPredicateOperation = switch (token_list[position.*].typ) {
+            tokens.tk_eq => .text_eq,
+            tokens.tk_ne => .text_ne,
+            tokens.tk_lt => .text_lt,
+            tokens.tk_le => .text_le,
+            tokens.tk_gt => .text_gt,
+            tokens.tk_ge => .text_ge,
+            else => unreachable,
+        };
         const comparison_text = token_list[position.* + 1].text;
         position.* += 2;
         return .{ .column_index = selected, .integer_primary_key = false, .operation = operation, .comparison_text = comparison_text, .text_collation = text_collation.? };

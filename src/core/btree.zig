@@ -197,7 +197,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     };
 }
 
-pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not };
+pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not, text_lt, text_le, text_gt, text_ge };
 
 pub const IndexPredicateTextCollation = enum { binary, nocase, rtrim };
 
@@ -219,8 +219,8 @@ pub const IndexPredicate = struct {
     combinations: [3]IndexPredicateCombination = .{ .and_, .and_, .and_ },
 };
 
-fn indexPredicateTextEquals(value: []const u8, literal: []const u8, collation: IndexPredicateTextCollation) bool {
-    if (literal.len < 2 or literal[0] != '\'' or literal[literal.len - 1] != '\'') return false;
+fn indexPredicateTextOrder(value: []const u8, literal: []const u8, collation: IndexPredicateTextCollation) ?std.math.Order {
+    if (literal.len < 2 or literal[0] != '\'' or literal[literal.len - 1] != '\'') return null;
     var value_end = value.len;
     var literal_end = literal.len - 1;
     if (collation == .rtrim) {
@@ -229,15 +229,21 @@ fn indexPredicateTextEquals(value: []const u8, literal: []const u8, collation: I
     }
     var value_position: usize = 0;
     var literal_position: usize = 1;
-    while (literal_position < literal_end) : (literal_position += 1) {
-        if (value_position >= value_end) return false;
+    while (literal_position < literal_end and value_position < value_end) : (literal_position += 1) {
         const value_byte = if (collation == .nocase) std.ascii.toLower(value[value_position]) else value[value_position];
         const literal_byte = if (collation == .nocase) std.ascii.toLower(literal[literal_position]) else literal[literal_position];
-        if (value_byte != literal_byte) return false;
+        const order = std.math.order(value_byte, literal_byte);
+        if (order != .eq) return order;
         value_position += 1;
         if (literal[literal_position] == '\'' and literal_position + 1 < literal_end and literal[literal_position + 1] == '\'') literal_position += 1;
     }
-    return value_position == value_end;
+    if (value_position < value_end) return .gt;
+    if (literal_position < literal_end) return .lt;
+    return .eq;
+}
+
+fn indexPredicateTextEquals(value: []const u8, literal: []const u8, collation: IndexPredicateTextCollation) bool {
+    return (indexPredicateTextOrder(value, literal, collation) orelse return false) == .eq;
 }
 
 pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
@@ -249,6 +255,20 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
         .is_not_null => switch (value) {
             .null_ => false,
             else => true,
+        },
+        .text_lt, .text_le, .text_gt, .text_ge => {
+            const text = switch (value) {
+                .text => |text| text,
+                else => return false,
+            };
+            const order = indexPredicateTextOrder(text, predicate.comparison_text, predicate.text_collation) orelse return false;
+            return switch (predicate.operation) {
+                .text_lt => order == .lt,
+                .text_le => order != .gt,
+                .text_gt => order == .gt,
+                .text_ge => order != .lt,
+                else => unreachable,
+            };
         },
         .text_is, .text_is_not => {
             const matches = switch (value) {
