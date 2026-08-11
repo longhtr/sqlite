@@ -17,7 +17,7 @@
     {
       "id": "btree-sharability-and-vdbe-usage-lock-masks",
       "path": "upstream/atomic-units/btree-sharability-and-vdbe-usage-lock-masks.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-make-ready-bulk-allocation-and-rewind",

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "btree-sharability-and-vdbe-usage-lock-masks",
   "title": "Btree sharability and VDBE database-usage/shared-cache lock masks",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3BtreeSharable and sqlite3VdbeUsesBtree establish the prepared-statement database-use mask and the shared-cache lock subset. Exact Btree/BtLock layout is required because sharability is a source field rather than a delegated API property.",
@@ -220,7 +220,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation and no OOM branch.",
