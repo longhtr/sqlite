@@ -49,6 +49,7 @@ pub const IndexIsComparison = struct { value: i64, is_not: bool };
 pub const IndexRangeComparison = struct { low: i64, high: i64, is_not: bool };
 pub const IndexMembership = struct { first: i64, second: i64, is_not: bool };
 pub const IndexSubstring = struct { start: i64, count: ?i64 };
+pub const IndexUnaryMath = enum { square_root, exponential };
 pub const IndexTransform = union(enum) {
     identity,
     numeric_negate,
@@ -58,6 +59,7 @@ pub const IndexTransform = union(enum) {
     numeric_ceil,
     numeric_floor,
     numeric_trunc,
+    unary_math: IndexUnaryMath,
     storage_type,
     octet_length,
     text_length,
@@ -210,6 +212,22 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             else => 1,
         } },
         .substring => |substring| return substringIndexValue(value, substring),
+        .unary_math => |operation| return switch (value) {
+            .null_ => .null_,
+            .integer, .real => numeric_result: {
+                const input = switch (value) {
+                    .integer => |integer| @as(f64, @floatFromInt(integer)),
+                    .real => |real| real,
+                    else => unreachable,
+                };
+                const result = switch (operation) {
+                    .square_root => @sqrt(input),
+                    .exponential => @exp(input),
+                };
+                break :numeric_result if (std.math.isNan(result)) .null_ else .{ .real = result };
+            },
+            .text, .blob => .null_,
+        },
         .numeric_ceil, .numeric_floor, .numeric_trunc => return switch (value) {
             .null_ => .null_,
             .integer => value,
@@ -339,7 +357,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             if (std.math.isNan(real) or real < -4_503_599_627_370_496.0 or real > 4_503_599_627_370_496.0) break :rounded .{ .real = real };
             break :rounded .{ .real = @floatFromInt(@as(i64, @intFromFloat(real + if (real < 0) @as(f64, -0.5) else @as(f64, 0.5)))) };
         },
-        .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .numeric_ceil, .numeric_floor, .numeric_trunc => unreachable,
+        .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .numeric_ceil, .numeric_floor, .numeric_trunc, .unary_math => unreachable,
         .numeric_sign => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = if (integer < 0) -1 else if (integer > 0) 1 else 0 },

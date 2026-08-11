@@ -4569,6 +4569,12 @@ fn resolveIfnullIndexExpression(token_list: []const Token, position: usize) ?Ifn
     return .{ .column_name = token_list[position + 2].text, .replacement = replacement, .null_if = std.ascii.eqlIgnoreCase(token_list[position].text, "nullif"), .consumed = literal_position + 2 - position };
 }
 
+fn resolveUnaryMathIndexOperation(name: []const u8) ?btree.IndexUnaryMath {
+    if (std.ascii.eqlIgnoreCase(name, "sqrt")) return .square_root;
+    if (std.ascii.eqlIgnoreCase(name, "exp")) return .exponential;
+    return null;
+}
+
 const MinMaxIndexExpression = struct { column_name: []const u8, comparison: i64, maximum: bool, consumed: usize };
 
 fn resolveMinMaxIndexExpression(token_list: []const Token, position: usize) ?MinMaxIndexExpression {
@@ -4634,7 +4640,11 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var index_transform: btree.IndexTransform = .identity;
         var name: []const u8 = undefined;
         var start = position;
-        if (if (schema_is_index) resolveMinMaxIndexExpression(parsed.tokens, position) else null) |min_max_expression| {
+        if (schema_is_index and position + 3 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and resolveUnaryMathIndexOperation(parsed.tokens[position].text) != null and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_rp) {
+            scan_expression = true;
+            index_transform = .{ .unary_math = resolveUnaryMathIndexOperation(parsed.tokens[position].text).? };
+            name = parsed.tokens[position + 2].text;
+        } else if (if (schema_is_index) resolveMinMaxIndexExpression(parsed.tokens, position) else null) |min_max_expression| {
             scan_expression = true;
             index_transform = if (min_max_expression.maximum) .{ .scalar_max_integer = min_max_expression.comparison } else .{ .scalar_min_integer = min_max_expression.comparison };
             name = min_max_expression.column_name;
@@ -9191,7 +9201,11 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if (wrapped_expression) position += 1;
         var transform: btree.IndexTransform = .identity;
         var column_name: []const u8 = undefined;
-        if (resolveMinMaxIndexExpression(token_list, position)) |min_max_expression| {
+        if (position + 3 < token_list.len and token_list[position].typ == tokens.tk_id and resolveUnaryMathIndexOperation(token_list[position].text) != null and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_rp) {
+            transform = .{ .unary_math = resolveUnaryMathIndexOperation(token_list[position].text).? };
+            column_name = token_list[position + 2].text;
+            position += 4;
+        } else if (resolveMinMaxIndexExpression(token_list, position)) |min_max_expression| {
             transform = if (min_max_expression.maximum) .{ .scalar_max_integer = min_max_expression.comparison } else .{ .scalar_min_integer = min_max_expression.comparison };
             column_name = min_max_expression.column_name;
             position += min_max_expression.consumed;
@@ -9399,7 +9413,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         };
         const numeric_transform = switch (specified_transforms.items[selected_position]) {
             .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .null_coalesce_integer, .null_if_integer => false,
-            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_compare, .integer_is, .integer_between, .integer_in, .scalar_min_integer, .scalar_max_integer => true,
+            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_compare, .integer_is, .integer_between, .integer_in, .scalar_min_integer, .scalar_max_integer, .unary_math => true,
         };
         if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
             allocator.free(source);
