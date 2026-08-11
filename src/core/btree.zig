@@ -53,6 +53,8 @@ pub const IndexTransform = union(enum) {
     integer_remainder: i64,
     integer_bit_and: i64,
     integer_bit_or: i64,
+    integer_shift_left: i64,
+    integer_shift_right: i64,
 };
 
 fn numericIndexValue(value: Value) Value {
@@ -64,6 +66,20 @@ fn numericIndexValue(value: Value) Value {
     if (std.fmt.parseInt(i64, bytes, 10)) |integer| return .{ .integer = integer } else |_| {}
     if (std.fmt.parseFloat(f64, bytes)) |real| return .{ .real = real } else |_| {}
     return .{ .integer = 0 };
+}
+
+fn shiftIndexInteger(integer: i64, amount: i64, shift_left: bool) i64 {
+    var left = shift_left;
+    var magnitude = amount;
+    if (magnitude < 0) {
+        left = !left;
+        magnitude = if (magnitude <= -64) 64 else -magnitude;
+    }
+    if (magnitude >= 64) return if (left or integer >= 0) 0 else -1;
+    const shift: u6 = @intCast(magnitude);
+    if (!left) return integer >> shift;
+    const bits: u64 = @bitCast(integer);
+    return @bitCast(bits << shift);
 }
 
 pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
@@ -120,6 +136,14 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
         },
         .integer_bit_or => |mask| switch (numeric) {
             .integer => |integer| .{ .integer = integer | mask },
+            else => .null_,
+        },
+        .integer_shift_left => |amount| switch (numeric) {
+            .integer => |integer| .{ .integer = shiftIndexInteger(integer, amount, true) },
+            else => .null_,
+        },
+        .integer_shift_right => |amount| switch (numeric) {
+            .integer => |integer| .{ .integer = shiftIndexInteger(integer, amount, false) },
             else => .null_,
         },
     };
