@@ -49,26 +49,42 @@ pub const IndexTransform = union(enum) {
     integer_multiply: i64,
 };
 
+fn numericIndexValue(value: Value) Value {
+    const bytes = switch (value) {
+        .text => |text| text,
+        .blob => |blob| blob,
+        else => return value,
+    };
+    if (std.fmt.parseInt(i64, bytes, 10)) |integer| return .{ .integer = integer } else |_| {}
+    if (std.fmt.parseFloat(f64, bytes)) |real| return .{ .real = real } else |_| {}
+    return .{ .integer = 0 };
+}
+
 pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
+    switch (transform) {
+        .identity => return value,
+        else => {},
+    }
+    const numeric = numericIndexValue(value);
     return switch (transform) {
-        .identity => value,
-        .numeric_negate => switch (value) {
+        .identity => unreachable,
+        .numeric_negate => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = -integer },
             .real => |real| .{ .real = -real },
-            .text, .blob => .null_,
+            .text, .blob => unreachable,
         },
-        .integer_add => |addition| switch (value) {
+        .integer_add => |addition| switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = std.math.add(i64, integer, addition) catch return .{ .real = @as(f64, @floatFromInt(integer)) + @as(f64, @floatFromInt(addition)) } },
             .real => |real| .{ .real = real + @as(f64, @floatFromInt(addition)) },
-            .text, .blob => .null_,
+            .text, .blob => unreachable,
         },
-        .integer_multiply => |factor| switch (value) {
+        .integer_multiply => |factor| switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = std.math.mul(i64, integer, factor) catch return .{ .real = @as(f64, @floatFromInt(integer)) * @as(f64, @floatFromInt(factor)) } },
             .real => |real| .{ .real = real * @as(f64, @floatFromInt(factor)) },
-            .text, .blob => .null_,
+            .text, .blob => unreachable,
         },
     };
 }

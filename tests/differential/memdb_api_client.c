@@ -281,11 +281,13 @@ int main(void){
   int negative_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX negative_expression_index ON negative_expression_data(-value)",0,0,0);
   int negative_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO negative_expression_data VALUES(3,20)",0,0,0);
   int negative_expression_update_rc=sqlite3_exec(clone,"UPDATE negative_expression_data SET value=20 WHERE id=2",0,0,0);
+  int negative_expression_text_rc=sqlite3_exec(clone,"INSERT INTO negative_expression_data VALUES(3,'abc')",0,0,0);
+  int negative_expression_text_duplicate_rc=sqlite3_exec(clone,"INSERT INTO negative_expression_data VALUES(4,'def')",0,0,0);
   sqlite3_int64 negative_expression_count=-1;
   int negative_expression_count_rc=query_value(clone,"SELECT count(*) FROM negative_expression_data",&negative_expression_count);
   int negative_expression_reindex_rc=sqlite3_exec(clone,"REINDEX negative_expression_index",0,0,0);
   int negative_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE negative_expression_data",0,0,0);
-  printf("negative-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",negative_expression_table_rc,negative_expression_first_rc,negative_expression_second_rc,negative_expression_index_rc,negative_expression_duplicate_rc,negative_expression_update_rc,negative_expression_count_rc,(long long)negative_expression_count,negative_expression_reindex_rc,negative_expression_drop_rc);
+  printf("negative-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",negative_expression_table_rc,negative_expression_first_rc,negative_expression_second_rc,negative_expression_index_rc,negative_expression_duplicate_rc,negative_expression_update_rc,negative_expression_text_rc,negative_expression_text_duplicate_rc,negative_expression_count_rc,(long long)negative_expression_count,negative_expression_reindex_rc,negative_expression_drop_rc);
   int additive_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE additive_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int additive_expression_first_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(1,20)",0,0,0);
   int additive_expression_second_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(2,10)",0,0,0);
