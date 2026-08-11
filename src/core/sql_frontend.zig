@@ -5954,6 +5954,22 @@ fn resolveIndexPredicatePrimary(token_list: []const Token, columns: []const Reso
         return;
     }
     if (term_count.* == 8) return error.Syntax;
+    if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_integer or token_list[position.*].typ == tokens.tk_minus)) {
+        var probe_position = position.*;
+        const constant = try resolveIndexPredicateInteger(token_list, &probe_position);
+        if (probe_position == token_list.len or token_list[probe_position].typ == tokens.tk_and or token_list[probe_position].typ == tokens.tk_or or token_list[probe_position].typ == tokens.tk_rp) {
+            position.* = probe_position;
+            try appendIndexPredicateNode(predicate, node_count, .{ .constant = constant != 0 });
+            term_count.* += 1;
+            return;
+        }
+    }
+    if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_null and (position.* + 1 == token_list.len or token_list[position.* + 1].typ == tokens.tk_and or token_list[position.* + 1].typ == tokens.tk_or or token_list[position.* + 1].typ == tokens.tk_rp)) {
+        position.* += 1;
+        try appendIndexPredicateNode(predicate, node_count, .{ .constant = false });
+        term_count.* += 1;
+        return;
+    }
     const term = try resolveIndexPredicateTermInner(token_list, columns, position);
     try appendIndexPredicateNode(predicate, node_count, .{ .term = term });
     term_count.* += 1;

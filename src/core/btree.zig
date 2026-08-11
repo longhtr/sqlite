@@ -532,6 +532,7 @@ pub const IndexPredicateTerm = struct {
 
 pub const IndexPredicateNode = union(enum) {
     term: IndexPredicateTerm,
+    constant: bool,
     and_,
     or_,
     not_,
@@ -679,6 +680,11 @@ pub fn indexPredicateRecordMatches(predicate: IndexPredicate, values: []const Va
                 if (term.column_index >= values.len or stack_count == stack.len) return null;
                 const value: Value = if (term.integer_primary_key) .{ .integer = rowid } else values[term.column_index];
                 stack[stack_count] = indexPredicateMatches(term, value);
+                stack_count += 1;
+            },
+            .constant => |constant| {
+                if (stack_count == stack.len) return null;
+                stack[stack_count] = constant;
                 stack_count += 1;
             },
             .not_ => {
