@@ -550,7 +550,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     };
 }
 
-pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not, text_lt, text_le, text_gt, text_ge, text_between, text_not_between };
+pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, real_eq, real_ne, real_lt, real_le, real_gt, real_ge, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not, text_lt, text_le, text_gt, text_ge, text_between, text_not_between };
 
 pub const IndexPredicateTextCollation = enum { binary, nocase, rtrim };
 
@@ -560,6 +560,7 @@ pub const IndexPredicateTerm = struct {
     operation: IndexPredicateOperation,
     comparison_value: i64 = 0,
     comparison_value_high: i64 = 0,
+    comparison_real: f64 = 0,
     comparison_text: []const u8 = "",
     comparison_text_high: []const u8 = "",
     text_collation: IndexPredicateTextCollation = .binary,
@@ -687,6 +688,22 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
             };
             const between = orders[0] != .lt and orders[1] != .gt;
             return if (predicate.operation == .integer_between) between else !between;
+        },
+        .real_eq, .real_ne, .real_lt, .real_le, .real_gt, .real_ge => {
+            const order = switch (value) {
+                .integer => |integer| std.math.order(@as(f64, @floatFromInt(integer)), predicate.comparison_real),
+                .real => |real| std.math.order(real, predicate.comparison_real),
+                else => return false,
+            };
+            return switch (predicate.operation) {
+                .real_eq => order == .eq,
+                .real_ne => order != .eq,
+                .real_lt => order == .lt,
+                .real_le => order != .gt,
+                .real_gt => order == .gt,
+                .real_ge => order != .lt,
+                else => unreachable,
+            };
         },
         .integer_eq, .integer_ne, .integer_lt, .integer_le, .integer_gt, .integer_ge => {
             const order = switch (value) {
