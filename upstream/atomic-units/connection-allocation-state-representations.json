@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "connection-allocation-state-representations",
   "title": "Connection allocation, lookaside, interrupt, and Parse state representations",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the additional exact sqlite3, Lookaside, LookasideSlot, interrupt-union, and Parse identities read or written by the connection-aware allocation/OOM closure.",
@@ -317,7 +317,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Representation-only; allocator fault traces consume these fields.",

@@ -137,7 +137,7 @@
     {
       "id": "connection-allocation-state-representations",
       "path": "upstream/atomic-units/connection-allocation-state-representations.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "global-allocator-core-for-connection-growth",
