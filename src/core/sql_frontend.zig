@@ -4559,6 +4559,20 @@ fn resolveSignedIndexOperand(token_list: []const Token, position: usize) ?Signed
     return .{ .value = value, .consumed = literal_position + 1 - position };
 }
 
+const NullBinaryFunctionIndexExpression = struct { column_name: []const u8, constant_null: bool, consumed: usize };
+
+fn resolveNullBinaryFunctionIndexExpression(token_list: []const Token, position: usize) ?NullBinaryFunctionIndexExpression {
+    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "ifnull") and !std.ascii.eqlIgnoreCase(token_list[position].text, "coalesce") and !std.ascii.eqlIgnoreCase(token_list[position].text, "nullif")) or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 3].typ != tokens.tk_comma or token_list[position + 5].typ != tokens.tk_rp) return null;
+    const null_first = token_list[position + 2].typ == tokens.tk_null and token_list[position + 4].typ == tokens.tk_id;
+    const null_second = token_list[position + 2].typ == tokens.tk_id and token_list[position + 4].typ == tokens.tk_null;
+    if (!null_first and !null_second) return null;
+    return .{
+        .column_name = token_list[if (null_first) position + 4 else position + 2].text,
+        .constant_null = null_first and std.ascii.eqlIgnoreCase(token_list[position].text, "nullif"),
+        .consumed = 6,
+    };
+}
+
 fn resolveIfnullIndexExpression(token_list: []const Token, position: usize) ?IfnullIndexExpression {
     if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "ifnull") and !std.ascii.eqlIgnoreCase(token_list[position].text, "coalesce") and !std.ascii.eqlIgnoreCase(token_list[position].text, "nullif")) or token_list[position + 1].typ != tokens.tk_lp) return null;
     const null_if = std.ascii.eqlIgnoreCase(token_list[position].text, "nullif");
@@ -4789,6 +4803,10 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             scan_expression = true;
             index_transform = .{ .substring = .{ .start = substring_expression.start, .count = substring_expression.count } };
             name = substring_expression.column_name;
+        } else if (if (schema_is_index) resolveNullBinaryFunctionIndexExpression(parsed.tokens, position) else null) |null_expression| {
+            scan_expression = true;
+            index_transform = if (null_expression.constant_null) .constant_null else .identity;
+            name = null_expression.column_name;
         } else if (if (schema_is_index) resolveIfnullIndexExpression(parsed.tokens, position) else null) |ifnull_expression| {
             scan_expression = true;
             index_transform = if (ifnull_expression.null_if)
@@ -9556,6 +9574,10 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             transform = .{ .substring = .{ .start = substring_expression.start, .count = substring_expression.count } };
             column_name = substring_expression.column_name;
             position += substring_expression.consumed;
+        } else if (resolveNullBinaryFunctionIndexExpression(token_list, position)) |null_expression| {
+            transform = if (null_expression.constant_null) .constant_null else .identity;
+            column_name = null_expression.column_name;
+            position += null_expression.consumed;
         } else if (resolveIfnullIndexExpression(token_list, position)) |ifnull_expression| {
             transform = if (ifnull_expression.null_if)
                 if (ifnull_expression.column_first) .{ .null_if_integer = ifnull_expression.replacement } else .{ .reverse_null_if_integer = ifnull_expression.replacement }
@@ -9762,7 +9784,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             return .{ .result = .error_, .consumed = consumed };
         };
         const numeric_transform = switch (specified_transforms.items[selected_position]) {
-            .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .constant_integer, .null_coalesce_integer, .null_if_integer, .reverse_null_if_integer => false,
+            .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .constant_null, .constant_integer, .null_coalesce_integer, .null_if_integer, .reverse_null_if_integer => false,
             .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .integer_is, .integer_between, .integer_in, .scalar_min_integer, .scalar_max_integer, .unary_math, .binary_math => true,
         };
         if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
