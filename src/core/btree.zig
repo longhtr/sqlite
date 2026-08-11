@@ -46,6 +46,7 @@ pub const IndexTransform = union(enum) {
     identity,
     numeric_negate,
     integer_add: i64,
+    integer_multiply: i64,
 };
 
 pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
@@ -61,6 +62,12 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .null_ => .null_,
             .integer => |integer| .{ .integer = std.math.add(i64, integer, addition) catch return .{ .real = @as(f64, @floatFromInt(integer)) + @as(f64, @floatFromInt(addition)) } },
             .real => |real| .{ .real = real + @as(f64, @floatFromInt(addition)) },
+            .text, .blob => .null_,
+        },
+        .integer_multiply => |factor| switch (value) {
+            .null_ => .null_,
+            .integer => |integer| .{ .integer = std.math.mul(i64, integer, factor) catch return .{ .real = @as(f64, @floatFromInt(integer)) * @as(f64, @floatFromInt(factor)) } },
+            .real => |real| .{ .real = real * @as(f64, @floatFromInt(factor)) },
             .text, .blob => .null_,
         },
     };
