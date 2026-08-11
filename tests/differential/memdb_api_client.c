@@ -579,7 +579,9 @@ int main(void){
   int max_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX max_expression_index ON minmax_expression_data(max(value,10))",0,0,0);
   int reversed_min_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_min_expression_index ON minmax_expression_data(min(10,value))",0,0,0);
   int reversed_max_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_max_expression_index ON minmax_expression_data(max(10,value))",0,0,0);
-  printf("reversed-minmax-expression-index\t%d\t%d\n",reversed_min_expression_index_rc,reversed_max_expression_index_rc);
+  int min_null_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX min_null_expression_index ON minmax_expression_data(min(value,NULL))",0,0,0);
+  int max_null_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX max_null_expression_index ON minmax_expression_data(max(NULL,value))",0,0,0);
+  printf("reversed-minmax-expression-index\t%d\t%d\t%d\t%d\n",reversed_min_expression_index_rc,reversed_max_expression_index_rc,min_null_expression_index_rc,max_null_expression_index_rc);
   int minmax_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO minmax_expression_data VALUES(2,5)",0,0,0);
   int minmax_expression_second_rc=sqlite3_exec(clone,"INSERT INTO minmax_expression_data VALUES(2,20)",0,0,0);
   int minmax_expression_update_rc=sqlite3_exec(clone,"UPDATE minmax_expression_data SET value=5 WHERE id=2",0,0,0);
