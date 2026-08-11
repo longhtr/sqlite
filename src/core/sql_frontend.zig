@@ -4635,6 +4635,23 @@ fn resolveNullBinaryFunctionIndexExpression(token_list: []const Token, position:
     };
 }
 
+const RealIfnullIndexExpression = struct { column_name: []const u8, replacement: f64, null_if: bool, column_first: bool, consumed: usize };
+
+fn resolveRealIfnullIndexExpression(token_list: []const Token, position: usize) ?RealIfnullIndexExpression {
+    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "ifnull") and !std.ascii.eqlIgnoreCase(token_list[position].text, "coalesce") and !std.ascii.eqlIgnoreCase(token_list[position].text, "nullif")) or token_list[position + 1].typ != tokens.tk_lp) return null;
+    const null_if = std.ascii.eqlIgnoreCase(token_list[position].text, "nullif");
+    if (token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_comma) {
+        const replacement = resolveSignedFloatIndexOperand(token_list, position + 4) orelse return null;
+        const end_position = position + 4 + replacement.consumed;
+        if (end_position >= token_list.len or token_list[end_position].typ != tokens.tk_rp) return null;
+        return .{ .column_name = token_list[position + 2].text, .replacement = replacement.value, .null_if = null_if, .column_first = true, .consumed = end_position + 1 - position };
+    }
+    const replacement = resolveSignedFloatIndexOperand(token_list, position + 2) orelse return null;
+    const comma_position = position + 2 + replacement.consumed;
+    if (comma_position + 2 >= token_list.len or token_list[comma_position].typ != tokens.tk_comma or token_list[comma_position + 1].typ != tokens.tk_id or token_list[comma_position + 2].typ != tokens.tk_rp) return null;
+    return .{ .column_name = token_list[comma_position + 1].text, .replacement = replacement.value, .null_if = null_if, .column_first = false, .consumed = comma_position + 3 - position };
+}
+
 fn resolveIfnullIndexExpression(token_list: []const Token, position: usize) ?IfnullIndexExpression {
     if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "ifnull") and !std.ascii.eqlIgnoreCase(token_list[position].text, "coalesce") and !std.ascii.eqlIgnoreCase(token_list[position].text, "nullif")) or token_list[position + 1].typ != tokens.tk_lp) return null;
     const null_if = std.ascii.eqlIgnoreCase(token_list[position].text, "nullif");
@@ -5015,6 +5032,15 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             scan_expression = true;
             index_transform = if (null_expression.constant_null) .constant_null else .identity;
             name = null_expression.column_name;
+        } else if (if (schema_is_index) resolveRealIfnullIndexExpression(parsed.tokens, position) else null) |real_ifnull_expression| {
+            scan_expression = true;
+            index_transform = if (real_ifnull_expression.null_if)
+                if (real_ifnull_expression.column_first) .{ .null_if_real = real_ifnull_expression.replacement } else .{ .reverse_null_if_real = real_ifnull_expression.replacement }
+            else if (real_ifnull_expression.column_first)
+                .{ .null_coalesce_real = real_ifnull_expression.replacement }
+            else
+                .{ .constant_real = real_ifnull_expression.replacement };
+            name = real_ifnull_expression.column_name;
         } else if (if (schema_is_index) resolveIfnullIndexExpression(parsed.tokens, position) else null) |ifnull_expression| {
             scan_expression = true;
             index_transform = if (ifnull_expression.null_if)
@@ -9925,6 +9951,15 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             transform = if (null_expression.constant_null) .constant_null else .identity;
             column_name = null_expression.column_name;
             position += null_expression.consumed;
+        } else if (resolveRealIfnullIndexExpression(token_list, position)) |real_ifnull_expression| {
+            transform = if (real_ifnull_expression.null_if)
+                if (real_ifnull_expression.column_first) .{ .null_if_real = real_ifnull_expression.replacement } else .{ .reverse_null_if_real = real_ifnull_expression.replacement }
+            else if (real_ifnull_expression.column_first)
+                .{ .null_coalesce_real = real_ifnull_expression.replacement }
+            else
+                .{ .constant_real = real_ifnull_expression.replacement };
+            column_name = real_ifnull_expression.column_name;
+            position += real_ifnull_expression.consumed;
         } else if (resolveIfnullIndexExpression(token_list, position)) |ifnull_expression| {
             transform = if (ifnull_expression.null_if)
                 if (ifnull_expression.column_first) .{ .null_if_integer = ifnull_expression.replacement } else .{ .reverse_null_if_integer = ifnull_expression.replacement }
@@ -10161,7 +10196,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             return .{ .result = .error_, .consumed = consumed };
         };
         const numeric_transform = switch (specified_transforms.items[selected_position]) {
-            .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .constant_null, .constant_integer, .null_coalesce_integer, .null_if_integer, .reverse_null_if_integer => false,
+            .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .constant_null, .constant_integer, .constant_real, .null_coalesce_integer, .null_coalesce_real, .null_if_integer, .null_if_real, .reverse_null_if_integer, .reverse_null_if_real => false,
             .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .real_compare, .real_arithmetic, .real_is, .integer_is, .integer_between, .real_between, .integer_in, .real_in, .scalar_min_integer, .scalar_max_integer, .scalar_min_real, .scalar_max_real, .unary_math, .binary_math => true,
         };
         if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {

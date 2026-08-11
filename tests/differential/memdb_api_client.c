@@ -603,6 +603,9 @@ int main(void){
   int ifnull_expression_first_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(1,NULL)",0,0,0);
   int ifnull_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX ifnull_expression_index ON ifnull_expression_data(ifnull(value,-1))",0,0,0);
   int coalesce_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX coalesce_expression_index ON ifnull_expression_data(coalesce(value,-1))",0,0,0);
+  int float_ifnull_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX float_ifnull_expression_index ON ifnull_expression_data(ifnull(value,-1.5))",0,0,0);
+  int float_coalesce_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX float_coalesce_expression_index ON ifnull_expression_data(coalesce(value,+1.5))",0,0,0);
+  printf("float-ifnull-expression-index\t%d\t%d\n",float_ifnull_expression_index_rc,float_coalesce_expression_index_rc);
   int ifnull_expression_conflict_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(2,-1)",0,0,0);
   int ifnull_expression_second_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(2,1)",0,0,0);
   int ifnull_expression_update_rc=sqlite3_exec(clone,"UPDATE ifnull_expression_data SET value=NULL WHERE id=2",0,0,0);
@@ -614,6 +617,8 @@ int main(void){
   int nullif_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE nullif_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int nullif_expression_first_rc=sqlite3_exec(clone,"INSERT INTO nullif_expression_data VALUES(1,-1)",0,0,0);
   int nullif_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX nullif_expression_index ON nullif_expression_data(nullif(value,-1))",0,0,0);
+  int float_nullif_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX float_nullif_expression_index ON nullif_expression_data(nullif(value,-1.5))",0,0,0);
+  printf("float-nullif-expression-index\t%d\n",float_nullif_expression_index_rc);
   int nullif_expression_second_rc=sqlite3_exec(clone,"INSERT INTO nullif_expression_data VALUES(2,2)",0,0,0);
   int nullif_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO nullif_expression_data VALUES(3,2)",0,0,0);
   int nullif_expression_null_rc=sqlite3_exec(clone,"INSERT INTO nullif_expression_data VALUES(3,-1)",0,0,0);
@@ -628,6 +633,10 @@ int main(void){
   int reversed_nullif_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX reversed_nullif_index ON reversed_nullif_data(nullif(-1,value))",0,0,0);
   int reversed_ifnull_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_ifnull_index ON reversed_nullif_data(ifnull(-1,value))",0,0,0);
   int reversed_coalesce_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_coalesce_index ON reversed_nullif_data(coalesce(-1,value))",0,0,0);
+  int reversed_float_nullif_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_float_nullif_index ON reversed_nullif_data(nullif(-1.5,value))",0,0,0);
+  int reversed_float_ifnull_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_float_ifnull_index ON reversed_nullif_data(ifnull(-1.5,value))",0,0,0);
+  int reversed_float_coalesce_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_float_coalesce_index ON reversed_nullif_data(coalesce(+1.5,value))",0,0,0);
+  printf("reversed-float-nullif-expression-index\t%d\t%d\t%d\n",reversed_float_nullif_index_rc,reversed_float_ifnull_index_rc,reversed_float_coalesce_index_rc);
   int reversed_nullif_equal_rc=sqlite3_exec(clone,"INSERT INTO reversed_nullif_data VALUES(2,-1)",0,0,0);
   int reversed_nullif_duplicate_rc=sqlite3_exec(clone,"INSERT INTO reversed_nullif_data VALUES(3,NULL)",0,0,0);
   int reversed_nullif_other_duplicate_rc=sqlite3_exec(clone,"INSERT INTO reversed_nullif_data VALUES(3,2)",0,0,0);

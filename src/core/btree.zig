@@ -106,9 +106,13 @@ pub const IndexTransform = union(enum) {
     is_not_null,
     constant_null,
     constant_integer: i64,
+    constant_real: f64,
     null_coalesce_integer: i64,
+    null_coalesce_real: f64,
     null_if_integer: i64,
+    null_if_real: f64,
     reverse_null_if_integer: i64,
+    reverse_null_if_real: f64,
     scalar_min_integer: IndexScalarMinMax,
     scalar_max_integer: IndexScalarMinMax,
     scalar_min_real: IndexScalarMinMaxReal,
@@ -395,14 +399,29 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
         } },
         .constant_null => return .null_,
         .constant_integer => |constant| return .{ .integer = constant },
+        .constant_real => |constant| return .{ .real = constant },
+        .null_coalesce_real => |replacement| return switch (value) {
+            .null_ => .{ .real = replacement },
+            else => value,
+        },
         .null_coalesce_integer => |replacement| return switch (value) {
             .null_ => .{ .integer = replacement },
             else => value,
+        },
+        .null_if_real => |comparison| return switch (value) {
+            .integer => |integer| if (@as(f64, @floatFromInt(integer)) == comparison) .null_ else value,
+            .real => |real| if (real == comparison) .null_ else value,
+            .null_, .text, .blob => value,
         },
         .null_if_integer => |comparison| return switch (value) {
             .integer => |integer| if (integer == comparison) .null_ else value,
             .real => |real| if (real == @as(f64, @floatFromInt(comparison))) .null_ else value,
             .null_, .text, .blob => value,
+        },
+        .reverse_null_if_real => |comparison| return switch (value) {
+            .integer => |integer| if (@as(f64, @floatFromInt(integer)) == comparison) .null_ else .{ .real = comparison },
+            .real => |real| if (real == comparison) .null_ else .{ .real = comparison },
+            .null_, .text, .blob => .{ .real = comparison },
         },
         .reverse_null_if_integer => |comparison| return switch (value) {
             .integer => |integer| if (integer == comparison) .null_ else .{ .integer = comparison },
@@ -437,7 +456,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     }
     const numeric = numericIndexValue(value);
     return switch (transform) {
-        .identity, .is_null, .is_not_null, .constant_null, .constant_integer, .null_coalesce_integer, .null_if_integer, .reverse_null_if_integer, .scalar_min_integer, .scalar_max_integer, .scalar_min_real, .scalar_max_real, .substring => unreachable,
+        .identity, .is_null, .is_not_null, .constant_null, .constant_integer, .constant_real, .null_coalesce_integer, .null_coalesce_real, .null_if_integer, .null_if_real, .reverse_null_if_integer, .reverse_null_if_real, .scalar_min_integer, .scalar_max_integer, .scalar_min_real, .scalar_max_real, .substring => unreachable,
         .numeric_negate => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = -integer },
