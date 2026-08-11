@@ -110,6 +110,8 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
 
 pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, text_eq, text_ne };
 
+pub const IndexPredicateTextCollation = enum { binary, nocase, rtrim };
+
 pub const IndexPredicateTerm = struct {
     column_index: usize,
     integer_primary_key: bool,
@@ -117,7 +119,7 @@ pub const IndexPredicateTerm = struct {
     comparison_value: i64 = 0,
     comparison_value_high: i64 = 0,
     comparison_text: []const u8 = "",
-    text_nocase: bool = false,
+    text_collation: IndexPredicateTextCollation = .binary,
 };
 
 pub const IndexPredicateCombination = enum { and_, or_ };
@@ -128,19 +130,25 @@ pub const IndexPredicate = struct {
     combination: IndexPredicateCombination = .and_,
 };
 
-fn indexPredicateTextEquals(value: []const u8, literal: []const u8, nocase: bool) bool {
+fn indexPredicateTextEquals(value: []const u8, literal: []const u8, collation: IndexPredicateTextCollation) bool {
     if (literal.len < 2 or literal[0] != '\'' or literal[literal.len - 1] != '\'') return false;
+    var value_end = value.len;
+    var literal_end = literal.len - 1;
+    if (collation == .rtrim) {
+        while (value_end > 0 and value[value_end - 1] == ' ') value_end -= 1;
+        while (literal_end > 1 and literal[literal_end - 1] == ' ') literal_end -= 1;
+    }
     var value_position: usize = 0;
     var literal_position: usize = 1;
-    while (literal_position + 1 < literal.len) : (literal_position += 1) {
-        if (value_position >= value.len) return false;
-        const value_byte = if (nocase) std.ascii.toLower(value[value_position]) else value[value_position];
-        const literal_byte = if (nocase) std.ascii.toLower(literal[literal_position]) else literal[literal_position];
+    while (literal_position < literal_end) : (literal_position += 1) {
+        if (value_position >= value_end) return false;
+        const value_byte = if (collation == .nocase) std.ascii.toLower(value[value_position]) else value[value_position];
+        const literal_byte = if (collation == .nocase) std.ascii.toLower(literal[literal_position]) else literal[literal_position];
         if (value_byte != literal_byte) return false;
         value_position += 1;
-        if (literal[literal_position] == '\'' and literal_position + 1 < literal.len - 1 and literal[literal_position + 1] == '\'') literal_position += 1;
+        if (literal[literal_position] == '\'' and literal_position + 1 < literal_end and literal[literal_position + 1] == '\'') literal_position += 1;
     }
-    return value_position == value.len;
+    return value_position == value_end;
 }
 
 pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
@@ -158,7 +166,7 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
                 .text => |text| text,
                 else => return false,
             };
-            const matches = indexPredicateTextEquals(text, predicate.comparison_text, predicate.text_nocase);
+            const matches = indexPredicateTextEquals(text, predicate.comparison_text, predicate.text_collation);
             return if (predicate.operation == .text_eq) matches else !matches;
         },
         .integer_in, .integer_not_in => {

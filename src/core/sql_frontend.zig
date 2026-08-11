@@ -5533,13 +5533,12 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
     position.* += 1;
     const integer_column = columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER");
     const text_column = std.ascii.eqlIgnoreCase(columns[selected].declared_type, "TEXT");
-    const text_nocase = std.ascii.eqlIgnoreCase(columns[selected].collation, "NOCASE");
-    const supported_text_column = text_column and (text_nocase or std.ascii.eqlIgnoreCase(columns[selected].collation, "BINARY"));
-    if (!boolean_negated and supported_text_column and position.* + 1 < token_list.len and (token_list[position.*].typ == tokens.tk_eq or token_list[position.*].typ == tokens.tk_ne) and token_list[position.* + 1].typ == tokens.tk_string) {
+    const text_collation: ?btree.IndexPredicateTextCollation = if (std.ascii.eqlIgnoreCase(columns[selected].collation, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "RTRIM")) .rtrim else null;
+    if (!boolean_negated and text_column and text_collation != null and position.* + 1 < token_list.len and (token_list[position.*].typ == tokens.tk_eq or token_list[position.*].typ == tokens.tk_ne) and token_list[position.* + 1].typ == tokens.tk_string) {
         const operation: btree.IndexPredicateOperation = if (token_list[position.*].typ == tokens.tk_eq) .text_eq else .text_ne;
         const comparison_text = token_list[position.* + 1].text;
         position.* += 2;
-        return .{ .column_index = selected, .integer_primary_key = false, .operation = operation, .comparison_text = comparison_text, .text_nocase = text_nocase };
+        return .{ .column_index = selected, .integer_primary_key = false, .operation = operation, .comparison_text = comparison_text, .text_collation = text_collation.? };
     }
     if (integer_column and (position.* == token_list.len or token_list[position.*].typ == tokens.tk_and or token_list[position.*].typ == tokens.tk_or or token_list[position.*].typ == tokens.tk_rp)) {
         return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (boolean_negated) .integer_eq else .integer_ne, .comparison_value = 0 };
