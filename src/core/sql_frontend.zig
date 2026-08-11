@@ -3571,9 +3571,11 @@ const ProgramAction = union(enum) {
     attach_database: struct { connection: *Connection, filename: []const u8, name: []const u8 },
     detach_database: struct { connection: *Connection, name: []const u8 },
     create: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, sql: []const u8, if_not_exists: bool },
+    create_index: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_index: usize, integer_primary_key: bool, if_not_exists: bool },
     virtual_create: struct { connection: *Connection, schema_name: []const u8, name: []const u8, module_name: []const u8 },
     virtual_drop: struct { connection: *Connection, schema_name: []const u8, name: []const u8 },
     drop: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
+    drop_index: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
     insert: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, column_count: usize, integer_primary_key: ?usize, replace: bool, conflict_ignore: bool },
     update: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, target_column: usize, target_integer_primary_key: bool, foreign_key_old_mask: u32 },
     delete: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, foreign_key_old_mask: u32 },
@@ -5291,6 +5293,76 @@ fn assignForeignKeyActionValue(database: *btree.Database, root_page: u32, column
     return .ok;
 }
 
+const IndexMutationRow = struct {
+    rowid: i64,
+    values: []const btree.Value,
+};
+
+/// Bounded source `sqlite3GenerateIndexKey()` mutation owner for ordinary
+/// single-column indexes created by `compileIndexSchema()`.
+fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, table_name: []const u8, old_row: ?IndexMutationRow, new_row: ?IndexMutationRow) ResultCode {
+    const table_outcome = database.schemaTable(table_name);
+    if (table_outcome.result != .ok) return table_outcome.result;
+    var table = table_outcome.table.?;
+    defer table.deinit();
+    const table_columns = resolveColumns(connection.allocator, table.sql) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+    defer {
+        connection.allocator.free(table_columns.columns);
+        connection.allocator.free(table_columns.tokens);
+        connection.allocator.free(table_columns.source);
+    }
+    const schema_outcome = database.openCursor(1, .table);
+    if (schema_outcome.result != .ok) return schema_outcome.result;
+    var schema_cursor = schema_outcome.cursor.?;
+    defer schema_cursor.deinit();
+    for (schema_cursor.entries.items) |entry| {
+        const decoded = btree.decodeRecord(connection.allocator, entry.payload);
+        if (decoded.result != .ok) return decoded.result;
+        var schema_record = decoded.record.?;
+        defer schema_record.deinit();
+        if (schema_record.values.len < 5) continue;
+        const object_type = schemaEntryText(schema_record.values[0]) orelse continue;
+        const indexed_table = schemaEntryText(schema_record.values[2]) orelse continue;
+        if (!std.ascii.eqlIgnoreCase(object_type, "index") or !std.ascii.eqlIgnoreCase(indexed_table, table_name)) continue;
+        const root_page = schemaEntryRoot(schema_record.values[3]) orelse return .corrupt;
+        const index_sql = schemaEntryText(schema_record.values[4]) orelse continue;
+        const index_columns = resolveColumns(connection.allocator, index_sql) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+        defer {
+            connection.allocator.free(index_columns.columns);
+            connection.allocator.free(index_columns.tokens);
+            connection.allocator.free(index_columns.source);
+        }
+        if (index_columns.columns.len != 1) continue;
+        var column_index: ?usize = null;
+        var integer_primary_key = false;
+        for (table_columns.columns, 0..) |column, index| {
+            if (std.ascii.eqlIgnoreCase(column.name, index_columns.columns[0].name)) {
+                column_index = index;
+                integer_primary_key = column.integer_primary_key;
+                break;
+            }
+        }
+        const selected = column_index orelse return .corrupt;
+        if (old_row) |row| {
+            if (selected >= row.values.len) return .corrupt;
+            const key: btree.Value = if (integer_primary_key) .{ .integer = row.rowid } else row.values[selected];
+            const payload = btree.encodeRecord(connection.allocator, &.{ key, .{ .integer = row.rowid } }) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+            defer connection.allocator.free(payload);
+            const deleted = database.deleteIndex(root_page, payload);
+            if (deleted != .ok) return if (deleted == .not_found) .corrupt else deleted;
+        }
+        if (new_row) |row| {
+            if (selected >= row.values.len) return .corrupt;
+            const key: btree.Value = if (integer_primary_key) .{ .integer = row.rowid } else row.values[selected];
+            const payload = btree.encodeRecord(connection.allocator, &.{ key, .{ .integer = row.rowid } }) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+            defer connection.allocator.free(payload);
+            const inserted = database.insertIndex(root_page, payload);
+            if (inserted != .ok) return inserted;
+        }
+    }
+    return .ok;
+}
+
 fn clearForeignKeyActionAllocations(connection: *Connection) void {
     for (connection.foreign_key_action_allocations.items) |allocation| {
         connection.allocator.free(allocation);
@@ -5348,6 +5420,8 @@ fn foreignKeyActionTrigger(
         const deleted = database.deleteTable(child_root_page, child_rowid);
         if (deleted == .not_found) return .ok;
         if (deleted != .ok) return deleted;
+        const indexed = maintainSecondaryIndexes(connection, database, child_table_name, .{ .rowid = child_rowid, .values = record.values }, null);
+        if (indexed != .ok) return indexed;
         return notifyForeignKeyMutation(connection, schema_name, 9, child_table_name, child_rowid);
     }
 
@@ -5403,6 +5477,8 @@ fn foreignKeyActionTrigger(
         const inserted = database.insertTable(child_root_page, child_rowid, payload, true);
         if (inserted != .ok) return inserted;
     }
+    const indexed = maintainSecondaryIndexes(connection, database, child_table_name, .{ .rowid = child_rowid, .values = record.values }, .{ .rowid = new_rowid, .values = values });
+    if (indexed != .ok) return indexed;
     return notifyForeignKeyMutation(connection, schema_name, 23, child_table_name, new_rowid);
 }
 
@@ -7695,6 +7771,26 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             batch_active = false;
             break :blk action.connection.afterWrite(committed, null, action.schema_name, action.name, 0);
         },
+        .create_index => |action| blk: {
+            const database = action.database;
+            const permission = action.connection.beforeWrite();
+            if (permission != .ok) break :blk permission;
+            const enlisted = enlistTransactionDatabase(action.connection, database);
+            if (enlisted != .ok) break :blk enlisted;
+            const begin = database.beginStatementBatch();
+            if (begin != .ok) break :blk begin;
+            var batch_active = true;
+            defer {
+                if (batch_active) {
+                    _ = database.rollbackStatementBatch();
+                }
+            }
+            const created = database.createSchemaIndex(action.name, action.table_name, action.sql, action.table_root, action.column_index, action.integer_primary_key, action.if_not_exists);
+            if (created != .ok) break :blk created;
+            const committed = database.commitStatementBatch();
+            batch_active = false;
+            break :blk action.connection.afterWrite(committed, null, action.schema_name, action.name, 0);
+        },
         .drop => |action| blk: {
             std.debug.assert(action.connection.foreign_key_action_allocations.items.len == 0);
             defer clearForeignKeyActionAllocations(action.connection);
@@ -7714,6 +7810,26 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             const cleared = dropTableForeignKeyActions(action.connection, database, action.schema_name, action.name);
             if (cleared != .ok) break :blk cleared;
             const dropped = database.dropSchemaTable(action.name, action.if_exists);
+            if (dropped != .ok) break :blk dropped;
+            const committed = database.commitStatementBatch();
+            batch_active = false;
+            break :blk action.connection.afterWrite(committed, null, action.schema_name, action.name, 0);
+        },
+        .drop_index => |action| blk: {
+            const database = action.database;
+            const permission = action.connection.beforeWrite();
+            if (permission != .ok) break :blk permission;
+            const enlisted = enlistTransactionDatabase(action.connection, database);
+            if (enlisted != .ok) break :blk enlisted;
+            const begin = database.beginStatementBatch();
+            if (begin != .ok) break :blk begin;
+            var batch_active = true;
+            defer {
+                if (batch_active) {
+                    _ = database.rollbackStatementBatch();
+                }
+            }
+            const dropped = database.dropSchemaIndex(action.name, action.if_exists);
             if (dropped != .ok) break :blk dropped;
             const committed = database.commitStatementBatch();
             batch_active = false;
@@ -7788,6 +7904,8 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             }
             const rc = database.insertTable(action.root_page, new_rowid, payload, new_rowid == rowid);
             if (rc != .ok) break :blk rc;
+            const indexed = maintainSecondaryIndexes(action.connection, database, action.table_name, .{ .rowid = rowid, .values = record.values }, .{ .rowid = new_rowid, .values = values });
+            if (indexed != .ok) break :blk indexed;
             const committed = database.commitStatementBatch();
             batch_active = false;
             if (committed == .ok) {
@@ -7836,6 +7954,8 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 break :blk .ok;
             }
             if (rc != .ok) break :blk rc;
+            const indexed = maintainSecondaryIndexes(action.connection, database, action.table_name, .{ .rowid = rowid, .values = record.values }, null);
+            if (indexed != .ok) break :blk indexed;
             const committed = database.commitStatementBatch();
             batch_active = false;
             if (committed == .ok) {
@@ -7897,6 +8017,8 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                     if (replaced != .ok) break :blk replaced;
                     const actions = applyForeignKeyActions(action.connection, database, action.schema_name, action.table_name, rowid, rowid, old_record.values, null, null);
                     if (actions != .ok) break :blk actions;
+                    const indexed = maintainSecondaryIndexes(action.connection, database, action.table_name, .{ .rowid = rowid, .values = old_record.values }, null);
+                    if (indexed != .ok) break :blk indexed;
                 } else {
                     existing_cursor.deinit();
                 }
@@ -7913,6 +8035,8 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 break :blk rolled_back;
             }
             if (rc != .ok) break :blk rc;
+            const indexed = maintainSecondaryIndexes(action.connection, database, action.table_name, null, .{ .rowid = rowid, .values = values });
+            if (indexed != .ok) break :blk indexed;
             const committed = database.commitStatementBatch();
             batch_active = false;
             if (committed == .ok) {
@@ -8068,9 +8192,188 @@ fn compileTransaction(connection: *Connection, source: [:0]u8, token_list: []con
     return .{ .result = .ok, .statement = prepared, .consumed = consumed };
 }
 
+/// Bounded application-defined subset of source `sqlite3CreateIndex()` and
+/// `sqlite3RefillIndex()`: one ordinary column, optional schema-qualified
+/// index name, optional IF NOT EXISTS, and ASC/DESC syntax.
+fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
+    const allocator = connection.allocator;
+    var position: usize = 1;
+    if (position >= token_list.len or token_list[position].typ != tokens.tk_index) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    position += 1;
+    var if_not_exists = false;
+    if (position + 2 < token_list.len and token_list[position].typ == tokens.tk_if and token_list[position + 1].typ == tokens.tk_not and token_list[position + 2].typ == tokens.tk_exists) {
+        if_not_exists = true;
+        position += 3;
+    }
+    if (position >= token_list.len or token_list[position].typ != tokens.tk_id) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    var schema_name: ?[]const u8 = null;
+    var index_name = token_list[position].text;
+    if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_dot and token_list[position + 2].typ == tokens.tk_id) {
+        schema_name = index_name;
+        index_name = token_list[position + 2].text;
+        position += 3;
+    } else {
+        position += 1;
+    }
+    if (position + 4 >= token_list.len or token_list[position].typ != tokens.tk_on or token_list[position + 1].typ != tokens.tk_id or token_list[position + 2].typ != tokens.tk_lp or token_list[position + 3].typ != tokens.tk_id) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const table_name = token_list[position + 1].text;
+    const column_name = token_list[position + 3].text;
+    position += 4;
+    if (position < token_list.len and (token_list[position].typ == tokens.tk_asc or token_list[position].typ == tokens.tk_desc)) {
+        position += 1;
+    }
+    if (position >= token_list.len or token_list[position].typ != tokens.tk_rp or position + 1 != token_list.len) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const located = locateTableWithDatabase(connection, table_name, schema_name);
+    if (located.result != .ok) {
+        allocator.free(source);
+        return .{ .result = if (located.result == .not_found) .error_ else located.result, .consumed = consumed };
+    }
+    var table = located.table.?;
+    defer table.deinit();
+    const resolved = resolveColumns(allocator, table.sql) catch |err| {
+        allocator.free(source);
+        return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+    };
+    defer {
+        allocator.free(resolved.columns);
+        allocator.free(resolved.tokens);
+        allocator.free(resolved.source);
+    }
+    var column_index: ?usize = null;
+    var integer_primary_key = false;
+    for (resolved.columns, 0..) |column, index| {
+        if (std.ascii.eqlIgnoreCase(column.name, column_name)) {
+            column_index = index;
+            integer_primary_key = column.integer_primary_key;
+            break;
+        }
+    }
+    if (column_index == null) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const owner = allocator.create(Owner) catch {
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const instructions = allocator.alloc(vdbe.Instruction, 2) catch {
+        allocator.destroy(owner);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const parameters = allocator.alloc(statement.ParameterMetadata, 0) catch unreachable;
+    const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
+    instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
+    instructions[1] = .{ .opcode = .halt };
+    owner.* = .{
+        .source = source,
+        .instructions = instructions,
+        .parameters = parameters,
+        .columns = columns,
+        .action = .{ .create_index = .{
+            .connection = connection,
+            .database = located.database.?,
+            .schema_name = located.schema_name,
+            .name = index_name,
+            .table_name = table_name,
+            .sql = source,
+            .table_root = table.root_page,
+            .column_index = column_index.?,
+            .integer_primary_key = integer_primary_key,
+            .if_not_exists = if_not_exists,
+        } },
+        .program = .{ .instructions = instructions, .register_count = 1 },
+    };
+    owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
+    owner.program.functions = owner.functions[0..];
+    const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
+        Owner.destroy(allocator, owner);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    prepared.adoptOwner(owner, Owner.destroy);
+    prepared.markWritable();
+    return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+}
+
+fn compileDropIndex(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
+    const allocator = connection.allocator;
+    var position: usize = 2;
+    var if_exists = false;
+    if (position + 1 < token_list.len and token_list[position].typ == tokens.tk_if and token_list[position + 1].typ == tokens.tk_exists) {
+        if_exists = true;
+        position += 2;
+    }
+    if (position >= token_list.len or token_list[position].typ != tokens.tk_id) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    var schema_name: []const u8 = "main";
+    var index_name = token_list[position].text;
+    if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_dot and token_list[position + 2].typ == tokens.tk_id) {
+        schema_name = index_name;
+        index_name = token_list[position + 2].text;
+        position += 3;
+    } else {
+        position += 1;
+    }
+    if (position != token_list.len) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const located = locateDatabase(connection, schema_name);
+    if (located.result != .ok) {
+        allocator.free(source);
+        return .{ .result = if (located.result == .not_found) .error_ else located.result, .consumed = consumed };
+    }
+    const owner = allocator.create(Owner) catch {
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const instructions = allocator.alloc(vdbe.Instruction, 2) catch {
+        allocator.destroy(owner);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const parameters = allocator.alloc(statement.ParameterMetadata, 0) catch unreachable;
+    const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
+    instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
+    instructions[1] = .{ .opcode = .halt };
+    owner.* = .{
+        .source = source,
+        .instructions = instructions,
+        .parameters = parameters,
+        .columns = columns,
+        .action = .{ .drop_index = .{ .connection = connection, .database = located.database.?, .schema_name = schema_name, .name = index_name, .if_exists = if_exists } },
+        .program = .{ .instructions = instructions, .register_count = 1 },
+    };
+    owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
+    owner.program.functions = owner.functions[0..];
+    const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
+        Owner.destroy(allocator, owner);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    prepared.adoptOwner(owner, Owner.destroy);
+    prepared.markWritable();
+    return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+}
+
 fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
     const allocator = connection.allocator;
     if (token_list.len > 1 and token_list[0].typ == tokens.tk_create and token_list[1].typ == tokens.tk_virtual) return compileVirtualSchema(connection, source, token_list, consumed);
+    if (token_list.len > 1 and token_list[0].typ == tokens.tk_create and (token_list[1].typ == tokens.tk_index or token_list[1].typ == tokens.tk_unique)) return compileIndexSchema(connection, source, token_list, consumed);
+    if (token_list.len > 1 and token_list[0].typ == tokens.tk_drop and token_list[1].typ == tokens.tk_index) return compileDropIndex(connection, source, token_list, consumed);
     if ((token_list.len == 3 or token_list.len == 5) and token_list[0].typ == tokens.tk_drop and token_list[1].typ == tokens.tk_table and schemaIdentifierToken(token_list[2])) {
         var virtual_schema_name: []const u8 = "main";
         var virtual_table_name = token_list[2].text;

@@ -594,7 +594,7 @@ pub const Database = struct {
         const root_page = allocated.page;
         rc = writeTableLeaf(&planner, root_page, &.{});
         if (rc == .ok) {
-            const schema_payload = encodeSchemaRecord(self.allocator, name, root_page, sql) catch |err| {
+            const schema_payload = encodeSchemaRecord(self.allocator, "table", name, name, root_page, sql) catch |err| {
                 if (owns_transaction) {
                     _ = self.pager.rollback();
                 }
@@ -631,6 +631,133 @@ pub const Database = struct {
         return .ok;
     }
 
+    /// Bounded source `sqlite3CreateIndex()`/`sqlite3RefillIndex()` path for
+    /// an ordinary single-column application-defined index. Existing table
+    /// rows are encoded with their trailing rowid before schema publication.
+    pub fn createSchemaIndex(self: *Database, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_index: usize, integer_primary_key: bool, if_not_exists: bool) ResultCode {
+        if (!self.writable) return .read_only;
+        if (name.len == 0 or table_name.len == 0 or sql.len == 0) return .misuse;
+        const table_opened = self.openCursor(table_root, .table);
+        if (table_opened.result != .ok) return table_opened.result;
+        var table_cursor = table_opened.cursor.?;
+        defer table_cursor.deinit();
+        var index_payloads = std.ArrayList([]u8).empty;
+        defer {
+            for (index_payloads.items) |payload| self.allocator.free(payload);
+            index_payloads.deinit(self.allocator);
+        }
+        for (table_cursor.entries.items) |entry| {
+            const rowid = entry.rowid orelse return .corrupt;
+            const decoded = decodeRecord(self.allocator, entry.payload);
+            if (decoded.result != .ok) return decoded.result;
+            var record = decoded.record.?;
+            defer record.deinit();
+            if (column_index >= record.values.len) return .corrupt;
+            const key: Value = if (integer_primary_key) .{ .integer = rowid } else record.values[column_index];
+            const payload = encodeRecord(self.allocator, &.{ key, .{ .integer = rowid } }) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+            index_payloads.append(self.allocator, payload) catch {
+                self.allocator.free(payload);
+                return .no_memory;
+            };
+        }
+        const opened = self.openCursor(1, .table);
+        if (opened.result != .ok) return opened.result;
+        var cursor = opened.cursor.?;
+        defer cursor.deinit();
+        var next_rowid: i64 = 1;
+        for (cursor.entries.items) |entry| {
+            next_rowid = @max(next_rowid, (entry.rowid orelse 0) + 1);
+            const record = decodeRecord(self.allocator, entry.payload);
+            if (record.result != .ok) return record.result;
+            var view = record.record.?;
+            defer view.deinit();
+            if (view.values.len >= 2 and schemaTextEqual(view.values[1], name)) {
+                return if (if_not_exists) .ok else .error_;
+            }
+        }
+
+        const owns_transaction = self.mutation_batch_depth == 0;
+        if (owns_transaction) {
+            const begun = self.beginMutationBatch();
+            if (begun != .ok) return begun;
+        }
+        var rc: ResultCode = .ok;
+        const planned = RebuildPlanner.init(self, 1, .table);
+        if (planned.result != .ok) {
+            if (owns_transaction) {
+                _ = self.rollbackMutationBatch();
+            }
+            return planned.result;
+        }
+        var planner = planned.planner.?;
+        defer planner.deinit();
+        if (planner.auto_vacuum) {
+            if (owns_transaction) {
+                _ = self.rollbackMutationBatch();
+            }
+            return .error_;
+        }
+        const allocated = planner.allocate();
+        if (allocated.result != .ok) {
+            if (owns_transaction) {
+                _ = self.rollbackMutationBatch();
+            }
+            return allocated.result;
+        }
+        const root_page = allocated.page;
+        rc = writeIndexLeaf(&planner, root_page, &.{});
+        if (rc == .ok) {
+            const schema_payload = encodeSchemaRecord(self.allocator, "index", name, table_name, root_page, sql) catch |err| {
+                if (owns_transaction) {
+                    _ = self.rollbackMutationBatch();
+                }
+                return if (err == error.OutOfMemory) .no_memory else .too_big;
+            };
+            defer self.allocator.free(schema_payload);
+            const copy = self.allocator.dupe(u8, schema_payload) catch {
+                if (owns_transaction) {
+                    _ = self.rollbackMutationBatch();
+                }
+                return .no_memory;
+            };
+            cursor.entries.append(self.allocator, .{ .rowid = next_rowid, .payload = copy }) catch {
+                self.allocator.free(copy);
+                if (owns_transaction) {
+                    _ = self.rollbackMutationBatch();
+                }
+                return .no_memory;
+            };
+            if (!entriesFitLeaf(self, cursor.entries.items, 100)) {
+                rc = .too_big;
+            } else {
+                rc = writeTableLeaf(&planner, 1, cursor.entries.items);
+            }
+        }
+        if (rc == .ok) {
+            rc = bumpSchemaCookie(&planner);
+        }
+        if (rc == .ok) {
+            rc = planner.finishFreelist();
+        }
+        if (rc == .ok) {
+            self.declared_pages = planner.next_page;
+            for (index_payloads.items) |payload| {
+                rc = self.insertIndex(root_page, payload);
+                if (rc != .ok) break;
+            }
+        }
+        if (rc == .ok and owns_transaction) {
+            rc = self.commitMutationBatch();
+        }
+        if (rc != .ok) {
+            if (owns_transaction) {
+                _ = self.rollbackMutationBatch();
+            }
+            return rc;
+        }
+        return .ok;
+    }
+
     pub fn dropSchemaTable(self: *Database, name: []const u8, if_exists: bool) ResultCode {
         if (!self.writable) return .read_only;
         const opened = self.openCursor(1, .table);
@@ -639,21 +766,32 @@ pub const Database = struct {
         defer cursor.deinit();
         var found: ?usize = null;
         var root_page: u32 = 0;
+        var index_positions = std.ArrayList(usize).empty;
+        defer index_positions.deinit(self.allocator);
+        var index_roots = std.ArrayList(u32).empty;
+        defer index_roots.deinit(self.allocator);
         for (cursor.entries.items, 0..) |entry, index| {
             const record = decodeRecord(self.allocator, entry.payload);
             if (record.result != .ok) return record.result;
             var view = record.record.?;
             defer view.deinit();
-            if (view.values.len >= 4 and schemaTextEqual(view.values[0], "table") and schemaTextEqual(view.values[1], name)) {
+            if (view.values.len < 4) continue;
+            if (schemaTextEqual(view.values[0], "table") and schemaTextEqual(view.values[1], name)) {
                 found = index;
                 root_page = switch (view.values[3]) {
                     .integer => |value| if (value > 0 and value <= std.math.maxInt(u32)) @intCast(value) else 0,
                     else => 0,
                 };
-                break;
+            } else if (schemaTextEqual(view.values[0], "index") and schemaTextEqual(view.values[2], name)) {
+                const index_root: u32 = switch (view.values[3]) {
+                    .integer => |value| if (value > 0 and value <= std.math.maxInt(u32)) @intCast(value) else return .corrupt,
+                    else => return .corrupt,
+                };
+                index_positions.append(self.allocator, index) catch return .no_memory;
+                index_roots.append(self.allocator, index_root) catch return .no_memory;
             }
         }
-        const index = found orelse return if (if_exists) .ok else .error_;
+        const table_position = found orelse return if (if_exists) .ok else .error_;
         if (root_page <= 1 or root_page > self.declared_pages) return .corrupt;
         const owns_transaction = self.mutation_batch_depth == 0;
         var rc: ResultCode = .ok;
@@ -678,12 +816,108 @@ pub const Database = struct {
         }
         rc = planner.collectTree(root_page, 0);
         if (rc == .ok) {
-            const removed = cursor.entries.orderedRemove(index);
+            for (index_roots.items) |index_root| {
+                rc = planner.collectTreeKind(index_root, 0, .index);
+                if (rc != .ok) break;
+            }
+        }
+        if (rc == .ok) {
+            var position = cursor.entries.items.len;
+            while (position != 0) {
+                position -= 1;
+                var remove = position == table_position;
+                if (!remove) {
+                    for (index_positions.items) |index_position| {
+                        if (position == index_position) {
+                            remove = true;
+                            break;
+                        }
+                    }
+                }
+                if (remove) {
+                    const removed = cursor.entries.orderedRemove(position);
+                    self.allocator.free(removed.payload);
+                }
+            }
+            rc = writeTableLeaf(&planner, 1, cursor.entries.items);
+        }
+        if (rc == .ok) {
+            rc = bumpSchemaCookie(&planner);
+        }
+        if (rc == .ok) {
+            rc = planner.finishFreelist();
+        }
+        if (rc == .ok and owns_transaction) {
+            rc = self.pager.commit();
+        }
+        if (rc != .ok) {
+            if (owns_transaction) {
+                _ = self.pager.rollback();
+            }
+            return rc;
+        }
+        self.declared_pages = planner.next_page;
+        return .ok;
+    }
+
+    /// Drop one ordinary application-defined index and reclaim its tree.
+    pub fn dropSchemaIndex(self: *Database, name: []const u8, if_exists: bool) ResultCode {
+        if (!self.writable) return .read_only;
+        const opened = self.openCursor(1, .table);
+        if (opened.result != .ok) return opened.result;
+        var cursor = opened.cursor.?;
+        defer cursor.deinit();
+        var found: ?usize = null;
+        var root_page: u32 = 0;
+        for (cursor.entries.items, 0..) |entry, index| {
+            const record = decodeRecord(self.allocator, entry.payload);
+            if (record.result != .ok) return record.result;
+            var view = record.record.?;
+            defer view.deinit();
+            if (view.values.len >= 4 and schemaTextEqual(view.values[0], "index") and schemaTextEqual(view.values[1], name)) {
+                found = index;
+                root_page = switch (view.values[3]) {
+                    .integer => |value| if (value > 0 and value <= std.math.maxInt(u32)) @intCast(value) else 0,
+                    else => 0,
+                };
+                break;
+            }
+        }
+        const index_position = found orelse return if (if_exists) .ok else .error_;
+        if (root_page <= 1 or root_page > self.declared_pages) return .corrupt;
+        const owns_transaction = self.mutation_batch_depth == 0;
+        var rc: ResultCode = .ok;
+        if (owns_transaction) {
+            rc = self.pager.beginWrite();
+            if (rc != .ok) return rc;
+        }
+        const planned = RebuildPlanner.init(self, 1, .table);
+        if (planned.result != .ok) {
+            if (owns_transaction) {
+                _ = self.pager.rollback();
+            }
+            return planned.result;
+        }
+        var planner = planned.planner.?;
+        defer planner.deinit();
+        if (planner.auto_vacuum) {
+            if (owns_transaction) {
+                _ = self.pager.rollback();
+            }
+            return .error_;
+        }
+        rc = planner.collectTreeKind(root_page, 0, .index);
+        if (rc == .ok) {
+            const removed = cursor.entries.orderedRemove(index_position);
             self.allocator.free(removed.payload);
             rc = writeTableLeaf(&planner, 1, cursor.entries.items);
         }
-        if (rc == .ok) rc = bumpSchemaCookie(&planner);
-        if (rc == .ok) rc = planner.finishFreelist();
+        if (rc == .ok) {
+            rc = bumpSchemaCookie(&planner);
+        }
+        if (rc == .ok) {
+            rc = planner.finishFreelist();
+        }
         if (rc == .ok and owns_transaction) {
             rc = self.pager.commit();
         }
@@ -1027,8 +1261,8 @@ fn schemaTextEqual(value: Value, expected: []const u8) bool {
     return std.ascii.eqlIgnoreCase(text, expected);
 }
 
-fn encodeSchemaRecord(allocator: std.mem.Allocator, name: []const u8, root_page: u32, sql: []const u8) ![]u8 {
-    const fields = [_][]const u8{ "table", name, name, sql };
+fn encodeSchemaRecord(allocator: std.mem.Allocator, object_type: []const u8, name: []const u8, table_name: []const u8, root_page: u32, sql: []const u8) ![]u8 {
+    const fields = [_][]const u8{ object_type, name, table_name, sql };
     const serials = [_]u64{ 13 + 2 * fields[0].len, 13 + 2 * fields[1].len, 13 + 2 * fields[2].len, 6, 13 + 2 * fields[3].len };
     var header_body: usize = 0;
     for (serials) |serial| {
@@ -1186,6 +1420,10 @@ const RebuildPlanner = struct {
     }
 
     fn collectTree(self: *RebuildPlanner, page_number: u32, depth: usize) ResultCode {
+        return self.collectTreeKind(page_number, depth, self.kind);
+    }
+
+    fn collectTreeKind(self: *RebuildPlanner, page_number: u32, depth: usize, expected_kind: TreeKind) ResultCode {
         if (depth >= maximum_depth) return .corrupt;
         const fetched = self.database.pager.getPage(page_number, false);
         if (fetched.result != .ok) return fetched.result;
@@ -1194,7 +1432,7 @@ const RebuildPlanner = struct {
             _ = self.database.pager.release(page);
             return .corrupt;
         };
-        if (info.kind != self.kind) {
+        if (info.kind != expected_kind) {
             _ = self.database.pager.release(page);
             return .misuse;
         }
@@ -1231,7 +1469,7 @@ const RebuildPlanner = struct {
             if (rc != .ok) return rc;
         }
         for (children.items) |child| {
-            rc = self.collectTree(child, depth + 1);
+            rc = self.collectTreeKind(child, depth + 1, expected_kind);
             if (rc != .ok) return rc;
         }
         return .ok;
@@ -1715,11 +1953,17 @@ fn writeIndexInterior(
 
 fn rebuildIndex(database: *Database, root_page: u32, entries: []const Entry) ResultCode {
     if (root_page == 1) return .misuse;
-    var rc = database.pager.beginWrite();
-    if (rc != .ok) return rc;
+    const owns_transaction = database.mutation_batch_depth == 0;
+    var rc: ResultCode = .ok;
+    if (owns_transaction) {
+        rc = database.pager.beginWrite();
+        if (rc != .ok) return rc;
+    }
     const planned = RebuildPlanner.init(database, root_page, .index);
     if (planned.result != .ok) {
-        _ = database.pager.rollback();
+        if (owns_transaction) {
+            _ = database.pager.rollback();
+        }
         return planned.result;
     }
     var planner = planned.planner.?;
@@ -1814,12 +2058,20 @@ fn rebuildIndex(database: *Database, root_page: u32, entries: []const Entry) Res
             child_pages = parent_pages;
             separators = promoted;
         }
-        if (rc == .ok) rc = writeIndexInterior(&planner, root_page, separators.items, child_pages.items);
+        if (rc == .ok) {
+            rc = writeIndexInterior(&planner, root_page, separators.items, child_pages.items);
+        }
     }
-    if (rc == .ok) rc = planner.finishFreelist();
-    if (rc == .ok) rc = database.pager.commit();
+    if (rc == .ok) {
+        rc = planner.finishFreelist();
+    }
+    if (rc == .ok and owns_transaction) {
+        rc = database.pager.commit();
+    }
     if (rc != .ok) {
-        if (database.pager.state != .reader) _ = database.pager.rollback();
+        if (owns_transaction and database.pager.state != .reader) {
+            _ = database.pager.rollback();
+        }
         return rc;
     }
     database.declared_pages = planner.next_page;
@@ -2200,6 +2452,17 @@ test "index and WITHOUT ROWID rebuild preserve ordered records" {
         try std.testing.expect(rebuilt.first());
         try std.testing.expectEqualSlices(u8, payload, rebuilt.current().?.payload);
         rebuilt.deinit();
+
+        try std.testing.expectEqual(ResultCode.ok, database.beginMutationBatch());
+        try std.testing.expectEqual(ResultCode.ok, database.beginStatementBatch());
+        try std.testing.expectEqual(ResultCode.ok, database.deleteIndex(root_page, payload));
+        try std.testing.expectEqual(ResultCode.ok, database.rollbackStatementBatch());
+        try std.testing.expectEqual(ResultCode.ok, database.commitMutationBatch());
+        var restored = database.openCursor(root_page, .index).cursor.?;
+        try std.testing.expectEqual(original_count, restored.count());
+        try std.testing.expect(restored.first());
+        try std.testing.expectEqualSlices(u8, payload, restored.current().?.payload);
+        restored.deinit();
     }
 }
 

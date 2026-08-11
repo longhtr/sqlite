@@ -45,6 +45,22 @@ static int query_value(sqlite3 *db, const char *sql, sqlite3_int64 *value){
   return rc;
 }
 
+static int query_scan(sqlite3 *db, const char *sql, int *count, sqlite3_int64 *first, sqlite3_int64 *last){
+  sqlite3_stmt *statement = 0;
+  int rc = sqlite3_prepare_v2(db, sql, -1, &statement, 0);
+  *count=0;
+  if(rc==SQLITE_OK){
+    while((rc=sqlite3_step(statement))==SQLITE_ROW){
+      sqlite3_int64 value=sqlite3_column_int64(statement,0);
+      if(*count==0) *first=value;
+      *last=value;
+      *count+=1;
+    }
+  }
+  sqlite3_finalize(statement);
+  return rc;
+}
+
 int main(void){
 #ifdef NATIVE_ENGINE
   int config_rc=zig_sqlite3_config_malloc(&fault_methods);
@@ -144,6 +160,49 @@ int main(void){
   int ddl_drop_insert_rc=sqlite3_exec(clone,"INSERT INTO txn_ddl_drop VALUES(1)",0,0,0);
   int ddl_drop_query_rc=query_value(clone,"SELECT count(*) FROM txn_ddl_drop",&ddl_drop_count);
   printf("transaction-ddl\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\n",ddl_rollback_begin_rc,ddl_rollback_create_rc,ddl_rollback_rc,ddl_rollback_query_rc,ddl_commit_begin_rc,ddl_commit_create_rc,ddl_commit_rc,ddl_commit_insert_rc,ddl_commit_query_rc,(long long)ddl_commit_count,ddl_drop_create_rc,ddl_drop_begin_rc,ddl_drop_rc,ddl_drop_rollback_rc,ddl_drop_insert_rc,ddl_drop_query_rc,(long long)ddl_drop_count);
+  int index_table_create_rc=sqlite3_exec(clone,"CREATE TABLE index_data(id INTEGER PRIMARY KEY,value)",0,0,0);
+  int index_data_insert_rc=sqlite3_exec(clone,"INSERT INTO index_data VALUES(1,30); INSERT INTO index_data VALUES(2,10); INSERT INTO index_data VALUES(3,20)",0,0,0);
+  int index_create_rc=sqlite3_exec(clone,"CREATE INDEX idx_index_data_value ON index_data(value)",0,0,0);
+  int index_duplicate_rc=sqlite3_exec(clone,"CREATE INDEX idx_index_data_value ON index_data(value)",0,0,0);
+  int index_if_not_exists_rc=sqlite3_exec(clone,"CREATE INDEX IF NOT EXISTS idx_index_data_value ON index_data(value)",0,0,0);
+  sqlite3_int64 index_first_value=-1,index_last_value=-1,index_after_first=-1,index_after_last=-1;
+  int index_count=-1,index_after_count=-1;
+  int index_query_rc=query_scan(clone,"SELECT value FROM index_data INDEXED BY idx_index_data_value",&index_count,&index_first_value,&index_last_value);
+  int index_post_insert_rc=sqlite3_exec(clone,"INSERT INTO index_data VALUES(4,5)",0,0,0);
+  int index_post_update_rc=sqlite3_exec(clone,"UPDATE index_data SET value=15 WHERE id=1",0,0,0);
+  int index_post_delete_rc=sqlite3_exec(clone,"DELETE FROM index_data WHERE id=2",0,0,0);
+  int index_after_query_rc=query_scan(clone,"SELECT value FROM index_data INDEXED BY idx_index_data_value",&index_after_count,&index_after_first,&index_after_last);
+  int index_rollback_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
+  int index_rollback_insert_rc=sqlite3_exec(clone,"INSERT INTO index_data VALUES(5,1)",0,0,0);
+  int index_rollback_update_rc=sqlite3_exec(clone,"UPDATE index_data SET value=2 WHERE id=3",0,0,0);
+  int index_rollback_delete_rc=sqlite3_exec(clone,"DELETE FROM index_data WHERE id=4",0,0,0);
+  int index_rollback_rc=sqlite3_exec(clone,"ROLLBACK",0,0,0);
+  sqlite3_int64 index_rollback_first=-1,index_rollback_last=-1,index_commit_first=-1,index_commit_last=-1;
+  int index_rollback_count=-1,index_commit_count=-1;
+  int index_rollback_query_rc=query_scan(clone,"SELECT value FROM index_data INDEXED BY idx_index_data_value",&index_rollback_count,&index_rollback_first,&index_rollback_last);
+  int index_commit_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
+  int index_commit_insert_rc=sqlite3_exec(clone,"INSERT INTO index_data VALUES(5,1)",0,0,0);
+  int index_commit_update_rc=sqlite3_exec(clone,"UPDATE index_data SET value=2 WHERE id=3",0,0,0);
+  int index_commit_delete_rc=sqlite3_exec(clone,"DELETE FROM index_data WHERE id=4",0,0,0);
+  int index_commit_rc=sqlite3_exec(clone,"COMMIT",0,0,0);
+  int index_commit_query_rc=query_scan(clone,"SELECT value FROM index_data INDEXED BY idx_index_data_value",&index_commit_count,&index_commit_first,&index_commit_last);
+  printf("secondary-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\n",index_table_create_rc,index_data_insert_rc,index_create_rc,index_duplicate_rc,index_if_not_exists_rc,index_query_rc,index_count,(long long)index_first_value,(long long)index_last_value,index_post_insert_rc,index_post_update_rc,index_post_delete_rc,index_after_query_rc,index_after_count,(long long)index_after_first,(long long)index_after_last,index_rollback_begin_rc,index_rollback_insert_rc,index_rollback_update_rc,index_rollback_delete_rc,index_rollback_rc,index_rollback_query_rc,index_rollback_count,(long long)index_rollback_first,(long long)index_rollback_last,index_commit_begin_rc,index_commit_insert_rc,index_commit_update_rc,index_commit_delete_rc,index_commit_rc,index_commit_query_rc,index_commit_count,(long long)index_commit_first,(long long)index_commit_last);
+  int index_drop_rollback_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
+  int index_drop_rollback_drop_rc=sqlite3_exec(clone,"DROP INDEX idx_index_data_value",0,0,0);
+  int index_drop_rollback_rc=sqlite3_exec(clone,"ROLLBACK",0,0,0);
+  sqlite3_int64 index_drop_rollback_first=-1,index_drop_rollback_last=-1;
+  int index_drop_rollback_count=-1;
+  int index_drop_rollback_query_rc=query_scan(clone,"SELECT value FROM index_data INDEXED BY idx_index_data_value",&index_drop_rollback_count,&index_drop_rollback_first,&index_drop_rollback_last);
+  int index_drop_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
+  int index_drop_rc=sqlite3_exec(clone,"DROP INDEX idx_index_data_value",0,0,0);
+  int index_drop_commit_rc=sqlite3_exec(clone,"COMMIT",0,0,0);
+  sqlite3_int64 index_missing_value=-1;
+  int index_missing_query_rc=query_value(clone,"SELECT value FROM index_data INDEXED BY idx_index_data_value",&index_missing_value);
+  int index_recreate_rc=sqlite3_exec(clone,"CREATE INDEX idx_index_data_value ON index_data(value)",0,0,0);
+  int index_table_drop_rc=sqlite3_exec(clone,"DROP TABLE index_data",0,0,0);
+  int index_reuse_table_rc=sqlite3_exec(clone,"CREATE TABLE index_reuse(id INTEGER PRIMARY KEY,value)",0,0,0);
+  int index_name_reuse_rc=sqlite3_exec(clone,"CREATE INDEX idx_index_data_value ON index_reuse(value)",0,0,0);
+  printf("secondary-index-drop\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",index_drop_rollback_begin_rc,index_drop_rollback_drop_rc,index_drop_rollback_rc,index_drop_rollback_query_rc,index_drop_rollback_count,(long long)index_drop_rollback_first,(long long)index_drop_rollback_last,index_drop_begin_rc,index_drop_rc,index_drop_commit_rc,index_missing_query_rc,index_recreate_rc,index_table_drop_rc,index_reuse_table_rc,index_name_reuse_rc);
 #ifdef NATIVE_ENGINE
   int deferred_fk_config_rc=zig_sqlite3_db_config_flag(clone,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
 #else
@@ -196,6 +255,17 @@ int main(void){
   sqlite3_int64 attached_created_value=-1;
   int attached_created_query_rc=query_value(attached,"SELECT value FROM aux.created",&attached_created_value);
   int attached_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.created",0,0,0);
+  int attached_index_create_rc=sqlite3_exec(attached,"CREATE INDEX aux.idx_t_x ON t(x)",0,0,0);
+  int attached_index_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.t VALUES(3,30)",0,0,0);
+  int attached_index_update_rc=sqlite3_exec(attached,"UPDATE aux.t SET x=40 WHERE id=2",0,0,0);
+  sqlite3_int64 attached_index_first=-1,attached_index_last=-1;
+  int attached_index_count=-1;
+  int attached_index_query_rc=query_scan(attached,"SELECT x FROM aux.t INDEXED BY idx_t_x",&attached_index_count,&attached_index_first,&attached_index_last);
+  int attached_index_delete_rc=sqlite3_exec(attached,"DELETE FROM aux.t WHERE id=3",0,0,0);
+  int attached_index_drop_rc=sqlite3_exec(attached,"DROP INDEX aux.idx_t_x",0,0,0);
+  sqlite3_int64 attached_index_missing_value=-1;
+  int attached_index_missing_rc=query_value(attached,"SELECT x FROM aux.t INDEXED BY idx_t_x",&attached_index_missing_value);
+  printf("attached-index\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\n",attached_index_create_rc,attached_index_insert_rc,attached_index_update_rc,attached_index_query_rc,attached_index_count,(long long)attached_index_first,(long long)attached_index_last,attached_index_delete_rc,attached_index_drop_rc,attached_index_missing_rc);
 #ifdef NATIVE_ENGINE
   int attached_fk_config_rc=zig_sqlite3_db_config_flag(attached,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
 #else
@@ -233,6 +303,7 @@ int main(void){
   int actions_null_reset_rc=sqlite3_exec(attached,"UPDATE aux.action_null SET parent_id=3 WHERE id=1",0,0,0);
   int actions_default_reset_rc=sqlite3_exec(attached,"UPDATE aux.action_default SET parent_id=3 WHERE id=1",0,0,0);
   int actions_cascade_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.action_cascade VALUES(1,3)",0,0,0);
+  int actions_cascade_index_rc=sqlite3_exec(attached,"CREATE INDEX aux.idx_action_cascade_parent ON action_cascade(parent_id)",0,0,0);
   int actions_update_restrict_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.action_restrict VALUES(2,3)",0,0,0);
   int actions_restricted_update_rc=sqlite3_exec(attached,"UPDATE aux.action_parent SET id=4 WHERE id=3",0,0,0);
   int actions_update_restrict_clear_rc=sqlite3_exec(attached,"DELETE FROM aux.action_restrict WHERE id=2",0,0,0);
@@ -241,6 +312,9 @@ int main(void){
   int actions_update_null_query_rc=query_value(attached,"SELECT parent_id FROM aux.action_null",&actions_update_null_value);
   int actions_update_default_query_rc=query_value(attached,"SELECT parent_id FROM aux.action_default",&actions_update_default_value);
   int actions_update_cascade_query_rc=query_value(attached,"SELECT parent_id FROM aux.action_cascade",&actions_update_cascade_value);
+  sqlite3_int64 actions_index_cascade_value=-1;
+  int actions_index_cascade_query_rc=query_value(attached,"SELECT parent_id FROM aux.action_cascade INDEXED BY idx_action_cascade_parent",&actions_index_cascade_value);
+  printf("attached-fk-index-action\t%d\t%d\t%lld\n",actions_cascade_index_rc,actions_index_cascade_query_rc,(long long)actions_index_cascade_value);
   printf("attached-fk-actions\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%lld\t%d\t%lld\n",actions_parent_create_rc,actions_null_create_rc,actions_default_create_rc,actions_restrict_create_rc,actions_cascade_create_rc,actions_parent_one_rc,actions_parent_two_rc,actions_null_insert_rc,actions_default_insert_rc,actions_restrict_insert_rc,actions_restricted_delete_rc,actions_restrict_clear_rc,actions_parent_delete_rc,actions_null_query_rc,(long long)actions_null_value,actions_default_query_rc,(long long)actions_default_value,actions_parent_three_rc,actions_null_reset_rc,actions_default_reset_rc,actions_cascade_insert_rc,actions_update_restrict_insert_rc,actions_restricted_update_rc,actions_update_restrict_clear_rc,actions_parent_update_rc,actions_update_null_query_rc,(long long)actions_update_null_value,actions_update_default_query_rc,(long long)actions_update_default_value,actions_update_cascade_query_rc,(long long)actions_update_cascade_value);
   sqlite3_exec(attached,"DROP TABLE aux.action_null",0,0,0);
   sqlite3_exec(attached,"DROP TABLE aux.action_default",0,0,0);
