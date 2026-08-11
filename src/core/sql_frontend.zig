@@ -5862,17 +5862,20 @@ fn appendIndexPredicateNode(predicate: *btree.IndexPredicate, node_count: *usize
 }
 
 fn resolveIndexPredicatePrimary(token_list: []const Token, columns: []const ResolvedColumn, position: *usize, predicate: *btree.IndexPredicate, node_count: *usize, term_count: *usize) IndexPredicateParseError!void {
-    const negated_group = position.* + 1 < token_list.len and token_list[position.*].typ == tokens.tk_not and token_list[position.* + 1].typ == tokens.tk_lp;
-    if (negated_group) position.* += 1;
+    if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_not) {
+        position.* += 1;
+        try resolveIndexPredicatePrimary(token_list, columns, position, predicate, node_count, term_count);
+        try appendIndexPredicateNode(predicate, node_count, .not_);
+        return;
+    }
     if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_lp) {
         position.* += 1;
         try resolveIndexPredicateOr(token_list, columns, position, predicate, node_count, term_count);
         if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_rp) return error.Syntax;
         position.* += 1;
-        if (negated_group) try appendIndexPredicateNode(predicate, node_count, .not_);
         return;
     }
-    if (negated_group or term_count.* == 8) return error.Syntax;
+    if (term_count.* == 8) return error.Syntax;
     const term = try resolveIndexPredicateTermInner(token_list, columns, position);
     try appendIndexPredicateNode(predicate, node_count, .{ .term = term });
     term_count.* += 1;
