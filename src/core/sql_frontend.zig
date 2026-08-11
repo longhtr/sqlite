@@ -6177,6 +6177,12 @@ fn resolveIndexPredicateInteger(token_list: []const Token, position: *usize) err
     return value;
 }
 
+fn resolveAsciiEscapeLiteral(literal: []const u8) ?u8 {
+    if (literal.len == 3 and literal[0] == '\'' and literal[2] == '\'' and literal[1] < 0x80) return literal[1];
+    if (literal.len == 4 and std.mem.eql(u8, literal, "''''")) return '\'';
+    return null;
+}
+
 fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const ResolvedColumn, position: *usize) error{Syntax}!btree.IndexPredicateTerm {
     if (position.* + 5 < token_list.len and token_list[position.*].typ == tokens.tk_like_kw and (std.ascii.eqlIgnoreCase(token_list[position.*].text, "like") or std.ascii.eqlIgnoreCase(token_list[position.*].text, "glob")) and token_list[position.* + 1].typ == tokens.tk_lp and token_list[position.* + 2].typ == tokens.tk_string and token_list[position.* + 3].typ == tokens.tk_comma and token_list[position.* + 4].typ == tokens.tk_id) {
         const glob = std.ascii.eqlIgnoreCase(token_list[position.*].text, "glob");
@@ -6194,8 +6200,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         if (token_list[end_position].typ == tokens.tk_comma) {
             if (glob or end_position + 2 >= token_list.len or token_list[end_position + 1].typ != tokens.tk_string) return error.Syntax;
             const escape_literal = token_list[end_position + 1].text;
-            if (escape_literal.len != 3 or escape_literal[0] != '\'' or escape_literal[2] != '\'' or escape_literal[1] >= 0x80) return error.Syntax;
-            escape = escape_literal[1];
+            escape = resolveAsciiEscapeLiteral(escape_literal) orelse return error.Syntax;
             end_position += 2;
         }
         if (end_position >= token_list.len or token_list[end_position].typ != tokens.tk_rp) return error.Syntax;
@@ -6366,8 +6371,8 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         var escape: i64 = 0;
         if (is_like and position.* + 1 < token_list.len and token_list[position.*].typ == tokens.tk_escape) {
             const escape_literal = token_list[position.* + 1].text;
-            if (token_list[position.* + 1].typ != tokens.tk_string or escape_literal.len != 3 or escape_literal[0] != '\'' or escape_literal[2] != '\'' or escape_literal[1] >= 0x80) return error.Syntax;
-            escape = escape_literal[1];
+            if (token_list[position.* + 1].typ != tokens.tk_string) return error.Syntax;
+            escape = resolveAsciiEscapeLiteral(escape_literal) orelse return error.Syntax;
             position.* += 2;
         }
         const operation: btree.IndexPredicateOperation = if (is_glob)

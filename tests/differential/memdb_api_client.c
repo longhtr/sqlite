@@ -967,6 +967,8 @@ int main(void){
   int partial_like_escape_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_like_escape_index ON partial_like_data(value) WHERE marker LIKE 'b!_%' ESCAPE '!'",0,0,0);
   int partial_unicode_like_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_unicode_like_index ON partial_like_data(value) WHERE marker LIKE 'é_'",0,0,0);
   int partial_quote_like_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_quote_like_index ON partial_like_data(value) WHERE marker LIKE '%''%'",0,0,0);
+  int partial_quote_escape_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_quote_escape_index ON partial_like_data(value) WHERE marker LIKE 'q''_%' ESCAPE ''''",0,0,0);
+  printf("partial-quote-escape-index\t%d\n",partial_quote_escape_index_rc);
   printf("partial-quote-like-index\t%d\n",partial_quote_like_index_rc);
   int partial_like_function_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_like_function_index ON partial_like_data(value) WHERE like('a%',marker)",0,0,0);
   int partial_not_like_function_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_like_function_index ON partial_like_data(value) WHERE NOT like('z%',marker)",0,0,0);
@@ -985,6 +987,9 @@ int main(void){
   int partial_like_escape_conflict_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(4,'b_more',7)",0,0,0);
   printf("partial-like-escape-conflict\t%d\n",partial_like_escape_conflict_rc);
   int partial_like_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(2,'Alpha',7)",0,0,0);
+  int partial_quote_escape_first_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(11,'q_value',13)",0,0,0);
+  int partial_quote_escape_conflict_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(12,'q_more',13)",0,0,0);
+  printf("partial-quote-escape-membership\t%d\t%d\n",partial_quote_escape_first_rc,partial_quote_escape_conflict_rc);
   int partial_quote_like_first_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(9,'o''clock',11)",0,0,0);
   int partial_quote_like_conflict_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(10,'x''y',11)",0,0,0);
   printf("partial-quote-like-membership\t%d\t%d\n",partial_quote_like_first_rc,partial_quote_like_conflict_rc);
