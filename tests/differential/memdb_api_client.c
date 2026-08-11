@@ -351,6 +351,17 @@ int main(void){
   int sign_expression_reindex_rc=sqlite3_exec(clone,"REINDEX sign_expression_index",0,0,0);
   int sign_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE sign_expression_data",0,0,0);
   printf("sign-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",sign_expression_table_rc,sign_expression_negative_rc,sign_expression_zero_rc,sign_expression_positive_rc,sign_expression_index_rc,typeof_expression_index_rc,sign_expression_duplicate_rc,sign_expression_update_rc,sign_expression_count_rc,(long long)sign_expression_count,sign_expression_reindex_rc,sign_expression_drop_rc);
+  int octet_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE octet_expression_data(id INTEGER PRIMARY KEY,value TEXT)",0,0,0);
+  int octet_expression_first_rc=sqlite3_exec(clone,"INSERT INTO octet_expression_data VALUES(1,'aa')",0,0,0);
+  int octet_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX octet_expression_index ON octet_expression_data(octet_length(value))",0,0,0);
+  int octet_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO octet_expression_data VALUES(2,'bb')",0,0,0);
+  int octet_expression_second_rc=sqlite3_exec(clone,"INSERT INTO octet_expression_data VALUES(2,'ccc')",0,0,0);
+  int octet_expression_update_rc=sqlite3_exec(clone,"UPDATE octet_expression_data SET value='dd' WHERE id=2",0,0,0);
+  sqlite3_int64 octet_expression_count=-1;
+  int octet_expression_count_rc=query_value(clone,"SELECT count(*) FROM octet_expression_data",&octet_expression_count);
+  int octet_expression_reindex_rc=sqlite3_exec(clone,"REINDEX octet_expression_index",0,0,0);
+  int octet_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE octet_expression_data",0,0,0);
+  printf("octet-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",octet_expression_table_rc,octet_expression_first_rc,octet_expression_index_rc,octet_expression_duplicate_rc,octet_expression_second_rc,octet_expression_update_rc,octet_expression_count_rc,(long long)octet_expression_count,octet_expression_reindex_rc,octet_expression_drop_rc);
   int ifnull_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE ifnull_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int ifnull_expression_first_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(1,NULL)",0,0,0);
   int ifnull_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX ifnull_expression_index ON ifnull_expression_data(ifnull(value,-1))",0,0,0);

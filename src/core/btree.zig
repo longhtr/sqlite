@@ -53,6 +53,7 @@ pub const IndexTransform = union(enum) {
     numeric_abs,
     numeric_sign,
     storage_type,
+    octet_length,
     numeric_not,
     integer_bit_not,
     is_null,
@@ -117,6 +118,12 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .null_ => 0,
             else => 1,
         } },
+        .octet_length => return switch (value) {
+            .null_ => .null_,
+            .text => |text| .{ .integer = @intCast(text.len) },
+            .blob => |blob| .{ .integer = @intCast(blob.len) },
+            .integer, .real => .null_,
+        },
         .storage_type => return .{ .text = switch (value) {
             .null_ => "null",
             .integer => "integer",
@@ -145,7 +152,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .real => |real| .{ .real = @abs(real) },
             .text, .blob => unreachable,
         },
-        .storage_type => unreachable,
+        .storage_type, .octet_length => unreachable,
         .numeric_sign => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = if (integer < 0) -1 else if (integer > 0) 1 else 0 },

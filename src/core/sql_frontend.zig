@@ -4610,9 +4610,9 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             scan_expression = true;
             index_transform = .{ .null_coalesce_integer = ifnull_expression.replacement };
             name = ifnull_expression.column_name;
-        } else if (schema_is_index and position + 3 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "abs") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "sign") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "typeof")) and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_rp) {
+        } else if (schema_is_index and position + 3 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "abs") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "sign") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "typeof") or std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "octet_length")) and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_rp) {
             scan_expression = true;
-            index_transform = if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "sign")) .numeric_sign else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "typeof")) .storage_type else .numeric_abs;
+            index_transform = if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "sign")) .numeric_sign else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "typeof")) .storage_type else if (std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "octet_length")) .octet_length else .numeric_abs;
             name = parsed.tokens[position + 2].text;
         } else {
             if (schema_is_index and (parsed.tokens[position].typ == tokens.tk_plus or parsed.tokens[position].typ == tokens.tk_minus or parsed.tokens[position].typ == tokens.tk_bitnot or parsed.tokens[position].typ == tokens.tk_not) and position + 1 < parsed.tokens.len and parsed.tokens[position + 1].typ == tokens.tk_id) {
@@ -9154,8 +9154,8 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             transform = .{ .null_coalesce_integer = ifnull_expression.replacement };
             column_name = ifnull_expression.column_name;
             position += ifnull_expression.consumed;
-        } else if (position + 3 < token_list.len and token_list[position].typ == tokens.tk_id and (std.ascii.eqlIgnoreCase(token_list[position].text, "abs") or std.ascii.eqlIgnoreCase(token_list[position].text, "sign") or std.ascii.eqlIgnoreCase(token_list[position].text, "typeof")) and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_rp) {
-            transform = if (std.ascii.eqlIgnoreCase(token_list[position].text, "sign")) .numeric_sign else if (std.ascii.eqlIgnoreCase(token_list[position].text, "typeof")) .storage_type else .numeric_abs;
+        } else if (position + 3 < token_list.len and token_list[position].typ == tokens.tk_id and (std.ascii.eqlIgnoreCase(token_list[position].text, "abs") or std.ascii.eqlIgnoreCase(token_list[position].text, "sign") or std.ascii.eqlIgnoreCase(token_list[position].text, "typeof") or std.ascii.eqlIgnoreCase(token_list[position].text, "octet_length")) and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_rp) {
+            transform = if (std.ascii.eqlIgnoreCase(token_list[position].text, "sign")) .numeric_sign else if (std.ascii.eqlIgnoreCase(token_list[position].text, "typeof")) .storage_type else if (std.ascii.eqlIgnoreCase(token_list[position].text, "octet_length")) .octet_length else .numeric_abs;
             column_name = token_list[position + 2].text;
             position += 4;
         } else {
@@ -9337,11 +9337,18 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             allocator.free(source);
             return .{ .result = .error_, .consumed = consumed };
         };
-        const transformed = switch (specified_transforms.items[selected_position]) {
-            .identity, .storage_type, .is_null, .is_not_null, .null_coalesce_integer => false,
+        const numeric_transform = switch (specified_transforms.items[selected_position]) {
+            .identity, .storage_type, .octet_length, .is_null, .is_not_null, .null_coalesce_integer => false,
             .numeric_negate, .numeric_abs, .numeric_sign, .numeric_not, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_compare, .integer_is, .integer_between, .integer_in => true,
         };
-        if (transformed and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
+        if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        if ((switch (specified_transforms.items[selected_position]) {
+            .octet_length => true,
+            else => false,
+        }) and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "TEXT") and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "BLOB")) {
             allocator.free(source);
             return .{ .result = .error_, .consumed = consumed };
         }
