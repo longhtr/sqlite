@@ -4546,12 +4546,16 @@ fn resolveRealInIndexExpression(token_list: []const Token, position: usize) ?Rea
     const is_not = token_list[position].typ == tokens.tk_not;
     const in_position = position + @intFromBool(is_not);
     if (in_position + 1 >= token_list.len or token_list[in_position].typ != tokens.tk_in or token_list[in_position + 1].typ != tokens.tk_lp) return null;
-    const first = resolveSignedFloatIndexOperand(token_list, in_position + 2) orelse return null;
-    const comma_position = in_position + 2 + first.consumed;
+    const first_position = in_position + 2;
+    const first_is_float = resolveSignedFloatIndexOperand(token_list, first_position) != null;
+    const first = resolveSignedNumericIndexOperand(token_list, first_position) orelse return null;
+    const comma_position = first_position + first.consumed;
     if (comma_position >= token_list.len or token_list[comma_position].typ != tokens.tk_comma) return null;
-    const second = resolveSignedFloatIndexOperand(token_list, comma_position + 1) orelse return null;
-    const close_position = comma_position + 1 + second.consumed;
-    if (close_position >= token_list.len or token_list[close_position].typ != tokens.tk_rp) return null;
+    const second_position = comma_position + 1;
+    const second_is_float = resolveSignedFloatIndexOperand(token_list, second_position) != null;
+    const second = resolveSignedNumericIndexOperand(token_list, second_position) orelse return null;
+    const close_position = second_position + second.consumed;
+    if (close_position >= token_list.len or token_list[close_position].typ != tokens.tk_rp or (!first_is_float and !second_is_float)) return null;
     return .{ .first = first.value, .second = second.value, .is_not = is_not, .consumed = close_position + 1 - position };
 }
 
@@ -4562,11 +4566,16 @@ fn resolveRealBetweenIndexExpression(token_list: []const Token, position: usize)
     const is_not = token_list[position].typ == tokens.tk_not;
     const between_position = position + @intFromBool(is_not);
     if (between_position >= token_list.len or token_list[between_position].typ != tokens.tk_between) return null;
-    const low = resolveSignedFloatIndexOperand(token_list, between_position + 1) orelse return null;
-    const and_position = between_position + 1 + low.consumed;
+    const low_position = between_position + 1;
+    const low_is_float = resolveSignedFloatIndexOperand(token_list, low_position) != null;
+    const low = resolveSignedNumericIndexOperand(token_list, low_position) orelse return null;
+    const and_position = low_position + low.consumed;
     if (and_position >= token_list.len or token_list[and_position].typ != tokens.tk_and) return null;
-    const high = resolveSignedFloatIndexOperand(token_list, and_position + 1) orelse return null;
-    return .{ .low = low.value, .high = high.value, .is_not = is_not, .consumed = and_position + 1 + high.consumed - position };
+    const high_position = and_position + 1;
+    const high_is_float = resolveSignedFloatIndexOperand(token_list, high_position) != null;
+    const high = resolveSignedNumericIndexOperand(token_list, high_position) orelse return null;
+    if (!low_is_float and !high_is_float) return null;
+    return .{ .low = low.value, .high = high.value, .is_not = is_not, .consumed = high_position + high.consumed - position };
 }
 
 const IfnullIndexExpression = struct {

@@ -706,6 +706,9 @@ int main(void){
   int float_not_between_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX float_not_between_expression_index ON float_range_expression_data(value NOT BETWEEN -1.5 AND 10.5)",0,0,0);
   int float_in_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX float_in_expression_index ON float_range_expression_data(value IN (-1.5,5.5))",0,0,0);
   int float_not_in_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX float_not_in_expression_index ON float_range_expression_data(value NOT IN (-1.5,5.5))",0,0,0);
+  int mixed_between_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX mixed_between_expression_index ON float_range_expression_data(value BETWEEN -1 AND 10.5)",0,0,0);
+  int mixed_in_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX mixed_in_expression_index ON float_range_expression_data(value IN (-1,5.5))",0,0,0);
+  printf("mixed-float-range-expression-index\t%d\t%d\n",mixed_between_expression_index_rc,mixed_in_expression_index_rc);
   int float_range_expression_second_rc=sqlite3_exec(clone,"INSERT INTO float_range_expression_data VALUES(2,6)",0,0,0);
   int float_range_expression_update_rc=sqlite3_exec(clone,"UPDATE float_range_expression_data SET value=-2 WHERE id=2",0,0,0);
   sqlite3_int64 float_range_expression_count=-1;

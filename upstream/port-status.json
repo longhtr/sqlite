@@ -94,7 +94,7 @@
     "utf_active_entities_differentially_checked": 13,
     "vdbe_opcode_coverage_warning": "A mapped case proves name-level runtime presence only, not complete SQLite semantics or fidelity.",
     "vlist_entities_differentially_checked": 0,
-    "zig_source_lines": 88243
+    "zig_source_lines": 88252
   },
   "overall_status": "incomplete-control-revalidation-and-source-port",
   "public_api": {
