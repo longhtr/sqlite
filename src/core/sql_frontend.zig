@@ -3617,7 +3617,7 @@ const ProgramAction = union(enum) {
     attach_database: struct { connection: *Connection, filename: []const u8, name: []const u8 },
     detach_database: struct { connection: *Connection, name: []const u8 },
     create: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, sql: []const u8, if_not_exists: bool },
-    create_index: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_index: usize, integer_primary_key: bool, if_not_exists: bool },
+    create_index: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_index: usize, integer_primary_key: bool, unique: bool, if_not_exists: bool },
     virtual_create: struct { connection: *Connection, schema_name: []const u8, name: []const u8, module_name: []const u8 },
     virtual_drop: struct { connection: *Connection, schema_name: []const u8, name: []const u8 },
     drop: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
@@ -4879,6 +4879,8 @@ fn tableKeyConstraintMatches(allocator: std.mem.Allocator, token_list: []const T
 /// UNIQUE/PRIMARY KEY declarations or table-level UNIQUE/PRIMARY KEY clauses.
 fn locateForeignKeyIndex(
     allocator: std.mem.Allocator,
+    database: *btree.Database,
+    parent_table_name: []const u8,
     parent_columns: []const ResolvedColumn,
     parent_tokens: []const Token,
     mappings: []const ForeignKeyMapping,
@@ -4923,8 +4925,45 @@ fn locateForeignKeyIndex(
         result[index] = resolvedColumnIndex(parent_columns, parent_name) orelse return error.ForeignKeyMismatch;
     }
     if (mappings.len == 1 and parent_columns[result[0]].unique) return result;
-    if (!try tableKeyConstraintMatches(allocator, parent_tokens, parent_columns, mappings, false)) return error.ForeignKeyMismatch;
-    return result;
+    if (try tableKeyConstraintMatches(allocator, parent_tokens, parent_columns, mappings, false)) return result;
+
+    const opened = database.openCursor(1, .table);
+    if (opened.result == .no_memory) return error.OutOfMemory;
+    if (opened.result != .ok) return error.ForeignKeyMismatch;
+    var cursor = opened.cursor.?;
+    defer cursor.deinit();
+    for (cursor.entries.items) |entry| {
+        const decoded = btree.decodeRecord(allocator, entry.payload);
+        if (decoded.result == .no_memory) return error.OutOfMemory;
+        if (decoded.result != .ok) return error.ForeignKeyMismatch;
+        var record = decoded.record.?;
+        defer record.deinit();
+        if (record.values.len < 5) continue;
+        const object_type = schemaEntryText(record.values[0]) orelse continue;
+        const indexed_table = schemaEntryText(record.values[2]) orelse continue;
+        if (!std.ascii.eqlIgnoreCase(object_type, "index") or !std.ascii.eqlIgnoreCase(indexed_table, parent_table_name)) continue;
+        const sql = schemaEntryText(record.values[4]) orelse continue;
+        const index_columns = resolveColumns(allocator, sql) catch |err| return if (err == error.OutOfMemory) error.OutOfMemory else error.ForeignKeyMismatch;
+        defer {
+            allocator.free(index_columns.columns);
+            allocator.free(index_columns.tokens);
+            allocator.free(index_columns.source);
+        }
+        if (index_columns.tokens.len <= 1 or index_columns.tokens[1].typ != tokens.tk_unique or index_columns.columns.len != mappings.len) continue;
+        var matches = true;
+        for (mappings, index_columns.columns) |mapping, index_column| {
+            const parent_name = mapping.parent_column orelse {
+                matches = false;
+                break;
+            };
+            if (!std.ascii.eqlIgnoreCase(parent_name, index_column.name)) {
+                matches = false;
+                break;
+            }
+        }
+        if (matches) return result;
+    }
+    return error.ForeignKeyMismatch;
 }
 
 const ForeignKeyLookupOutcome = struct { result: ResultCode, found: bool = false };
@@ -5179,7 +5218,7 @@ fn checkChildForeignKeyParentsMode(connection: *Connection, database: *btree.Dat
             connection.allocator.free(parent_columns.source);
         }
         const mappings = foreign_keys.keyMappings(key);
-        const parent_indices = locateForeignKeyIndex(connection.allocator, parent_columns.columns, parent_columns.tokens, mappings) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+        const parent_indices = locateForeignKeyIndex(connection.allocator, database, key.parent_table, parent_columns.columns, parent_columns.tokens, mappings) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
         defer connection.allocator.free(parent_indices);
         const same_table = std.ascii.eqlIgnoreCase(table_name, key.parent_table);
         const lookup = lookupForeignKeyParent(connection, database, key.parent_table, parent_schema.root_page, parent_columns.columns, parent_indices, values, mappings, if (same_table) rowid else null);
@@ -5379,6 +5418,7 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
             connection.allocator.free(index_columns.source);
         }
         if (index_columns.columns.len != 1) continue;
+        const unique = index_columns.tokens.len > 1 and index_columns.tokens[0].typ == tokens.tk_create and index_columns.tokens[1].typ == tokens.tk_unique;
         var column_index: ?usize = null;
         var integer_primary_key = false;
         for (table_columns.columns, 0..) |column, index| {
@@ -5402,7 +5442,7 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
             const key: btree.Value = if (integer_primary_key) .{ .integer = row.rowid } else row.values[selected];
             const payload = btree.encodeRecord(connection.allocator, &.{ key, .{ .integer = row.rowid } }) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
             defer connection.allocator.free(payload);
-            const inserted = database.insertIndex(root_page, payload);
+            const inserted = if (unique) database.insertUniqueIndex(root_page, payload, 1) else database.insertIndex(root_page, payload);
             if (inserted != .ok) return inserted;
         }
     }
@@ -5619,7 +5659,7 @@ fn processParentForeignKeys(
         for (foreign_keys.keys) |key| {
             if (!std.ascii.eqlIgnoreCase(key.parent_table, parent_table_name)) continue;
             const mappings = foreign_keys.keyMappings(key);
-            const parent_indices = locateForeignKeyIndex(connection.allocator, parent_columns, parent_tokens, mappings) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+            const parent_indices = locateForeignKeyIndex(connection.allocator, database, parent_table_name, parent_columns, parent_tokens, mappings) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
             defer connection.allocator.free(parent_indices);
             if (new_values) |new| {
                 if (!parentKeyChanged(parent_columns, parent_indices, parent_rowid, parent_new_rowid, old_values, new)) continue;
@@ -5703,7 +5743,7 @@ fn foreignKeyOldMask(connection: *Connection, database: *btree.Database, table_n
         for (keys.keys) |key| {
             if (!std.ascii.eqlIgnoreCase(key.parent_table, table_name)) continue;
             const mappings = keys.keyMappings(key);
-            const indices = locateForeignKeyIndex(connection.allocator, table_columns, table_tokens, mappings) catch |err| return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_ };
+            const indices = locateForeignKeyIndex(connection.allocator, database, table_name, table_columns, table_tokens, mappings) catch |err| return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_ };
             defer connection.allocator.free(indices);
             for (indices) |index| {
                 mask |= foreignKeyColumnMask(index);
@@ -7831,7 +7871,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                     _ = database.rollbackStatementBatch();
                 }
             }
-            const created = database.createSchemaIndex(action.name, action.table_name, action.sql, action.table_root, action.column_index, action.integer_primary_key, action.if_not_exists);
+            const created = database.createSchemaIndex(action.name, action.table_name, action.sql, action.table_root, action.column_index, action.integer_primary_key, action.unique, action.if_not_exists);
             if (created != .ok) break :blk created;
             const committed = database.commitStatementBatch();
             batch_active = false;
@@ -8244,6 +8284,10 @@ fn compileTransaction(connection: *Connection, source: [:0]u8, token_list: []con
 fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
     const allocator = connection.allocator;
     var position: usize = 1;
+    const unique = position < token_list.len and token_list[position].typ == tokens.tk_unique;
+    if (unique) {
+        position += 1;
+    }
     if (position >= token_list.len or token_list[position].typ != tokens.tk_index) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
@@ -8338,6 +8382,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             .table_root = table.root_page,
             .column_index = column_index.?,
             .integer_primary_key = integer_primary_key,
+            .unique = unique,
             .if_not_exists = if_not_exists,
         } },
         .program = .{ .instructions = instructions, .register_count = 1 },

@@ -634,7 +634,7 @@ pub const Database = struct {
     /// Bounded source `sqlite3CreateIndex()`/`sqlite3RefillIndex()` path for
     /// an ordinary single-column application-defined index. Existing table
     /// rows are encoded with their trailing rowid before schema publication.
-    pub fn createSchemaIndex(self: *Database, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_index: usize, integer_primary_key: bool, if_not_exists: bool) ResultCode {
+    pub fn createSchemaIndex(self: *Database, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_index: usize, integer_primary_key: bool, unique: bool, if_not_exists: bool) ResultCode {
         if (!self.writable) return .read_only;
         if (name.len == 0 or table_name.len == 0 or sql.len == 0) return .misuse;
         const table_opened = self.openCursor(table_root, .table);
@@ -742,7 +742,7 @@ pub const Database = struct {
         if (rc == .ok) {
             self.declared_pages = planner.next_page;
             for (index_payloads.items) |payload| {
-                rc = self.insertIndex(root_page, payload);
+                rc = if (unique) self.insertUniqueIndex(root_page, payload, 1) else self.insertIndex(root_page, payload);
                 if (rc != .ok) break;
             }
         }
@@ -1237,6 +1237,37 @@ pub const Database = struct {
         return rebuildIndex(self, root_page, cursor.entries.items);
     }
 
+    pub fn insertUniqueIndex(self: *Database, root_page: u32, payload: []const u8, key_count: usize) ResultCode {
+        const candidate_outcome = decodeRecord(self.allocator, payload);
+        if (candidate_outcome.result != .ok) return candidate_outcome.result;
+        var candidate = candidate_outcome.record.?;
+        defer candidate.deinit();
+        if (key_count == 0 or candidate.values.len <= key_count) return .corrupt;
+        for (candidate.values[0..key_count]) |value| {
+            if (value == .null_) return self.insertIndex(root_page, payload);
+        }
+        const opened = self.openCursor(root_page, .index);
+        if (opened.result != .ok) return opened.result;
+        var cursor = opened.cursor.?;
+        defer cursor.deinit();
+        for (cursor.entries.items) |entry| {
+            const existing_outcome = decodeRecord(self.allocator, entry.payload);
+            if (existing_outcome.result != .ok) return existing_outcome.result;
+            var existing = existing_outcome.record.?;
+            defer existing.deinit();
+            if (existing.values.len <= key_count) return .corrupt;
+            var matches = true;
+            for (existing.values[0..key_count], candidate.values[0..key_count]) |left, right| {
+                if (!indexValueEqual(left, right)) {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) return .constraint;
+        }
+        return self.insertIndex(root_page, payload);
+    }
+
     pub fn deleteIndex(self: *Database, root_page: u32, payload: []const u8) ResultCode {
         if (!self.writable) return .read_only;
         const opened = self.openCursor(root_page, .index);
@@ -1252,6 +1283,30 @@ pub const Database = struct {
         return .not_found;
     }
 };
+
+fn indexValueEqual(left: Value, right: Value) bool {
+    return switch (left) {
+        .null_ => right == .null_,
+        .integer => |value| switch (right) {
+            .integer => |other| value == other,
+            .real => |other| @as(f64, @floatFromInt(value)) == other,
+            else => false,
+        },
+        .real => |value| switch (right) {
+            .integer => |other| value == @as(f64, @floatFromInt(other)),
+            .real => |other| value == other,
+            else => false,
+        },
+        .text => |value| switch (right) {
+            .text => |other| std.mem.eql(u8, value, other),
+            else => false,
+        },
+        .blob => |value| switch (right) {
+            .blob => |other| std.mem.eql(u8, value, other),
+            else => false,
+        },
+    };
+}
 
 fn schemaTextEqual(value: Value, expected: []const u8) bool {
     const text = switch (value) {

@@ -283,6 +283,29 @@ int main(void){
   int attached_parent_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.parent",0,0,0);
   printf("attached\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",attach_rc,attached_deserialize_rc,attached_borrowed==attached_image,(long long)borrowed_size,sqlite3_db_readonly(attached,"aux"),attached_query_rc,(long long)attached_value,attached_insert_rc,attached_update_rc,attached_delete_rc,attached_final_query_rc,(long long)attached_final_value,attached_create_rc,attached_created_insert_rc,attached_created_query_rc,(long long)attached_created_value,attached_drop_rc,attached_fk_config_rc,attached_parent_create_rc,attached_child_create_rc,attached_parent_insert_rc,attached_child_insert_rc,attached_invalid_child_rc,attached_parent_delete_rc,attached_child_count_rc,(long long)attached_child_count,attached_child_drop_rc,attached_parent_drop_rc);
 
+  int unique_parent_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.unique_parent(id INTEGER PRIMARY KEY,code INTEGER)",0,0,0);
+  int unique_parent_index_rc=sqlite3_exec(attached,"CREATE UNIQUE INDEX aux.idx_unique_parent_code ON unique_parent(code)",0,0,0);
+  int unique_child_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.unique_child(id INTEGER PRIMARY KEY,parent_code INTEGER REFERENCES unique_parent(code) ON UPDATE CASCADE ON DELETE CASCADE)",0,0,0);
+  int unique_parent_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.unique_parent VALUES(1,7)",0,0,0);
+  int unique_parent_duplicate_rc=sqlite3_exec(attached,"INSERT INTO aux.unique_parent VALUES(2,7)",0,0,0);
+  int unique_parent_null_one_rc=sqlite3_exec(attached,"INSERT INTO aux.unique_parent VALUES(2,NULL)",0,0,0);
+  int unique_parent_null_two_rc=sqlite3_exec(attached,"INSERT INTO aux.unique_parent VALUES(3,NULL)",0,0,0);
+  int unique_parent_nine_rc=sqlite3_exec(attached,"INSERT INTO aux.unique_parent VALUES(4,9)",0,0,0);
+  int unique_child_insert_rc=sqlite3_exec(attached,"INSERT INTO aux.unique_child VALUES(1,7)",0,0,0);
+  int unique_child_invalid_rc=sqlite3_exec(attached,"INSERT INTO aux.unique_child VALUES(2,99)",0,0,0);
+  int unique_parent_update_rc=sqlite3_exec(attached,"UPDATE aux.unique_parent SET code=8 WHERE id=1",0,0,0);
+  sqlite3_int64 unique_child_value=-1,unique_child_count=-1;
+  int unique_child_query_rc=query_value(attached,"SELECT parent_code FROM aux.unique_child",&unique_child_value);
+  int unique_parent_conflict_update_rc=sqlite3_exec(attached,"UPDATE aux.unique_parent SET code=9 WHERE id=1",0,0,0);
+  sqlite3_int64 unique_parent_after_conflict=-1;
+  int unique_parent_after_conflict_rc=query_value(attached,"SELECT code FROM aux.unique_parent WHERE id=1",&unique_parent_after_conflict);
+  printf("unique-index-conflict\t%d\t%d\t%d\t%d\t%d\t%lld\n",unique_parent_null_one_rc,unique_parent_null_two_rc,unique_parent_nine_rc,unique_parent_conflict_update_rc,unique_parent_after_conflict_rc,(long long)unique_parent_after_conflict);
+  int unique_parent_delete_rc=sqlite3_exec(attached,"DELETE FROM aux.unique_parent WHERE id=1",0,0,0);
+  int unique_child_count_rc=query_value(attached,"SELECT count(*) FROM aux.unique_child",&unique_child_count);
+  int unique_child_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.unique_child",0,0,0);
+  int unique_parent_drop_rc=sqlite3_exec(attached,"DROP TABLE aux.unique_parent",0,0,0);
+  printf("attached-unique-index-fk\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\n",unique_parent_create_rc,unique_parent_index_rc,unique_child_create_rc,unique_parent_insert_rc,unique_parent_duplicate_rc,unique_child_insert_rc,unique_child_invalid_rc,unique_parent_update_rc,unique_child_query_rc,(long long)unique_child_value,unique_parent_delete_rc,unique_child_count_rc,(long long)unique_child_count,unique_child_drop_rc,unique_parent_drop_rc);
+
   int actions_parent_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_parent(id INTEGER PRIMARY KEY)",0,0,0);
   int actions_null_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_null(id INTEGER PRIMARY KEY,parent_id REFERENCES action_parent(id) ON DELETE SET NULL ON UPDATE SET NULL)",0,0,0);
   int actions_default_create_rc=sqlite3_exec(attached,"CREATE TABLE aux.action_default(id INTEGER PRIMARY KEY,parent_id DEFAULT 2 REFERENCES action_parent(id) ON DELETE SET DEFAULT ON UPDATE SET DEFAULT)",0,0,0);
