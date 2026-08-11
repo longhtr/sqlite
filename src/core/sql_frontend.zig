@@ -5556,6 +5556,8 @@ fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedCol
     while (position < token_list.len and token_list[position].typ != tokens.tk_where) : (position += 1) {}
     if (position == token_list.len) return null;
     position += 1;
+    const wrapped_predicate = position < token_list.len and token_list[position].typ == tokens.tk_lp;
+    if (wrapped_predicate) position += 1;
     const first = try resolveIndexPredicateTerm(token_list, columns, &position);
     var second: ?btree.IndexPredicateTerm = null;
     var combination: btree.IndexPredicateCombination = .and_;
@@ -5567,6 +5569,10 @@ fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedCol
         };
         position += 1;
         second = try resolveIndexPredicateTerm(token_list, columns, &position);
+    }
+    if (wrapped_predicate) {
+        if (position >= token_list.len or token_list[position].typ != tokens.tk_rp) return error.Syntax;
+        position += 1;
     }
     if (position != token_list.len) return error.Syntax;
     return .{ .first = first, .second = second, .combination = combination };
