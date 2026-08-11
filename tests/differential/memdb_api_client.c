@@ -267,8 +267,9 @@ int main(void){
   sqlite3_int64 expression_count=-1;
   int expression_count_rc=query_value(clone,"SELECT count(*) FROM expression_index_data",&expression_count);
   int expression_update_conflict_rc=sqlite3_exec(clone,"UPDATE expression_index_data SET value=20 WHERE id=2",0,0,0);
+  int expression_reindex_rc=sqlite3_exec(clone,"REINDEX EXPRESSIONS",0,0,0);
   int expression_drop_rc=sqlite3_exec(clone,"DROP TABLE expression_index_data",0,0,0);
-  printf("identity-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",expression_table_rc,expression_first_rc,expression_second_rc,expression_index_rc,expression_duplicate_rc,expression_count_rc,(long long)expression_count,expression_update_conflict_rc,expression_drop_rc);
+  printf("identity-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\n",expression_table_rc,expression_first_rc,expression_second_rc,expression_index_rc,expression_duplicate_rc,expression_count_rc,(long long)expression_count,expression_update_conflict_rc,expression_reindex_rc,expression_drop_rc);
   int partial_table_create_rc=sqlite3_exec(clone,"CREATE TABLE partial_index_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int partial_null_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(1,NULL)",0,0,0);
   int partial_value_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(2,20)",0,0,0);
@@ -368,8 +369,13 @@ int main(void){
   int custom_collation_wide_reindex_rc=sqlite3_exec(clone,"REINDEX REVERSE",0,0,0);
   int custom_collation_wide_count=-1,custom_collation_wide_first=-1,custom_collation_wide_last=-1;
   int custom_collation_wide_query_rc=query_text_initials(clone,"SELECT value FROM custom_collation_data INDEXED BY custom_collation_index",&custom_collation_wide_count,&custom_collation_wide_first,&custom_collation_wide_last);
+  reverse_direction=1;
+  int custom_collation_all_reindex_rc=sqlite3_exec(clone,"REINDEX",0,0,0);
+  int custom_collation_all_count=-1,custom_collation_all_first=-1,custom_collation_all_last=-1;
+  int custom_collation_all_query_rc=query_text_initials(clone,"SELECT value FROM custom_collation_data INDEXED BY custom_collation_index",&custom_collation_all_count,&custom_collation_all_first,&custom_collation_all_last);
+  reverse_direction=-1;
   int custom_collation_drop_rc=sqlite3_exec(clone,"DROP TABLE custom_collation_data",0,0,0);
-  printf("custom-collated-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",custom_collation_register_rc,custom_collation_table_rc,custom_collation_first_rc,custom_collation_second_rc,custom_collation_third_rc,custom_collation_index_rc,custom_collation_query_rc,custom_collation_count,custom_collation_first_initial,custom_collation_last_initial,custom_collation_insert_rc,custom_collation_after_query_rc,custom_collation_after_count,custom_collation_after_first,custom_collation_after_last,custom_collation_reindex_rc,custom_collation_reindex_query_rc,custom_collation_reindex_count,custom_collation_reindex_first,custom_collation_reindex_last,custom_collation_wide_reindex_rc,custom_collation_wide_query_rc,custom_collation_wide_count,custom_collation_wide_first,custom_collation_wide_last,custom_collation_drop_rc);
+  printf("custom-collated-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",custom_collation_register_rc,custom_collation_table_rc,custom_collation_first_rc,custom_collation_second_rc,custom_collation_third_rc,custom_collation_index_rc,custom_collation_query_rc,custom_collation_count,custom_collation_first_initial,custom_collation_last_initial,custom_collation_insert_rc,custom_collation_after_query_rc,custom_collation_after_count,custom_collation_after_first,custom_collation_after_last,custom_collation_reindex_rc,custom_collation_reindex_query_rc,custom_collation_reindex_count,custom_collation_reindex_first,custom_collation_reindex_last,custom_collation_wide_reindex_rc,custom_collation_wide_query_rc,custom_collation_wide_count,custom_collation_wide_first,custom_collation_wide_last,custom_collation_all_reindex_rc,custom_collation_all_query_rc,custom_collation_all_count,custom_collation_all_first,custom_collation_all_last,custom_collation_drop_rc);
   int needed_collation_register_rc=sqlite3_collation_needed(clone,0,needed_collation);
   int needed_collation_table_rc=sqlite3_exec(clone,"CREATE TABLE needed_collation_data(id INTEGER PRIMARY KEY,value TEXT)",0,0,0);
   int needed_collation_first_rc=sqlite3_exec(clone,"INSERT INTO needed_collation_data VALUES(1,'a')",0,0,0);
