@@ -162,7 +162,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
         .integer_remainder => |divisor| if (divisor == 0) .null_ else switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = if (integer == std.math.minInt(i64) and divisor == -1) 0 else @rem(integer, divisor) },
-            .real => |real| .{ .real = @rem(real, @as(f64, @floatFromInt(divisor))) },
+            .real => .{ .real = @floatFromInt(@rem(integerIndexValue(numeric).?, if (divisor == -1) 1 else divisor)) },
             .text, .blob => unreachable,
         },
         .integer_bit_and => |mask| .{ .integer = (integerIndexValue(numeric) orelse return .null_) & mask },
