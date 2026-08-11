@@ -182,7 +182,7 @@
     {
       "id": "global-library-initialize-shutdown",
       "path": "upstream/atomic-units/global-library-initialize-shutdown.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "mutex-method-selection-and-lifecycle",

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-library-initialize-shutdown",
   "title": "Top-level recursive and concurrent library initialization/shutdown coordinator",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These two top-level source functions serialize initialization, support same-thread recursion, initialize mutex/malloc/pcache/OS layers in order, preserve completed layers across late failures, and shut layers down in reverse order. The production public exports now route through one Coordinator owner.",
@@ -115,7 +115,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Allocator failure, recursive init-mutex allocation failure, PCache failure, and late-hook partial-state preservation/retry are tested; per-cache allocation OOM remains outside the lifecycle unit.",
