@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "id": "vdbe-index-record-rowid-extraction",
-  "title": "VDBE index-record rowid extraction",
+  "title": "VDBE index-record rowid extraction and prefix comparison",
   "status": "source-context-reviewed",
   "admission_ready": true,
   "scope": {
-    "rationale": "sqlite3VdbeIdxRowid validates an untrusted encoded index record, requires the final serial type to be an integer, and returns the table rowid while releasing temporary payload ownership on every path.",
+    "rationale": "sqlite3VdbeIdxRowid and sqlite3VdbeIdxKeyCompare acquire untrusted encoded index records, validate/decode the final integer rowid or compare the prefix against an unpacked key, and release temporary payload ownership on every post-read path.",
     "source_files": [{"path": "src/vdbeaux.c", "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"}],
-    "source_entity_ids": ["src/vdbeaux.c::function::sqlite3VdbeIdxRowid::line-5191"],
+    "source_entity_ids": ["src/vdbeaux.c::function::sqlite3VdbeIdxRowid::line-5191", "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::line-5270"],
     "behavioral_block_ids": [
       "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::behavior::assert::line-5204-column-3::ordinal-0",
       "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::behavior::assert::line-5206-column-3::ordinal-0",
@@ -24,7 +24,14 @@
       "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::behavior::goto::line-5242-column-5::ordinal-0",
       "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::behavior::return::line-5249-column-3::ordinal-0",
       "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::behavior::label::line-5253-column-1::ordinal-0",
-      "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::behavior::return::line-5256-column-3::ordinal-0"
+      "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::behavior::return::line-5256-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::behavior::assert::line-5281-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::behavior::assert::line-5283-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::behavior::if::line-5287-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::behavior::return::line-5289-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::behavior::if::line-5293-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::behavior::return::line-5294-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::behavior::return::line-5298-column-3::ordinal-0"
     ],
     "excluded_responsibilities": ["Btree cursor payload acquisition", "Index-prefix comparison", "VDBE IdxRowid opcode execution"]
   },
@@ -45,6 +52,10 @@
     "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::line-5191",
     "relation": "candidate-slice-record-rowid-validation",
     "zig_declaration_ids": ["src/core/internal/record_compare.zig::function::indexRowid"]
+  }, {
+    "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::line-5270",
+    "relation": "candidate-slice-index-prefix-comparison",
+    "zig_declaration_ids": ["src/core/internal/record_compare.zig::function::indexKeyCompare"]
   }],
   "representation_differences": ["The current Zig candidate receives a bounded encoded-record slice after payload acquisition and therefore does not yet own source temporary-Mem allocation or cursor errors.", "It validates all fields through a record cursor rather than reading the final header serial varint directly."],
   "oracle": {
@@ -72,10 +83,10 @@
   "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires source translation, payload/cursor trace, integration assurance, and independent review."},
   "known_blockers": ["Retain exact Btree payload error and temporary Mem cleanup behavior.", "Run pinned-C malformed and integer-serial differential.", "Decide direct-final-field versus full-slice traversal only from evidence.", "Independent fidelity review remains open."],
   "context_review": {
-    "implementation_spans": ["upstream/sqlite/src/vdbeaux.c:5179-5260 was reviewed completely for cursor assumptions, payload acquisition, header and serial validation, integer decode, cleanup label, and returns", "src/core/internal/record_compare.zig indexRowid/Cursor and src/core/vdbe.zig opcode caller were reviewed as the current bounded candidate"],
+    "implementation_spans": ["upstream/sqlite/src/vdbeaux.c:5179-5300 was reviewed completely for cursor assumptions, payload acquisition, header and serial validation, integer decode, unpacked-prefix comparison, cleanup, and returns", "src/core/internal/record_compare.zig indexRowid/Cursor and src/core/vdbe.zig opcode caller were reviewed as the current bounded candidate"],
     "callers": ["OP_IdxRowid execution reads the table rowid from the current index entry", "Current Zig Vm opcode passes an encoded payload slice"],
     "callees": ["Btree payload size and MemFromBtree acquire the source record", "bounded varint/header logic and sqlite3VdbeSerialGet decode the final integer", "releaseMalloc cleans temporary payload ownership"],
-    "assertions_branches_cleanup": ["All 16 active behavior IDs cover cursor/payload assumptions, payload errors, header bounds, integer serial whitelist, payload fit, success, cleanup label, and corruption", "Rowid is published only after complete validation", "Temporary payload ownership is released on success and all post-read corruption paths"],
+    "assertions_branches_cleanup": ["All 23 active behavior IDs cover cursor/payload assumptions, invalid payload sizes, payload errors, header bounds, integer serial whitelist, payload fit, prefix comparison, success, cleanup label, and corruption", "Rowid is published only after complete validation", "Temporary payload ownership is released on success and all post-read corruption paths"],
     "upstream_tests": ["Upstream index, corrupt, rowid, VDBE, payload, OOM, and cursor tests cover the source owner", "Project btree/VDBE tests exercise the slice candidate but do not yet constitute an exact source trace"]
   },
   "evidence_receipts": []
