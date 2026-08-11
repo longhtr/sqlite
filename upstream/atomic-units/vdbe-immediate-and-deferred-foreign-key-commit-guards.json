@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-immediate-and-deferred-foreign-key-commit-guards",
   "title": "VDBE immediate and deferred foreign-key commit guards",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These guards convert outstanding immediate or connection-deferred foreign-key counts into the exact VDBE constraint state, abort policy, fixed error message, and prepare-mode-dependent return code used by halt/commit.",
@@ -100,7 +100,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Deterministic no-lookaside message-allocation failure preserves rc/action/return while publishing null and sticky OOM.",
     "io_crash_concurrency": "No I/O/callback; caller mutex remains integration obligation.",
@@ -154,5 +154,14 @@
       "Project builder differential seeds prior state and compares zero no-mutation, count selection, rc/action, generic/extended result, message replacement, and deterministic message OOM",
       "Halt-path and counter-producer integration remain explicit blockers rather than credited behavior"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "ce48a27b24f8a45187854ba6b1c98490fb4b7caf9c3588222d53fa18798ece7c",
+      "zig_scope_sha256": "e72f4560eb18d8934a252ae09760da2db8e406c89cec2a5e50a600fec151e872"
+    }
+  ]
 }

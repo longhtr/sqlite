@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-p4-attachment-dispatch-and-object-destruction",
   "title": "VDBE P4 attachment, dispatch, operation-array, and object destruction",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These seven coupled routines own the complete active-profile P4 attach/replace/release path and recursively retire operation arrays, subprograms, and VDBE objects. Keeping them together closes every owner transition from attachment through statement deletion.",
@@ -205,7 +205,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Differential cases force ChangeP4 and AppendP4 OOM and verify incoming dynamic owners are consumed while operation state remains unused; all cleanup runs under connection ownership.",
     "io_crash_concurrency": "No direct I/O; VTable callback behavior is covered by its dependency unit and production mutex sequencing remains integration work.",
@@ -263,5 +263,21 @@
       "Project builder differential attaches/replaces static/int/copied/dynamic/VTable values, forces Change/Append OOM, compares callback/ref effects, reverse releases, recursive subprogram cleanup, linked deletion and free-list membership",
       "Internal layout and dependency differentials validate every typed owner; halt/reset sequencing and production compiler switch remain blockers"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "51ac68fafb72ea5acaa0c4bc730cb7aa50aa5afaafd4de02c68707b04d78ecbd",
+      "zig_scope_sha256": "19ab323dd856b76c1aeeff30dada9b7edb1168da265d55034709a1c35c8a4c5f"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "51ac68fafb72ea5acaa0c4bc730cb7aa50aa5afaafd4de02c68707b04d78ecbd",
+      "zig_scope_sha256": "19ab323dd856b76c1aeeff30dada9b7edb1168da265d55034709a1c35c8a4c5f"
+    }
+  ]
 }

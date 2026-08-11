@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "memdb-file-storage-locking-and-mapping",
   "title": "Memdb shared/private storage, file methods, locking, and mapping",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These active memdb.c methods own shared-versus-private store creation and last-close destruction, contiguous doubled-capacity byte I/O, rollback-only truncation/sync, reader/writer locks, fetch behavior, file controls, ABI method tails, access, and pathname handling. The dedicated native memdb owner now follows these target-profile traces. The source MemStore/MemFile/MemFS representations, method tables, selected mutex helpers, delegated VFS services, and memdb identity predicate are also assigned here.",
@@ -602,7 +602,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Exact growth allocation failure returns IOERR_NOMEM without mutation; open/store/handle rollback passes. Configured dynamic FAST mutex allocation failure returns NOMEM before registry publication, frees partial state, and permits continuation.",
     "io_crash_concurrency": "No disk/crash semantics. Registry plus per-store serialization passes eight-thread shared open, concurrent precise growth, byte integrity, lock, close and last-reference coverage.",
@@ -612,7 +612,8 @@
     "commands": [
       "zig test src/core/vfs.zig -lc",
       "zig test src/core/global.zig -lc",
-      "zig build test -j2"
+      "zig build test -j2",
+      "zig build infrastructure-differential"
     ]
   },
   "integration": {
@@ -662,5 +663,14 @@
       "Focused native tests cover exact doubled capacity, FULL and allocator OOM continuation, process-manager VFSNAME ownership, and eight-thread shared open/growth/content/close serialization",
       "The 38-field C/Zig storage differential covers 24 operation orderings and normalizes only allocation addresses/VFSNAME pointer spelling; the dependent public-API differential additionally verifies that deserialized READONLY storage rejects the write-lock upgrade with READONLY while remaining a writable-open B-tree"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "31faa3ba8ba7ea138ba91e9fe8dd793cd24176bb93d9e73f67bc109ae1d1b90b",
+      "zig_scope_sha256": "51912bc6115e0804b95f0cee6a032719345da7c94933a4f3c7e08f5766c83c75"
+    }
+  ]
 }

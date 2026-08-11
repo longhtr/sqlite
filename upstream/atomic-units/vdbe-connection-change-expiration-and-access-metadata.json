@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-connection-change-expiration-and-access-metadata",
   "title": "VDBE connection changes, statement expiration, and metadata access",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These source helpers are the small connection/statement metadata boundary: publish connection changes, opt a statement into change counting, expire all linked statements with immediate/advisory strength, expose db/preparation flags, and reset the step result. They operate on the same exact linked Vdbe state.",
@@ -118,7 +118,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No allocation or OOM behavior.",
     "io_crash_concurrency": "No I/O/callback; mutex remains caller obligation.",
@@ -173,5 +173,21 @@
       "Project builder differential uses a two-node list and compares counters, change bit, both expiration strengths, owner/flags access, and interrupt-to-OK reset",
       "Public/reset/reprepare production integration remains a separate gate"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "a840fe469152e279c057fdecead575faf7988d4936f31fb7ca6e29df80872d76",
+      "zig_scope_sha256": "b21783cc46ae8f8af64e06cd2f6f4199b0c943d276d69adb2091538079539b7f"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "a840fe469152e279c057fdecead575faf7988d4936f31fb7ca6e29df80872d76",
+      "zig_scope_sha256": "b21783cc46ae8f8af64e06cd2f6f4199b0c943d276d69adb2091538079539b7f"
+    }
+  ]
 }

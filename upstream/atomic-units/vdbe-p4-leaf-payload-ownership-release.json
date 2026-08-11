@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-p4-leaf-payload-ownership-release",
   "title": "VDBE P4 ephemeral-function, Mem, and function-context leaf release",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These three source helpers are the leaf destructors used by freeP4 for P4_FUNCDEF, P4_MEM, and P4_FUNCCTX. Their owned fields and SQLITE_FUNC_EPHEM flag completely determine whether nested allocations and functions are consumed.",
@@ -141,7 +141,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No allocation. Every assigned nested and outer owner is observed returned exactly once.",
     "io_crash_concurrency": "No I/O/callback; caller mutex remains integration obligation.",
@@ -196,5 +196,21 @@
       "Project vdbe-builder differential allocates static/ephemeral FuncDef, Context, and Mem owners and observes exact lookaside free-list membership for retained/consumed owners",
       "Internal VDBE layout tests verify field widths/offsets; top-level P4 dispatch promotion remains separate"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "13e12e64cbe7a00b52f53fb0544ca9db7c7d9f223ee53b87fc3cb276d5aae0dc",
+      "zig_scope_sha256": "2f17756b74ba8613aa9f51011210e781f301ed3239c3ee51c4904139c0a70d3e"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "13e12e64cbe7a00b52f53fb0544ca9db7c7d9f223ee53b87fc3cb276d5aae0dc",
+      "zig_scope_sha256": "2f17756b74ba8613aa9f51011210e781f301ed3239c3ee51c4904139c0a70d3e"
+    }
+  ]
 }

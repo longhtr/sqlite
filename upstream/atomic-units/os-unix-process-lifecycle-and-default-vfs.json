@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "os-unix-process-lifecycle-and-default-vfs",
   "title": "Unix OS lifecycle, default Unix VFS, and memdb VFS registration",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These functions are the active OS layer called by sqlite3_initialize: wrapper dispatch, the four-variant Linux Unix VFS table, shutdown, and memdb registration. Production owns concrete Unix locking-mode and memory adapters in one shared ABI registry.",
@@ -130,7 +130,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Lifecycle registration uses process-static owners and is allocation-free. Per-open Unix/memdb ownership failures have native cleanup coverage.",
     "io_crash_concurrency": "Lifecycle performs no I/O. Posix has OFD cross-process and process-death evidence; no-lock, dotfile, and exclusive modes have method-tail and contention tests. Memdb source concurrency remains open.",
@@ -141,7 +141,8 @@
       "zig test src/core/global.zig -lc",
       "zig test src/core/unix_vfs.zig -lc",
       "zig build infrastructure-differential",
-      "zig build test -j2"
+      "zig build test -j2",
+      "zig build unix-vfs-test -j2"
     ]
   },
   "integration": {
@@ -188,5 +189,21 @@
       "upstream/sqlite/test/vfs.test, vfs1.test, unixexcl.test, lock tests, and memdb tests observe registration/default and selected locking behavior",
       "Project global/unix VFS tests exercise variant table, no-lock/dotfile/exclusive semantics, OFD contention/death, registry continuation, and memdb lookup; exact registry differential remains a blocker"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "4122e4c17c4ea3300378ddd50891481f3d053a80bd577548dbdd561e975b8fb0",
+      "zig_scope_sha256": "060bd6e3fb0bae85dd3b47c481c6747ed5572bd4367aee6f0ef0d614321d93a3"
+    },
+    {
+      "command": "zig build unix-vfs-test -j2",
+      "result_owner": "upstream/evidence/unix-vfs-test.txt",
+      "result_sha256": "e912047d02d1a2919da50ce1157ea065661e7e03096f9266c0d99aefbd14b847",
+      "source_scope_sha256": "4122e4c17c4ea3300378ddd50891481f3d053a80bd577548dbdd561e975b8fb0",
+      "zig_scope_sha256": "060bd6e3fb0bae85dd3b47c481c6747ed5572bd4367aee6f0ef0d614321d93a3"
+    }
+  ]
 }

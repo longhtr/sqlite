@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-make-ready-bulk-allocation-and-rewind",
   "title": "VDBE MakeReady bulk allocation, Parse transfer, and rewind",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "MakeReady is the one-way packaging boundary from Parse-owned builder metadata to execution-ready Vdbe arrays. ReusableSpace/allocSpace, Mem initialization, rewind, transferred VList, array/count fields, and execution defaults form one inseparable ownership unit.",
@@ -324,7 +324,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Normal tail-only packaging and forced pFree allocation failure are reached; failed packaging publishes zero executable array counts and remains destructible.",
     "io_crash_concurrency": "No I/O/callback. Production mutex and runtime cursor lifecycle remain integration obligations.",
@@ -382,5 +382,28 @@
       "Project builder worker compares 351 exact observations for tail/pFree ownership, VList transfer, arrays/counts, Mem headers, cursor zeroing, explain/journal flags, READY defaults, and forced deficit OOM",
       "Internal VDBE/Parse layout tests verify alignment, offsets, and target widths; production compiler/runtime ownership remains blocking"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "08a17c7b0366724b1cee73f6198b1c01ab85459ebb54512f52eb30c2e1c1b113",
+      "zig_scope_sha256": "6a9ef4c1922d1f302a7d4cd8f454f0fc242997a37f0bcd65b2ee6e6c17933bb9"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "08a17c7b0366724b1cee73f6198b1c01ab85459ebb54512f52eb30c2e1c1b113",
+      "zig_scope_sha256": "6a9ef4c1922d1f302a7d4cd8f454f0fc242997a37f0bcd65b2ee6e6c17933bb9"
+    },
+    {
+      "command": "zig build internal-parse-layout-test",
+      "result_owner": "upstream/evidence/internal-parse-layout-test.txt",
+      "result_sha256": "c9194a5051ee9ff623e25dbd4c085bddf49336de60a74eb03a2e35b8739014f4",
+      "source_scope_sha256": "08a17c7b0366724b1cee73f6198b1c01ab85459ebb54512f52eb30c2e1c1b113",
+      "zig_scope_sha256": "6a9ef4c1922d1f302a7d4cd8f454f0fc242997a37f0bcd65b2ee6e6c17933bb9"
+    }
+  ]
 }

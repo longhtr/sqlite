@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "connection-allocation-for-vdbe-growth",
   "title": "Connection lookaside, reallocation, and OOM state for VDBE growth",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These connection-aware malloc.c routines form the direct allocation and failure closure reached by growOpArray: size measurement, two-size lookaside allocation/free, lookaside-to-heap and heap reallocation, sticky OOM, Parse propagation, and OOM clear.",
@@ -285,7 +285,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "366-observation C/Zig trace reaches limit, one-shot, and sticky allocation failures and continuation; promotion waits for dependency admission.",
     "io_crash_concurrency": "No I/O; mutex-held behavior needs its dependency dossier.",
@@ -342,5 +342,28 @@
       "upstream/sqlite/test/malloc.test family and oomfault.test exercise one-shot/sticky failures, Parse propagation, interrupt, and continuation",
       "Project VDBE builder/memory differentials reach limit, one-shot, sticky and clear paths while native allocator tests cover free lists and measurement; receipts remain later"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-mem-differential -j1",
+      "result_owner": "upstream/evidence/vdbe-mem-differential.txt",
+      "result_sha256": "d80e2f5050dddcb811cd201fc4ec251ec69c5c370bd0f0ad44b15bb92a55d3bb",
+      "source_scope_sha256": "ac9130c38b0fb574b30bcf8a176978c4859df448b1ac8dc3ee2b428a0c3455eb",
+      "zig_scope_sha256": "6c0ca2e5c2783aa003cfae3b7ea4e65e7a242fb50e774562c9668a9640afdf9b"
+    },
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "ac9130c38b0fb574b30bcf8a176978c4859df448b1ac8dc3ee2b428a0c3455eb",
+      "zig_scope_sha256": "6c0ca2e5c2783aa003cfae3b7ea4e65e7a242fb50e774562c9668a9640afdf9b"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "ac9130c38b0fb574b30bcf8a176978c4859df448b1ac8dc3ee2b428a0c3455eb",
+      "zig_scope_sha256": "6c0ca2e5c2783aa003cfae3b7ea4e65e7a242fb50e774562c9668a9640afdf9b"
+    }
+  ]
 }

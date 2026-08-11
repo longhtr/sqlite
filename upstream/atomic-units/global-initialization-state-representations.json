@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-initialization-state-representations",
   "title": "Global initialization layer flags, progress owner, and waiter synchronization state",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These seven Sqlite3Config fields are the complete initialization-progress and per-layer state read or written by sqlite3_initialize/shutdown. Coordinator and subsystem owners now preserve partial-success state across late failures.",
@@ -122,7 +122,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Allocator/mutex failure state is represented; per-cache allocation OOM remains outside this representation unit.",
     "io_crash_concurrency": "No I/O at representation level. Eight-thread and recursive races pass; formal event proof remains pending.",
@@ -177,5 +177,14 @@
       "upstream/sqlite/test/thread001.test and thread_common.tcl provide concurrent initialization coverage",
       "Project global tests and infrastructure differential cover 100 cycles, eight-thread races, recursion, layer failures, partial shutdown, and retry; receipts remain later"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "0b2fab92d047ea7a6e20e31210bc15621c33a81f4f52b67e7a9cb725c967f9c1",
+      "zig_scope_sha256": "d0c4a207af626960e8f078e0ddd2deb8e1560a41b9051861a55d1c6b441e920a"
+    }
+  ]
 }

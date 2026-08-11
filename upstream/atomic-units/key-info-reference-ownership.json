@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "key-info-reference-ownership",
   "title": "KeyInfo reference ownership and final release",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3KeyInfoRef/Unref and the KeyInfo nRef/db owner fields are the complete intrusive reference contract used by P4_KEYINFO and unpacked records. Increment, decrement and final connection-aware free cannot be split.",
@@ -106,7 +106,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No allocation in assigned functions; final release uses previously validated connection allocator.",
     "io_crash_concurrency": "No I/O/callback; mutex integration remains caller obligation.",
@@ -161,5 +161,21 @@
       "Project builder differential compares null behavior, 1->2, 2->1, 1->0, same-pointer/owner identity and final retirement",
       "P4 and unpacked-record integration remain separate units"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "8443863c681d92affd548dacea0cbd0a5dd0824beb876cc5e69fac71c74f31c3",
+      "zig_scope_sha256": "e507a1e19a76aea68e1506a716758f2a5005d5b7a9d744ceb2266ccd5f8ea44e"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "8443863c681d92affd548dacea0cbd0a5dd0824beb876cc5e69fac71c74f31c3",
+      "zig_scope_sha256": "e507a1e19a76aea68e1506a716758f2a5005d5b7a9d744ceb2266ccd5f8ea44e"
+    }
+  ]
 }

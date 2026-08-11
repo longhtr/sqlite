@@ -1,0 +1,7 @@
+1/104 unix_vfs.test.source Unix full pathname normalizes dot components and bounds output...OK
+2/104 unix_vfs.test.active Unix locking variants select source method tails and lock behavior...OK
+3/104 unix_vfs.test.native Unix file URI short-read mmap and system-call override...OK
+4/104 unix_vfs.test.native Unix POSIX database and WAL locks contend across processes...OK
+5/104 unix_vfs.test.native Unix process death releases file locks...OK
+6/104 unix_vfs.test.native Unix VFS runs rollback and WAL pager durability paths...OK
+All 104 tests passed.

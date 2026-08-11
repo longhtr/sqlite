@@ -1,0 +1,56 @@
+internal-vdbe-layout: verified 47 active C layouts
+1/54 internal_vdbe_types_test.test.analyze all active internal VDBE declarations...OK
+2/54 internal.vdbe_types.test.active vdbe.h layout and constants...OK
+3/54 internal.vdbe_types.test.active sqlite3 connection macros...OK
+4/54 internal.vdbe_types.test.active Mem and frame macros...OK
+5/54 internal.vdbe_types.test.active VdbeCursor sizing and null predicate...OK
+6/54 internal.parse_types.test.source layout and flag accessors...OK
+7/54 hash.test.C layout matches the initial 64-bit target...OK
+8/54 hash.test.initialization and empty operations...OK
+9/54 hash.test.insert replacement lookup and removal are case insensitive...OK
+10/54 hash.test.linear list transitions to grouped buckets and preserves order...OK
+11/54 hash.test.bucket growth is capped by the SQLite malloc soft limit...OK
+12/54 hash.test.element allocation failure returns new data without mutation...OK
+13/54 hash.test.rehash allocation failure is benign and leak free...OK
+14/54 hash.test.all deterministic sticky program allocation failures are leak free...OK
+15/54 hash.test.all deterministic one-shot program allocation failures are leak free...OK
+16/54 internal.schema_types.test.active schema storage topology matches the pinned profile...OK
+17/54 internal.db_allocator.test.connection allocation uses and returns both lookaside sizes...OK
+18/54 internal.db_allocator.test.OOM state propagates through active and outer Parse owners...OK
+19/54 internal.db_allocator.test.heap fallback, duplication, measurement, and OOM state...OK
+20/54 memory.test.sqlite3_mem_methods ABI layout...OK
+21/54 memory.test.system allocator rounds, sizes, tracks, and resets highwater...OK
+22/54 memory.test.configured method table is copied and receives lifecycle calls...OK
+23/54 memory.test.zero, excessive, realloc, and hard-limit semantics...OK
+24/54 memory.test.bounded one-shot and sticky allocation faults preserve ownership...OK
+25/54 memory.test.process allocator uses the process STATIC_MEM identity...OK
+26/54 memory.test.status primitives preserve current and highwater slots...OK
+27/54 memory.test.soft-limit alarm releases the allocator mutex around releaseMemory...OK
+28/54 memory.test.allocator initialization validates static page-cache configuration...OK
+29/54 memory.test.failed backend initialization clears allocator-local state...OK
+30/54 memory.test.memory status configuration is initialization-only...OK
+31/54 mutex.test.default pthread method table preserves dynamic and static identities...OK
+32/54 mutex.test.no-op method table returns stable sentinel and successful operations...OK
+33/54 mutex.test.sqlite3_mutex_methods ABI layout...OK
+34/54 mutex.test.configured mutex method table is copied and routed...OK
+35/54 mutex.test.process static identities are stable and distinct...OK
+36/54 mutex.test.mode configuration and static identities...OK
+37/54 mutex.test.recursive entry and ownership...OK
+38/54 mutex.test.single-thread mode uses nullable no-op internal mutexes...OK
+39/54 mutex.test.dynamic mutex allocation has sticky and one-shot OOM coverage...OK
+40/54 mutex.test.contended recursive mutex serializes workers...OK
+41/54 string.test.dequote and Token optimization preserve SQLite quote rules...OK
+42/54 string.test.Expr and quoted-number views preserve flags types separators and IntValue...OK
+43/54 string.test.case-fold table changes only ASCII uppercase...OK
+44/54 string.test.null and ASCII comparison behavior...OK
+45/54 string.test.non-ASCII bytes are not case folded...OK
+46/54 string.test.bounded comparison preserves zero and negative count behavior...OK
+47/54 string.test.case-insensitive hash wraps at eight bits...OK
+48/54 string.test.30-bit lengths include nullable and non-null forms...OK
+49/54 numeric.test.hex blob allocation preserves bytes sentinel and OOM...OK
+50/54 numeric.test.signed integer formatting subset...OK
+51/54 numeric.test.signed 64-bit boundaries and status codes...OK
+52/54 numeric.test.UTF-16 integer parsing checks high bytes...OK
+53/54 numeric.test.UTF-16 parsing has no fixed utility buffer limit...OK
+54/54 numeric.test.hex and 32-bit parser peculiarities...OK
+All 54 tests passed.

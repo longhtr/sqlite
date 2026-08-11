@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-virtual-table-error-message-import",
   "title": "Virtual-table global-to-connection error-message import",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VtabImportErrmsg crosses allocator domains: it conditionally consumes sqlite3_vtab.zErrMsg from the global allocator, replaces the Vdbe connection-owned error, and clears the virtual-table owner even when duplication fails.",
@@ -74,7 +74,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Deterministic no-lookaside duplication OOM verifies null destination, sticky OOM, and unconditional source-owner consumption.",
     "io_crash_concurrency": "No I/O or callback; connection mutex remains integration obligation.",
@@ -128,5 +128,21 @@
       "Project builder differential compares replacement bytes, null no-op, owner clearing, and forced duplicate OOM with unconditional source consumption",
       "Production vtab callback integration remains blocking"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "7175116e3c3f2f1c1677e751639600093ee6533a62daf591215f1ba7fc161628",
+      "zig_scope_sha256": "8ea1ead940663f34bce2951ec90f63ebddb50153d7f7e5fa48c29c0cfea3a9b2"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "7175116e3c3f2f1c1677e751639600093ee6533a62daf591215f1ba7fc161628",
+      "zig_scope_sha256": "8ea1ead940663f34bce2951ec90f63ebddb50153d7f7e5fa48c29c0cfea3a9b2"
+    }
+  ]
 }

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-final-label-fixup-and-program-flags",
   "title": "VDBE final label fixup, reader/write flags, and virtual-table argument sizing",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "resolveP2Values is the source builder finalization scan that consumes resolved labels, patches negative jump P2 operands, computes maximum VUpdate/VFilter argument demand, derives read-only/reader flags, and releases Parse label storage. Its reverse scan and generated opcode-property coupling form one atomic unit.",
@@ -155,7 +155,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Entry requires no sticky OOM; preceding label growth OOM/continuation is covered by the same 366-observation worker.",
     "io_crash_concurrency": "No I/O or callback; caller mutex remains integration obligation.",
@@ -213,5 +213,28 @@
       "Query-only/read-only, transaction, pragma, vtab, bytecode, and OOM suites observe resulting metadata and preconditions",
       "Project builder differential emits Init/jump/Transaction/VFilter/VUpdate programs and compares targets, max args, flags, label retirement, and generated-property decisions"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "b5ce7b258998f6765e1cd28b241a3d5ff7c0839542ff2a3183b06ecefd1c7b83",
+      "zig_scope_sha256": "8112d02dc2665bd23a78512e52bdf8f960cb059c24e613e6cc9360ce0f60cb0d"
+    },
+    {
+      "command": "zig build opcodes-test",
+      "result_owner": "upstream/evidence/opcodes-test.txt",
+      "result_sha256": "6f642f1f0c8c5db7afb67f3fcfefaa2f30ad08b0e940a055cc83ad53649341ee",
+      "source_scope_sha256": "b5ce7b258998f6765e1cd28b241a3d5ff7c0839542ff2a3183b06ecefd1c7b83",
+      "zig_scope_sha256": "8112d02dc2665bd23a78512e52bdf8f960cb059c24e613e6cc9360ce0f60cb0d"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "b5ce7b258998f6765e1cd28b241a3d5ff7c0839542ff2a3183b06ecefd1c7b83",
+      "zig_scope_sha256": "8112d02dc2665bd23a78512e52bdf8f960cb059c24e613e6cc9360ce0f60cb0d"
+    }
+  ]
 }

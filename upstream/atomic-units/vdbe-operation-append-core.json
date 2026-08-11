@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-operation-append-core",
   "title": "VDBE operation-array growth and fixed-operand append core",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These eight mutually coupled vdbeaux.c routines implement the smallest operation-array append state machine: geometric growth, allocator-reported capacity, fixed P1/P2/P3 initialization, and P4_INT32 insertion.",
@@ -163,7 +163,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Native and differential traces cover initial growth-limit OOM, reached one-shot and sticky growth allocation failures, sticky persistence across machine reset, preservation of the existing operation array, and continuation after explicit fault/OOM clear.",
     "io_crash_concurrency": "No I/O; connection mutex is a caller obligation.",
@@ -224,5 +224,35 @@
       "Project vdbe_aux native tests cover operand initialization and limit failure; vdbe-builder differential compares addresses, capacities, operation bytes, reached one-shot/sticky realloc failures, preservation, mutation rejection, and continuation",
       "Opcode generation and internal layout tests validate enum range and Op/Parse/Vdbe storage dependencies; durable trace promotion remains later"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-mem-differential -j1",
+      "result_owner": "upstream/evidence/vdbe-mem-differential.txt",
+      "result_sha256": "d80e2f5050dddcb811cd201fc4ec251ec69c5c370bd0f0ad44b15bb92a55d3bb",
+      "source_scope_sha256": "f83b6829f8f960cbf94a9f8f519397879044d1abfd641cb74830965522c3cd7a",
+      "zig_scope_sha256": "e82e08b2b05438e7f6e6fb5bb474d7ddcc2e63d067421cfc1fafe97beec543a2"
+    },
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "f83b6829f8f960cbf94a9f8f519397879044d1abfd641cb74830965522c3cd7a",
+      "zig_scope_sha256": "e82e08b2b05438e7f6e6fb5bb474d7ddcc2e63d067421cfc1fafe97beec543a2"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "f83b6829f8f960cbf94a9f8f519397879044d1abfd641cb74830965522c3cd7a",
+      "zig_scope_sha256": "e82e08b2b05438e7f6e6fb5bb474d7ddcc2e63d067421cfc1fafe97beec543a2"
+    },
+    {
+      "command": "zig build opcodes-test",
+      "result_owner": "upstream/evidence/opcodes-test.txt",
+      "result_sha256": "6f642f1f0c8c5db7afb67f3fcfefaa2f30ad08b0e940a055cc83ad53649341ee",
+      "source_scope_sha256": "f83b6829f8f960cbf94a9f8f519397879044d1abfd641cb74830965522c3cd7a",
+      "zig_scope_sha256": "e82e08b2b05438e7f6e6fb5bb474d7ddcc2e63d067421cfc1fafe97beec543a2"
+    }
+  ]
 }

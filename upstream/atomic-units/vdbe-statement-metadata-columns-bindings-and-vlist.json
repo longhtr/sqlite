@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-statement-metadata-columns-bindings-and-vlist",
   "title": "VDBE statement metadata, result columns, bindings, and variable lists",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These 37 coupled active-profile routines form the allocation-aware prepared-statement observation and binding layer: API safety, result-column access, VList variable identity, binding transfer/clear, statement metadata, counters, and API-exit OOM conversion.",
@@ -479,7 +479,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "The neutral VList case forces heap realloc OOM and proves old-list continuation. Existing Mem and P4 dependencies cover conversion/allocation ownership; APIEXIT proves sticky OOM normalization.",
     "io_crash_concurrency": "No direct I/O or crash boundary. Connection mutex entry/leave is preserved; broader concurrent statement use remains integration assurance.",
@@ -539,5 +539,21 @@
       "Project source-layout worker compares 373 observations across values/encodings/bytes/types/RANGE, VList OOM retention, binding move/clear/expiration, list/status/SQL/safety/MEMUSED and API-exit OOM",
       "VDBE Mem/builder differentials and layout tests validate conversion, allocator, object-destruction and field dependencies; public owner switch waits for step/reset/finalize and bind setters"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential -j1",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "41cfa0c54231443687179876dd10a0bf17119dd4bb9fc5cfb5954ec2a0fb9e2a",
+      "zig_scope_sha256": "ad2b9a6c3dadfea360fab68c7bd9ed760fb437932e33372a42c8283ab80cef2a"
+    },
+    {
+      "command": "zig build vdbe-mem-differential -j1",
+      "result_owner": "upstream/evidence/vdbe-mem-differential.txt",
+      "result_sha256": "d80e2f5050dddcb811cd201fc4ec251ec69c5c370bd0f0ad44b15bb92a55d3bb",
+      "source_scope_sha256": "41cfa0c54231443687179876dd10a0bf17119dd4bb9fc5cfb5954ec2a0fb9e2a",
+      "zig_scope_sha256": "ad2b9a6c3dadfea360fab68c7bd9ed760fb437932e33372a42c8283ab80cef2a"
+    }
+  ]
 }

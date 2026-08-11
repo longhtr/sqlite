@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-label-resolution-progress-and-reuse",
   "title": "VDBE label resolution, progress checks, and reusable-program marker",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These active source functions and state fields form the dependency-closed label state machine used by the VDBE builder: negative label issuance, geometric label-array growth, resolve-to-next-op, hundred-label progress checks, interrupt/callback propagation, and Expire/Noop reusable marking. They extend the admitted fixed-operand append core and share its connection allocation/OOM closure.",
@@ -218,7 +218,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "The 366-observation builder trace reaches label realloc failure, verifies realloc-or-free ownership loss and sticky OOM, then resumes after clear.",
     "io_crash_concurrency": "No I/O. Atomic interrupt ordering and callback invocation are traced; caller mutex ownership remains an integration obligation.",
@@ -276,5 +276,28 @@
       "Broad expression/planner/mutation suites exercise forward labels and final fixup; pragma tests exercise reusable statement behavior",
       "Project builder differential observes negative labels, capacities, hundred-boundary callback/interrupt state, realloc-or-free OOM, Expire/Noop, clear, and continuation"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "31b9aefe6d5c691dfdc351ff9686dee74e57dd4baebee306c0694f48265cf00b",
+      "zig_scope_sha256": "0144b302509c6f55c485b822cf391efbc966c43f82ea72ca7cbffb47c9a1b7d3"
+    },
+    {
+      "command": "zig build vdbe-mem-differential -j1",
+      "result_owner": "upstream/evidence/vdbe-mem-differential.txt",
+      "result_sha256": "d80e2f5050dddcb811cd201fc4ec251ec69c5c370bd0f0ad44b15bb92a55d3bb",
+      "source_scope_sha256": "31b9aefe6d5c691dfdc351ff9686dee74e57dd4baebee306c0694f48265cf00b",
+      "zig_scope_sha256": "0144b302509c6f55c485b822cf391efbc966c43f82ea72ca7cbffb47c9a1b7d3"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "31b9aefe6d5c691dfdc351ff9686dee74e57dd4baebee306c0694f48265cf00b",
+      "zig_scope_sha256": "0144b302509c6f55c485b822cf391efbc966c43f82ea72ca7cbffb47c9a1b7d3"
+    }
+  ]
 }

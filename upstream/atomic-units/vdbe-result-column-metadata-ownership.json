@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-result-column-metadata-ownership",
   "title": "VDBE result-column metadata allocation and string ownership",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeSetNumCols and sqlite3VdbeSetColName own the pre-execution result-column metadata matrix. Count replacement releases prior Mem values/allocation, allocates COLNAME_N cells per column, and name assignment applies SQLite static/transient/dynamic string ownership.",
@@ -144,7 +144,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Deterministic matrix-allocation OOM and subsequent SetColName NOMEM are reached; successful replacement releases three ownership strategies.",
     "io_crash_concurrency": "No I/O; caller mutex and destructor reentrancy remain integration obligations.",
@@ -200,5 +200,28 @@
       "Project builder differential compares matrix/counts, Mem owner headers, all three string strategies, pointer identity/content, replacement cleanup, matrix OOM and sticky continuation",
       "VDBE Mem/layout tests validate destructor and representation dependencies"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "88c1c43768265fda420bcaf9458248535acb016b064c75f7b09644770cafa25d",
+      "zig_scope_sha256": "549745f12e80a882e2e3b5d411c73e1b8c78fea5566006082908fc1ea53d3b2b"
+    },
+    {
+      "command": "zig build vdbe-mem-differential",
+      "result_owner": "upstream/evidence/vdbe-mem-differential.txt",
+      "result_sha256": "d80e2f5050dddcb811cd201fc4ec251ec69c5c370bd0f0ad44b15bb92a55d3bb",
+      "source_scope_sha256": "88c1c43768265fda420bcaf9458248535acb016b064c75f7b09644770cafa25d",
+      "zig_scope_sha256": "549745f12e80a882e2e3b5d411c73e1b8c78fea5566006082908fc1ea53d3b2b"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "88c1c43768265fda420bcaf9458248535acb016b064c75f7b09644770cafa25d",
+      "zig_scope_sha256": "549745f12e80a882e2e3b5d411c73e1b8c78fea5566006082908fc1ea53d3b2b"
+    }
+  ]
 }

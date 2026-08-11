@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-subprogram-intrusive-linkage",
   "title": "VDBE trigger SubProgram intrusive linkage and presence",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeLinkSubProgram and sqlite3VdbeHasSubProgram establish and query the Vdbe-owned intrusive list used to retain transferred trigger programs until statement destruction. SubProgram/pNext and Vdbe.pProgram are the complete linkage representation.",
@@ -122,7 +122,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No allocation in assigned functions; test allocations are explicitly retired after observation.",
     "io_crash_concurrency": "No I/O/callback; caller mutex remains integration obligation.",
@@ -176,5 +176,21 @@
       "Project builder differential links two exact nodes and compares empty/nonempty, head, prior-head next and null tail identities",
       "Transferred array construction and final destruction remain explicit blockers"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "462a58705672ba2d69a5a8068d7916a6da645ad6ca91c1a32021af676604ce99",
+      "zig_scope_sha256": "38612cfaf1511a5420d7f1b505c5903fa6aed990281398afd72d328763a56e1d"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "462a58705672ba2d69a5a8068d7916a6da645ad6ca91c1a32021af676604ce99",
+      "zig_scope_sha256": "38612cfaf1511a5420d7f1b505c5903fa6aed990281398afd72d328763a56e1d"
+    }
+  ]
 }

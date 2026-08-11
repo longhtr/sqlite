@@ -7,7 +7,7 @@
     {
       "id": "btree-interface-flags-and-payload",
       "path": "upstream/atomic-units/btree-interface-flags-and-payload.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "active-profile-limit-constants",
@@ -17,127 +17,127 @@
     {
       "id": "btree-sharability-and-vdbe-usage-lock-masks",
       "path": "upstream/atomic-units/btree-sharability-and-vdbe-usage-lock-masks.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-make-ready-bulk-allocation-and-rewind",
       "path": "upstream/atomic-units/vdbe-make-ready-bulk-allocation-and-rewind.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-p4-leaf-payload-ownership-release",
       "path": "upstream/atomic-units/vdbe-p4-leaf-payload-ownership-release.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-p4-attachment-dispatch-and-object-destruction",
       "path": "upstream/atomic-units/vdbe-p4-attachment-dispatch-and-object-destruction.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-operation-access-mutation-and-jump-patching",
       "path": "upstream/atomic-units/vdbe-operation-access-mutation-and-jump-patching.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-operation-append-core",
       "path": "upstream/atomic-units/vdbe-operation-append-core.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-immediate-and-deferred-foreign-key-commit-guards",
       "path": "upstream/atomic-units/vdbe-immediate-and-deferred-foreign-key-commit-guards.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-label-resolution-progress-and-reuse",
       "path": "upstream/atomic-units/vdbe-label-resolution-progress-and-reuse.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-bound-value-copy-affinity-and-variable-mask",
       "path": "upstream/atomic-units/vdbe-bound-value-copy-affinity-and-variable-mask.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-compact-operation-list-append-and-relocation",
       "path": "upstream/atomic-units/vdbe-compact-operation-list-append-and-relocation.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-connection-change-expiration-and-access-metadata",
       "path": "upstream/atomic-units/vdbe-connection-change-expiration-and-access-metadata.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-creation-connection-linkage-and-parse-ownership",
       "path": "upstream/atomic-units/vdbe-creation-connection-linkage-and-parse-ownership.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-final-operation-array-transfer",
       "path": "upstream/atomic-units/vdbe-final-operation-array-transfer.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-final-label-fixup-and-program-flags",
       "path": "upstream/atomic-units/vdbe-final-label-fixup-and-program-flags.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-goto-and-explain-parent-stack-wrappers",
       "path": "upstream/atomic-units/vdbe-goto-and-explain-parent-stack-wrappers.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-virtual-table-error-message-import",
       "path": "upstream/atomic-units/vdbe-virtual-table-error-message-import.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "virtual-table-and-module-reference-ownership",
       "path": "upstream/atomic-units/virtual-table-and-module-reference-ownership.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-unpacked-record-allocation-and-decode",
       "path": "upstream/atomic-units/vdbe-unpacked-record-allocation-and-decode.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-record-serial-type-length-and-value-decode",
       "path": "upstream/atomic-units/vdbe-record-serial-type-length-and-value-decode.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-result-column-metadata-ownership",
       "path": "upstream/atomic-units/vdbe-result-column-metadata-ownership.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-saved-sql-and-reprepare-bytecode-swap",
       "path": "upstream/atomic-units/vdbe-saved-sql-and-reprepare-bytecode-swap.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-subprogram-intrusive-linkage",
       "path": "upstream/atomic-units/vdbe-subprogram-intrusive-linkage.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "vdbe-builder-state-representations",
       "path": "upstream/atomic-units/vdbe-builder-state-representations.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "connection-allocation-for-vdbe-growth",
       "path": "upstream/atomic-units/connection-allocation-for-vdbe-growth.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "connection-allocation-state-representations",
       "path": "upstream/atomic-units/connection-allocation-state-representations.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "global-allocator-core-for-connection-growth",
@@ -177,12 +177,12 @@
     {
       "id": "builtin-function-hash-and-lifecycle-registration",
       "path": "upstream/atomic-units/builtin-function-hash-and-lifecycle-registration.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "global-library-initialize-shutdown",
       "path": "upstream/atomic-units/global-library-initialize-shutdown.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "mutex-method-selection-and-lifecycle",
@@ -192,7 +192,7 @@
     {
       "id": "global-initialization-state-representations",
       "path": "upstream/atomic-units/global-initialization-state-representations.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "pcache-process-lifecycle-and-static-buffer",
@@ -202,7 +202,7 @@
     {
       "id": "os-unix-process-lifecycle-and-default-vfs",
       "path": "upstream/atomic-units/os-unix-process-lifecycle-and-default-vfs.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "pcache-static-slot-allocation-and-free",
@@ -212,22 +212,22 @@
     {
       "id": "memory-journal-chunks-spill-and-lifecycle",
       "path": "upstream/atomic-units/memory-journal-chunks-spill-and-lifecycle.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "key-info-reference-ownership",
       "path": "upstream/atomic-units/key-info-reference-ownership.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "memdb-file-storage-locking-and-mapping",
       "path": "upstream/atomic-units/memdb-file-storage-locking-and-mapping.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "memdb-serialize-deserialize-store-replacement",
       "path": "upstream/atomic-units/memdb-serialize-deserialize-store-replacement.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     },
     {
       "id": "pcache-pgroup-cross-cache-lru-and-limits",
@@ -237,7 +237,7 @@
     {
       "id": "vdbe-statement-metadata-columns-bindings-and-vlist",
       "path": "upstream/atomic-units/vdbe-statement-metadata-columns-bindings-and-vlist.json",
-      "status": "source-translated"
+      "status": "internal-trace-equivalent"
     }
   ]
 }

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-goto-and-explain-parent-stack-wrappers",
   "title": "VDBE unconditional goto and EXPLAIN parent-stack wrappers",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These source-shaped code-generation wrappers preserve unconditional jump operands and the addrExplain parent chain used to nest and pop EXPLAIN QUERY PLAN nodes.",
@@ -89,7 +89,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Goto dependency coverage exercises sticky and one-shot append OOM; parent/pop allocate nothing.",
     "io_crash_concurrency": "No I/O or callbacks.",
@@ -143,5 +143,21 @@
       "upstream/sqlite/test/eqp.test and broad EXPLAIN QUERY PLAN suites exercise nested parent push/pop relationships",
       "Project builder differential compares all Goto fields/address, zero-parent no-dereference, nonzero P2, and addrExplain after pop"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "0e1faf039f34294950f04ec1120cf23daaf994c48f622b4ae067e534e96e630d",
+      "zig_scope_sha256": "00f0f153ad8e835e66d0bfc3fac629152d21efff5081c1b6c748092e1346fb07"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "0e1faf039f34294950f04ec1120cf23daaf994c48f622b4ae067e534e96e630d",
+      "zig_scope_sha256": "00f0f153ad8e835e66d0bfc3fac629152d21efff5081c1b6c748092e1346fb07"
+    }
+  ]
 }

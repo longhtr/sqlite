@@ -4,11 +4,11 @@
     "atomic_unit_dossiers_complete": true,
     "atomic_unit_state_counts": {
       "assurance-passed": 0,
-      "internal-trace-equivalent": 12,
+      "internal-trace-equivalent": 47,
       "inventoried": 0,
       "scaffolded": 0,
       "source-context-reviewed": 0,
-      "source-translated": 35,
+      "source-translated": 0,
       "subsystem-integrated": 0
     },
     "authoritative_process": "docs/ENGINEERING_PROCESS.md",
@@ -214,10 +214,9 @@
     "completion_credit": 0,
     "durable_checkpoints": 0,
     "historical_claim_classifications": {
-      "internal-trace-equivalent": 30,
+      "internal-trace-equivalent": 106,
       "legacy-candidate-target-resolved": 208,
       "legacy-candidate-unresolved": 162,
-      "source-translated": 76,
       "targeted-differential-passed": 76,
       "unmapped": 1186
     },

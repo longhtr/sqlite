@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "btree-sharability-and-vdbe-usage-lock-masks",
   "title": "Btree sharability and VDBE database-usage/shared-cache lock masks",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3BtreeSharable and sqlite3VdbeUsesBtree establish the prepared-statement database-use mask and the shared-cache lock subset. Exact Btree/BtLock layout is required because sharability is a source field rather than a delegated API property.",
@@ -221,7 +221,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No allocation and no OOM branch.",
     "io_crash_concurrency": "No I/O/callback; lock acquisition and mutex behavior remain integration work.",
@@ -277,5 +277,21 @@
       "Project builder differential packages main/TEMP/attached Btrees and compares direct sharability plus cumulative masks",
       "Internal VDBE layout probe verifies every active Btree/BtLock field; runtime lock acquisition remains blocking"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "ab3f5027ff0e5d1361708524f84e3333a24e9b8fde56adc35896b8feb3ccdfa9",
+      "zig_scope_sha256": "882b3b15e166ab490424b4f22478501fe76dace66f746320ec522937dc9ebb98"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "ab3f5027ff0e5d1361708524f84e3333a24e9b8fde56adc35896b8feb3ccdfa9",
+      "zig_scope_sha256": "882b3b15e166ab490424b4f22478501fe76dace66f746320ec522937dc9ebb98"
+    }
+  ]
 }

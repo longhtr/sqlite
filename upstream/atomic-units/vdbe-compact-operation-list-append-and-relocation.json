@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-compact-operation-list-append-and-relocation",
   "title": "VDBE compact operation-list append and jump relocation",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeAddOpList consumes the generated compact VdbeOpList representation, reserves the whole batch atomically, expands every operand, and relocates positive jump P2 values by one shared insertion base. Representation and expansion behavior form one atomic unit.",
@@ -137,7 +137,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Zero-limit growth failure is reached and compared; allocator realloc failure semantics are covered by the shared append dependency trace.",
     "io_crash_concurrency": "No I/O/callback. Production compiler mutex remains integration obligation.",
@@ -193,5 +193,28 @@
       "Project builder differential appends Integer/Goto/Noop after a prior operation and compares return identity, capacity/count, all fields, relocation, and zero-limit no-mutation failure",
       "Opcode and internal-layout tests verify generated jump properties and compact representation"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "4373aaf7811fa763d1d1020c469f3c549b40e9310cb68df980ff37195306e121",
+      "zig_scope_sha256": "acf9cebeb4c97c28dc9da3a05164fbfb2d67b76b8c3d951fe0f6cb48fc03daba"
+    },
+    {
+      "command": "zig build opcodes-test",
+      "result_owner": "upstream/evidence/opcodes-test.txt",
+      "result_sha256": "6f642f1f0c8c5db7afb67f3fcfefaa2f30ad08b0e940a055cc83ad53649341ee",
+      "source_scope_sha256": "4373aaf7811fa763d1d1020c469f3c549b40e9310cb68df980ff37195306e121",
+      "zig_scope_sha256": "acf9cebeb4c97c28dc9da3a05164fbfb2d67b76b8c3d951fe0f6cb48fc03daba"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "4373aaf7811fa763d1d1020c469f3c549b40e9310cb68df980ff37195306e121",
+      "zig_scope_sha256": "acf9cebeb4c97c28dc9da3a05164fbfb2d67b76b8c3d951fe0f6cb48fc03daba"
+    }
+  ]
 }

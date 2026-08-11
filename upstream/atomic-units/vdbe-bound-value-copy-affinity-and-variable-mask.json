@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-bound-value-copy-affinity-and-variable-mask",
   "title": "VDBE bound-value copy, affinity, and reoptimization variable mask",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeGetBoundValue and sqlite3VdbeSetVarmask are the planner/reprepare boundary for bound parameters: one returns a caller-owned affinity-applied copy while preserving the binding, and the other records parameters whose rebinding may change a query plan.",
@@ -93,7 +93,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Deterministic value-allocation OOM is reached with lookaside disabled; return is null and sticky state matches.",
     "io_crash_concurrency": "No I/O/callback; caller mutex remains integration obligation.",
@@ -148,5 +148,28 @@
       "Project builder differential packages integer/NULL values, applies affinity, sets 1/31/32 masks, forces copy OOM, and verifies source binding retention",
       "VDBE Mem differential covers copy/affinity ownership details"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "94ad6e02f68f8ab90a041f072836c2fd878ace31ac4fd19ebebd06eaaa82f482",
+      "zig_scope_sha256": "b33f20b9b4d05e5ac23d3cc7b056a65b637cc5b017ab3b8832880d65a7017c5c"
+    },
+    {
+      "command": "zig build vdbe-mem-differential",
+      "result_owner": "upstream/evidence/vdbe-mem-differential.txt",
+      "result_sha256": "d80e2f5050dddcb811cd201fc4ec251ec69c5c370bd0f0ad44b15bb92a55d3bb",
+      "source_scope_sha256": "94ad6e02f68f8ab90a041f072836c2fd878ace31ac4fd19ebebd06eaaa82f482",
+      "zig_scope_sha256": "b33f20b9b4d05e5ac23d3cc7b056a65b637cc5b017ab3b8832880d65a7017c5c"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "94ad6e02f68f8ab90a041f072836c2fd878ace31ac4fd19ebebd06eaaa82f482",
+      "zig_scope_sha256": "b33f20b9b4d05e5ac23d3cc7b056a65b637cc5b017ab3b8832880d65a7017c5c"
+    }
+  ]
 }

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-library-initialize-shutdown",
   "title": "Top-level recursive and concurrent library initialization/shutdown coordinator",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These two top-level source functions serialize initialization, support same-thread recursion, initialize mutex/malloc/pcache/OS layers in order, preserve completed layers across late failures, and shut layers down in reverse order. The production public exports now route through one Coordinator owner.",
@@ -116,7 +116,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Allocator failure, recursive init-mutex allocation failure, PCache failure, and late-hook partial-state preservation/retry are tested; per-cache allocation OOM remains outside the lifecycle unit.",
     "io_crash_concurrency": "Concurrent and recursive init are tested; PCache and scoped OS/VFS hooks are trace-equivalent with the complete active Linux Unix table.",
@@ -174,5 +174,14 @@
       "upstream/sqlite/test/thread001.test family exercises concurrent auto-initialization and connection creation",
       "Project global tests and infrastructure differential compare 100 cycles, eight-thread race, recursion, configured failures, partial state, retry, reverse shutdown, and owner identity; builtin registry integration remains blocking"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build infrastructure-differential",
+      "result_owner": "upstream/evidence/infrastructure-differential.txt",
+      "result_sha256": "5cb2ba8c161df36121274b72a933633052ca37af36e94b04491a638f0c5f9baf",
+      "source_scope_sha256": "2de265a9dea9254bc78ecad866472c2cf81d0a54a6930185a408b395942ebc63",
+      "zig_scope_sha256": "f91b240769e0b1d13c73c6fa84d71d9dc029b9f67b175fc1dd6757ecd58ac54f"
+    }
+  ]
 }

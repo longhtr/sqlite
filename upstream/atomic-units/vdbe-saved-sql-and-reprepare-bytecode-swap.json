@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-saved-sql-and-reprepare-bytecode-swap",
   "title": "VDBE saved SQL ownership and reprepare bytecode swap",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeSetSql owns the saved SQL copy and preparation metadata; sqlite3VdbeSwap exchanges a recompiled VDBE body while deliberately restoring handle list links and saved SQL identity, then propagating preparation/counter state to the persistent statement. These are one reprepare ownership boundary.",
@@ -127,7 +127,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Deterministic SQL duplicate allocation failure preserves metadata and null ownership; later cases clean all saved SQL exactly once.",
     "io_crash_concurrency": "No I/O/callback; caller mutex remains orchestration obligation.",
@@ -183,5 +183,21 @@
       "Statement status and expanded-SQL tests observe REPREPARE counters, saved SQL, binding masks, and continuation",
       "Project builder differential compares null/OOM SetSql, distinct SQL/body/list/Parse relationships, metadata/counters, REPREPARE increment, and exact cleanup ownership"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "bfc0b35d1a3d566003c0f8f119227f261fde3cbb3a5838c1e5e60809ac6c6851",
+      "zig_scope_sha256": "4b1a73463e250dafc47a8dc10ff21552688f0bce1b25ff60a3b397d5696629ba"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "bfc0b35d1a3d566003c0f8f119227f261fde3cbb3a5838c1e5e60809ac6c6851",
+      "zig_scope_sha256": "4b1a73463e250dafc47a8dc10ff21552688f0bce1b25ff60a3b397d5696629ba"
+    }
+  ]
 }

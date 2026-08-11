@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-final-operation-array-transfer",
   "title": "VDBE finalized operation-array ownership transfer",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeTakeOpArray is the unique no-copy ownership boundary that finalizes labels/metadata and detaches the operation allocation from its builder Vdbe for subprogram ownership. Its preconditions, outputs and nulling mutation are atomic.",
@@ -78,7 +78,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No allocation; source rejects sticky OOM. Preceding builder/fixup OOM paths are covered by dependency traces.",
     "io_crash_concurrency": "No I/O/callback. Production mutex and subprogram lifetime remain integration obligations.",
@@ -131,5 +131,21 @@
       "Project builder differential compares former/returned identity, null detach, nOp, resolved P2, max args, and label retirement",
       "Destination SubProgram and P4 destruction integration remain blockers"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "21980edfb98f1ce2ea4366672135b34dcd43c93ccc0d4d77a9814014eb6accbf",
+      "zig_scope_sha256": "792004753619654c88f7f3701caa9f3f21e8c53074105d71d44b0ff98b1a204f"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "21980edfb98f1ce2ea4366672135b34dcd43c93ccc0d4d77a9814014eb6accbf",
+      "zig_scope_sha256": "792004753619654c88f7f3701caa9f3f21e8c53074105d71d44b0ff98b1a204f"
+    }
+  ]
 }

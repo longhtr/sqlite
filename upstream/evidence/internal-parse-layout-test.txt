@@ -1,0 +1,28 @@
+internal-parse-layout: verified 22 active C layouts
+1/26 internal_parse_types_test.test_0...OK
+2/26 internal.parse_types.test.source layout and flag accessors...OK
+3/26 internal.schema_types.test.active schema storage topology matches the pinned profile...OK
+4/26 hash.test.C layout matches the initial 64-bit target...OK
+5/26 hash.test.initialization and empty operations...OK
+6/26 hash.test.insert replacement lookup and removal are case insensitive...OK
+7/26 hash.test.linear list transitions to grouped buckets and preserves order...OK
+8/26 hash.test.bucket growth is capped by the SQLite malloc soft limit...OK
+9/26 hash.test.element allocation failure returns new data without mutation...OK
+10/26 hash.test.rehash allocation failure is benign and leak free...OK
+11/26 hash.test.all deterministic sticky program allocation failures are leak free...OK
+12/26 hash.test.all deterministic one-shot program allocation failures are leak free...OK
+13/26 string.test.dequote and Token optimization preserve SQLite quote rules...OK
+14/26 string.test.Expr and quoted-number views preserve flags types separators and IntValue...OK
+15/26 string.test.case-fold table changes only ASCII uppercase...OK
+16/26 string.test.null and ASCII comparison behavior...OK
+17/26 string.test.non-ASCII bytes are not case folded...OK
+18/26 string.test.bounded comparison preserves zero and negative count behavior...OK
+19/26 string.test.case-insensitive hash wraps at eight bits...OK
+20/26 string.test.30-bit lengths include nullable and non-null forms...OK
+21/26 numeric.test.hex blob allocation preserves bytes sentinel and OOM...OK
+22/26 numeric.test.signed integer formatting subset...OK
+23/26 numeric.test.signed 64-bit boundaries and status codes...OK
+24/26 numeric.test.UTF-16 integer parsing checks high bytes...OK
+25/26 numeric.test.UTF-16 parsing has no fixed utility buffer limit...OK
+26/26 numeric.test.hex and 32-bit parser peculiarities...OK
+All 26 tests passed.

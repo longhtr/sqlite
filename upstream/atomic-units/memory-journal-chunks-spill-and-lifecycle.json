@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "memory-journal-chunks-spill-and-lifecycle",
   "title": "In-memory rollback-journal chunks, spill, and lifecycle",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "This unit owns the complete active memjournal.c chunk representation, sequential/header writes, cached reads, truncation, cleanup, optional atomic spill to the underlying VFS, open mode selection, identity, and size calculation. The native Journal is a direct source-shaped translation and its chunk/cursor/truncate/spill trace matches the pinned C implementation; production Pager ABI routing and complete failure assurance remain open.",
@@ -397,7 +397,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "First chunk OOM and cleanup are covered; every chunk boundary and spill-storage/open/write OOM/fault site remains open.",
     "io_crash_concurrency": "Successful real-VFS spill and readback pass. Failed-open/write restoration and crash boundaries need exact differential coverage; source unit is single-threaded.",
@@ -456,5 +456,14 @@
       "The pinned C/Zig differential compares 14 exact state/byte/VFS-event observations; all-boundary and failed-open/write/OOM expansion remains an explicit blocker",
       "Pager production selection and preallocated sqlite3_file ABI ownership remain open and are not claimed as integrated"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build memory-journal-differential",
+      "result_owner": "upstream/evidence/memory-journal-differential.txt",
+      "result_sha256": "a5361dfc65234dcab320a6452b79b0c78e2a3963f9265dc4b02e67fc82a251a0",
+      "source_scope_sha256": "8bf92ec42d1a9bc07f02896611d713d4a25b4f46c7f179bf4159cd674430e0bf",
+      "zig_scope_sha256": "918a4a3da9edd1cdd5dcb0f8a59fe8f85b5a621025559a6cf79acb6d5a84d45a"
+    }
+  ]
 }

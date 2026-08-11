@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "btree-interface-flags-and-payload",
   "title": "B-tree interface flags, opaque handles, and insertion payload",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "The active btree.h entities are representation contracts rather than function bodies: opaque handle aliases, exact BtreePayload fields, open/table/meta/hint/cursor/mutation flags, active defaults/header identity, and the non-debug seek-count expansion. The native module translates each declaration and compile-time checks payload layout against C.",
@@ -416,7 +416,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No allocation.",
     "io_crash_concurrency": "No I/O, lock, or concurrency behavior.",
@@ -474,5 +474,14 @@
       "Native focused tests verify active metadata count, DATA_VERSION, PREFORMAT and non-debug seek count; internal-vdbe-layout-test owns the broader generated ABI check",
       "No runtime differential is needed for pure constants beyond consumer execution; source-shaped insertion/cursor integration and broader target ABI validation remain explicit blockers"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "cdaba1123c98a01f08d0cadb06e80fcb7b6282d5a5b42d025dc82693c365c5ad",
+      "zig_scope_sha256": "ae0fd27026d1354210692c2a74e94e062b99f11330e03e566d5d3cc739a6a0f9"
+    }
+  ]
 }

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-unpacked-record-allocation-and-decode",
   "title": "UnpackedRecord connection allocation and record decode",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These functions allocate the contiguous UnpackedRecord/Mem workspace from the owning connection and decode a record header into bounded Mem fields using the serial-format helpers, including malformed payload nulling.",
@@ -98,7 +98,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "No-lookaside first allocation failure returns null and sets sticky OOM without partial publication.",
     "io_crash_concurrency": "No I/O/callback; connection mutex remains caller obligation.",
@@ -152,5 +152,14 @@
       "Project worker compares one-block interior offset, capacity/owner, mixed signed/text/NULL decode, no-lookaside OOM, and truncated 64-bit NULL repair",
       "Record comparison/opcode integration remains follow-on"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "a607eff96d38c5f6771203baf24c5ee96739a1eda5e04153e3303e8728ca09e6",
+      "zig_scope_sha256": "77dac97f28b06edb1f21a519e505567675859f6c11faede75b3dd9ff2dc98cc6"
+    }
+  ]
 }

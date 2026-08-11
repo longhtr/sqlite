@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-creation-connection-linkage-and-parse-ownership",
   "title": "VDBE creation, connection linkage, and Parse ownership",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeCreate atomically allocates the statement object, initializes the zero-required tail, links it at the connection head, establishes Parse ownership, and appends mandatory OP_Init. sqlite3VdbeParser is the inverse owner accessor. The intrusive-list fields have no independent behavior outside this lifecycle.",
@@ -136,7 +136,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Both Vdbe object-allocation failure and second-allocation OP_Init failure are deterministically reached and compared; cleanup returns lookaside/global storage.",
     "io_crash_concurrency": "No I/O or callback. Production mutex/cross-statement lifecycle remains integration work.",
@@ -193,5 +193,28 @@
       "Project builder differential creates one/two statements and deterministic object/Init allocation failures, comparing exact reciprocal identities, state, Init operands, and OOM continuation",
       "Internal VDBE/Parse layout tests verify offsets and pointer representations; production compiler migration remains blocking"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "a40a1832f0c067107c6f4e74eafabf2c13885dcb09cdafd75221c233e583f420",
+      "zig_scope_sha256": "2df17cb48871cdbc40b9baa5560e03873d5ea932beeb1b3881ecd5bed3ace3d6"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "a40a1832f0c067107c6f4e74eafabf2c13885dcb09cdafd75221c233e583f420",
+      "zig_scope_sha256": "2df17cb48871cdbc40b9baa5560e03873d5ea932beeb1b3881ecd5bed3ace3d6"
+    },
+    {
+      "command": "zig build internal-parse-layout-test",
+      "result_owner": "upstream/evidence/internal-parse-layout-test.txt",
+      "result_sha256": "c9194a5051ee9ff623e25dbd4c085bddf49336de60a74eb03a2e35b8739014f4",
+      "source_scope_sha256": "a40a1832f0c067107c6f4e74eafabf2c13885dcb09cdafd75221c233e583f420",
+      "zig_scope_sha256": "2df17cb48871cdbc40b9baa5560e03873d5ea932beeb1b3881ecd5bed3ace3d6"
+    }
+  ]
 }

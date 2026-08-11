@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-operation-access-mutation-and-jump-patching",
   "title": "VDBE operation access, operand mutation, and jump patching",
-  "status": "source-translated",
+  "status": "internal-trace-equivalent",
   "admission_ready": true,
   "scope": {
     "rationale": "These accessors and mutators form the source builder patching interface: current/last/addressed operation access, OOM dummy fallback, exact operand changes, typeof flagging, and jump-here/pop optimization. They share one INIT-state and dummy-continuation contract.",
@@ -175,7 +175,7 @@
   "assurance": {
     "source_context_reviewed": true,
     "source_translated": true,
-    "internal_trace_equivalent": false,
+    "internal_trace_equivalent": true,
     "subsystem_integrated": false,
     "oom": "Sticky OOM dummy retrieval with invalid address is reached; it returns exact zero fields without touching aOp.",
     "io_crash_concurrency": "No I/O/callback. Production compiler mutex remains integration obligation.",
@@ -232,5 +232,28 @@
       "OOM suites exercise dummy continuation after compiler allocation failure; bytecode/explain tests observe patched operands",
       "Project 366-observation builder differential compares real/dummy identity, all fields, typeof flag, pop/patch counts, sticky OOM, and continuation"
     ]
-  }
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "a9afc7f13808c7d7fa1eb276dafd8a3df8035918a118b1c5a9b606c0250d4359",
+      "source_scope_sha256": "26db3a40b656898fb55021a993cafa05b895b39640f09dc0a657fc8aced597f3",
+      "zig_scope_sha256": "3a36740e384ec7cf04996c7d71c83ba51ee57b29dafaeab0bd87f5b39919db78"
+    },
+    {
+      "command": "zig build opcodes-test",
+      "result_owner": "upstream/evidence/opcodes-test.txt",
+      "result_sha256": "6f642f1f0c8c5db7afb67f3fcfefaa2f30ad08b0e940a055cc83ad53649341ee",
+      "source_scope_sha256": "26db3a40b656898fb55021a993cafa05b895b39640f09dc0a657fc8aced597f3",
+      "zig_scope_sha256": "3a36740e384ec7cf04996c7d71c83ba51ee57b29dafaeab0bd87f5b39919db78"
+    },
+    {
+      "command": "zig build internal-vdbe-layout-test",
+      "result_owner": "upstream/evidence/internal-vdbe-layout-test.txt",
+      "result_sha256": "5841b03597ee2cba65749babbb0bc2cfc7be9e7114cc8571fce781039ce37f66",
+      "source_scope_sha256": "26db3a40b656898fb55021a993cafa05b895b39640f09dc0a657fc8aced597f3",
+      "zig_scope_sha256": "3a36740e384ec7cf04996c7d71c83ba51ee57b29dafaeab0bd87f5b39919db78"
+    }
+  ]
 }
