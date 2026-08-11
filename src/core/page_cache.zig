@@ -409,6 +409,20 @@ pub const Cache = struct {
         return initWithLifecycle(allocator, page_size, extra_size, purgeable, max_pages, null);
     }
 
+    /// Source `pcache1Create()`: allocate the cache owner before allocating its
+    /// initial hash table. The embedded private Group therefore shares the same
+    /// owner allocation, while unified mode borrows Lifecycle.shared_group.
+    pub fn create(allocator: std.mem.Allocator, page_size: usize, extra_size: usize, purgeable: bool, max_pages: usize, lifecycle: ?*Lifecycle) ?*Cache {
+        const result = allocator.create(Cache) catch return null;
+        result.* = initWithLifecycle(allocator, page_size, extra_size, purgeable, max_pages, lifecycle);
+        if (!result.ready()) {
+            result.deinit();
+            allocator.destroy(result);
+            return null;
+        }
+        return result;
+    }
+
     pub fn initWithLifecycle(allocator: std.mem.Allocator, page_size: usize, extra_size: usize, purgeable: bool, max_pages: usize, lifecycle: ?*Lifecycle) Cache {
         const limit = @min(max_pages, 0x7fff_0000);
         var result = Cache{
@@ -446,6 +460,12 @@ pub const Cache = struct {
             }
         }
         return result;
+    }
+
+    pub fn destroy(self: *Cache) void {
+        const allocator = self.allocator;
+        self.deinit();
+        allocator.destroy(self);
     }
 
     pub fn deinit(self: *Cache) void {
@@ -1339,6 +1359,21 @@ fn cleanStress(context: ?*anyopaque, page: *Page) Result {
     const cache: *Cache = @ptrCast(@alignCast(context.?));
     cache.makeClean(page);
     return .ok;
+}
+
+test "source-shaped cache owner precedes initial hash allocation" {
+    var owner_failure = OneShotFailAllocator.init(std.testing.allocator, 0);
+    try std.testing.expect(Cache.create(owner_failure.allocator(), 512, 16, true, 10, null) == null);
+    try std.testing.expect(owner_failure.induced_failure);
+
+    var hash_failure = OneShotFailAllocator.init(std.testing.allocator, 1);
+    try std.testing.expect(Cache.create(hash_failure.allocator(), 512, 16, true, 10, null) == null);
+    try std.testing.expect(hash_failure.induced_failure);
+
+    const cache = Cache.create(std.testing.allocator, 512, 16, true, 10, null) orelse return error.OutOfMemory;
+    try std.testing.expect(cache.ready());
+    try std.testing.expect(cache.pageGroup() == &cache.private_group);
+    cache.destroy();
 }
 
 test "source-shaped page hash initializes and treats later resize OOM as benign" {

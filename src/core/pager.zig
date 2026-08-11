@@ -132,7 +132,7 @@ pub const Pager = struct {
     filename: [:0]u8,
     journal_name: [:0]u8,
     wal_name: [:0]u8,
-    cache: page_cache.Cache,
+    cache: *page_cache.Cache,
     state: State = .open,
     page_size: u32 = default_page_size,
     reserved_bytes: u8 = 0,
@@ -245,6 +245,24 @@ pub const Pager = struct {
             return .{ .result = .cannot_open };
         }
 
+        const cache = page_cache.Cache.create(
+            allocator,
+            default_page_size,
+            options.extra_size,
+            true,
+            options.max_cached_pages,
+            page_cache.activeProcessLifecycle(),
+        ) orelse {
+            if (file.pMethods) |methods| {
+                if (methods.xClose) |close_fn| _ = close_fn(file);
+            }
+            allocator.free(file_bytes);
+            allocator.free(wal_name);
+            allocator.free(journal_name);
+            allocator.free(filename);
+            return .{ .result = .no_memory };
+        };
+
         var pager = Pager{
             .allocator = allocator,
             .abi_vfs = abi_vfs,
@@ -253,23 +271,11 @@ pub const Pager = struct {
             .filename = filename,
             .journal_name = journal_name,
             .wal_name = wal_name,
-            .cache = page_cache.Cache.initWithLifecycle(
-                allocator,
-                default_page_size,
-                options.extra_size,
-                true,
-                options.max_cached_pages,
-                page_cache.activeProcessLifecycle(),
-            ),
+            .cache = cache,
             .read_only = !options.writable,
             .wal_external_index = options.wal_external_index,
             .journal_spill_threshold = options.journal_spill_threshold,
         };
-
-        if (!pager.cache.ready()) {
-            pager.deinitAfterOpenFailure();
-            return .{ .result = .no_memory };
-        }
         const configure_rc = pager.readAndConfigureHeader();
         if (configure_rc != .ok) {
             pager.deinitAfterOpenFailure();
@@ -1354,7 +1360,7 @@ pub const Pager = struct {
         }
         self.clearTransaction();
         self.savepoints.deinit(self.allocator);
-        self.cache.deinit();
+        self.cache.destroy();
         if (self.temp_page.len != 0) self.allocator.free(self.temp_page);
         self.allocator.free(self.file_bytes);
         self.allocator.free(self.filename);
@@ -1382,7 +1388,7 @@ pub const Pager = struct {
         const rc = ResultCode.fromC(close_fn(self.file));
         self.clearTransaction();
         self.savepoints.deinit(self.allocator);
-        self.cache.deinit();
+        self.cache.destroy();
         if (self.temp_page.len != 0) self.allocator.free(self.temp_page);
         self.allocator.free(self.file_bytes);
         self.allocator.free(self.filename);
@@ -1396,7 +1402,7 @@ pub const Pager = struct {
         if (self.file.pMethods) |methods| {
             if (methods.xClose) |close_fn| _ = close_fn(self.file);
         }
-        self.cache.deinit();
+        self.cache.destroy();
         if (self.temp_page.len != 0) self.allocator.free(self.temp_page);
         self.allocator.free(self.file_bytes);
         self.allocator.free(self.filename);

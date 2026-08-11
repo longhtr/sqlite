@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "pcache-pgroup-cross-cache-lru-and-limits",
   "title": "PCache PGroup cross-cache LRU, limits, and recycling",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These source responsibilities jointly own PGroup-wide maximum/minimum/pinned/purgeable accounting, cache registration, recyclable-page LRU membership, cross-cache buffer recycling, soft-create admission, limit enforcement, shrink, and page counts. Native unified mode now shares one intrusive LRU and exact page buffer across caches. The dossier also owns the PCache1/PgHdr1/PGroup fields that directly carry these semantics; static/bulk allocation-only fields remain with their allocation unit.",
@@ -179,7 +179,6 @@
       "pthread-mutex-enter-leave-core"
     ],
     "external_source_responsibilities": [
-      "Exact PCache1/PGroup object allocation topology and create-failure publication",
       "Exact upper pcache.c dirty/stress/reference coupling"
     ],
     "caller_closure": "Production Pager caches use Cache. Unified target mode is selected only for a startup static page buffer with core mutexes disabled, matching the active profile. Separate caches retain private groups."
@@ -215,6 +214,7 @@
       "source_entity_id": "src/pcache1.c::function::pcache1Create::line-764",
       "relation": "source-pgroup-operation-to-native-cache-candidate",
       "zig_declaration_ids": [
+        "src/core/page_cache.zig::function::Cache.create",
         "src/core/page_cache.zig::function::Cache.initWithLifecycle"
       ]
     },
@@ -596,7 +596,7 @@
   "representation_differences": [
     "Source anchor PgHdr1 is represented by nullable Group head/tail pointers with Page prev/next/on-LRU fields.",
     "PCache1 apHash/nHash/nPage is represented by PageTable with nullable bucket heads, intrusive hash_next links, modulo lookup, 256-slot initial allocation, doubling, and benign later resize OOM.",
-    "Source PCache1 and private PGroup share one zeroed allocation; native Cache is embedded in Pager and allocates its initial PageTable separately, so create-allocation timing remains a promotion blocker.",
+    "Source PCache1 and private PGroup share one zeroed allocation; production Pager owns one heap Cache whose embedded private Group shares that allocation, followed by the fallible initial PageTable allocation.",
     "Source nMin is 10 per purgeable cache and unsigned mxPinned arithmetic is preserved with wrapping arithmetic.",
     "Source unified mode has no bulk-local pages; native cross-cache transfer therefore retains static/overflow allocation ownership safely."
   ],
@@ -618,10 +618,10 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
-    "oom": "Initial 256-bucket failure leaves Cache unavailable and Pager returns NOMEM; later doubling failure is benign and preserves old buckets. Full PCache1/PGroup object allocation-sequence equivalence remains open.",
+    "oom": "Cache-owner allocation failure returns null before hash allocation. Initial 256-bucket failure destroys that owner and leaves Cache unavailable so Pager returns NOMEM; later doubling failure is benign and preserves old buckets.",
     "io_crash_concurrency": "No I/O. Unified mode is selected only when core mutexes are disabled; broader configured/memory-management mutex profiles are out of selected scope.",
     "malformed_input": "Key zero, conflicting keys and invalid ownership have native guards; exact source assertions remain to be closed with the hash unit.",
     "continuation": "Cross-cache recycle, limit, shrink, pinned/dirty retention and deinit counter continuation pass.",
@@ -634,18 +634,17 @@
     ]
   },
   "integration": {
-    "production_owner": "src/core/page_cache.zig Cache and Lifecycle.shared_group",
-    "native_call_path": "Pager.open constructs production caches against activeProcessLifecycle; unified mode caches resolve Lifecycle.shared_group on fetch/release/limit/shrink.",
+    "production_owner": "src/core/page_cache.zig heap-owned Cache and Lifecycle.shared_group",
+    "native_call_path": "Pager.open calls Cache.create against activeProcessLifecycle, owns the resulting pointer, and calls Cache.destroy on every close/failure path; unified mode caches resolve Lifecycle.shared_group on fetch/release/limit/shrink.",
     "bounded_owner_retired": "Per-cache lru_stamp scans no longer own fetch-time eviction in unified or private groups; local scan remains only for explicitly local purge."
   },
   "independent_review": {
     "status": "pending",
     "reviewer": null,
     "review_commit": null,
-    "notes": "PGroup/LRU and source-shaped hash behavior are integrated. Requires exact PCache1/PGroup object allocation publication, complete upper-cache coupling traces, assurance, and independent review."
+    "notes": "PGroup/LRU, source-shaped owner/hash allocation order, and source-shaped hash behavior are integrated. Requires complete upper-cache coupling traces, assurance, and independent review."
   },
   "known_blockers": [
-    "PCache1/private-PGroup one-allocation create/failure topology differs from embedded Cache plus PageTable allocation.",
     "Complete upper pcache.c dirty/stress/reference coupling traces remain open.",
     "Independent fidelity review remains open."
   ],
@@ -673,13 +672,13 @@
       "All 97 behavior IDs cover structural/mutex invariants, hash allocation/rehash, pin/hash/LRU transitions, max enforcement, create/cachesize/shrink/count, fetch admission/recycling/allocation, unpin, rekey, truncate scan choices, and destroy",
       "Each page belongs to exactly one cache hash and purgeable counter; each eligible unpinned page belongs to exactly one group LRU; cross-cache recycle transfers the same underlying storage without free/reallocate",
       "Initial hash OOM prevents usable Cache publication; later resize OOM retains the old table; pre-transfer native capacity failure leaves victim and both caches unchanged",
-      "Pinned and dirty upper-cache pages remain unavailable to lower LRU eviction; exact PCache1 plus private-PGroup one-allocation topology and full pcache.c coupling remain explicit blockers rather than promoted claims"
+      "Production create allocates one heap Cache with its embedded private Group before the initial PageTable, and destroys that owner if hash allocation fails; full upper pcache.c coupling remains an explicit integration blocker"
     ],
     "upstream_tests": [
       "upstream pcache2.test, pcache.test, shrink.test, cache-size pragma, fault-injection, pager/WAL/rollback and memory-subsystem suites exercise counts, limits, reuse, truncation, shrink, and OOM",
       "Project tests cover initial/later hash OOM, exact 256-to-512 growth, collision order, cross-cache pointer/static-slot recycle, aggregate max/min/purgeable counts, limit victims, group shrink, deterministic LRU, truncate/rekey, pinned/dirty retention, and invariants",
       "The 787-line C/Zig PCache differential compares group counts, LRU ends, page ownership/identity, hash state, allocation class/status, results, and continuation",
-      "Pager tests establish production construction and upper-cache use, while exact object-allocation timing and complete dirty/stress/reference trace closure remain blockers"
+      "Pager and Cache.create tests establish production pointer ownership, first-versus-second allocation failure, initial-hash cleanup, and upper-cache use; complete dirty/stress/reference trace closure remains an integration blocker"
     ]
   }
 }

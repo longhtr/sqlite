@@ -1,10 +1,20 @@
 {
   "schema_version": 2,
-  "status": "idle",
+  "status": "active",
   "completion_claim": false,
   "base_checkpoint_id": null,
   "historical_claim_ledger": "upstream/historical-port-claims.json",
   "minimum_short_functions": 200,
   "minimum_substantive_functions": 50,
-  "entries": []
+  "entries": [
+    {
+      "source_entity_id": "src/pcache1.c::function::pcache1Create::line-764",
+      "source_sha256": "2b81d1302b3d912850dc21e067b8c7d508d492223d0ff12fad070f8fa8e059f9",
+      "zig_declaration_id": "src/core/page_cache.zig::function::Cache.create",
+      "zig_declaration_sha256": "b4d972aa98cde83abe31aa7273c995fb60795b4470d8404ee521676a2ad16809",
+      "atomic_unit_id": "pcache-pgroup-cross-cache-lru-and-limits",
+      "class": "substantive",
+      "complete": true
+    }
+  ]
 }

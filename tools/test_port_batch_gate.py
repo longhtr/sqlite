@@ -57,11 +57,14 @@ def main() -> None:
             check_mutation(mutated, "unknown active manifest status")
 
             mutated = copy.deepcopy(manifest)
-            mutated["entries"] = [historical["entries"][0]]
+            mutated["status"] = "idle"
+            if not mutated["entries"]:
+                mutated["entries"] = [historical["entries"][0]]
             check_mutation(mutated, "idle active manifest contains entries")
 
             mutated = copy.deepcopy(manifest)
             mutated["status"] = "active"
+            mutated["entries"] = []
             check_mutation(mutated, "active manifest contains no entries")
 
             mutated = copy.deepcopy(manifest)
@@ -100,7 +103,8 @@ def main() -> None:
 
             checkpoints_path.write_text(json.dumps(checkpoints))
             manifest_path.write_text(json.dumps(manifest))
-            expect_failure("checkpoint promotion requires an active batch", gate.require_checkpoint_ready)
+            expected = "checkpoint threshold not reached" if manifest["status"] == "active" else "checkpoint promotion requires an active batch"
+            expect_failure(expected, gate.require_checkpoint_ready)
         finally:
             gate.MANIFEST = original_manifest
             gate.HISTORICAL_CLAIMS = original_historical
