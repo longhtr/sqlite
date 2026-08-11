@@ -127,7 +127,7 @@
     {
       "id": "vdbe-builder-state-representations",
       "path": "upstream/atomic-units/vdbe-builder-state-representations.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "connection-allocation-for-vdbe-growth",

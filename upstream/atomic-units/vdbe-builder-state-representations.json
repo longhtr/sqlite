@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-builder-state-representations",
   "title": "VDBE builder operation and owner-state representations",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "The append builder requires these exact active-profile operation, P4, Vdbe, Parse, and connection state identities as one representation boundary. Only fields read or written by the fixed-operand append core are assigned.",
@@ -320,7 +320,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Not applicable to representation-only unit.",
