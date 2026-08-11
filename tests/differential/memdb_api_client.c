@@ -964,14 +964,16 @@ int main(void){
   int partial_like_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_like_data(id INTEGER PRIMARY KEY,marker TEXT,value INTEGER)",0,0,0);
   int partial_like_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_like_index ON partial_like_data(value) WHERE marker LIKE 'a%'",0,0,0);
   int partial_not_like_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_like_index ON partial_like_data(value) WHERE marker NOT LIKE '%z_'",0,0,0);
-  int partial_like_escape_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_like_escape_index ON partial_like_data(value) WHERE marker LIKE 'a!_%' ESCAPE '!'",0,0,0);
+  int partial_like_escape_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_like_escape_index ON partial_like_data(value) WHERE marker LIKE 'b!_%' ESCAPE '!'",0,0,0);
   printf("partial-like-escape-index\t%d\n",partial_like_escape_index_rc);
   int partial_glob_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_glob_index ON partial_like_data(value) WHERE marker GLOB 'A?*'",0,0,0);
   int partial_not_glob_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_glob_index ON partial_like_data(value) WHERE marker NOT GLOB '*z?'",0,0,0);
   int partial_glob_class_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_glob_class_index ON partial_like_data(value) WHERE marker GLOB '[A-C]*'",0,0,0);
   int partial_glob_invert_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_glob_invert_index ON partial_like_data(value) WHERE marker GLOB '[^z]*'",0,0,0);
   printf("partial-glob-index\t%d\t%d\t%d\t%d\n",partial_glob_index_rc,partial_not_glob_index_rc,partial_glob_class_index_rc,partial_glob_invert_index_rc);
-  int partial_like_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(1,'beta',7)",0,0,0);
+  int partial_like_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(1,'b_value',7)",0,0,0);
+  int partial_like_escape_conflict_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(4,'b_more',7)",0,0,0);
+  printf("partial-like-escape-conflict\t%d\n",partial_like_escape_conflict_rc);
   int partial_like_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(2,'Alpha',7)",0,0,0);
   int partial_like_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(3,'apple',7)",0,0,0);
   int partial_like_enter_conflict_rc=sqlite3_exec(clone,"UPDATE partial_like_data SET marker='atom' WHERE id=1",0,0,0);
