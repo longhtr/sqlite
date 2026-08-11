@@ -4809,7 +4809,10 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
                 generated_virtual = storage_position >= position or parsed.tokens[storage_position].typ == tokens.tk_virtual or !std.ascii.eqlIgnoreCase(parsed.tokens[storage_position].text, "stored");
             }
         }
-        if (schema_is_index and start + 3 == position and parsed.tokens[start + 1].typ == tokens.tk_is and parsed.tokens[start + 2].typ == tokens.tk_null) {
+        if (schema_is_index and start + 2 == position and (parsed.tokens[start + 1].typ == tokens.tk_isnull or parsed.tokens[start + 1].typ == tokens.tk_notnull)) {
+            scan_expression = true;
+            index_transform = if (parsed.tokens[start + 1].typ == tokens.tk_notnull) .is_not_null else .is_null;
+        } else if (schema_is_index and start + 3 == position and parsed.tokens[start + 1].typ == tokens.tk_is and parsed.tokens[start + 2].typ == tokens.tk_null) {
             scan_expression = true;
             index_transform = .is_null;
         } else if (schema_is_index and start + 4 == position and parsed.tokens[start + 1].typ == tokens.tk_is and parsed.tokens[start + 2].typ == tokens.tk_not and parsed.tokens[start + 3].typ == tokens.tk_null) {
@@ -9500,6 +9503,13 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             allocator.free(source);
             return .{ .result = .no_memory, .consumed = consumed };
         };
+        if ((switch (transform) {
+            .identity => true,
+            else => false,
+        }) and position < token_list.len and (token_list[position].typ == tokens.tk_isnull or token_list[position].typ == tokens.tk_notnull)) {
+            transform = if (token_list[position].typ == tokens.tk_notnull) .is_not_null else .is_null;
+            position += 1;
+        }
         if ((switch (transform) {
             .identity => true,
             else => false,
