@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-make-ready-bulk-allocation-and-rewind",
   "title": "VDBE MakeReady bulk allocation, Parse transfer, and rewind",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "MakeReady is the one-way packaging boundary from Parse-owned builder metadata to execution-ready Vdbe arrays. ReusableSpace/allocSpace, Mem initialization, rewind, transferred VList, array/count fields, and execution defaults form one inseparable ownership unit.",
@@ -323,7 +323,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Normal tail-only packaging and forced pFree allocation failure are reached; failed packaging publishes zero executable array counts and remains destructible.",

@@ -22,7 +22,7 @@
     {
       "id": "vdbe-make-ready-bulk-allocation-and-rewind",
       "path": "upstream/atomic-units/vdbe-make-ready-bulk-allocation-and-rewind.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-p4-leaf-payload-ownership-release",
