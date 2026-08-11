@@ -108,7 +108,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     };
 }
 
-pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in };
+pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, text_eq, text_ne };
 
 pub const IndexPredicateTerm = struct {
     column_index: usize,
@@ -116,6 +116,7 @@ pub const IndexPredicateTerm = struct {
     operation: IndexPredicateOperation,
     comparison_value: i64 = 0,
     comparison_value_high: i64 = 0,
+    comparison_text: []const u8 = "",
 };
 
 pub const IndexPredicateCombination = enum { and_, or_ };
@@ -126,6 +127,18 @@ pub const IndexPredicate = struct {
     combination: IndexPredicateCombination = .and_,
 };
 
+fn indexPredicateTextEquals(value: []const u8, literal: []const u8) bool {
+    if (literal.len < 2 or literal[0] != '\'' or literal[literal.len - 1] != '\'') return false;
+    var value_position: usize = 0;
+    var literal_position: usize = 1;
+    while (literal_position + 1 < literal.len) : (literal_position += 1) {
+        if (value_position >= value.len or value[value_position] != literal[literal_position]) return false;
+        value_position += 1;
+        if (literal[literal_position] == '\'' and literal_position + 1 < literal.len - 1 and literal[literal_position + 1] == '\'') literal_position += 1;
+    }
+    return value_position == value.len;
+}
+
 pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
     return switch (predicate.operation) {
         .is_null => switch (value) {
@@ -135,6 +148,14 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
         .is_not_null => switch (value) {
             .null_ => false,
             else => true,
+        },
+        .text_eq, .text_ne => {
+            const text = switch (value) {
+                .text => |text| text,
+                else => return false,
+            };
+            const matches = indexPredicateTextEquals(text, predicate.comparison_text);
+            return if (predicate.operation == .text_eq) matches else !matches;
         },
         .integer_in, .integer_not_in => {
             const matches = switch (value) {
