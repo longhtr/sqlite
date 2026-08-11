@@ -46,6 +46,8 @@ pub const IndexSortOrder = enum { ascending, descending };
 pub const IndexComparisonOperation = enum { eq, ne, lt, le, gt, ge };
 pub const IndexComparison = struct { operation: IndexComparisonOperation, value: i64 };
 pub const IndexRealComparison = struct { operation: IndexComparisonOperation, value: f64 };
+pub const IndexRealArithmeticOperation = enum { add, subtract, multiply, divide };
+pub const IndexRealArithmetic = struct { operation: IndexRealArithmeticOperation, value: f64, column_first: bool };
 pub const IndexIsComparison = struct { value: i64, is_not: bool };
 pub const IndexRealIsComparison = struct { value: f64, is_not: bool };
 pub const IndexRangeComparison = struct { low: i64, high: i64, is_not: bool };
@@ -123,6 +125,7 @@ pub const IndexTransform = union(enum) {
     integer_reverse_shift_right: i64,
     integer_compare: IndexComparison,
     real_compare: IndexRealComparison,
+    real_arithmetic: IndexRealArithmetic,
     real_is: IndexRealIsComparison,
     integer_is: IndexIsComparison,
     integer_between: IndexRangeComparison,
@@ -568,6 +571,23 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
                 else => false,
             };
             return .{ .integer = @intFromBool(if (comparison.is_not) !matches else matches) };
+        },
+        .real_arithmetic => |expression| arithmetic: {
+            const input = switch (numeric) {
+                .null_ => break :arithmetic .null_,
+                .integer => |integer| @as(f64, @floatFromInt(integer)),
+                .real => |real| real,
+                .text, .blob => unreachable,
+            };
+            const left = if (expression.column_first) input else expression.value;
+            const right = if (expression.column_first) expression.value else input;
+            if (expression.operation == .divide and right == 0) break :arithmetic .null_;
+            break :arithmetic .{ .real = switch (expression.operation) {
+                .add => left + right,
+                .subtract => left - right,
+                .multiply => left * right,
+                .divide => left / right,
+            } };
         },
         .real_compare => |comparison| switch (numeric) {
             .null_ => .null_,

@@ -4714,6 +4714,16 @@ fn resolveReversedRealIndexExpression(token_list: []const Token, position: usize
         return .{ .column_name = token_list[column_position].text, .transform = .{ .real_is = .{ .value = operand.value, .is_not = is_suffix.is_not } }, .consumed = column_position + 1 - position };
     }
     if (operation_position + 1 >= token_list.len or token_list[operation_position + 1].typ != tokens.tk_id) return null;
+    const arithmetic: ?btree.IndexRealArithmeticOperation = switch (token_list[operation_position].typ) {
+        tokens.tk_plus => .add,
+        tokens.tk_minus => .subtract,
+        tokens.tk_star => .multiply,
+        tokens.tk_slash => .divide,
+        else => null,
+    };
+    if (arithmetic) |operation| {
+        return .{ .column_name = token_list[operation_position + 1].text, .transform = .{ .real_arithmetic = .{ .operation = operation, .value = operand.value, .column_first = false } }, .consumed = operation_position + 2 - position };
+    }
     const operation: btree.IndexComparisonOperation = switch (token_list[operation_position].typ) {
         tokens.tk_eq => .eq,
         tokens.tk_ne => .ne,
@@ -4826,17 +4836,21 @@ const RealComparisonIndexExpression = struct { transform: btree.IndexTransform, 
 
 fn resolveRealComparisonIndexExpression(token_list: []const Token, position: usize) ?RealComparisonIndexExpression {
     if (position >= token_list.len) return null;
-    const operation: btree.IndexComparisonOperation = switch (token_list[position].typ) {
-        tokens.tk_eq => .eq,
-        tokens.tk_ne => .ne,
-        tokens.tk_lt => .lt,
-        tokens.tk_le => .le,
-        tokens.tk_gt => .gt,
-        tokens.tk_ge => .ge,
+    const operand = resolveSignedFloatIndexOperand(token_list, position + 1) orelse return null;
+    const transform: btree.IndexTransform = switch (token_list[position].typ) {
+        tokens.tk_eq => .{ .real_compare = .{ .operation = .eq, .value = operand.value } },
+        tokens.tk_ne => .{ .real_compare = .{ .operation = .ne, .value = operand.value } },
+        tokens.tk_lt => .{ .real_compare = .{ .operation = .lt, .value = operand.value } },
+        tokens.tk_le => .{ .real_compare = .{ .operation = .le, .value = operand.value } },
+        tokens.tk_gt => .{ .real_compare = .{ .operation = .gt, .value = operand.value } },
+        tokens.tk_ge => .{ .real_compare = .{ .operation = .ge, .value = operand.value } },
+        tokens.tk_plus => .{ .real_arithmetic = .{ .operation = .add, .value = operand.value, .column_first = true } },
+        tokens.tk_minus => .{ .real_arithmetic = .{ .operation = .subtract, .value = operand.value, .column_first = true } },
+        tokens.tk_star => .{ .real_arithmetic = .{ .operation = .multiply, .value = operand.value, .column_first = true } },
+        tokens.tk_slash => .{ .real_arithmetic = .{ .operation = .divide, .value = operand.value, .column_first = true } },
         else => return null,
     };
-    const operand = resolveSignedFloatIndexOperand(token_list, position + 1) orelse return null;
-    return .{ .transform = .{ .real_compare = .{ .operation = operation, .value = operand.value } }, .consumed = 1 + operand.consumed };
+    return .{ .transform = transform, .consumed = 1 + operand.consumed };
 }
 
 const SubstringIndexExpression = struct { column_name: []const u8, start: i64, count: ?i64, consumed: usize };
@@ -10047,7 +10061,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         };
         const numeric_transform = switch (specified_transforms.items[selected_position]) {
             .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .constant_null, .constant_integer, .null_coalesce_integer, .null_if_integer, .reverse_null_if_integer => false,
-            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .real_compare, .real_is, .integer_is, .integer_between, .real_between, .integer_in, .real_in, .scalar_min_integer, .scalar_max_integer, .unary_math, .binary_math => true,
+            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .real_compare, .real_arithmetic, .real_is, .integer_is, .integer_between, .real_between, .integer_in, .real_in, .scalar_min_integer, .scalar_max_integer, .unary_math, .binary_math => true,
         };
         if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
             allocator.free(source);
