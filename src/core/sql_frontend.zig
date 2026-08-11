@@ -7686,11 +7686,11 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             const database = action.database;
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
-            const begin = database.beginMutationBatch();
+            const begin = database.beginStatementBatch();
             if (begin != .ok) break :blk begin;
             var batch_active = true;
             defer {
-                if (batch_active) _ = database.rollbackMutationBatch();
+                if (batch_active) _ = database.rollbackStatementBatch();
             }
             const enlisted = enlistTransactionDatabase(action.connection, database);
             if (enlisted != .ok) break :blk enlisted;
@@ -7698,7 +7698,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             if (cleared != .ok) break :blk cleared;
             const dropped = database.dropSchemaTable(action.name, action.if_exists);
             if (dropped != .ok) break :blk dropped;
-            const committed = database.commitMutationBatch();
+            const committed = database.commitStatementBatch();
             batch_active = false;
             break :blk action.connection.afterWrite(committed, null, action.schema_name, action.name, 0);
         },
@@ -7735,11 +7735,11 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             if (permission != .ok) break :blk permission;
             const enlisted = enlistTransactionDatabase(action.connection, database);
             if (enlisted != .ok) break :blk enlisted;
-            const begin = database.beginMutationBatch();
+            const begin = database.beginStatementBatch();
             if (begin != .ok) break :blk begin;
             var batch_active = true;
             defer {
-                if (batch_active) _ = database.rollbackMutationBatch();
+                if (batch_active) _ = database.rollbackStatementBatch();
             }
             const values = allocator.dupe(btree.Value, record.values) catch break :blk .no_memory;
             defer allocator.free(values);
@@ -7771,7 +7771,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             }
             const rc = database.insertTable(action.root_page, new_rowid, payload, new_rowid == rowid);
             if (rc != .ok) break :blk rc;
-            const committed = database.commitMutationBatch();
+            const committed = database.commitStatementBatch();
             batch_active = false;
             if (committed == .ok) {
                 action.connection.changes = 1;
@@ -7803,11 +7803,11 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             if (permission != .ok) break :blk permission;
             const enlisted = enlistTransactionDatabase(action.connection, database);
             if (enlisted != .ok) break :blk enlisted;
-            const begin = database.beginMutationBatch();
+            const begin = database.beginStatementBatch();
             if (begin != .ok) break :blk begin;
             var batch_active = true;
             defer {
-                if (batch_active) _ = database.rollbackMutationBatch();
+                if (batch_active) _ = database.rollbackStatementBatch();
             }
             const foreign_key_result = checkForeignKeys(action.connection, database, action.schema_name, action.table_name, rowid, .{ .parent_delete = .{ .old_values = record.values } });
             if (foreign_key_result != .ok) break :blk foreign_key_result;
@@ -7819,7 +7819,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 break :blk .ok;
             }
             if (rc != .ok) break :blk rc;
-            const committed = database.commitMutationBatch();
+            const committed = database.commitStatementBatch();
             batch_active = false;
             if (committed == .ok) {
                 action.connection.changes = 1;
@@ -7857,11 +7857,11 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             if (permission != .ok) break :blk permission;
             const enlisted = enlistTransactionDatabase(action.connection, database);
             if (enlisted != .ok) break :blk enlisted;
-            const begin = database.beginMutationBatch();
+            const begin = database.beginStatementBatch();
             if (begin != .ok) break :blk begin;
             var batch_active = true;
             defer {
-                if (batch_active) _ = database.rollbackMutationBatch();
+                if (batch_active) _ = database.rollbackStatementBatch();
             }
             if (action.replace) {
                 const existing = database.openCursor(action.root_page, .table);
@@ -7890,13 +7890,13 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             defer allocator.free(payload);
             const rc = database.insertTable(action.root_page, rowid, payload, action.replace);
             if (rc == .constraint and action.conflict_ignore) {
-                const rolled_back = database.rollbackMutationBatch();
+                const rolled_back = database.rollbackStatementBatch();
                 batch_active = false;
                 action.connection.changes = 0;
                 break :blk rolled_back;
             }
             if (rc != .ok) break :blk rc;
-            const committed = database.commitMutationBatch();
+            const committed = database.commitStatementBatch();
             batch_active = false;
             if (committed == .ok) {
                 action.connection.changes = 1;
