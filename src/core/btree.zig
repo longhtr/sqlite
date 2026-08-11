@@ -49,6 +49,7 @@ pub const IndexIsComparison = struct { value: i64, is_not: bool };
 pub const IndexRangeComparison = struct { low: i64, high: i64, is_not: bool };
 pub const IndexMembership = struct { first: i64, second: i64, is_not: bool };
 pub const IndexSubstring = struct { start: i64, count: ?i64 };
+pub const IndexScalarMinMax = struct { comparison: i64, column_first: bool };
 pub const IndexBinaryMath = enum { power, modulo, arc_tangent_two, logarithm };
 pub const IndexBinaryMathExpression = struct { operation: IndexBinaryMath, operand: i64, column_first: bool };
 pub const IndexUnaryMath = enum {
@@ -98,8 +99,8 @@ pub const IndexTransform = union(enum) {
     is_not_null,
     null_coalesce_integer: i64,
     null_if_integer: i64,
-    scalar_min_integer: i64,
-    scalar_max_integer: i64,
+    scalar_min_integer: IndexScalarMinMax,
+    scalar_max_integer: IndexScalarMinMax,
     integer_add: i64,
     integer_reverse_subtract: i64,
     integer_multiply: i64,
@@ -384,16 +385,16 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .real => |real| if (real == @as(f64, @floatFromInt(comparison))) .null_ else value,
             .null_, .text, .blob => value,
         },
-        .scalar_min_integer => |comparison| return switch (value) {
+        .scalar_min_integer => |expression| return switch (value) {
             .null_ => .null_,
-            .integer => |integer| if (integer < comparison) value else .{ .integer = comparison },
-            .real => |real| if (real < @as(f64, @floatFromInt(comparison))) value else .{ .integer = comparison },
-            .text, .blob => .{ .integer = comparison },
+            .integer => |integer| if (if (expression.column_first) integer < expression.comparison else integer <= expression.comparison) value else .{ .integer = expression.comparison },
+            .real => |real| if (if (expression.column_first) real < @as(f64, @floatFromInt(expression.comparison)) else real <= @as(f64, @floatFromInt(expression.comparison))) value else .{ .integer = expression.comparison },
+            .text, .blob => .{ .integer = expression.comparison },
         },
-        .scalar_max_integer => |comparison| return switch (value) {
+        .scalar_max_integer => |expression| return switch (value) {
             .null_ => .null_,
-            .integer => |integer| if (integer >= comparison) value else .{ .integer = comparison },
-            .real => |real| if (real >= @as(f64, @floatFromInt(comparison))) value else .{ .integer = comparison },
+            .integer => |integer| if (if (expression.column_first) integer >= expression.comparison else integer > expression.comparison) value else .{ .integer = expression.comparison },
+            .real => |real| if (if (expression.column_first) real >= @as(f64, @floatFromInt(expression.comparison)) else real > @as(f64, @floatFromInt(expression.comparison))) value else .{ .integer = expression.comparison },
             .text, .blob => value,
         },
         else => {},

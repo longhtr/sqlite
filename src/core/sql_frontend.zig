@@ -4624,14 +4624,21 @@ fn resolveBinaryMathIndexExpression(token_list: []const Token, position: usize) 
     return .{ .column_name = token_list[comma_position + 1].text, .operation = operation, .operand = operand.value, .column_first = false, .consumed = comma_position + 3 - position };
 }
 
-const MinMaxIndexExpression = struct { column_name: []const u8, comparison: i64, maximum: bool, consumed: usize };
+const MinMaxIndexExpression = struct { column_name: []const u8, comparison: i64, maximum: bool, column_first: bool, consumed: usize };
 
 fn resolveMinMaxIndexExpression(token_list: []const Token, position: usize) ?MinMaxIndexExpression {
-    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "min") and !std.ascii.eqlIgnoreCase(token_list[position].text, "max")) or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 2].typ != tokens.tk_id or token_list[position + 3].typ != tokens.tk_comma) return null;
-    const comparison = resolveSignedIndexOperand(token_list, position + 4) orelse return null;
-    const end_position = position + 4 + comparison.consumed;
-    if (end_position >= token_list.len or token_list[end_position].typ != tokens.tk_rp) return null;
-    return .{ .column_name = token_list[position + 2].text, .comparison = comparison.value, .maximum = std.ascii.eqlIgnoreCase(token_list[position].text, "max"), .consumed = end_position + 1 - position };
+    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "min") and !std.ascii.eqlIgnoreCase(token_list[position].text, "max")) or token_list[position + 1].typ != tokens.tk_lp) return null;
+    const maximum = std.ascii.eqlIgnoreCase(token_list[position].text, "max");
+    if (token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_comma) {
+        const comparison = resolveSignedIndexOperand(token_list, position + 4) orelse return null;
+        const end_position = position + 4 + comparison.consumed;
+        if (end_position >= token_list.len or token_list[end_position].typ != tokens.tk_rp) return null;
+        return .{ .column_name = token_list[position + 2].text, .comparison = comparison.value, .maximum = maximum, .column_first = true, .consumed = end_position + 1 - position };
+    }
+    const comparison = resolveSignedIndexOperand(token_list, position + 2) orelse return null;
+    const comma_position = position + 2 + comparison.consumed;
+    if (comma_position + 2 >= token_list.len or token_list[comma_position].typ != tokens.tk_comma or token_list[comma_position + 1].typ != tokens.tk_id or token_list[comma_position + 2].typ != tokens.tk_rp) return null;
+    return .{ .column_name = token_list[comma_position + 1].text, .comparison = comparison.value, .maximum = maximum, .column_first = false, .consumed = comma_position + 3 - position };
 }
 
 const ReversedIntegerIndexExpression = struct { column_name: []const u8, transform: btree.IndexTransform, consumed: usize };
@@ -4743,7 +4750,7 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             name = parsed.tokens[position + 2].text;
         } else if (if (schema_is_index) resolveMinMaxIndexExpression(parsed.tokens, position) else null) |min_max_expression| {
             scan_expression = true;
-            index_transform = if (min_max_expression.maximum) .{ .scalar_max_integer = min_max_expression.comparison } else .{ .scalar_min_integer = min_max_expression.comparison };
+            index_transform = if (min_max_expression.maximum) .{ .scalar_max_integer = .{ .comparison = min_max_expression.comparison, .column_first = min_max_expression.column_first } } else .{ .scalar_min_integer = .{ .comparison = min_max_expression.comparison, .column_first = min_max_expression.column_first } };
             name = min_max_expression.column_name;
         } else if (if (schema_is_index) resolveSubstringIndexExpression(parsed.tokens, position) else null) |substring_expression| {
             scan_expression = true;
@@ -9500,7 +9507,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             column_name = token_list[position + 2].text;
             position += 4;
         } else if (resolveMinMaxIndexExpression(token_list, position)) |min_max_expression| {
-            transform = if (min_max_expression.maximum) .{ .scalar_max_integer = min_max_expression.comparison } else .{ .scalar_min_integer = min_max_expression.comparison };
+            transform = if (min_max_expression.maximum) .{ .scalar_max_integer = .{ .comparison = min_max_expression.comparison, .column_first = min_max_expression.column_first } } else .{ .scalar_min_integer = .{ .comparison = min_max_expression.comparison, .column_first = min_max_expression.column_first } };
             column_name = min_max_expression.column_name;
             position += min_max_expression.consumed;
         } else if (resolveSubstringIndexExpression(token_list, position)) |substring_expression| {
