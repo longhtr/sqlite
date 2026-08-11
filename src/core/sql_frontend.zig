@@ -4541,16 +4541,26 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             }
             continue;
         }
+        const wrapped_expression = schema_is_index and parsed.tokens[position].typ == tokens.tk_lp;
+        if (wrapped_expression) position += 1;
         var scan_expression = false;
         var index_transform: btree.IndexTransform = .identity;
-        if (schema_is_index and (parsed.tokens[position].typ == tokens.tk_plus or parsed.tokens[position].typ == tokens.tk_minus) and position + 1 < parsed.tokens.len and parsed.tokens[position + 1].typ == tokens.tk_id) {
+        var name: []const u8 = undefined;
+        var start = position;
+        if (schema_is_index and position + 3 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "abs") and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_rp) {
             scan_expression = true;
-            if (parsed.tokens[position].typ == tokens.tk_minus) index_transform = .numeric_negate;
-            position += 1;
+            index_transform = .numeric_abs;
+            name = parsed.tokens[position + 2].text;
+        } else {
+            if (schema_is_index and (parsed.tokens[position].typ == tokens.tk_plus or parsed.tokens[position].typ == tokens.tk_minus) and position + 1 < parsed.tokens.len and parsed.tokens[position + 1].typ == tokens.tk_id) {
+                scan_expression = true;
+                if (parsed.tokens[position].typ == tokens.tk_minus) index_transform = .numeric_negate;
+                position += 1;
+            }
+            if (parsed.tokens[position].typ != tokens.tk_id) return error.Syntax;
+            name = parsed.tokens[position].text;
+            start = position;
         }
-        if (parsed.tokens[position].typ != tokens.tk_id) return error.Syntax;
-        const name = parsed.tokens[position].text;
-        const start = position;
         var depth: usize = 0;
         while (position < parsed.tokens.len) : (position += 1) {
             const typ = parsed.tokens[position].typ;
@@ -4641,6 +4651,10 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         try columns.append(allocator, .{ .name = name, .declared_type = declared_type, .collation = collation, .explicit_collation = explicit_collation, .descending = descending, .record_index = record_index, .integer_primary_key = primary and std.ascii.eqlIgnoreCase(declared_type, "INTEGER"), .primary_key = primary, .unique = unique or primary, .not_null = not_null, .default_start = default_start, .default_end = default_end, .generated_start = generated_start, .generated_end = generated_end, .generated_virtual = generated_virtual, .scan_expression = scan_expression, .index_transform = index_transform });
         if (!generated_virtual) {
             record_index += 1;
+        }
+        if (wrapped_expression) {
+            if (position >= parsed.tokens.len or parsed.tokens[position].typ != tokens.tk_rp) return error.Syntax;
+            position += 1;
         }
         if (position < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_comma) position += 1;
     }
@@ -8868,20 +8882,30 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
     var specified_transforms = std.ArrayList(btree.IndexTransform).empty;
     defer specified_transforms.deinit(allocator);
     while (true) {
+        const wrapped_expression = position < token_list.len and token_list[position].typ == tokens.tk_lp;
+        if (wrapped_expression) position += 1;
         var transform: btree.IndexTransform = .identity;
-        if (position < token_list.len and (token_list[position].typ == tokens.tk_plus or token_list[position].typ == tokens.tk_minus)) {
-            if (token_list[position].typ == tokens.tk_minus) transform = .numeric_negate;
+        var column_name: []const u8 = undefined;
+        if (position + 3 < token_list.len and token_list[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(token_list[position].text, "abs") and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_rp) {
+            transform = .numeric_abs;
+            column_name = token_list[position + 2].text;
+            position += 4;
+        } else {
+            if (position < token_list.len and (token_list[position].typ == tokens.tk_plus or token_list[position].typ == tokens.tk_minus)) {
+                if (token_list[position].typ == tokens.tk_minus) transform = .numeric_negate;
+                position += 1;
+            }
+            if (position >= token_list.len or token_list[position].typ != tokens.tk_id) {
+                allocator.free(source);
+                return .{ .result = .error_, .consumed = consumed };
+            }
+            column_name = token_list[position].text;
             position += 1;
         }
-        if (position >= token_list.len or token_list[position].typ != tokens.tk_id) {
-            allocator.free(source);
-            return .{ .result = .error_, .consumed = consumed };
-        }
-        column_names.append(allocator, token_list[position].text) catch {
+        column_names.append(allocator, column_name) catch {
             allocator.free(source);
             return .{ .result = .no_memory, .consumed = consumed };
         };
-        position += 1;
         if ((switch (transform) {
             .identity => true,
             else => false,
@@ -8899,6 +8923,13 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
                 transform = .{ .integer_add = operand };
             }
             position += 2;
+        }
+        if (wrapped_expression) {
+            if (position >= token_list.len or token_list[position].typ != tokens.tk_rp) {
+                allocator.free(source);
+                return .{ .result = .error_, .consumed = consumed };
+            }
+            position += 1;
         }
         var specified_collation: ?[]const u8 = null;
         if (position < token_list.len and token_list[position].typ == tokens.tk_collate) {
@@ -8977,7 +9008,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         };
         const transformed = switch (specified_transforms.items[selected_position]) {
             .identity => false,
-            .numeric_negate, .integer_add, .integer_multiply, .integer_divide => true,
+            .numeric_negate, .numeric_abs, .integer_add, .integer_multiply, .integer_divide => true,
         };
         if (transformed and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
             allocator.free(source);

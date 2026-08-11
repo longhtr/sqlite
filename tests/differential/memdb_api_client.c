@@ -291,7 +291,7 @@ int main(void){
   int additive_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE additive_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int additive_expression_first_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(1,20)",0,0,0);
   int additive_expression_second_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(2,10)",0,0,0);
-  int additive_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX additive_expression_index ON additive_expression_data(value+5)",0,0,0);
+  int additive_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX additive_expression_index ON additive_expression_data((value+5))",0,0,0);
   int additive_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(3,20)",0,0,0);
   int additive_expression_update_rc=sqlite3_exec(clone,"UPDATE additive_expression_data SET value=20 WHERE id=2",0,0,0);
   sqlite3_int64 additive_expression_count=-1;
@@ -311,6 +311,17 @@ int main(void){
   int multiplicative_expression_reindex_rc=sqlite3_exec(clone,"REINDEX multiplicative_expression_index",0,0,0);
   int multiplicative_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE multiplicative_expression_data",0,0,0);
   printf("multiplicative-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",multiplicative_expression_table_rc,multiplicative_expression_first_rc,multiplicative_expression_second_rc,multiplicative_expression_index_rc,divisive_expression_index_rc,multiplicative_expression_duplicate_rc,multiplicative_expression_update_rc,multiplicative_expression_count_rc,(long long)multiplicative_expression_count,multiplicative_expression_reindex_rc,multiplicative_expression_drop_rc);
+  int absolute_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE absolute_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
+  int absolute_expression_first_rc=sqlite3_exec(clone,"INSERT INTO absolute_expression_data VALUES(1,-20)",0,0,0);
+  int absolute_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX absolute_expression_index ON absolute_expression_data(abs(value))",0,0,0);
+  int absolute_expression_conflict_rc=sqlite3_exec(clone,"INSERT INTO absolute_expression_data VALUES(2,20)",0,0,0);
+  int absolute_expression_second_rc=sqlite3_exec(clone,"INSERT INTO absolute_expression_data VALUES(2,-10)",0,0,0);
+  int absolute_expression_update_rc=sqlite3_exec(clone,"UPDATE absolute_expression_data SET value=20 WHERE id=2",0,0,0);
+  sqlite3_int64 absolute_expression_count=-1;
+  int absolute_expression_count_rc=query_value(clone,"SELECT count(*) FROM absolute_expression_data",&absolute_expression_count);
+  int absolute_expression_reindex_rc=sqlite3_exec(clone,"REINDEX absolute_expression_index",0,0,0);
+  int absolute_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE absolute_expression_data",0,0,0);
+  printf("absolute-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",absolute_expression_table_rc,absolute_expression_first_rc,absolute_expression_index_rc,absolute_expression_conflict_rc,absolute_expression_second_rc,absolute_expression_update_rc,absolute_expression_count_rc,(long long)absolute_expression_count,absolute_expression_reindex_rc,absolute_expression_drop_rc);
   int partial_table_create_rc=sqlite3_exec(clone,"CREATE TABLE partial_index_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int partial_null_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(1,NULL)",0,0,0);
   int partial_value_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(2,20)",0,0,0);
