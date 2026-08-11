@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-creation-connection-linkage-and-parse-ownership",
   "title": "VDBE creation, connection linkage, and Parse ownership",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeCreate atomically allocates the statement object, initializes the zero-required tail, links it at the connection head, establishes Parse ownership, and appends mandatory OP_Init. sqlite3VdbeParser is the inverse owner accessor. The intrusive-list fields have no independent behavior outside this lifecycle.",
@@ -135,7 +135,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Both Vdbe object-allocation failure and second-allocation OP_Init failure are deterministically reached and compared; cleanup returns lookaside/global storage.",
