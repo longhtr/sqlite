@@ -965,6 +965,8 @@ int main(void){
   int partial_like_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_like_index ON partial_like_data(value) WHERE marker LIKE 'a%'",0,0,0);
   int partial_not_like_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_like_index ON partial_like_data(value) WHERE marker NOT LIKE '%z_'",0,0,0);
   int partial_like_escape_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_like_escape_index ON partial_like_data(value) WHERE marker LIKE 'b!_%' ESCAPE '!'",0,0,0);
+  int partial_unicode_like_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_unicode_like_index ON partial_like_data(value) WHERE marker LIKE 'é_'",0,0,0);
+  printf("partial-unicode-like-index\t%d\n",partial_unicode_like_index_rc);
   printf("partial-like-escape-index\t%d\n",partial_like_escape_index_rc);
   int partial_glob_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_glob_index ON partial_like_data(value) WHERE marker GLOB 'A?*'",0,0,0);
   int partial_not_glob_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_glob_index ON partial_like_data(value) WHERE marker NOT GLOB '*z?'",0,0,0);
@@ -975,6 +977,9 @@ int main(void){
   int partial_like_escape_conflict_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(4,'b_more',7)",0,0,0);
   printf("partial-like-escape-conflict\t%d\n",partial_like_escape_conflict_rc);
   int partial_like_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(2,'Alpha',7)",0,0,0);
+  int partial_unicode_like_first_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(7,'éx',9)",0,0,0);
+  int partial_unicode_like_conflict_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(8,'éy',9)",0,0,0);
+  printf("partial-unicode-like-membership\t%d\t%d\n",partial_unicode_like_first_rc,partial_unicode_like_conflict_rc);
   int partial_glob_class_first_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(5,'delta',7)",0,0,0);
   int partial_glob_class_conflict_rc=sqlite3_exec(clone,"INSERT INTO partial_like_data VALUES(6,'echo',7)",0,0,0);
   printf("partial-glob-class-membership\t%d\t%d\n",partial_glob_class_first_rc,partial_glob_class_conflict_rc);
