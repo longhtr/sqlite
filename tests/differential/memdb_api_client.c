@@ -369,6 +369,8 @@ int main(void){
   int likely_expression_first_rc=sqlite3_exec(clone,"INSERT INTO likely_expression_data VALUES(1,'alpha')",0,0,0);
   int likely_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX likely_expression_index ON likely_expression_data(likely(value))",0,0,0);
   int unlikely_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX unlikely_expression_index ON likely_expression_data(unlikely(value))",0,0,0);
+  int likelihood_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX likelihood_expression_index ON likely_expression_data(likelihood(value,0.5))",0,0,0);
+  int likelihood_expression_invalid_rc=sqlite3_exec(clone,"CREATE INDEX likelihood_expression_invalid ON likely_expression_data(likelihood(value,2.0))",0,0,0);
   int likely_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO likely_expression_data VALUES(2,'alpha')",0,0,0);
   int likely_expression_second_rc=sqlite3_exec(clone,"INSERT INTO likely_expression_data VALUES(2,'beta')",0,0,0);
   int likely_expression_update_rc=sqlite3_exec(clone,"UPDATE likely_expression_data SET value='alpha' WHERE id=2",0,0,0);
@@ -376,7 +378,7 @@ int main(void){
   int likely_expression_count_rc=query_value(clone,"SELECT count(*) FROM likely_expression_data",&likely_expression_count);
   int likely_expression_reindex_rc=sqlite3_exec(clone,"REINDEX likely_expression_index",0,0,0);
   int likely_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE likely_expression_data",0,0,0);
-  printf("likely-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",likely_expression_table_rc,likely_expression_first_rc,likely_expression_index_rc,unlikely_expression_index_rc,likely_expression_duplicate_rc,likely_expression_second_rc,likely_expression_update_rc,likely_expression_count_rc,(long long)likely_expression_count,likely_expression_reindex_rc,likely_expression_drop_rc);
+  printf("likely-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",likely_expression_table_rc,likely_expression_first_rc,likely_expression_index_rc,unlikely_expression_index_rc,likelihood_expression_index_rc,likelihood_expression_invalid_rc,likely_expression_duplicate_rc,likely_expression_second_rc,likely_expression_update_rc,likely_expression_count_rc,(long long)likely_expression_count,likely_expression_reindex_rc,likely_expression_drop_rc);
   int ifnull_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE ifnull_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int ifnull_expression_first_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(1,NULL)",0,0,0);
   int ifnull_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX ifnull_expression_index ON ifnull_expression_data(ifnull(value,-1))",0,0,0);
