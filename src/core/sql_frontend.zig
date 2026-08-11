@@ -4724,6 +4724,38 @@ fn resolveConcatIndexExpression(token_list: []const Token, position: usize) ?Con
     return .{ .column_name = column_name.?, .consumed = cursor + 1 - position };
 }
 
+const NullSubstringIndexExpression = struct { column_name: []const u8, consumed: usize };
+
+fn resolveNullSubstringIndexExpression(token_list: []const Token, position: usize) ?NullSubstringIndexExpression {
+    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or (!std.ascii.eqlIgnoreCase(token_list[position].text, "substr") and !std.ascii.eqlIgnoreCase(token_list[position].text, "substring")) or token_list[position + 1].typ != tokens.tk_lp) return null;
+    var cursor = position + 2;
+    var argument_count: usize = 0;
+    var column_name: ?[]const u8 = null;
+    var have_null = false;
+    while (cursor < token_list.len and token_list[cursor].typ != tokens.tk_rp) {
+        if (token_list[cursor].typ == tokens.tk_id and column_name == null) {
+            column_name = token_list[cursor].text;
+            cursor += 1;
+        } else if (token_list[cursor].typ == tokens.tk_null) {
+            have_null = true;
+            cursor += 1;
+        } else if (resolveSignedIndexOperand(token_list, cursor)) |operand| {
+            cursor += operand.consumed;
+        } else {
+            return null;
+        }
+        argument_count += 1;
+        if (cursor < token_list.len and token_list[cursor].typ == tokens.tk_comma) {
+            cursor += 1;
+            if (cursor >= token_list.len or token_list[cursor].typ == tokens.tk_rp) return null;
+        } else if (cursor >= token_list.len or token_list[cursor].typ != tokens.tk_rp) {
+            return null;
+        }
+    }
+    if (cursor >= token_list.len or token_list[cursor].typ != tokens.tk_rp or column_name == null or !have_null or (argument_count != 2 and argument_count != 3)) return null;
+    return .{ .column_name = column_name.?, .consumed = cursor + 1 - position };
+}
+
 const SubstringIndexExpression = struct { column_name: []const u8, start: i64, count: ?i64, consumed: usize };
 
 fn resolveSubstringIndexExpression(token_list: []const Token, position: usize) ?SubstringIndexExpression {
@@ -4799,6 +4831,10 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             scan_expression = true;
             index_transform = if (min_max_expression.maximum) .{ .scalar_max_integer = .{ .comparison = min_max_expression.comparison, .column_first = min_max_expression.column_first } } else .{ .scalar_min_integer = .{ .comparison = min_max_expression.comparison, .column_first = min_max_expression.column_first } };
             name = min_max_expression.column_name;
+        } else if (if (schema_is_index) resolveNullSubstringIndexExpression(parsed.tokens, position) else null) |null_substring_expression| {
+            scan_expression = true;
+            index_transform = .constant_null;
+            name = null_substring_expression.column_name;
         } else if (if (schema_is_index) resolveSubstringIndexExpression(parsed.tokens, position) else null) |substring_expression| {
             scan_expression = true;
             index_transform = .{ .substring = .{ .start = substring_expression.start, .count = substring_expression.count } };
@@ -9570,6 +9606,10 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             transform = if (min_max_expression.maximum) .{ .scalar_max_integer = .{ .comparison = min_max_expression.comparison, .column_first = min_max_expression.column_first } } else .{ .scalar_min_integer = .{ .comparison = min_max_expression.comparison, .column_first = min_max_expression.column_first } };
             column_name = min_max_expression.column_name;
             position += min_max_expression.consumed;
+        } else if (resolveNullSubstringIndexExpression(token_list, position)) |null_substring_expression| {
+            transform = .constant_null;
+            column_name = null_substring_expression.column_name;
+            position += null_substring_expression.consumed;
         } else if (resolveSubstringIndexExpression(token_list, position)) |substring_expression| {
             transform = .{ .substring = .{ .start = substring_expression.start, .count = substring_expression.count } };
             column_name = substring_expression.column_name;

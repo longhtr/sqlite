@@ -498,6 +498,11 @@ int main(void){
   int substring_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX substring_expression_index ON substring_expression_data(substr(value,2,3))",0,0,0);
   int substring_alias_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX substring_alias_index ON substring_expression_data(substring(value,-3))",0,0,0);
   int substring_negative_count_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX substring_negative_count_index ON substring_expression_data(substr(value,4,-2))",0,0,0);
+  int substring_null_start_index_rc=sqlite3_exec(clone,"CREATE INDEX substring_null_start_index ON substring_expression_data(substr(value,NULL))",0,0,0);
+  int substring_null_value_index_rc=sqlite3_exec(clone,"CREATE INDEX substring_null_value_index ON substring_expression_data(substring(NULL,value))",0,0,0);
+  int substring_null_count_index_rc=sqlite3_exec(clone,"CREATE INDEX substring_null_count_index ON substring_expression_data(substr(value,2,NULL))",0,0,0);
+  int substring_null_first_three_index_rc=sqlite3_exec(clone,"CREATE INDEX substring_null_first_three_index ON substring_expression_data(substr(NULL,value,2))",0,0,0);
+  printf("substring-null-expression-index\t%d\t%d\t%d\t%d\n",substring_null_start_index_rc,substring_null_value_index_rc,substring_null_count_index_rc,substring_null_first_three_index_rc);
   int substring_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO substring_expression_data VALUES(2,'xbcdz')",0,0,0);
   int substring_expression_second_rc=sqlite3_exec(clone,"INSERT INTO substring_expression_data VALUES(2,'uvwxyz')",0,0,0);
   int substring_expression_update_rc=sqlite3_exec(clone,"UPDATE substring_expression_data SET value='xbcdz' WHERE id=2",0,0,0);
