@@ -33,6 +33,23 @@ pub const Value = union(enum) {
     blob: []const u8,
 };
 
+pub const IndexPredicateOperation = enum { is_not_null };
+
+pub const IndexPredicate = struct {
+    column_index: usize,
+    integer_primary_key: bool,
+    operation: IndexPredicateOperation,
+};
+
+pub fn indexPredicateMatches(operation: IndexPredicateOperation, value: Value) bool {
+    return switch (operation) {
+        .is_not_null => switch (value) {
+            .null_ => false,
+            else => true,
+        },
+    };
+}
+
 pub const RecordView = struct {
     allocator: std.mem.Allocator,
     values: []Value,
@@ -632,9 +649,9 @@ pub const Database = struct {
     }
 
     /// Bounded source `sqlite3CreateIndex()`/`sqlite3RefillIndex()` path for
-    /// an ordinary single-column application-defined index. Existing table
-    /// rows are encoded with their trailing rowid before schema publication.
-    pub fn createSchemaIndex(self: *Database, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_indices: []const usize, integer_primary_key_position: ?usize, unique: bool, if_not_exists: bool) ResultCode {
+    /// an ordinary application-defined index. Existing matching table rows
+    /// are encoded with their trailing rowid before schema publication.
+    pub fn createSchemaIndex(self: *Database, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_indices: []const usize, integer_primary_key_position: ?usize, predicate: ?IndexPredicate, unique: bool, if_not_exists: bool) ResultCode {
         if (!self.writable) return .read_only;
         if (name.len == 0 or table_name.len == 0 or sql.len == 0 or column_indices.len == 0) return .misuse;
         const table_opened = self.openCursor(table_root, .table);
@@ -652,6 +669,11 @@ pub const Database = struct {
             if (decoded.result != .ok) return decoded.result;
             var record = decoded.record.?;
             defer record.deinit();
+            if (predicate) |filter| {
+                if (filter.column_index >= record.values.len) return .corrupt;
+                const value: Value = if (filter.integer_primary_key) .{ .integer = rowid } else record.values[filter.column_index];
+                if (!indexPredicateMatches(filter.operation, value)) continue;
+            }
             const key_values = self.allocator.alloc(Value, column_indices.len + 1) catch return .no_memory;
             defer self.allocator.free(key_values);
             for (column_indices, 0..) |column_index, index| {

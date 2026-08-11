@@ -3617,7 +3617,7 @@ const ProgramAction = union(enum) {
     attach_database: struct { connection: *Connection, filename: []const u8, name: []const u8 },
     detach_database: struct { connection: *Connection, name: []const u8 },
     create: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, sql: []const u8, if_not_exists: bool },
-    create_index: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, integer_primary_key_position: ?usize, unique: bool, if_not_exists: bool },
+    create_index: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, integer_primary_key_position: ?usize, predicate: ?btree.IndexPredicate, unique: bool, if_not_exists: bool },
     virtual_create: struct { connection: *Connection, schema_name: []const u8, name: []const u8, module_name: []const u8 },
     virtual_drop: struct { connection: *Connection, schema_name: []const u8, name: []const u8 },
     drop: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
@@ -4950,6 +4950,8 @@ fn locateForeignKeyIndex(
             allocator.free(index_columns.source);
         }
         if (index_columns.tokens.len <= 1 or index_columns.tokens[1].typ != tokens.tk_unique or index_columns.columns.len != mappings.len) continue;
+        const partial = resolveIndexPredicate(index_columns.tokens, parent_columns) catch return error.ForeignKeyMismatch;
+        if (partial != null) continue;
         var matches = true;
         for (mappings, index_columns.columns) |mapping, index_column| {
             const parent_name = mapping.parent_column orelse {
@@ -5383,6 +5385,26 @@ const IndexMutationRow = struct {
     values: []const btree.Value,
 };
 
+fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedColumn) error{Syntax}!?btree.IndexPredicate {
+    var position: usize = 0;
+    while (position < token_list.len and token_list[position].typ != tokens.tk_where) : (position += 1) {}
+    if (position == token_list.len) return null;
+    if (position + 5 != token_list.len or token_list[position + 1].typ != tokens.tk_id or token_list[position + 2].typ != tokens.tk_is or token_list[position + 3].typ != tokens.tk_not or token_list[position + 4].typ != tokens.tk_null) return error.Syntax;
+    for (columns, 0..) |column, index| {
+        if (std.ascii.eqlIgnoreCase(column.name, token_list[position + 1].text)) {
+            return .{ .column_index = index, .integer_primary_key = column.integer_primary_key, .operation = .is_not_null };
+        }
+    }
+    return error.Syntax;
+}
+
+fn indexPredicateRowMatches(predicate: ?btree.IndexPredicate, row: IndexMutationRow) error{Corrupt}!bool {
+    const filter = predicate orelse return true;
+    if (filter.column_index >= row.values.len) return error.Corrupt;
+    const value: btree.Value = if (filter.integer_primary_key) .{ .integer = row.rowid } else row.values[filter.column_index];
+    return btree.indexPredicateMatches(filter.operation, value);
+}
+
 /// Bounded source `sqlite3GenerateIndexKey()` mutation owner for ordinary
 /// ordinary indexes created by `compileIndexSchema()`.
 fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, table_name: []const u8, old_row: ?IndexMutationRow, new_row: ?IndexMutationRow) ResultCode {
@@ -5418,6 +5440,7 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
             connection.allocator.free(index_columns.source);
         }
         if (index_columns.columns.len == 0) continue;
+        const predicate = resolveIndexPredicate(index_columns.tokens, table_columns.columns) catch return .corrupt;
         const unique = index_columns.tokens.len > 1 and index_columns.tokens[0].typ == tokens.tk_create and index_columns.tokens[1].typ == tokens.tk_unique;
         const selected = connection.allocator.alloc(usize, index_columns.columns.len) catch return .no_memory;
         defer connection.allocator.free(selected);
@@ -5434,30 +5457,36 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
             selected[selected_position] = found orelse return .corrupt;
         }
         if (old_row) |row| {
-            const key_values = connection.allocator.alloc(btree.Value, selected.len + 1) catch return .no_memory;
-            defer connection.allocator.free(key_values);
-            for (selected, 0..) |column_index, index| {
-                if (column_index >= row.values.len) return .corrupt;
-                key_values[index] = if (integer_primary_key_position == index) .{ .integer = row.rowid } else row.values[column_index];
+            const matches = indexPredicateRowMatches(predicate, row) catch return .corrupt;
+            if (matches) {
+                const key_values = connection.allocator.alloc(btree.Value, selected.len + 1) catch return .no_memory;
+                defer connection.allocator.free(key_values);
+                for (selected, 0..) |column_index, index| {
+                    if (column_index >= row.values.len) return .corrupt;
+                    key_values[index] = if (integer_primary_key_position == index) .{ .integer = row.rowid } else row.values[column_index];
+                }
+                key_values[selected.len] = .{ .integer = row.rowid };
+                const payload = btree.encodeRecord(connection.allocator, key_values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+                defer connection.allocator.free(payload);
+                const deleted = database.deleteIndex(root_page, payload);
+                if (deleted != .ok) return if (deleted == .not_found) .corrupt else deleted;
             }
-            key_values[selected.len] = .{ .integer = row.rowid };
-            const payload = btree.encodeRecord(connection.allocator, key_values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
-            defer connection.allocator.free(payload);
-            const deleted = database.deleteIndex(root_page, payload);
-            if (deleted != .ok) return if (deleted == .not_found) .corrupt else deleted;
         }
         if (new_row) |row| {
-            const key_values = connection.allocator.alloc(btree.Value, selected.len + 1) catch return .no_memory;
-            defer connection.allocator.free(key_values);
-            for (selected, 0..) |column_index, index| {
-                if (column_index >= row.values.len) return .corrupt;
-                key_values[index] = if (integer_primary_key_position == index) .{ .integer = row.rowid } else row.values[column_index];
+            const matches = indexPredicateRowMatches(predicate, row) catch return .corrupt;
+            if (matches) {
+                const key_values = connection.allocator.alloc(btree.Value, selected.len + 1) catch return .no_memory;
+                defer connection.allocator.free(key_values);
+                for (selected, 0..) |column_index, index| {
+                    if (column_index >= row.values.len) return .corrupt;
+                    key_values[index] = if (integer_primary_key_position == index) .{ .integer = row.rowid } else row.values[column_index];
+                }
+                key_values[selected.len] = .{ .integer = row.rowid };
+                const payload = btree.encodeRecord(connection.allocator, key_values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+                defer connection.allocator.free(payload);
+                const inserted = if (unique) database.insertUniqueIndex(root_page, payload, selected.len) else database.insertIndex(root_page, payload);
+                if (inserted != .ok) return inserted;
             }
-            key_values[selected.len] = .{ .integer = row.rowid };
-            const payload = btree.encodeRecord(connection.allocator, key_values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
-            defer connection.allocator.free(payload);
-            const inserted = if (unique) database.insertUniqueIndex(root_page, payload, selected.len) else database.insertIndex(root_page, payload);
-            if (inserted != .ok) return inserted;
         }
     }
     return .ok;
@@ -6888,6 +6917,13 @@ const LocatedTableOutcome = struct {
     table: ?btree.SchemaTable = null,
 };
 
+const LocatedIndexOutcome = struct {
+    result: ResultCode,
+    database: ?*btree.Database = null,
+    schema_name: []const u8 = "",
+    index: ?btree.SchemaTable = null,
+};
+
 fn locateDatabase(connection: *Connection, database_name: ?[]const u8) LocatedDatabaseOutcome {
     if (database_name) |name| {
         if (std.ascii.eqlIgnoreCase(name, "temp")) {
@@ -6962,6 +6998,39 @@ fn locateTableWithDatabase(connection: *Connection, name: []const u8, database_n
             if (table.result != .not_found) {
                 return .{ .result = table.result };
             }
+        }
+    }
+    return .{ .result = .not_found };
+}
+
+/// Source `sqlite3FindIndex()`: resolve TEMP, main, then attached schemas for
+/// an unqualified index name, or restrict lookup to the selected database.
+fn locateIndexWithDatabase(connection: *Connection, name: []const u8, database_name: ?[]const u8) LocatedIndexOutcome {
+    if (database_name) |schema_name| {
+        const located_database = locateDatabase(connection, schema_name);
+        if (located_database.result != .ok) return .{ .result = located_database.result };
+        const index = located_database.database.?.schemaIndex(name);
+        return .{ .result = index.result, .database = located_database.database, .schema_name = schema_name, .index = index.table };
+    }
+    if (connection.temp_database) |temporary| {
+        if (temporary.database) |*database| {
+            const index = database.schemaIndex(name);
+            if (index.result == .ok) return .{ .result = .ok, .database = database, .schema_name = "temp", .index = index.table };
+            if (index.result != .not_found) return .{ .result = index.result };
+        }
+    }
+    const main_database = locateDatabase(connection, null);
+    if (main_database.result != .ok) return .{ .result = main_database.result };
+    const main_index = main_database.database.?.schemaIndex(name);
+    if (main_index.result == .ok) return .{ .result = .ok, .database = main_database.database, .schema_name = "main", .index = main_index.table };
+    if (main_index.result != .not_found) return .{ .result = main_index.result };
+    if (connection.attachments) |*attachments| {
+        for (attachments.databases.items[2..]) |attached| {
+            const located_database = locateDatabase(connection, attached.name);
+            if (located_database.result != .ok) return .{ .result = located_database.result };
+            const index = located_database.database.?.schemaIndex(name);
+            if (index.result == .ok) return .{ .result = .ok, .database = located_database.database, .schema_name = attached.name, .index = index.table };
+            if (index.result != .not_found) return .{ .result = index.result };
         }
     }
     return .{ .result = .not_found };
@@ -7885,7 +7954,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                     _ = database.rollbackStatementBatch();
                 }
             }
-            const created = database.createSchemaIndex(action.name, action.table_name, action.sql, action.table_root, owner.indices, action.integer_primary_key_position, action.unique, action.if_not_exists);
+            const created = database.createSchemaIndex(action.name, action.table_name, action.sql, action.table_root, owner.indices, action.integer_primary_key_position, action.predicate, action.unique, action.if_not_exists);
             if (created != .ok) break :blk created;
             const committed = database.commitStatementBatch();
             batch_active = false;
@@ -8293,8 +8362,8 @@ fn compileTransaction(connection: *Connection, source: [:0]u8, token_list: []con
 }
 
 /// Bounded application-defined subset of source `sqlite3CreateIndex()` and
-/// `sqlite3RefillIndex()`: one ordinary column, optional schema-qualified
-/// index name, optional IF NOT EXISTS, and ASC/DESC syntax.
+/// `sqlite3RefillIndex()`: ordinary columns, optional schema-qualified index
+/// name, optional IF NOT EXISTS, and ASC/DESC syntax.
 fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
     const allocator = connection.allocator;
     var position: usize = 1;
@@ -8352,9 +8421,18 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         }
         break;
     }
-    if (position >= token_list.len or token_list[position].typ != tokens.tk_rp or position + 1 != token_list.len) {
+    if (position >= token_list.len or token_list[position].typ != tokens.tk_rp) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
+    }
+    position += 1;
+    var predicate_name: ?[]const u8 = null;
+    if (position < token_list.len) {
+        if (position + 5 != token_list.len or token_list[position].typ != tokens.tk_where or token_list[position + 1].typ != tokens.tk_id or token_list[position + 2].typ != tokens.tk_is or token_list[position + 3].typ != tokens.tk_not or token_list[position + 4].typ != tokens.tk_null) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        predicate_name = token_list[position + 1].text;
     }
     const located = locateTableWithDatabase(connection, table_name, schema_name);
     if (located.result != .ok) {
@@ -8392,6 +8470,19 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             return .{ .result = .no_memory, .consumed = consumed };
         };
     }
+    var predicate: ?btree.IndexPredicate = null;
+    if (predicate_name) |name| {
+        for (resolved.columns, 0..) |column, index| {
+            if (std.ascii.eqlIgnoreCase(column.name, name)) {
+                predicate = .{ .column_index = index, .integer_primary_key = column.integer_primary_key, .operation = .is_not_null };
+                break;
+            }
+        }
+        if (predicate == null) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+    }
     const owned_indices = selected_indices.toOwnedSlice(allocator) catch {
         allocator.free(source);
         return .{ .result = .no_memory, .consumed = consumed };
@@ -8426,6 +8517,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             .sql = source,
             .table_root = table.root_page,
             .integer_primary_key_position = integer_primary_key_position,
+            .predicate = predicate,
             .unique = unique,
             .if_not_exists = if_not_exists,
         } },
@@ -8454,10 +8546,10 @@ fn compileDropIndex(connection: *Connection, source: [:0]u8, token_list: []const
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
-    var schema_name: []const u8 = "main";
+    var requested_schema: ?[]const u8 = null;
     var index_name = token_list[position].text;
     if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_dot and token_list[position + 2].typ == tokens.tk_id) {
-        schema_name = index_name;
+        requested_schema = index_name;
         index_name = token_list[position + 2].text;
         position += 3;
     } else {
@@ -8467,10 +8559,25 @@ fn compileDropIndex(connection: *Connection, source: [:0]u8, token_list: []const
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
-    const located = locateDatabase(connection, schema_name);
-    if (located.result != .ok) {
+    const located_index = locateIndexWithDatabase(connection, index_name, requested_schema);
+    var database: *btree.Database = undefined;
+    var schema_name: []const u8 = undefined;
+    if (located_index.result == .ok) {
+        database = located_index.database.?;
+        schema_name = located_index.schema_name;
+        var schema_index = located_index.index.?;
+        schema_index.deinit();
+    } else if (located_index.result == .not_found) {
+        const located_database = locateDatabase(connection, requested_schema);
+        if (located_database.result != .ok) {
+            allocator.free(source);
+            return .{ .result = if (located_database.result == .not_found) .error_ else located_database.result, .consumed = consumed };
+        }
+        database = located_database.database.?;
+        schema_name = requested_schema orelse "main";
+    } else {
         allocator.free(source);
-        return .{ .result = if (located.result == .not_found) .error_ else located.result, .consumed = consumed };
+        return .{ .result = located_index.result, .consumed = consumed };
     }
     const owner = allocator.create(Owner) catch {
         allocator.free(source);
@@ -8490,7 +8597,7 @@ fn compileDropIndex(connection: *Connection, source: [:0]u8, token_list: []const
         .instructions = instructions,
         .parameters = parameters,
         .columns = columns,
-        .action = .{ .drop_index = .{ .connection = connection, .database = located.database.?, .schema_name = schema_name, .name = index_name, .if_exists = if_exists } },
+        .action = .{ .drop_index = .{ .connection = connection, .database = database, .schema_name = schema_name, .name = index_name, .if_exists = if_exists } },
         .program = .{ .instructions = instructions, .register_count = 1 },
     };
     owner.functions[0] = .{ .callback = programActionCallback, .context = owner };

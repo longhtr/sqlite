@@ -129,6 +129,23 @@ int main(void){
   int temporary_drop_rc=sqlite3_exec(clone,"DROP TABLE t",0,0,0);
   int temporary_main_after_drop_rc=query_value(clone,"SELECT x FROM t",&temporary_main_after_drop);
   printf("temporary\t%d\t%d\t%d\t%lld\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%lld\n",temporary_create_rc,temporary_insert_rc,temporary_query_rc,(long long)temporary_value,temporary_main_query_rc,(long long)temporary_main_value,temporary_update_rc,temporary_update_query_rc,(long long)temporary_after_update,temporary_delete_rc,temporary_count_rc,(long long)temporary_count,temporary_drop_rc,temporary_main_after_drop_rc,(long long)temporary_main_after_drop);
+  int temp_index_main_create_rc=sqlite3_exec(clone,"CREATE TABLE main.temp_index_table(id INTEGER PRIMARY KEY,v INTEGER)",0,0,0);
+  int temp_index_main_index_rc=sqlite3_exec(clone,"CREATE INDEX main.shared_index_name ON temp_index_table(v)",0,0,0);
+  int temp_index_main_insert_rc=sqlite3_exec(clone,"INSERT INTO main.temp_index_table VALUES(1,30)",0,0,0);
+  int temp_index_temp_create_rc=sqlite3_exec(clone,"CREATE TEMP TABLE temp_index_table(id INTEGER PRIMARY KEY,v INTEGER)",0,0,0);
+  int temp_index_temp_index_rc=sqlite3_exec(clone,"CREATE INDEX shared_index_name ON temp_index_table(v)",0,0,0);
+  int temp_index_temp_insert_rc=sqlite3_exec(clone,"INSERT INTO temp_index_table VALUES(1,20)",0,0,0);
+  int temp_index_temp_insert_second_rc=sqlite3_exec(clone,"INSERT INTO temp_index_table VALUES(2,10)",0,0,0);
+  int temp_index_count=-1,temp_index_after_count=-1,temp_index_main_count=-1;
+  sqlite3_int64 temp_index_first=-1,temp_index_last=-1,temp_index_after_first=-1,temp_index_after_last=-1,temp_index_main_first=-1,temp_index_main_last=-1;
+  int temp_index_query_rc=query_scan(clone,"SELECT v FROM temp_index_table INDEXED BY shared_index_name",&temp_index_count,&temp_index_first,&temp_index_last);
+  int temp_index_drop_temp_rc=sqlite3_exec(clone,"DROP INDEX shared_index_name",0,0,0);
+  int temp_index_after_query_rc=query_scan(clone,"SELECT v FROM temp_index_table INDEXED BY shared_index_name",&temp_index_after_count,&temp_index_after_first,&temp_index_after_last);
+  int temp_index_main_query_rc=query_scan(clone,"SELECT v FROM main.temp_index_table INDEXED BY shared_index_name",&temp_index_main_count,&temp_index_main_first,&temp_index_main_last);
+  int temp_index_drop_main_rc=sqlite3_exec(clone,"DROP INDEX shared_index_name",0,0,0);
+  int temp_index_drop_temp_table_rc=sqlite3_exec(clone,"DROP TABLE temp_index_table",0,0,0);
+  int temp_index_drop_main_table_rc=sqlite3_exec(clone,"DROP TABLE main.temp_index_table",0,0,0);
+  printf("temporary-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\n",temp_index_main_create_rc,temp_index_main_index_rc,temp_index_main_insert_rc,temp_index_temp_create_rc,temp_index_temp_index_rc,temp_index_temp_insert_rc,temp_index_temp_insert_second_rc,temp_index_query_rc,temp_index_count,(long long)temp_index_first,(long long)temp_index_last,temp_index_drop_temp_rc,temp_index_after_query_rc,temp_index_after_count,(long long)temp_index_after_first,(long long)temp_index_after_last,temp_index_main_query_rc,temp_index_main_count,(long long)temp_index_main_first,(long long)temp_index_main_last,temp_index_drop_main_rc,temp_index_drop_temp_table_rc,temp_index_drop_main_table_rc);
   int transaction_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
   int transaction_insert_rollback_rc=sqlite3_exec(clone,"INSERT INTO main.t VALUES(43)",0,0,0);
   int transaction_active=sqlite3_get_autocommit(clone);
@@ -203,6 +220,20 @@ int main(void){
   int index_reuse_table_rc=sqlite3_exec(clone,"CREATE TABLE index_reuse(id INTEGER PRIMARY KEY,value)",0,0,0);
   int index_name_reuse_rc=sqlite3_exec(clone,"CREATE INDEX idx_index_data_value ON index_reuse(value)",0,0,0);
   printf("secondary-index-drop\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",index_drop_rollback_begin_rc,index_drop_rollback_drop_rc,index_drop_rollback_rc,index_drop_rollback_query_rc,index_drop_rollback_count,(long long)index_drop_rollback_first,(long long)index_drop_rollback_last,index_drop_begin_rc,index_drop_rc,index_drop_commit_rc,index_missing_query_rc,index_recreate_rc,index_table_drop_rc,index_reuse_table_rc,index_name_reuse_rc);
+  int partial_table_create_rc=sqlite3_exec(clone,"CREATE TABLE partial_index_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
+  int partial_null_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(1,NULL)",0,0,0);
+  int partial_value_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(2,20)",0,0,0);
+  int partial_index_create_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_value_index ON partial_index_data(value) WHERE value IS NOT NULL",0,0,0);
+  int partial_second_null_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(3,NULL)",0,0,0);
+  int partial_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(4,20)",0,0,0);
+  int partial_enter_rc=sqlite3_exec(clone,"UPDATE partial_index_data SET value=10 WHERE id=1",0,0,0);
+  int partial_enter_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(5,10)",0,0,0);
+  int partial_leave_rc=sqlite3_exec(clone,"UPDATE partial_index_data SET value=NULL WHERE id=1",0,0,0);
+  int partial_reuse_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(5,10)",0,0,0);
+  sqlite3_int64 partial_count=-1;
+  int partial_count_rc=query_value(clone,"SELECT count(*) FROM partial_index_data",&partial_count);
+  int partial_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_index_data",0,0,0);
+  printf("partial-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\n",partial_table_create_rc,partial_null_insert_rc,partial_value_insert_rc,partial_index_create_rc,partial_second_null_rc,partial_duplicate_rc,partial_enter_rc,partial_enter_duplicate_rc,partial_leave_rc,partial_reuse_rc,partial_count_rc,(long long)partial_count,partial_drop_rc);
 #ifdef NATIVE_ENGINE
   int deferred_fk_config_rc=zig_sqlite3_db_config_flag(clone,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
 #else
