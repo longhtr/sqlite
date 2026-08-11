@@ -45,6 +45,7 @@ pub const IndexSortOrder = enum { ascending, descending };
 pub const IndexTransform = union(enum) {
     identity,
     numeric_negate,
+    numeric_abs,
     integer_add: i64,
     integer_multiply: i64,
     integer_divide: i64,
@@ -73,6 +74,12 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .null_ => .null_,
             .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = -integer },
             .real => |real| .{ .real = -real },
+            .text, .blob => unreachable,
+        },
+        .numeric_abs => switch (numeric) {
+            .null_ => .null_,
+            .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = if (integer < 0) -integer else integer },
+            .real => |real| .{ .real = @abs(real) },
             .text, .blob => unreachable,
         },
         .integer_add => |addition| switch (numeric) {
