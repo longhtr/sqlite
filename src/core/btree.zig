@@ -117,9 +117,12 @@ pub const IndexPredicateTerm = struct {
     comparison_value: i64 = 0,
 };
 
+pub const IndexPredicateCombination = enum { and_, or_ };
+
 pub const IndexPredicate = struct {
     first: IndexPredicateTerm,
     second: ?IndexPredicateTerm = null,
+    combination: IndexPredicateCombination = .and_,
 };
 
 pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
@@ -152,14 +155,17 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
 }
 
 pub fn indexPredicateRecordMatches(predicate: IndexPredicate, values: []const Value, rowid: i64) ?bool {
-    const terms = [_]?IndexPredicateTerm{ predicate.first, predicate.second };
-    for (terms) |optional_term| {
-        const term = optional_term orelse continue;
-        if (term.column_index >= values.len) return null;
-        const value: Value = if (term.integer_primary_key) .{ .integer = rowid } else values[term.column_index];
-        if (!indexPredicateMatches(term, value)) return false;
-    }
-    return true;
+    if (predicate.first.column_index >= values.len) return null;
+    const first_value: Value = if (predicate.first.integer_primary_key) .{ .integer = rowid } else values[predicate.first.column_index];
+    const first_matches = indexPredicateMatches(predicate.first, first_value);
+    const second = predicate.second orelse return first_matches;
+    if (second.column_index >= values.len) return null;
+    const second_value: Value = if (second.integer_primary_key) .{ .integer = rowid } else values[second.column_index];
+    const second_matches = indexPredicateMatches(second, second_value);
+    return switch (predicate.combination) {
+        .and_ => first_matches and second_matches,
+        .or_ => first_matches or second_matches,
+    };
 }
 
 pub const RecordView = struct {

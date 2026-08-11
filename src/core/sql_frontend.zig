@@ -5558,13 +5558,18 @@ fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedCol
     position += 1;
     const first = try resolveIndexPredicateTerm(token_list, columns, &position);
     var second: ?btree.IndexPredicateTerm = null;
+    var combination: btree.IndexPredicateCombination = .and_;
     if (position < token_list.len) {
-        if (token_list[position].typ != tokens.tk_and) return error.Syntax;
+        combination = switch (token_list[position].typ) {
+            tokens.tk_and => .and_,
+            tokens.tk_or => .or_,
+            else => return error.Syntax,
+        };
         position += 1;
         second = try resolveIndexPredicateTerm(token_list, columns, &position);
     }
     if (position != token_list.len) return error.Syntax;
-    return .{ .first = first, .second = second };
+    return .{ .first = first, .second = second, .combination = combination };
 }
 
 fn indexPredicateRowMatches(predicate: ?btree.IndexPredicate, row: IndexMutationRow) error{Corrupt}!bool {
