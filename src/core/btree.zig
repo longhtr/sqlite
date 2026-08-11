@@ -45,6 +45,7 @@ pub const IndexCollation = union(enum) {
 pub const IndexSortOrder = enum { ascending, descending };
 pub const IndexComparisonOperation = enum { eq, ne, lt, le, gt, ge };
 pub const IndexComparison = struct { operation: IndexComparisonOperation, value: i64 };
+pub const IndexRealComparison = struct { operation: IndexComparisonOperation, value: f64 };
 pub const IndexIsComparison = struct { value: i64, is_not: bool };
 pub const IndexRangeComparison = struct { low: i64, high: i64, is_not: bool };
 pub const IndexMembership = struct { first: i64, second: i64, is_not: bool };
@@ -118,6 +119,7 @@ pub const IndexTransform = union(enum) {
     integer_reverse_shift_left: i64,
     integer_reverse_shift_right: i64,
     integer_compare: IndexComparison,
+    real_compare: IndexRealComparison,
     integer_is: IndexIsComparison,
     integer_between: IndexRangeComparison,
     integer_in: IndexMembership,
@@ -526,6 +528,26 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
                 else => false,
             };
             return .{ .integer = @intFromBool(if (comparison.is_not) !matches else matches) };
+        },
+        .real_compare => |comparison| switch (numeric) {
+            .null_ => .null_,
+            .integer => |integer| .{ .integer = @intFromBool(switch (comparison.operation) {
+                .eq => @as(f64, @floatFromInt(integer)) == comparison.value,
+                .ne => @as(f64, @floatFromInt(integer)) != comparison.value,
+                .lt => @as(f64, @floatFromInt(integer)) < comparison.value,
+                .le => @as(f64, @floatFromInt(integer)) <= comparison.value,
+                .gt => @as(f64, @floatFromInt(integer)) > comparison.value,
+                .ge => @as(f64, @floatFromInt(integer)) >= comparison.value,
+            }) },
+            .real => |real| .{ .integer = @intFromBool(switch (comparison.operation) {
+                .eq => real == comparison.value,
+                .ne => real != comparison.value,
+                .lt => real < comparison.value,
+                .le => real <= comparison.value,
+                .gt => real > comparison.value,
+                .ge => real >= comparison.value,
+            }) },
+            .text, .blob => unreachable,
         },
         .integer_compare => |comparison| switch (numeric) {
             .null_ => .null_,

@@ -4548,6 +4548,17 @@ const IfnullIndexExpression = struct {
 };
 
 const SignedIndexOperand = struct { value: i64, consumed: usize };
+const SignedFloatIndexOperand = struct { value: f64, consumed: usize };
+
+fn resolveSignedFloatIndexOperand(token_list: []const Token, position: usize) ?SignedFloatIndexOperand {
+    if (position >= token_list.len) return null;
+    const negative = token_list[position].typ == tokens.tk_minus;
+    const literal_position = position + @intFromBool(negative);
+    if (literal_position >= token_list.len or token_list[literal_position].typ != tokens.tk_float) return null;
+    var value = std.fmt.parseFloat(f64, token_list[literal_position].text) catch return null;
+    if (negative) value = -value;
+    return .{ .value = value, .consumed = literal_position + 1 - position };
+}
 
 fn resolveSignedIndexOperand(token_list: []const Token, position: usize) ?SignedIndexOperand {
     if (position >= token_list.len) return null;
@@ -4660,6 +4671,24 @@ fn resolveMinMaxIndexExpression(token_list: []const Token, position: usize) ?Min
     return .{ .column_name = token_list[comma_position + 1].text, .comparison = comparison.value, .maximum = maximum, .column_first = false, .consumed = comma_position + 3 - position };
 }
 
+const ReversedRealIndexExpression = struct { column_name: []const u8, transform: btree.IndexTransform, consumed: usize };
+
+fn resolveReversedRealIndexExpression(token_list: []const Token, position: usize) ?ReversedRealIndexExpression {
+    const operand = resolveSignedFloatIndexOperand(token_list, position) orelse return null;
+    const operation_position = position + operand.consumed;
+    if (operation_position + 1 >= token_list.len or token_list[operation_position + 1].typ != tokens.tk_id) return null;
+    const operation: btree.IndexComparisonOperation = switch (token_list[operation_position].typ) {
+        tokens.tk_eq => .eq,
+        tokens.tk_ne => .ne,
+        tokens.tk_lt => .gt,
+        tokens.tk_le => .ge,
+        tokens.tk_gt => .lt,
+        tokens.tk_ge => .le,
+        else => return null,
+    };
+    return .{ .column_name = token_list[operation_position + 1].text, .transform = .{ .real_compare = .{ .operation = operation, .value = operand.value } }, .consumed = operation_position + 2 - position };
+}
+
 const ReversedIntegerIndexExpression = struct { column_name: []const u8, transform: btree.IndexTransform, consumed: usize };
 
 fn resolveReversedIntegerIndexExpression(token_list: []const Token, position: usize) ?ReversedIntegerIndexExpression {
@@ -4756,6 +4785,23 @@ fn resolveNullSubstringIndexExpression(token_list: []const Token, position: usiz
     return .{ .column_name = column_name.?, .consumed = cursor + 1 - position };
 }
 
+const RealComparisonIndexExpression = struct { transform: btree.IndexTransform, consumed: usize };
+
+fn resolveRealComparisonIndexExpression(token_list: []const Token, position: usize) ?RealComparisonIndexExpression {
+    if (position >= token_list.len) return null;
+    const operation: btree.IndexComparisonOperation = switch (token_list[position].typ) {
+        tokens.tk_eq => .eq,
+        tokens.tk_ne => .ne,
+        tokens.tk_lt => .lt,
+        tokens.tk_le => .le,
+        tokens.tk_gt => .gt,
+        tokens.tk_ge => .ge,
+        else => return null,
+    };
+    const operand = resolveSignedFloatIndexOperand(token_list, position + 1) orelse return null;
+    return .{ .transform = .{ .real_compare = .{ .operation = operation, .value = operand.value } }, .consumed = 1 + operand.consumed };
+}
+
 const SubstringIndexExpression = struct { column_name: []const u8, start: i64, count: ?i64, consumed: usize };
 
 fn resolveSubstringIndexExpression(token_list: []const Token, position: usize) ?SubstringIndexExpression {
@@ -4815,6 +4861,10 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             scan_expression = true;
             index_transform = .concat_single;
             name = concat_expression.column_name;
+        } else if (if (schema_is_index) resolveReversedRealIndexExpression(parsed.tokens, position) else null) |reversed_real_expression| {
+            scan_expression = true;
+            index_transform = reversed_real_expression.transform;
+            name = reversed_real_expression.column_name;
         } else if (if (schema_is_index) resolveReversedIntegerIndexExpression(parsed.tokens, position) else null) |reversed_expression| {
             scan_expression = true;
             index_transform = reversed_expression.transform;
@@ -4981,6 +5031,14 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
                 if (start + 1 + between_expression.consumed == position) {
                     scan_expression = true;
                     index_transform = .{ .integer_between = .{ .low = between_expression.low, .high = between_expression.high, .is_not = between_expression.is_not } };
+                }
+            }
+        }
+        if (schema_is_index and !scan_expression) {
+            if (resolveRealComparisonIndexExpression(parsed.tokens, start + 1)) |real_comparison| {
+                if (start + 1 + real_comparison.consumed == position) {
+                    scan_expression = true;
+                    index_transform = real_comparison.transform;
                 }
             }
         }
@@ -9662,6 +9720,10 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             transform = .concat_single;
             column_name = concat_expression.column_name;
             position += concat_expression.consumed;
+        } else if (resolveReversedRealIndexExpression(token_list, position)) |reversed_real_expression| {
+            transform = reversed_real_expression.transform;
+            column_name = reversed_real_expression.column_name;
+            position += reversed_real_expression.consumed;
         } else if (resolveReversedIntegerIndexExpression(token_list, position)) |reversed_expression| {
             transform = reversed_expression.transform;
             column_name = reversed_expression.column_name;
@@ -9773,6 +9835,15 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             if (resolveIntegerBetweenIndexExpression(token_list, position)) |between_expression| {
                 transform = .{ .integer_between = .{ .low = between_expression.low, .high = between_expression.high, .is_not = between_expression.is_not } };
                 position += between_expression.consumed;
+            }
+        }
+        if (switch (transform) {
+            .identity => true,
+            else => false,
+        }) {
+            if (resolveRealComparisonIndexExpression(token_list, position)) |real_comparison| {
+                transform = real_comparison.transform;
+                position += real_comparison.consumed;
             }
         }
         if ((switch (transform) {
@@ -9897,7 +9968,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         };
         const numeric_transform = switch (specified_transforms.items[selected_position]) {
             .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .constant_null, .constant_integer, .null_coalesce_integer, .null_if_integer, .reverse_null_if_integer => false,
-            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .integer_is, .integer_between, .integer_in, .scalar_min_integer, .scalar_max_integer, .unary_math, .binary_math => true,
+            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_reverse_subtract, .integer_multiply, .integer_divide, .integer_reverse_divide, .integer_remainder, .integer_reverse_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_reverse_shift_left, .integer_reverse_shift_right, .integer_compare, .real_compare, .integer_is, .integer_between, .integer_in, .scalar_min_integer, .scalar_max_integer, .unary_math, .binary_math => true,
         };
         if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
             allocator.free(source);

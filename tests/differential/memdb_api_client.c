@@ -637,7 +637,11 @@ int main(void){
   int comparison_expression_not_in_index_rc=sqlite3_exec(clone,"CREATE INDEX comparison_expression_not_in_index ON comparison_expression_data(value NOT IN (5,20))",0,0,0);
   int reversed_comparison_lt_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_comparison_lt_index ON comparison_expression_data(10<value)",0,0,0);
   int reversed_comparison_ge_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_comparison_ge_index ON comparison_expression_data(10>=value)",0,0,0);
-  printf("reversed-comparison-expression-index\t%d\t%d\n",reversed_comparison_lt_index_rc,reversed_comparison_ge_index_rc);
+  int float_comparison_index_rc=sqlite3_exec(clone,"CREATE INDEX float_comparison_index ON comparison_expression_data(value>1.5)",0,0,0);
+  int negative_float_comparison_index_rc=sqlite3_exec(clone,"CREATE INDEX negative_float_comparison_index ON comparison_expression_data(value<=-1.5)",0,0,0);
+  int reversed_float_comparison_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_float_comparison_index ON comparison_expression_data(1.5<value)",0,0,0);
+  int reversed_negative_float_comparison_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_negative_float_comparison_index ON comparison_expression_data(-1.5>=value)",0,0,0);
+  printf("reversed-comparison-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\n",reversed_comparison_lt_index_rc,reversed_comparison_ge_index_rc,float_comparison_index_rc,negative_float_comparison_index_rc,reversed_float_comparison_index_rc,reversed_negative_float_comparison_index_rc);
   int comparison_expression_second_rc=sqlite3_exec(clone,"INSERT INTO comparison_expression_data VALUES(2,20)",0,0,0);
   int comparison_expression_true_duplicate_rc=sqlite3_exec(clone,"INSERT INTO comparison_expression_data VALUES(3,30)",0,0,0);
   int comparison_expression_false_duplicate_rc=sqlite3_exec(clone,"INSERT INTO comparison_expression_data VALUES(3,6)",0,0,0);
