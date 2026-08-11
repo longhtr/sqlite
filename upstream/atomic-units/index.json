@@ -32,7 +32,7 @@
     {
       "id": "vdbe-p4-attachment-dispatch-and-object-destruction",
       "path": "upstream/atomic-units/vdbe-p4-attachment-dispatch-and-object-destruction.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-operation-access-mutation-and-jump-patching",

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-p4-attachment-dispatch-and-object-destruction",
   "title": "VDBE P4 attachment, dispatch, operation-array, and object destruction",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These seven coupled routines own the complete active-profile P4 attach/replace/release path and recursively retire operation arrays, subprograms, and VDBE objects. Keeping them together closes every owner transition from attachment through statement deletion.",
@@ -204,7 +204,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Differential cases force ChangeP4 and AppendP4 OOM and verify incoming dynamic owners are consumed while operation state remains unused; all cleanup runs under connection ownership.",
