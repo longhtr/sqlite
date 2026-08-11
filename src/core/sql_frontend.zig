@@ -5503,6 +5503,11 @@ fn indexCollation(connection: *Connection, name: []const u8) ?btree.IndexCollati
 }
 
 fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const ResolvedColumn, position: *usize) error{Syntax}!btree.IndexPredicateTerm {
+    var boolean_negated = false;
+    if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_not) {
+        boolean_negated = true;
+        position.* += 1;
+    }
     if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_id) return error.Syntax;
     var column_index: ?usize = null;
     for (columns, 0..) |column, index| {
@@ -5513,7 +5518,11 @@ fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const Resolve
     }
     const selected = column_index orelse return error.Syntax;
     position.* += 1;
-    if (position.* >= token_list.len) return error.Syntax;
+    const integer_column = columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER");
+    if (integer_column and (position.* == token_list.len or token_list[position.*].typ == tokens.tk_and or token_list[position.*].typ == tokens.tk_or or token_list[position.*].typ == tokens.tk_rp)) {
+        return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (boolean_negated) .integer_eq else .integer_ne, .comparison_value = 0 };
+    }
+    if (boolean_negated or position.* >= token_list.len) return error.Syntax;
     var operation: btree.IndexPredicateOperation = undefined;
     var comparison_value: i64 = 0;
     if (token_list[position.*].typ == tokens.tk_is) {
@@ -5527,7 +5536,7 @@ fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const Resolve
         if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_null) return error.Syntax;
         position.* += 1;
     } else {
-        if (!columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER")) return error.Syntax;
+        if (!integer_column) return error.Syntax;
         operation = switch (token_list[position.*].typ) {
             tokens.tk_eq => .integer_eq,
             tokens.tk_ne => .integer_ne,
