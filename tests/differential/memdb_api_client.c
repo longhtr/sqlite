@@ -275,6 +275,17 @@ int main(void){
   int expression_reindex_rc=sqlite3_exec(clone,"REINDEX EXPRESSIONS",0,0,0);
   int expression_drop_rc=sqlite3_exec(clone,"DROP TABLE expression_index_data",0,0,0);
   printf("identity-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\n",expression_table_rc,expression_first_rc,expression_second_rc,expression_index_rc,expression_duplicate_rc,expression_count_rc,(long long)expression_count,expression_update_conflict_rc,expression_reindex_rc,expression_drop_rc);
+  int negative_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE negative_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
+  int negative_expression_first_rc=sqlite3_exec(clone,"INSERT INTO negative_expression_data VALUES(1,20)",0,0,0);
+  int negative_expression_second_rc=sqlite3_exec(clone,"INSERT INTO negative_expression_data VALUES(2,10)",0,0,0);
+  int negative_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX negative_expression_index ON negative_expression_data(-value)",0,0,0);
+  int negative_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO negative_expression_data VALUES(3,20)",0,0,0);
+  int negative_expression_update_rc=sqlite3_exec(clone,"UPDATE negative_expression_data SET value=20 WHERE id=2",0,0,0);
+  sqlite3_int64 negative_expression_count=-1;
+  int negative_expression_count_rc=query_value(clone,"SELECT count(*) FROM negative_expression_data",&negative_expression_count);
+  int negative_expression_reindex_rc=sqlite3_exec(clone,"REINDEX negative_expression_index",0,0,0);
+  int negative_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE negative_expression_data",0,0,0);
+  printf("negative-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",negative_expression_table_rc,negative_expression_first_rc,negative_expression_second_rc,negative_expression_index_rc,negative_expression_duplicate_rc,negative_expression_update_rc,negative_expression_count_rc,(long long)negative_expression_count,negative_expression_reindex_rc,negative_expression_drop_rc);
   int partial_table_create_rc=sqlite3_exec(clone,"CREATE TABLE partial_index_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int partial_null_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(1,NULL)",0,0,0);
   int partial_value_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(2,20)",0,0,0);

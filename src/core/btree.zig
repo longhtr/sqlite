@@ -42,6 +42,19 @@ pub const IndexCollation = union(enum) {
     custom: struct { context: ?*anyopaque, callback: IndexCollationCallback },
 };
 pub const IndexSortOrder = enum { ascending, descending };
+pub const IndexTransform = enum { identity, numeric_negate };
+
+pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
+    return switch (transform) {
+        .identity => value,
+        .numeric_negate => switch (value) {
+            .null_ => .null_,
+            .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = -integer },
+            .real => |real| .{ .real = -real },
+            .text, .blob => .null_,
+        },
+    };
+}
 
 pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge };
 
@@ -682,9 +695,9 @@ pub const Database = struct {
     /// Bounded source `sqlite3CreateIndex()`/`sqlite3RefillIndex()` path for
     /// an ordinary application-defined index. Existing matching table rows
     /// are encoded with their trailing rowid before schema publication.
-    pub fn createSchemaIndex(self: *Database, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_indices: []const usize, integer_primary_key_position: ?usize, collations: []const IndexCollation, sort_orders: []const IndexSortOrder, predicate: ?IndexPredicate, unique: bool, if_not_exists: bool) ResultCode {
+    pub fn createSchemaIndex(self: *Database, name: []const u8, table_name: []const u8, sql: []const u8, table_root: u32, column_indices: []const usize, integer_primary_key_position: ?usize, collations: []const IndexCollation, sort_orders: []const IndexSortOrder, transforms: []const IndexTransform, predicate: ?IndexPredicate, unique: bool, if_not_exists: bool) ResultCode {
         if (!self.writable) return .read_only;
-        if (name.len == 0 or table_name.len == 0 or sql.len == 0 or column_indices.len == 0 or collations.len != column_indices.len or sort_orders.len != column_indices.len) return .misuse;
+        if (name.len == 0 or table_name.len == 0 or sql.len == 0 or column_indices.len == 0 or collations.len != column_indices.len or sort_orders.len != column_indices.len or transforms.len != column_indices.len) return .misuse;
         const table_opened = self.openCursor(table_root, .table);
         if (table_opened.result != .ok) return table_opened.result;
         var table_cursor = table_opened.cursor.?;
@@ -709,7 +722,7 @@ pub const Database = struct {
             defer self.allocator.free(key_values);
             for (column_indices, 0..) |column_index, index| {
                 if (column_index >= record.values.len) return .corrupt;
-                key_values[index] = if (integer_primary_key_position == index) .{ .integer = rowid } else record.values[column_index];
+                key_values[index] = transformIndexValue(transforms[index], if (integer_primary_key_position == index) .{ .integer = rowid } else record.values[column_index]);
             }
             key_values[column_indices.len] = .{ .integer = rowid };
             const payload = encodeRecord(self.allocator, key_values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
@@ -819,9 +832,9 @@ pub const Database = struct {
 
     /// Source `sqlite3RefillIndex()` path used by REINDEX. Clear the existing
     /// root and repopulate it with the current key information atomically.
-    pub fn refillSchemaIndex(self: *Database, root_page: u32, table_root: u32, column_indices: []const usize, integer_primary_key_position: ?usize, collations: []const IndexCollation, sort_orders: []const IndexSortOrder, predicate: ?IndexPredicate, unique: bool) ResultCode {
+    pub fn refillSchemaIndex(self: *Database, root_page: u32, table_root: u32, column_indices: []const usize, integer_primary_key_position: ?usize, collations: []const IndexCollation, sort_orders: []const IndexSortOrder, transforms: []const IndexTransform, predicate: ?IndexPredicate, unique: bool) ResultCode {
         if (!self.writable) return .read_only;
-        if (column_indices.len == 0 or collations.len != column_indices.len or sort_orders.len != column_indices.len) return .misuse;
+        if (column_indices.len == 0 or collations.len != column_indices.len or sort_orders.len != column_indices.len or transforms.len != column_indices.len) return .misuse;
         const table_opened = self.openCursor(table_root, .table);
         if (table_opened.result != .ok) return table_opened.result;
         var table_cursor = table_opened.cursor.?;
@@ -843,7 +856,7 @@ pub const Database = struct {
             defer self.allocator.free(key_values);
             for (column_indices, 0..) |column_index, index| {
                 if (column_index >= record.values.len) return .corrupt;
-                key_values[index] = if (integer_primary_key_position == index) .{ .integer = rowid } else record.values[column_index];
+                key_values[index] = transformIndexValue(transforms[index], if (integer_primary_key_position == index) .{ .integer = rowid } else record.values[column_index]);
             }
             key_values[column_indices.len] = .{ .integer = rowid };
             const payload = encodeRecord(self.allocator, key_values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
