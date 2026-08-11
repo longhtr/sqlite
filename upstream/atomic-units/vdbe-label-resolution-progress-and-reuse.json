@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-label-resolution-progress-and-reuse",
   "title": "VDBE label resolution, progress checks, and reusable-program marker",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These active source functions and state fields form the dependency-closed label state machine used by the VDBE builder: negative label issuance, geometric label-array growth, resolve-to-next-op, hundred-label progress checks, interrupt/callback propagation, and Expire/Noop reusable marking. They extend the admitted fixed-operand append core and share its connection allocation/OOM closure.",
@@ -217,7 +217,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "The 366-observation builder trace reaches label realloc failure, verifies realloc-or-free ownership loss and sticky OOM, then resumes after clear.",

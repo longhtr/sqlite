@@ -52,7 +52,7 @@
     {
       "id": "vdbe-label-resolution-progress-and-reuse",
       "path": "upstream/atomic-units/vdbe-label-resolution-progress-and-reuse.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-bound-value-copy-affinity-and-variable-mask",
