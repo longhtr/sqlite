@@ -58,7 +58,7 @@ pub const IndexSubstring = struct { start: i64, count: ?i64 };
 pub const IndexScalarMinMax = struct { comparison: i64, column_first: bool };
 pub const IndexScalarMinMaxReal = struct { comparison: f64, column_first: bool };
 pub const IndexBinaryMath = enum { power, modulo, arc_tangent_two, logarithm };
-pub const IndexBinaryMathExpression = struct { operation: IndexBinaryMath, operand: i64, column_first: bool };
+pub const IndexBinaryMathExpression = struct { operation: IndexBinaryMath, operand: f64, column_first: bool };
 pub const IndexUnaryMath = enum {
     square_root,
     exponential,
@@ -266,7 +266,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
                     .real => |real| real,
                     else => unreachable,
                 };
-                const constant: f64 = @floatFromInt(expression.operand);
+                const constant = expression.operand;
                 const left = if (expression.column_first) input else constant;
                 const right = if (expression.column_first) constant else input;
                 const result = switch (expression.operation) {

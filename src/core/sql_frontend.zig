@@ -4600,6 +4600,16 @@ fn resolveSignedIndexOperand(token_list: []const Token, position: usize) ?Signed
     return .{ .value = value, .consumed = literal_position + 1 - position };
 }
 
+const SignedNumericIndexOperand = struct { value: f64, consumed: usize };
+
+fn resolveSignedNumericIndexOperand(token_list: []const Token, position: usize) ?SignedNumericIndexOperand {
+    if (resolveSignedFloatIndexOperand(token_list, position)) |operand| {
+        return .{ .value = operand.value, .consumed = operand.consumed };
+    }
+    const operand = resolveSignedIndexOperand(token_list, position) orelse return null;
+    return .{ .value = @floatFromInt(operand.value), .consumed = operand.consumed };
+}
+
 const NullBinaryFunctionIndexExpression = struct { column_name: []const u8, constant_null: bool, consumed: usize };
 
 fn resolveNullBinaryFunctionIndexExpression(token_list: []const Token, position: usize) ?NullBinaryFunctionIndexExpression {
@@ -4658,7 +4668,7 @@ fn resolveUnaryMathIndexOperation(name: []const u8) ?btree.IndexUnaryMath {
     return null;
 }
 
-const BinaryMathIndexExpression = struct { column_name: []const u8, operation: btree.IndexBinaryMath, operand: i64, column_first: bool, consumed: usize };
+const BinaryMathIndexExpression = struct { column_name: []const u8, operation: btree.IndexBinaryMath, operand: f64, column_first: bool, consumed: usize };
 
 fn resolveBinaryMathIndexExpression(token_list: []const Token, position: usize) ?BinaryMathIndexExpression {
     if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or token_list[position + 1].typ != tokens.tk_lp) return null;
@@ -4673,12 +4683,12 @@ fn resolveBinaryMathIndexExpression(token_list: []const Token, position: usize) 
     else
         return null;
     if (token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_comma) {
-        const operand = resolveSignedIndexOperand(token_list, position + 4) orelse return null;
+        const operand = resolveSignedNumericIndexOperand(token_list, position + 4) orelse return null;
         const end_position = position + 4 + operand.consumed;
         if (end_position >= token_list.len or token_list[end_position].typ != tokens.tk_rp) return null;
         return .{ .column_name = token_list[position + 2].text, .operation = operation, .operand = operand.value, .column_first = true, .consumed = end_position + 1 - position };
     }
-    const operand = resolveSignedIndexOperand(token_list, position + 2) orelse return null;
+    const operand = resolveSignedNumericIndexOperand(token_list, position + 2) orelse return null;
     const comma_position = position + 2 + operand.consumed;
     if (comma_position + 2 >= token_list.len or token_list[comma_position].typ != tokens.tk_comma or token_list[comma_position + 1].typ != tokens.tk_id or token_list[comma_position + 2].typ != tokens.tk_rp) return null;
     return .{ .column_name = token_list[comma_position + 1].text, .operation = operation, .operand = operand.value, .column_first = false, .consumed = comma_position + 3 - position };
