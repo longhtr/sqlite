@@ -27,7 +27,7 @@
     {
       "id": "vdbe-p4-leaf-payload-ownership-release",
       "path": "upstream/atomic-units/vdbe-p4-leaf-payload-ownership-release.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-p4-attachment-dispatch-and-object-destruction",

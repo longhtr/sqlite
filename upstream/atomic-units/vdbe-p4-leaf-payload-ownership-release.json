@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-p4-leaf-payload-ownership-release",
   "title": "VDBE P4 ephemeral-function, Mem, and function-context leaf release",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These three source helpers are the leaf destructors used by freeP4 for P4_FUNCDEF, P4_MEM, and P4_FUNCCTX. Their owned fields and SQLITE_FUNC_EPHEM flag completely determine whether nested allocations and functions are consumed.",
@@ -140,7 +140,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation. Every assigned nested and outer owner is observed returned exactly once.",
