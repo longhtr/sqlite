@@ -5502,27 +5502,33 @@ fn indexCollation(connection: *Connection, name: []const u8) ?btree.IndexCollati
     return registeredIndexCollation(connection, name);
 }
 
-fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedColumn) error{Syntax}!?btree.IndexPredicate {
-    var position: usize = 0;
-    while (position < token_list.len and token_list[position].typ != tokens.tk_where) : (position += 1) {}
-    if (position == token_list.len) return null;
-    if (position + 4 > token_list.len or token_list[position + 1].typ != tokens.tk_id) return error.Syntax;
+fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const ResolvedColumn, position: *usize) error{Syntax}!btree.IndexPredicateTerm {
+    if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_id) return error.Syntax;
     var column_index: ?usize = null;
     for (columns, 0..) |column, index| {
-        if (std.ascii.eqlIgnoreCase(column.name, token_list[position + 1].text)) {
+        if (std.ascii.eqlIgnoreCase(column.name, token_list[position.*].text)) {
             column_index = index;
             break;
         }
     }
     const selected = column_index orelse return error.Syntax;
+    position.* += 1;
+    if (position.* >= token_list.len) return error.Syntax;
     var operation: btree.IndexPredicateOperation = undefined;
     var comparison_value: i64 = 0;
-    if (position + 4 == token_list.len and token_list[position + 2].typ == tokens.tk_is and token_list[position + 3].typ == tokens.tk_null) {
-        operation = .is_null;
-    } else if (position + 5 == token_list.len and token_list[position + 2].typ == tokens.tk_is and token_list[position + 3].typ == tokens.tk_not and token_list[position + 4].typ == tokens.tk_null) {
-        operation = .is_not_null;
-    } else if ((position + 4 == token_list.len or (position + 5 == token_list.len and token_list[position + 3].typ == tokens.tk_minus)) and (columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER"))) {
-        operation = switch (token_list[position + 2].typ) {
+    if (token_list[position.*].typ == tokens.tk_is) {
+        position.* += 1;
+        if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_not) {
+            operation = .is_not_null;
+            position.* += 1;
+        } else {
+            operation = .is_null;
+        }
+        if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_null) return error.Syntax;
+        position.* += 1;
+    } else {
+        if (!columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER")) return error.Syntax;
+        operation = switch (token_list[position.*].typ) {
             tokens.tk_eq => .integer_eq,
             tokens.tk_ne => .integer_ne,
             tokens.tk_lt => .integer_lt,
@@ -5531,21 +5537,39 @@ fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedCol
             tokens.tk_ge => .integer_ge,
             else => return error.Syntax,
         };
-        const literal_position = if (position + 4 == token_list.len) position + 3 else position + 4;
-        if (token_list[literal_position].typ != tokens.tk_integer) return error.Syntax;
-        comparison_value = std.fmt.parseInt(i64, token_list[literal_position].text, 10) catch return error.Syntax;
-        if (literal_position != position + 3) comparison_value = -comparison_value;
-    } else {
-        return error.Syntax;
+        position.* += 1;
+        var negative = false;
+        if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_minus) {
+            negative = true;
+            position.* += 1;
+        }
+        if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_integer) return error.Syntax;
+        comparison_value = std.fmt.parseInt(i64, token_list[position.*].text, 10) catch return error.Syntax;
+        if (negative) comparison_value = -comparison_value;
+        position.* += 1;
     }
     return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = operation, .comparison_value = comparison_value };
 }
 
+fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedColumn) error{Syntax}!?btree.IndexPredicate {
+    var position: usize = 0;
+    while (position < token_list.len and token_list[position].typ != tokens.tk_where) : (position += 1) {}
+    if (position == token_list.len) return null;
+    position += 1;
+    const first = try resolveIndexPredicateTerm(token_list, columns, &position);
+    var second: ?btree.IndexPredicateTerm = null;
+    if (position < token_list.len) {
+        if (token_list[position].typ != tokens.tk_and) return error.Syntax;
+        position += 1;
+        second = try resolveIndexPredicateTerm(token_list, columns, &position);
+    }
+    if (position != token_list.len) return error.Syntax;
+    return .{ .first = first, .second = second };
+}
+
 fn indexPredicateRowMatches(predicate: ?btree.IndexPredicate, row: IndexMutationRow) error{Corrupt}!bool {
     const filter = predicate orelse return true;
-    if (filter.column_index >= row.values.len) return error.Corrupt;
-    const value: btree.Value = if (filter.integer_primary_key) .{ .integer = row.rowid } else row.values[filter.column_index];
-    return btree.indexPredicateMatches(filter, value);
+    return btree.indexPredicateRecordMatches(filter, row.values, row.rowid) orelse error.Corrupt;
 }
 
 /// Bounded source `sqlite3GenerateIndexKey()` mutation owner for ordinary

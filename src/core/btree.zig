@@ -110,14 +110,19 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
 
 pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge };
 
-pub const IndexPredicate = struct {
+pub const IndexPredicateTerm = struct {
     column_index: usize,
     integer_primary_key: bool,
     operation: IndexPredicateOperation,
     comparison_value: i64 = 0,
 };
 
-pub fn indexPredicateMatches(predicate: IndexPredicate, value: Value) bool {
+pub const IndexPredicate = struct {
+    first: IndexPredicateTerm,
+    second: ?IndexPredicateTerm = null,
+};
+
+pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
     return switch (predicate.operation) {
         .is_null => switch (value) {
             .null_ => true,
@@ -144,6 +149,17 @@ pub fn indexPredicateMatches(predicate: IndexPredicate, value: Value) bool {
             };
         },
     };
+}
+
+pub fn indexPredicateRecordMatches(predicate: IndexPredicate, values: []const Value, rowid: i64) ?bool {
+    const terms = [_]?IndexPredicateTerm{ predicate.first, predicate.second };
+    for (terms) |optional_term| {
+        const term = optional_term orelse continue;
+        if (term.column_index >= values.len) return null;
+        const value: Value = if (term.integer_primary_key) .{ .integer = rowid } else values[term.column_index];
+        if (!indexPredicateMatches(term, value)) return false;
+    }
+    return true;
 }
 
 pub const RecordView = struct {
@@ -766,9 +782,7 @@ pub const Database = struct {
             var record = decoded.record.?;
             defer record.deinit();
             if (predicate) |filter| {
-                if (filter.column_index >= record.values.len) return .corrupt;
-                const value: Value = if (filter.integer_primary_key) .{ .integer = rowid } else record.values[filter.column_index];
-                if (!indexPredicateMatches(filter, value)) continue;
+                if (!(indexPredicateRecordMatches(filter, record.values, rowid) orelse return .corrupt)) continue;
             }
             const key_values = self.allocator.alloc(Value, column_indices.len + 1) catch return .no_memory;
             defer self.allocator.free(key_values);
@@ -900,9 +914,7 @@ pub const Database = struct {
             var record = decoded.record.?;
             defer record.deinit();
             if (predicate) |filter| {
-                if (filter.column_index >= record.values.len) return .corrupt;
-                const value: Value = if (filter.integer_primary_key) .{ .integer = rowid } else record.values[filter.column_index];
-                if (!indexPredicateMatches(filter, value)) continue;
+                if (!(indexPredicateRecordMatches(filter, record.values, rowid) orelse return .corrupt)) continue;
             }
             const key_values = self.allocator.alloc(Value, column_indices.len + 1) catch return .no_memory;
             defer self.allocator.free(key_values);
