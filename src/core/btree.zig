@@ -97,8 +97,10 @@ pub const IndexTransform = union(enum) {
     integer_bit_not,
     is_null,
     is_not_null,
+    constant_integer: i64,
     null_coalesce_integer: i64,
     null_if_integer: i64,
+    reverse_null_if_integer: i64,
     scalar_min_integer: IndexScalarMinMax,
     scalar_max_integer: IndexScalarMinMax,
     integer_add: i64,
@@ -376,6 +378,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .text => "text",
             .blob => "blob",
         } },
+        .constant_integer => |constant| return .{ .integer = constant },
         .null_coalesce_integer => |replacement| return switch (value) {
             .null_ => .{ .integer = replacement },
             else => value,
@@ -384,6 +387,11 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .integer => |integer| if (integer == comparison) .null_ else value,
             .real => |real| if (real == @as(f64, @floatFromInt(comparison))) .null_ else value,
             .null_, .text, .blob => value,
+        },
+        .reverse_null_if_integer => |comparison| return switch (value) {
+            .integer => |integer| if (integer == comparison) .null_ else .{ .integer = comparison },
+            .real => |real| if (real == @as(f64, @floatFromInt(comparison))) .null_ else .{ .integer = comparison },
+            .null_, .text, .blob => .{ .integer = comparison },
         },
         .scalar_min_integer => |expression| return switch (value) {
             .null_ => .null_,
@@ -401,7 +409,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     }
     const numeric = numericIndexValue(value);
     return switch (transform) {
-        .identity, .is_null, .is_not_null, .null_coalesce_integer, .null_if_integer, .scalar_min_integer, .scalar_max_integer, .substring => unreachable,
+        .identity, .is_null, .is_not_null, .constant_integer, .null_coalesce_integer, .null_if_integer, .reverse_null_if_integer, .scalar_min_integer, .scalar_max_integer, .substring => unreachable,
         .numeric_negate => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = -integer },
