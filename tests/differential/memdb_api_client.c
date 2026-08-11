@@ -969,7 +969,9 @@ int main(void){
   int partial_like_function_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_like_function_index ON partial_like_data(value) WHERE like('a%',marker)",0,0,0);
   int partial_not_like_function_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_like_function_index ON partial_like_data(value) WHERE NOT like('z%',marker)",0,0,0);
   int partial_like_function_escape_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_like_function_escape_index ON partial_like_data(value) WHERE like('b!_%',marker,'!')",0,0,0);
-  printf("partial-like-function-index\t%d\t%d\t%d\n",partial_like_function_index_rc,partial_not_like_function_index_rc,partial_like_function_escape_index_rc);
+  int partial_glob_function_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_glob_function_index ON partial_like_data(value) WHERE glob('[d-f]*',marker)",0,0,0);
+  int partial_not_glob_function_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_glob_function_index ON partial_like_data(value) WHERE NOT glob('z*',marker)",0,0,0);
+  printf("partial-like-function-index\t%d\t%d\t%d\t%d\t%d\n",partial_like_function_index_rc,partial_not_like_function_index_rc,partial_like_function_escape_index_rc,partial_glob_function_index_rc,partial_not_glob_function_index_rc);
   printf("partial-unicode-like-index\t%d\n",partial_unicode_like_index_rc);
   printf("partial-like-escape-index\t%d\n",partial_like_escape_index_rc);
   int partial_glob_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_glob_index ON partial_like_data(value) WHERE marker GLOB 'A?*'",0,0,0);

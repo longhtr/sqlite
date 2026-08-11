@@ -6178,7 +6178,8 @@ fn resolveIndexPredicateInteger(token_list: []const Token, position: *usize) err
 }
 
 fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const ResolvedColumn, position: *usize) error{Syntax}!btree.IndexPredicateTerm {
-    if (position.* + 5 < token_list.len and token_list[position.*].typ == tokens.tk_like_kw and std.ascii.eqlIgnoreCase(token_list[position.*].text, "like") and token_list[position.* + 1].typ == tokens.tk_lp and token_list[position.* + 2].typ == tokens.tk_string and token_list[position.* + 3].typ == tokens.tk_comma and token_list[position.* + 4].typ == tokens.tk_id) {
+    if (position.* + 5 < token_list.len and token_list[position.*].typ == tokens.tk_like_kw and (std.ascii.eqlIgnoreCase(token_list[position.*].text, "like") or std.ascii.eqlIgnoreCase(token_list[position.*].text, "glob")) and token_list[position.* + 1].typ == tokens.tk_lp and token_list[position.* + 2].typ == tokens.tk_string and token_list[position.* + 3].typ == tokens.tk_comma and token_list[position.* + 4].typ == tokens.tk_id) {
+        const glob = std.ascii.eqlIgnoreCase(token_list[position.*].text, "glob");
         var selected: ?usize = null;
         for (columns, 0..) |column, index| {
             if (std.ascii.eqlIgnoreCase(column.name, token_list[position.* + 4].text)) {
@@ -6191,7 +6192,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         var end_position = position.* + 5;
         var escape: i64 = 0;
         if (token_list[end_position].typ == tokens.tk_comma) {
-            if (end_position + 2 >= token_list.len or token_list[end_position + 1].typ != tokens.tk_string) return error.Syntax;
+            if (glob or end_position + 2 >= token_list.len or token_list[end_position + 1].typ != tokens.tk_string) return error.Syntax;
             const escape_literal = token_list[end_position + 1].text;
             if (escape_literal.len != 3 or escape_literal[0] != '\'' or escape_literal[2] != '\'' or escape_literal[1] >= 0x80) return error.Syntax;
             escape = escape_literal[1];
@@ -6200,7 +6201,7 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         if (end_position >= token_list.len or token_list[end_position].typ != tokens.tk_rp) return error.Syntax;
         const pattern = token_list[position.* + 2].text;
         position.* = end_position + 1;
-        return .{ .column_index = column_index, .integer_primary_key = false, .operation = .text_like, .comparison_value = escape, .comparison_text = pattern };
+        return .{ .column_index = column_index, .integer_primary_key = false, .operation = if (glob) .text_glob else .text_like, .comparison_value = escape, .comparison_text = pattern };
     }
     if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_null) {
         position.* += 1;
