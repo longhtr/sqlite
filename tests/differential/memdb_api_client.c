@@ -895,7 +895,7 @@ int main(void){
   int partial_float_eq_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_eq_index ON partial_float_data(value) WHERE marker=1.5",0,0,0);
   int partial_float_ne_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_ne_index ON partial_float_data(value) WHERE marker!=1.5",0,0,0);
   int partial_float_le_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_le_index ON partial_float_data(value) WHERE marker<=-1.5",0,0,0);
-  int partial_float_ge_reverse_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_ge_reverse_index ON partial_float_data(value) WHERE -1.5>=marker",0,0,0);
+  int partial_float_ge_reverse_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_ge_reverse_index ON partial_float_data(value) WHERE +1.5>=marker",0,0,0);
   int partial_float_is_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_is_index ON partial_float_data(value) WHERE marker IS 1.5",0,0,0);
   int partial_float_is_not_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_is_not_index ON partial_float_data(value) WHERE marker IS NOT -1.5",0,0,0);
   int partial_float_reversed_is_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_reversed_is_index ON partial_float_data(value) WHERE 1.5 IS marker",0,0,0);
