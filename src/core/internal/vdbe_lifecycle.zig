@@ -98,6 +98,31 @@ fn btreeLeave(tree: *types.Btree, operations: *const BtreeMutexOperations) void 
     }
 }
 
+/// Source `btreeEnterAll()`: enter every sharable Btree on a connection and
+/// cache whether future all-Btree entry may be skipped.
+fn btreeEnterAll(db: *types.Sqlite3, operations: *const BtreeMutexOperations) void {
+    var skip_ok: u8 = 1;
+    var index: c_int = 0;
+    while (index < db.nDb) : (index += 1) {
+        const tree = db.aDb.?[@intCast(index)].pBt orelse continue;
+        if (tree.sharable != 0) {
+            btreeEnter(tree, operations);
+            skip_ok = 0;
+        }
+    }
+    db.noSharedCache = skip_ok;
+}
+
+/// Source `btreeLeaveAll()`: leave every present Btree on a connection after
+/// a matching all-Btree entry operation.
+fn btreeLeaveAll(db: *types.Sqlite3, operations: *const BtreeMutexOperations) void {
+    var index: c_int = 0;
+    while (index < db.nDb) : (index += 1) {
+        const tree = db.aDb.?[@intCast(index)].pBt orelse continue;
+        btreeLeave(tree, operations);
+    }
+}
+
 /// Source `sqlite3VdbeEnter()`: lock the non-TEMP shared btrees in the VM's
 /// lock mask in database order.
 pub fn enterBtrees(machine: *types.Vdbe) void {
@@ -629,6 +654,26 @@ test "source careful Btree lock preserves ascending reacquisition" {
     try std.testing.expectEqual(@as(c_int, 0), first.wantToLock);
     try std.testing.expectEqual(@as(u8, 0), first.locked);
     try std.testing.expectEqualSlices(u8, &.{ 0x11, 0x31 }, harness.events[0..harness.count]);
+
+    harness.count = 0;
+    var databases = [_]types.Db{ std.mem.zeroes(types.Db), std.mem.zeroes(types.Db), std.mem.zeroes(types.Db) };
+    databases[0].pBt = &first;
+    databases[2].pBt = &second;
+    second.sharable = 0;
+    second.locked = 0;
+    second.wantToLock = 0;
+    var db = std.mem.zeroes(types.Sqlite3);
+    db.aDb = &databases;
+    db.nDb = databases.len;
+    btreeEnterAll(&db, &operations);
+    try std.testing.expectEqual(@as(u8, 0), db.noSharedCache);
+    try std.testing.expectEqual(@as(c_int, 1), first.wantToLock);
+    btreeLeaveAll(&db, &operations);
+    try std.testing.expectEqual(@as(c_int, 0), first.wantToLock);
+    try std.testing.expectEqual(@as(u8, 0), first.locked);
+    first.sharable = 0;
+    btreeEnterAll(&db, &operations);
+    try std.testing.expectEqual(@as(u8, 1), db.noSharedCache);
 }
 
 fn testExecuteDone(_: ?*anyopaque, _: *types.Vdbe) c_int {
