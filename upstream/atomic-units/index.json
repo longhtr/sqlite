@@ -82,7 +82,7 @@
     {
       "id": "vdbe-final-label-fixup-and-program-flags",
       "path": "upstream/atomic-units/vdbe-final-label-fixup-and-program-flags.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-goto-and-explain-parent-stack-wrappers",

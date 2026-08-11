@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-final-label-fixup-and-program-flags",
   "title": "VDBE final label fixup, reader/write flags, and virtual-table argument sizing",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "resolveP2Values is the source builder finalization scan that consumes resolved labels, patches negative jump P2 operands, computes maximum VUpdate/VFilter argument demand, derives read-only/reader flags, and releases Parse label storage. Its reverse scan and generated opcode-property coupling form one atomic unit.",
@@ -154,7 +154,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Entry requires no sticky OOM; preceding label growth OOM/continuation is covered by the same 366-observation worker.",
