@@ -5550,6 +5550,19 @@ fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const Resolve
         position.* += 1;
     } else {
         if (!integer_column) return error.Syntax;
+        const not_in = token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_in;
+        if (token_list[position.*].typ == tokens.tk_in or not_in) {
+            position.* += if (not_in) 2 else 1;
+            if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_lp) return error.Syntax;
+            position.* += 1;
+            const first_value = try resolveIndexPredicateInteger(token_list, position);
+            if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_comma) return error.Syntax;
+            position.* += 1;
+            const second_value = try resolveIndexPredicateInteger(token_list, position);
+            if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_rp) return error.Syntax;
+            position.* += 1;
+            return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (not_in) .integer_not_in else .integer_in, .comparison_value = first_value, .comparison_value_high = second_value };
+        }
         const not_between = token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_between;
         if (token_list[position.*].typ == tokens.tk_between or not_between) {
             position.* += if (not_between) 2 else 1;
