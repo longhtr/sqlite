@@ -57,7 +57,7 @@
     {
       "id": "vdbe-bound-value-copy-affinity-and-variable-mask",
       "path": "upstream/atomic-units/vdbe-bound-value-copy-affinity-and-variable-mask.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-compact-operation-list-append-and-relocation",

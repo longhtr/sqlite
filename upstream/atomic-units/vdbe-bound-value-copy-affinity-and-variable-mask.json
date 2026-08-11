@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-bound-value-copy-affinity-and-variable-mask",
   "title": "VDBE bound-value copy, affinity, and reoptimization variable mask",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeGetBoundValue and sqlite3VdbeSetVarmask are the planner/reprepare boundary for bound parameters: one returns a caller-owned affinity-applied copy while preserving the binding, and the other records parameters whose rebinding may change a query plan.",
@@ -92,7 +92,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Deterministic value-allocation OOM is reached with lookaside disabled; return is null and sticky state matches.",
