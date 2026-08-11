@@ -122,7 +122,7 @@
     {
       "id": "vdbe-subprogram-intrusive-linkage",
       "path": "upstream/atomic-units/vdbe-subprogram-intrusive-linkage.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-builder-state-representations",

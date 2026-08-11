@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-subprogram-intrusive-linkage",
   "title": "VDBE trigger SubProgram intrusive linkage and presence",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeLinkSubProgram and sqlite3VdbeHasSubProgram establish and query the Vdbe-owned intrusive list used to retain transferred trigger programs until statement destruction. SubProgram/pNext and Vdbe.pProgram are the complete linkage representation.",
@@ -121,7 +121,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "No allocation in assigned functions; test allocations are explicitly retired after observation.",
