@@ -144,10 +144,14 @@ int main(void){
   int deferred_delete_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
   int deferred_parent_delete_rc=sqlite3_exec(clone,"DELETE FROM deferred_parent WHERE id=9",0,0,0);
   int deferred_delete_rollback_rc=sqlite3_exec(clone,"ROLLBACK",0,0,0);
+  int transaction_error_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
+  int transaction_error_first_insert_rc=sqlite3_exec(clone,"INSERT INTO deferred_parent VALUES(10)",0,0,0);
+  int transaction_error_duplicate_rc=sqlite3_exec(clone,"INSERT INTO deferred_parent VALUES(10)",0,0,0);
+  int transaction_error_commit_rc=sqlite3_exec(clone,"COMMIT",0,0,0);
   sqlite3_int64 deferred_parent_count=-1,deferred_child_count=-1;
   int deferred_parent_query_rc=query_value(clone,"SELECT count(*) FROM deferred_parent",&deferred_parent_count);
   int deferred_child_query_rc=query_value(clone,"SELECT count(*) FROM deferred_child",&deferred_child_count);
-  printf("deferred-fk\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%lld\n",deferred_fk_config_rc,deferred_parent_create_rc,deferred_child_create_rc,deferred_begin_rc,deferred_child_insert_rc,deferred_failed_commit_rc,deferred_failed_commit_autocommit,deferred_parent_insert_rc,deferred_commit_rc,deferred_commit_autocommit,deferred_delete_begin_rc,deferred_parent_delete_rc,deferred_delete_rollback_rc,deferred_parent_query_rc,(long long)deferred_parent_count,deferred_child_query_rc,(long long)deferred_child_count);
+  printf("deferred-fk\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%lld\n",deferred_fk_config_rc,deferred_parent_create_rc,deferred_child_create_rc,deferred_begin_rc,deferred_child_insert_rc,deferred_failed_commit_rc,deferred_failed_commit_autocommit,deferred_parent_insert_rc,deferred_commit_rc,deferred_commit_autocommit,deferred_delete_begin_rc,deferred_parent_delete_rc,deferred_delete_rollback_rc,transaction_error_begin_rc,transaction_error_first_insert_rc,transaction_error_duplicate_rc,transaction_error_commit_rc,deferred_parent_query_rc,(long long)deferred_parent_count,deferred_child_query_rc,(long long)deferred_child_count);
   int attach_rc=sqlite3_exec(attached,"ATTACH ':memory:' AS aux",0,0,0);
   unsigned char *attached_image=sqlite3_serialize(source,"main",&size,0);
   int attached_deserialize_rc=sqlite3_deserialize(attached,"aux",attached_image,size,size,SQLITE_DESERIALIZE_FREEONCLOSE|SQLITE_DESERIALIZE_RESIZEABLE);

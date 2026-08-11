@@ -366,6 +366,7 @@ pub const Database = struct {
     writable: bool = false,
     mutation_batch_depth: usize = 0,
     mutation_batch_pages: u32 = 0,
+    statement_batch_pages: u32 = 0,
 
     pub fn open(
         allocator: std.mem.Allocator,
@@ -844,6 +845,40 @@ pub const Database = struct {
             self.mutation_batch_pages = self.declared_pages;
         }
         self.mutation_batch_depth += 1;
+        return .ok;
+    }
+
+    /// Source `sqlite3BtreeBeginStmt()`: nest one statement savepoint inside
+    /// an explicit transaction, or use the ordinary outer mutation batch.
+    pub fn beginStatementBatch(self: *Database) ResultCode {
+        if (self.mutation_batch_depth == 0) return self.beginMutationBatch();
+        const pages = self.declared_pages;
+        self.mutation_batch_depth += 1;
+        const opened = self.pager.openSavepoints(1);
+        if (opened != .ok) {
+            self.mutation_batch_depth -= 1;
+            return opened;
+        }
+        self.statement_batch_pages = pages;
+        return .ok;
+    }
+
+    pub fn commitStatementBatch(self: *Database) ResultCode {
+        if (self.mutation_batch_depth <= 1) return self.commitMutationBatch();
+        const released = self.pager.releaseSavepoint(0);
+        if (released != .ok) return released;
+        self.mutation_batch_depth -= 1;
+        return .ok;
+    }
+
+    pub fn rollbackStatementBatch(self: *Database) ResultCode {
+        if (self.mutation_batch_depth <= 1) return self.rollbackMutationBatch();
+        const rolled_back = self.pager.rollbackSavepoint(0);
+        if (rolled_back != .ok) return rolled_back;
+        const released = self.pager.releaseSavepoint(0);
+        if (released != .ok) return released;
+        self.mutation_batch_depth -= 1;
+        self.declared_pages = self.statement_batch_pages;
         return .ok;
     }
 
