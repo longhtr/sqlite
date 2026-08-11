@@ -50,6 +50,7 @@ pub const IndexTransform = union(enum) {
     integer_add: i64,
     integer_multiply: i64,
     integer_divide: i64,
+    integer_remainder: i64,
 };
 
 fn numericIndexValue(value: Value) Value {
@@ -103,6 +104,12 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .null_ => .null_,
             .integer => |integer| if (integer == std.math.minInt(i64) and divisor == -1) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = @divTrunc(integer, divisor) },
             .real => |real| .{ .real = real / @as(f64, @floatFromInt(divisor)) },
+            .text, .blob => unreachable,
+        },
+        .integer_remainder => |divisor| if (divisor == 0) .null_ else switch (numeric) {
+            .null_ => .null_,
+            .integer => |integer| .{ .integer = if (integer == std.math.minInt(i64) and divisor == -1) 0 else @rem(integer, divisor) },
+            .real => |real| .{ .real = @rem(real, @as(f64, @floatFromInt(divisor))) },
             .text, .blob => unreachable,
         },
     };

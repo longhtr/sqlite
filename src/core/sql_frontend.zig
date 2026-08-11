@@ -4669,7 +4669,7 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
                 generated_virtual = storage_position >= position or parsed.tokens[storage_position].typ == tokens.tk_virtual or !std.ascii.eqlIgnoreCase(parsed.tokens[storage_position].text, "stored");
             }
         }
-        if (schema_is_index and start + 2 < position and (parsed.tokens[start + 1].typ == tokens.tk_plus or parsed.tokens[start + 1].typ == tokens.tk_minus or parsed.tokens[start + 1].typ == tokens.tk_star or parsed.tokens[start + 1].typ == tokens.tk_slash)) {
+        if (schema_is_index and start + 2 < position and (parsed.tokens[start + 1].typ == tokens.tk_plus or parsed.tokens[start + 1].typ == tokens.tk_minus or parsed.tokens[start + 1].typ == tokens.tk_star or parsed.tokens[start + 1].typ == tokens.tk_slash or parsed.tokens[start + 1].typ == tokens.tk_rem)) {
             if (resolveSignedIndexOperand(parsed.tokens, start + 2)) |resolved_operand| {
                 if (start + 2 + resolved_operand.consumed == position) {
                     var operand = resolved_operand.value;
@@ -4678,6 +4678,8 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
                         index_transform = .{ .integer_multiply = operand };
                     } else if (parsed.tokens[start + 1].typ == tokens.tk_slash) {
                         index_transform = .{ .integer_divide = operand };
+                    } else if (parsed.tokens[start + 1].typ == tokens.tk_rem) {
+                        index_transform = .{ .integer_remainder = operand };
                     } else {
                         if (parsed.tokens[start + 1].typ == tokens.tk_minus) operand = -operand;
                         index_transform = .{ .integer_add = operand };
@@ -9058,13 +9060,15 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if ((switch (transform) {
             .identity => true,
             else => false,
-        }) and position < token_list.len and (token_list[position].typ == tokens.tk_plus or token_list[position].typ == tokens.tk_minus or token_list[position].typ == tokens.tk_star or token_list[position].typ == tokens.tk_slash)) {
+        }) and position < token_list.len and (token_list[position].typ == tokens.tk_plus or token_list[position].typ == tokens.tk_minus or token_list[position].typ == tokens.tk_star or token_list[position].typ == tokens.tk_slash or token_list[position].typ == tokens.tk_rem)) {
             if (resolveSignedIndexOperand(token_list, position + 1)) |resolved_operand| {
                 var operand = resolved_operand.value;
                 if (token_list[position].typ == tokens.tk_star) {
                     transform = .{ .integer_multiply = operand };
                 } else if (token_list[position].typ == tokens.tk_slash) {
                     transform = .{ .integer_divide = operand };
+                } else if (token_list[position].typ == tokens.tk_rem) {
+                    transform = .{ .integer_remainder = operand };
                 } else {
                     if (token_list[position].typ == tokens.tk_minus) operand = -operand;
                     transform = .{ .integer_add = operand };
@@ -9156,7 +9160,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         };
         const transformed = switch (specified_transforms.items[selected_position]) {
             .identity, .null_coalesce_integer => false,
-            .numeric_negate, .numeric_abs, .integer_add, .integer_multiply, .integer_divide => true,
+            .numeric_negate, .numeric_abs, .integer_add, .integer_multiply, .integer_divide, .integer_remainder => true,
         };
         if (transformed and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
             allocator.free(source);
