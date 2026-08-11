@@ -533,8 +533,8 @@ pub const IndexPredicateTerm = struct {
 pub const IndexPredicateCombination = enum { and_, or_ };
 
 pub const IndexPredicate = struct {
-    terms: [4]?IndexPredicateTerm = .{ null, null, null, null },
-    combinations: [3]IndexPredicateCombination = .{ .and_, .and_, .and_ },
+    terms: [8]?IndexPredicateTerm = .{ null, null, null, null, null, null, null, null },
+    combinations: [7]IndexPredicateCombination = .{ .and_, .and_, .and_, .and_, .and_, .and_, .and_ },
 };
 
 fn indexPredicateTextOrder(value: []const u8, literal: []const u8, collation: IndexPredicateTextCollation) ?std.math.Order {
