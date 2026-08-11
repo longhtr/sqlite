@@ -15,6 +15,26 @@ fn parseDatabase(parse: *types.Parse) *types.Sqlite3 {
     return @ptrCast(@alignCast(parse.db.?));
 }
 
+/// Source `sqlite3ParseObjectInit()`: clear the recursive header and
+/// non-recursive tail while preserving Lemon recursive state, then link the
+/// Parse at the connection head.
+pub fn initializeParseObject(parse: *types.Parse, db: *types.Sqlite3) void {
+    const bytes: [*]u8 = @ptrCast(parse);
+    const header_start = @offsetOf(types.Parse, "zErrMsg");
+    @memset(bytes[header_start .. header_start + types.Parse.header_size], 0);
+    @memset(bytes[types.Parse.recursive_offset .. types.Parse.recursive_offset + types.Parse.tail_size], 0);
+    std.debug.assert(db.pParse != parse);
+    parse.pOuterParse = db.pParse;
+    db.pParse = parse;
+    parse.db = @ptrCast(db);
+    if (db.mallocFailed != 0) {
+        db.errByteOffset = -1;
+        parse.nErr += 1;
+        parse.rc = if (db.suppressErr != 0) types.result_no_memory else types.result_error;
+        parse.pWith = null;
+    }
+}
+
 /// Source `sqlite3VdbeCreate()`: allocate the statement object, link it at
 /// the connection head, establish Parse ownership, and append OP_Init.
 pub fn create(parse: *types.Parse) ?*types.Vdbe {
@@ -899,6 +919,31 @@ pub fn deleteVdbe(machine: *types.Vdbe) void {
         if (machine.pVNext) |next| next.ppVPrev = previous_link;
     }
     db_allocator.freeNN(db, @ptrCast(machine));
+}
+
+test "source Parse object initialization preserves recursive middle state" {
+    var outer = std.mem.zeroes(types.Parse);
+    var parse: types.Parse = undefined;
+    @memset(@as([*]u8, @ptrCast(&parse))[0..@sizeOf(types.Parse)], 0xa5);
+    parse.aTempReg[0] = 42;
+    parse.oldmask = 0x1234;
+    var db = std.mem.zeroes(types.Sqlite3);
+    db.pParse = &outer;
+    initializeParseObject(&parse, &db);
+    try std.testing.expect(db.pParse == &parse);
+    try std.testing.expect(parse.pOuterParse == &outer);
+    try std.testing.expectEqual(@intFromPtr(&db), @intFromPtr(parse.db.?));
+    try std.testing.expectEqual(@as(c_int, 0), parse.nErr);
+    try std.testing.expectEqual(@as(u32, 0), parse.sLastToken.n);
+    try std.testing.expectEqual(@as(c_int, 42), parse.aTempReg[0]);
+    try std.testing.expectEqual(@as(u32, 0x1234), parse.oldmask);
+
+    db.pParse = &outer;
+    db.mallocFailed = 1;
+    initializeParseObject(&parse, &db);
+    try std.testing.expectEqual(@as(c_int, 1), parse.nErr);
+    try std.testing.expectEqual(types.result_error, parse.rc);
+    try std.testing.expectEqual(@as(c_int, -1), db.errByteOffset);
 }
 
 test "freeP4 nullable selected owner families" {

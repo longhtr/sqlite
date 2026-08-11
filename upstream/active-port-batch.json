@@ -168,6 +168,15 @@
       "atomic_unit_id": "schema-sibling-index-root-page-corruption-check",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/prepare.c::function::sqlite3ParseObjectInit::line-661",
+      "source_sha256": "413a11a835a62088201e19e275beb1d9b45a7a7bd6349fe32b88659a1c7423c3",
+      "zig_declaration_id": "src/core/internal/vdbe_aux.zig::function::initializeParseObject",
+      "zig_declaration_sha256": "2edd62b58a53ec0627ff395e6e0a0a9d94aac3ea39504e3270da2f6f92e2b6ec",
+      "atomic_unit_id": "prepare-parse-object-initialization",
+      "class": "short",
+      "complete": true
     }
   ]
 }
