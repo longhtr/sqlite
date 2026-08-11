@@ -258,6 +258,11 @@
       "id": "vdbe-post-commit-wal-callback-dispatch",
       "path": "upstream/atomic-units/vdbe-post-commit-wal-callback-dispatch.json",
       "status": "source-translated"
+    },
+    {
+      "id": "vdbe-statement-profile-callback-dispatch",
+      "path": "upstream/atomic-units/vdbe-statement-profile-callback-dispatch.json",
+      "status": "source-translated"
     }
   ]
 }

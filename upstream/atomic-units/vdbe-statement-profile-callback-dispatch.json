@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-statement-profile-callback-dispatch",
+  "title": "VDBE statement profile callback dispatch",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "invokeProfileCallback owns the one-shot conversion of a statement start timestamp into elapsed nanoseconds and dispatches both legacy and trace-v2 profile callbacks before consuming the timestamp.",
+    "source_files": [{"path": "src/vdbeapi.c", "sha256": "233846129dc649ec3d1ae321612ee8833c937ee775766eb8e39deda07a6b19a6"}],
+    "source_entity_ids": ["src/vdbeapi.c::function::invokeProfileCallback::line-68"],
+    "behavioral_block_ids": [
+      "src/vdbeapi.c::function::invokeProfileCallback::behavior::assert::line-71-column-3::ordinal-0",
+      "src/vdbeapi.c::function::invokeProfileCallback::behavior::assert::line-72-column-3::ordinal-0",
+      "src/vdbeapi.c::function::invokeProfileCallback::behavior::assert::line-73-column-3::ordinal-0",
+      "src/vdbeapi.c::function::invokeProfileCallback::behavior::if::line-77-column-3::ordinal-0",
+      "src/vdbeapi.c::function::invokeProfileCallback::behavior::if::line-81-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Statement step/reset/finalize callers", "VFS current-time implementation", "Trace/profile callback registration", "Public bounded Statement ownership"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": ["vdbe-builder-state-representations", "vdbe-statement-metadata-columns-bindings-and-vlist"],
+    "external_source_responsibilities": ["Source sqlite3OsCurrentTimeInt64 dispatch against the connection VFS"],
+    "caller_closure": "The complete callback body is assigned. A named current-time operation retains the exact VFS boundary until source-layout VFS ownership is connected."
+  },
+  "contracts": {
+    "inputs": ["Source-layout Sqlite3 and Vdbe with positive startTime, saved SQL text, idle initialization state, and a current-time operation"],
+    "outputs": ["No result code; optional callbacks receive one exact elapsed interval and startTime becomes zero"],
+    "ownership": "SQL, callback arguments, statement, connection, and stack-local elapsed value are borrowed for callback duration only.",
+    "state_and_results": "Elapsed time is the signed current-time millisecond delta multiplied by 1,000,000 nanoseconds. Legacy profile receives the bit-preserving u64 value; trace-v2 receives SQLITE_TRACE_PROFILE, the Vdbe, and a pointer to the signed interval. startTime is consumed after callbacks.",
+    "locks_callbacks_io": "Callers own the connection mutex. Current-time VFS dispatch precedes user callbacks; legacy callback precedes trace-v2. The current-time result code is intentionally ignored as in source.",
+    "failure_and_continuation": "Callback return values do not alter statement state. After dispatch, repeated checks see startTime zero and do not invoke this body again."
+  },
+  "mappings": [{
+    "source_entity_id": "src/vdbeapi.c::function::invokeProfileCallback::line-68",
+    "relation": "source-profile-callback-dispatch-to-native-operation",
+    "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::invokeProfileCallback"]
+  }],
+  "representation_differences": [
+    "sqlite3OsCurrentTimeInt64 is a named function pointer until the exact source-layout VFS pointer is connected.",
+    "The source stack pointer to iElapse is represented by an aligned anyopaque pointer only for the synchronous xV2 callback duration."
+  ],
+  "oracle": {
+    "protocol": "A native source-layout unit trace supplies timestamps 100 and 130, enables both callback families, and compares exact legacy/v2 elapsed values, trace event, Vdbe identity, and one-shot startTime consumption.",
+    "internal_observations": ["legacy elapsed nanoseconds", "trace event, elapsed value, and Vdbe identity", "startTime reset"],
+    "normalization": "Callback pointer addresses are reduced to Vdbe identity equality; elapsed values and events are exact. A pinned-C trace remains pending."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "One VFS time read is delegated; no durable I/O. Caller mutex integration remains pending.",
+    "malformed_input": "Positive start time, idle init state, and non-null SQL are source assertions rather than recoverable inputs.",
+    "continuation": "Timestamp consumption prevents duplicate profile dispatch.",
+    "performance": "Constant time plus one clock read and up to two synchronous callbacks.",
+    "commands": ["zig build internal-vdbe-layout-test", "zig build test"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_api.zig source-layout statement lifecycle API layer",
+    "native_call_path": "The exact source-layout operation and native unit trace are implemented; finalize/reset/step and VFS time integration remain pending.",
+    "bounded_owner_retired": "No. The bounded frontend retains a separate profile callback owner."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pinned-C trace, lifecycle/VFS/public-owner integration, assurance closure, and independent review."},
+  "known_blockers": ["Connect source-layout VFS current-time and step/reset/finalize callers.", "Add a pinned-C legacy/v2 profile callback trace.", "Retire the bounded frontend callback owner.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeapi.c:60-94 was reviewed completely for assertions, current-time sampling, nanosecond conversion, deprecated and v2 callback order, stack argument lifetime, and startTime reset",
+      "src/core/internal/vdbe_types.zig exact Sqlite3/Vdbe trace, profile, SQL, init, and timestamp fields were reviewed with current VFS ownership"
+    ],
+    "callers": ["sqlite3_finalize, sqlite3_reset, and sqlite3Step invoke the profile check while holding the connection mutex", "The bounded frontend callback path remains outside this source-layout unit"],
+    "callees": ["sqlite3OsCurrentTimeInt64 is represented by the named current-time operation", "xProfile and trace.xV2 receive source-order synchronous calls with exact arguments"],
+    "assertions_branches_cleanup": ["All five active behavior IDs cover three preconditions and both optional callback families", "startTime resets after both callbacks and not before", "The signed elapsed stack value remains live through trace.xV2"],
+    "upstream_tests": ["Upstream trace, profile, stmt, reset, finalize, timing, and callback tests cover the source path", "Project native source-layout unit trace covers both callback families and timestamp consumption"]
+  },
+  "evidence_receipts": []
+}

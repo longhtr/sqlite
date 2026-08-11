@@ -78,6 +78,15 @@
       "atomic_unit_id": "vdbe-post-commit-wal-callback-dispatch",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::invokeProfileCallback::line-68",
+      "source_sha256": "a42c2083c830cb171c8884d0e48efcad92c1f4ef8a99545c0bb4bbe1dd3f62ed",
+      "zig_declaration_id": "src/core/internal/vdbe_api.zig::function::invokeProfileCallback",
+      "zig_declaration_sha256": "d02a4c7fb2b39078010d793fd66b4962bcdaaaf6b96b16e582e1eecd789363f7",
+      "atomic_unit_id": "vdbe-statement-profile-callback-dispatch",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

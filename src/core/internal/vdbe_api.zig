@@ -70,6 +70,29 @@ pub fn doWalCallbacks(connection: *types.Sqlite3, frame_count: WalFrameCountFunc
     return result;
 }
 
+pub const CurrentTimeFunction = *const fn (*types.Sqlite3, *i64) c_int;
+
+/// Source `invokeProfileCallback()`: compute elapsed nanoseconds from the
+/// statement start timestamp, invoke legacy and v2 profile callbacks, then
+/// consume the timestamp exactly once.
+pub fn invokeProfileCallback(connection: *types.Sqlite3, machine: *types.Vdbe, current_time: CurrentTimeFunction) void {
+    std.debug.assert(machine.startTime > 0);
+    std.debug.assert(connection.init.busy == 0);
+    std.debug.assert(machine.zSql != null);
+    var now: i64 = 0;
+    _ = current_time(connection, &now);
+    var elapsed = (now - machine.startTime) * 1_000_000;
+    if (connection.xProfile) |profile| {
+        profile(connection.pProfileArg, machine.zSql, @bitCast(elapsed));
+    }
+    if (connection.mTrace & 0x02 != 0) {
+        if (connection.trace.xV2) |trace| {
+            _ = trace(0x02, connection.pTraceArg, @ptrCast(machine), @ptrCast(&elapsed));
+        }
+    }
+    machine.startTime = 0;
+}
+
 test "source WAL callbacks scan every Btree and stop hooks after error" {
     const Harness = struct {
         var frame_calls: c_int = 0;
@@ -107,6 +130,51 @@ test "source WAL callbacks scan every Btree and stop hooks after error" {
     try std.testing.expectEqual(@as(c_int, 2), Harness.frame_calls);
     try std.testing.expectEqual(@as(c_int, 1), Harness.hook_calls);
     try std.testing.expectEqual(@as(c_int, 2), Harness.last_entries);
+}
+
+test "source profile callback publishes one elapsed interval" {
+    const Harness = struct {
+        var profile_elapsed: u64 = 0;
+        var trace_elapsed: i64 = 0;
+        var trace_event: u32 = 0;
+        var expected_machine: ?*anyopaque = null;
+        var saw_machine = false;
+
+        fn currentTime(_: *types.Sqlite3, output: *i64) c_int {
+            output.* = 130;
+            return 0;
+        }
+
+        fn profile(_: ?*anyopaque, _: ?[*:0]const u8, elapsed: u64) callconv(.c) void {
+            profile_elapsed = elapsed;
+        }
+
+        fn trace(event: u32, _: ?*anyopaque, machine: ?*anyopaque, elapsed: ?*anyopaque) callconv(.c) c_int {
+            trace_event = event;
+            saw_machine = machine == expected_machine;
+            trace_elapsed = @as(*const i64, @ptrCast(@alignCast(elapsed.?))).*;
+            return 0;
+        }
+    };
+    Harness.profile_elapsed = 0;
+    Harness.trace_elapsed = 0;
+    Harness.trace_event = 0;
+    Harness.saw_machine = false;
+    var connection = std.mem.zeroes(types.Sqlite3);
+    connection.mTrace = 0x02;
+    connection.xProfile = Harness.profile;
+    connection.trace.xV2 = Harness.trace;
+    var machine = std.mem.zeroes(types.Vdbe);
+    machine.db = &connection;
+    machine.zSql = "SELECT 1";
+    machine.startTime = 100;
+    Harness.expected_machine = @ptrCast(&machine);
+    invokeProfileCallback(&connection, &machine, Harness.currentTime);
+    try std.testing.expectEqual(@as(u64, 30_000_000), Harness.profile_elapsed);
+    try std.testing.expectEqual(@as(i64, 30_000_000), Harness.trace_elapsed);
+    try std.testing.expectEqual(@as(u32, 0x02), Harness.trace_event);
+    try std.testing.expect(Harness.saw_machine);
+    try std.testing.expectEqual(@as(i64, 0), machine.startTime);
 }
 
 pub fn vdbeSafety(machine: *types.Vdbe) bool {
