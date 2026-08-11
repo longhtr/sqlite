@@ -5609,6 +5609,10 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_null) {
             operation = if (is_not) .is_not_null else .is_null;
             position.* += 1;
+        } else if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_string and text_column and text_collation != null) {
+            const comparison_text = token_list[position.*].text;
+            position.* += 1;
+            return .{ .column_index = selected, .integer_primary_key = false, .operation = if (is_not) .text_is_not else .text_is, .comparison_text = comparison_text, .text_collation = text_collation.? };
         } else {
             if (!integer_column) return error.Syntax;
             operation = if (is_not) .integer_is_not else .integer_is;

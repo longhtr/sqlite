@@ -154,7 +154,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     };
 }
 
-pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, text_eq, text_ne, text_in, text_not_in };
+pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not };
 
 pub const IndexPredicateTextCollation = enum { binary, nocase, rtrim };
 
@@ -206,6 +206,13 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
         .is_not_null => switch (value) {
             .null_ => false,
             else => true,
+        },
+        .text_is, .text_is_not => {
+            const matches = switch (value) {
+                .text => |text| indexPredicateTextEquals(text, predicate.comparison_text, predicate.text_collation),
+                else => false,
+            };
+            return if (predicate.operation == .text_is) matches else !matches;
         },
         .text_eq, .text_ne, .text_in, .text_not_in => {
             const text = switch (value) {
