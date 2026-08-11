@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-result-column-metadata-ownership",
   "title": "VDBE result-column metadata allocation and string ownership",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeSetNumCols and sqlite3VdbeSetColName own the pre-execution result-column metadata matrix. Count replacement releases prior Mem values/allocation, allocates COLNAME_N cells per column, and name assignment applies SQLite static/transient/dynamic string ownership.",
@@ -143,7 +143,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Deterministic matrix-allocation OOM and subsequent SetColName NOMEM are reached; successful replacement releases three ownership strategies.",

@@ -112,7 +112,7 @@
     {
       "id": "vdbe-result-column-metadata-ownership",
       "path": "upstream/atomic-units/vdbe-result-column-metadata-ownership.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-saved-sql-and-reprepare-bytecode-swap",
