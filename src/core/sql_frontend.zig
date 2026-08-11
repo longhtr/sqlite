@@ -5550,13 +5550,14 @@ fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const Resolve
         position.* += 1;
     } else {
         if (!integer_column) return error.Syntax;
-        if (token_list[position.*].typ == tokens.tk_between) {
-            position.* += 1;
+        const not_between = token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_between;
+        if (token_list[position.*].typ == tokens.tk_between or not_between) {
+            position.* += if (not_between) 2 else 1;
             const low = try resolveIndexPredicateInteger(token_list, position);
             if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_and) return error.Syntax;
             position.* += 1;
             const high = try resolveIndexPredicateInteger(token_list, position);
-            return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = .integer_between, .comparison_value = low, .comparison_value_high = high };
+            return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = if (not_between) .integer_not_between else .integer_between, .comparison_value = low, .comparison_value_high = high };
         }
         operation = switch (token_list[position.*].typ) {
             tokens.tk_eq => .integer_eq,
