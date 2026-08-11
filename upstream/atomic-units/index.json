@@ -177,7 +177,7 @@
     {
       "id": "builtin-function-hash-and-lifecycle-registration",
       "path": "upstream/atomic-units/builtin-function-hash-and-lifecycle-registration.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "global-library-initialize-shutdown",
