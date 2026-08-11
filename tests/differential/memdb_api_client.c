@@ -318,6 +318,7 @@ int main(void){
   int bitwise_expression_or_index_rc=sqlite3_exec(clone,"CREATE INDEX bitwise_expression_or_index ON bitwise_expression_data(value|-1)",0,0,0);
   int bitwise_expression_left_index_rc=sqlite3_exec(clone,"CREATE INDEX bitwise_expression_left_index ON bitwise_expression_data(value<<-1)",0,0,0);
   int bitwise_expression_right_index_rc=sqlite3_exec(clone,"CREATE INDEX bitwise_expression_right_index ON bitwise_expression_data(value>>1)",0,0,0);
+  int bitwise_expression_not_index_rc=sqlite3_exec(clone,"CREATE INDEX bitwise_expression_not_index ON bitwise_expression_data(~value)",0,0,0);
   int bitwise_expression_conflict_rc=sqlite3_exec(clone,"INSERT INTO bitwise_expression_data VALUES(2,22)",0,0,0);
   int bitwise_expression_second_rc=sqlite3_exec(clone,"INSERT INTO bitwise_expression_data VALUES(2,21)",0,0,0);
   int bitwise_expression_update_rc=sqlite3_exec(clone,"UPDATE bitwise_expression_data SET value=24 WHERE id=2",0,0,0);
@@ -325,7 +326,7 @@ int main(void){
   int bitwise_expression_count_rc=query_value(clone,"SELECT count(*) FROM bitwise_expression_data",&bitwise_expression_count);
   int bitwise_expression_reindex_rc=sqlite3_exec(clone,"REINDEX bitwise_expression_and_index",0,0,0);
   int bitwise_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE bitwise_expression_data",0,0,0);
-  printf("bitwise-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",bitwise_expression_table_rc,bitwise_expression_first_rc,bitwise_expression_and_index_rc,bitwise_expression_or_index_rc,bitwise_expression_left_index_rc,bitwise_expression_right_index_rc,bitwise_expression_conflict_rc,bitwise_expression_second_rc,bitwise_expression_update_rc,bitwise_expression_count_rc,(long long)bitwise_expression_count,bitwise_expression_reindex_rc,bitwise_expression_drop_rc);
+  printf("bitwise-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",bitwise_expression_table_rc,bitwise_expression_first_rc,bitwise_expression_and_index_rc,bitwise_expression_or_index_rc,bitwise_expression_left_index_rc,bitwise_expression_right_index_rc,bitwise_expression_not_index_rc,bitwise_expression_conflict_rc,bitwise_expression_second_rc,bitwise_expression_update_rc,bitwise_expression_count_rc,(long long)bitwise_expression_count,bitwise_expression_reindex_rc,bitwise_expression_drop_rc);
   int absolute_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE absolute_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int absolute_expression_first_rc=sqlite3_exec(clone,"INSERT INTO absolute_expression_data VALUES(1,-20)",0,0,0);
   int absolute_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX absolute_expression_index ON absolute_expression_data(abs(value))",0,0,0);
