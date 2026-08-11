@@ -823,6 +823,18 @@ int main(void){
   int pattern_expression_reindex_rc=sqlite3_exec(clone,"REINDEX like_expression_index",0,0,0);
   int pattern_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE pattern_expression_data",0,0,0);
   printf("pattern-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",pattern_expression_table_rc,pattern_expression_first_rc,like_expression_index_rc,not_like_expression_index_rc,glob_expression_index_rc,pattern_expression_second_rc,pattern_expression_duplicate_rc,pattern_expression_update_rc,pattern_expression_count_rc,(long long)pattern_expression_count,pattern_expression_reindex_rc,pattern_expression_drop_rc);
+  int integer_pattern_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE integer_pattern_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
+  int integer_pattern_expression_first_rc=sqlite3_exec(clone,"INSERT INTO integer_pattern_expression_data VALUES(1,12)",0,0,0);
+  int integer_like_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX integer_like_expression_index ON integer_pattern_expression_data(value LIKE '1%')",0,0,0);
+  int integer_glob_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX integer_glob_expression_index ON integer_pattern_expression_data(glob('2*',value))",0,0,0);
+  int integer_pattern_expression_second_rc=sqlite3_exec(clone,"INSERT INTO integer_pattern_expression_data VALUES(2,20)",0,0,0);
+  int integer_pattern_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO integer_pattern_expression_data VALUES(3,13)",0,0,0);
+  int integer_pattern_expression_update_rc=sqlite3_exec(clone,"UPDATE integer_pattern_expression_data SET value=14 WHERE id=2",0,0,0);
+  sqlite3_int64 integer_pattern_expression_count=-1;
+  int integer_pattern_expression_count_rc=query_value(clone,"SELECT count(*) FROM integer_pattern_expression_data",&integer_pattern_expression_count);
+  int integer_pattern_expression_reindex_rc=sqlite3_exec(clone,"REINDEX integer_like_expression_index",0,0,0);
+  int integer_pattern_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE integer_pattern_expression_data",0,0,0);
+  printf("integer-pattern-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",integer_pattern_expression_table_rc,integer_pattern_expression_first_rc,integer_like_expression_index_rc,integer_glob_expression_index_rc,integer_pattern_expression_second_rc,integer_pattern_expression_duplicate_rc,integer_pattern_expression_update_rc,integer_pattern_expression_count_rc,(long long)integer_pattern_expression_count,integer_pattern_expression_reindex_rc,integer_pattern_expression_drop_rc);
   int partial_table_create_rc=sqlite3_exec(clone,"CREATE TABLE partial_index_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int partial_null_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(1,NULL)",0,0,0);
   int partial_value_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(2,20)",0,0,0);
