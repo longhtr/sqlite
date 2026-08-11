@@ -273,6 +273,11 @@
       "id": "vdbe-rejected-result-value-destruction",
       "path": "upstream/atomic-units/vdbe-rejected-result-value-destruction.json",
       "status": "source-translated"
+    },
+    {
+      "id": "vdbe-index-record-rowid-extraction",
+      "path": "upstream/atomic-units/vdbe-index-record-rowid-extraction.json",
+      "status": "source-context-reviewed"
     }
   ]
 }

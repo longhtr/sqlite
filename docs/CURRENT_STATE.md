@@ -9,12 +9,12 @@ Incomplete and unsafe for production data. Reusable source-corresponding slices 
 | Fact | Current value |
 |---|---:|
 | Active source entities | 6,752 active |
-| Historical reviewed-or-later classifications | 2,127 |
+| Historical reviewed-or-later classifications | 2,128 |
 | Inventoried, unpromoted entities | 0 |
-| Unmapped entities | 3,869 |
+| Unmapped entities | 3,868 |
 | Behavioral inventory | 25,930 blocks in 2,457 functions |
-| Atomic-unit dossiers total | 54 |
-| Admission-ready dossiers | 54 |
+| Atomic-unit dossiers total | 55 |
+| Admission-ready dossiers | 55 |
 | Source-translated atomic units | 4 |
 | Internal-trace-equivalent atomic units | 31 |
 | Subsystem-integrated atomic units | 19 |

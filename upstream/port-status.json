@@ -7,7 +7,7 @@
       "internal-trace-equivalent": 31,
       "inventoried": 0,
       "scaffolded": 0,
-      "source-context-reviewed": 0,
+      "source-context-reviewed": 1,
       "source-translated": 4,
       "subsystem-integrated": 19
     },
@@ -133,21 +133,21 @@
   ],
   "schema_version": 3,
   "source": {
-    "active_entities_context_reviewed_or_later": 2127,
+    "active_entities_context_reviewed_or_later": 2128,
     "active_entities_initially_classified": 6752,
     "active_entities_inventoried": 0,
-    "active_entities_unmapped": 3869,
+    "active_entities_unmapped": 3868,
     "active_entities_with_legacy_candidates": 756,
     "active_profile_entities": 6752,
     "active_source_files": 85,
     "ast_resolved_legacy_target_references": 446,
-    "ast_resolved_reviewed_target_references": 1914,
-    "atomic_unit_dossiers_admission_ready": 54,
-    "atomic_unit_dossiers_total": 54,
+    "ast_resolved_reviewed_target_references": 1915,
+    "atomic_unit_dossiers_admission_ready": 55,
+    "atomic_unit_dossiers_total": 55,
     "atomic_units_assurance_passed": 0,
     "atomic_units_source_translated_or_later": 54,
     "atomic_units_subsystem_integrated_or_later": 19,
-    "behavioral_blocks_assigned_to_atomic_units": 1098,
+    "behavioral_blocks_assigned_to_atomic_units": 1114,
     "behavioral_blocks_inventoried": 25930,
     "behavioral_functions_inventoried": 2457,
     "by_kind": {
@@ -155,7 +155,7 @@
         "active": 2588,
         "inventoried": 0,
         "legacy_candidates": 574,
-        "reviewed": 515
+        "reviewed": 516
       },
       "macro": {
         "active": 1484,
@@ -199,7 +199,7 @@
     "mapping_status": "working-classification-with-inventoried-unpromoted-atomic-units",
     "mapping_warning": "Inventoried mappings, AST resolution, and legacy candidates are planning facts only, not semantic review, promotion, or fidelity evidence.",
     "reviewed_coverage_is_completion_metric": false,
-    "reviewed_coverage_percent": 31.5,
+    "reviewed_coverage_percent": 31.52,
     "source_dependency_file_units": 85,
     "unresolved_legacy_target_references": 402,
     "zig_declaration_inventory": 13440
@@ -217,10 +217,11 @@
       "internal-trace-equivalent": 60,
       "legacy-candidate-target-resolved": 208,
       "legacy-candidate-unresolved": 159,
+      "source-context-reviewed": 1,
       "source-translated": 4,
       "subsystem-integrated": 49,
       "targeted-differential-passed": 76,
-      "unmapped": 1182
+      "unmapped": 1181
     },
     "historical_claim_dispositions": {
       "retired-canonical-target-conflict": 269,
@@ -232,10 +233,10 @@
       "ambiguous": 1,
       "unique": 1737
     },
-    "historical_claims_assigned_to_atomic_units": 113,
+    "historical_claims_assigned_to_atomic_units": 114,
     "historical_claims_conflicting_with_canonical_target": 276,
-    "historical_claims_matching_canonical_target": 138,
-    "historical_claims_without_canonical_target": 1324,
+    "historical_claims_matching_canonical_target": 139,
+    "historical_claims_without_canonical_target": 1323,
     "historical_mechanical_claims": 1738,
     "historical_mechanical_short_functions": 172,
     "historical_mechanical_substantive_functions": 1566,
