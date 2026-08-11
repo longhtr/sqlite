@@ -5423,17 +5423,47 @@ fn registeredIndexCollation(connection: *Connection, name: []const u8) ?btree.In
     return null;
 }
 
+fn utf8CollationNameToUtf16(name: []const u8, output: []u16) ?usize {
+    var source: usize = 0;
+    var destination: usize = 0;
+    while (source < name.len) {
+        const sequence_length = std.unicode.utf8ByteSequenceLength(name[source]) catch return null;
+        if (source + sequence_length > name.len) return null;
+        const codepoint: u21 = std.unicode.utf8Decode(name[source..][0..sequence_length]) catch return null;
+        source += sequence_length;
+        if (codepoint <= 0xffff) {
+            if (codepoint >= 0xd800 and codepoint <= 0xdfff) return null;
+            if (destination >= output.len) return null;
+            output[destination] = @intCast(codepoint);
+            destination += 1;
+        } else {
+            if (destination + 1 >= output.len) return null;
+            const adjusted = codepoint - 0x10000;
+            output[destination] = @intCast(0xd800 + (adjusted >> 10));
+            output[destination + 1] = @intCast(0xdc00 + (adjusted & 0x3ff));
+            destination += 2;
+        }
+    }
+    return destination;
+}
+
 fn indexCollation(connection: *Connection, name: []const u8) ?btree.IndexCollation {
     if (std.ascii.eqlIgnoreCase(name, "BINARY")) return .binary;
     if (std.ascii.eqlIgnoreCase(name, "NOCASE")) return .nocase;
     if (std.ascii.eqlIgnoreCase(name, "RTRIM")) return .rtrim;
     if (registeredIndexCollation(connection, name)) |collation| return collation;
-    const needed = connection.collation_needed_callback orelse return null;
-    if (name.len > 255) return null;
-    var terminated: [256]u8 = undefined;
-    @memcpy(terminated[0..name.len], name);
-    terminated[name.len] = 0;
-    needed(connection.collation_needed_context, toOpaque(connection), 1, @ptrCast(&terminated));
+    if (connection.collation_needed_callback) |needed| {
+        if (name.len > 255) return null;
+        var terminated: [256]u8 = undefined;
+        @memcpy(terminated[0..name.len], name);
+        terminated[name.len] = 0;
+        needed(connection.collation_needed_context, toOpaque(connection), 1, @ptrCast(&terminated));
+    } else if (connection.collation_needed16_callback) |needed| {
+        var terminated: [256]u16 = undefined;
+        const length = utf8CollationNameToUtf16(name, terminated[0 .. terminated.len - 1]) orelse return null;
+        terminated[length] = 0;
+        needed(connection.collation_needed_context, toOpaque(connection), 1, @ptrCast(&terminated));
+    }
     return registeredIndexCollation(connection, name);
 }
 

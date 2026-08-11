@@ -77,6 +77,11 @@ static void needed_collation(void *context,sqlite3 *db,int encoding,const char *
   if(encoding==SQLITE_UTF8 && strcmp(name,"LAZY_REVERSE")==0) sqlite3_create_collation(db,name,SQLITE_UTF8,0,reverse_collation);
 }
 
+static void needed_collation16(void *context,sqlite3 *db,int encoding,const void *name){
+  (void)context; (void)encoding; (void)name;
+  sqlite3_create_collation(db,"LAZY16_REVERSE",SQLITE_UTF8,0,reverse_collation);
+}
+
 static int query_text_initials(sqlite3 *db, const char *sql, int *count, int *first, int *last){
   sqlite3_stmt *statement = 0;
   int rc = sqlite3_prepare_v2(db, sql, -1, &statement, 0);
@@ -385,6 +390,15 @@ int main(void){
   int needed_collation_query_rc=query_text_initials(clone,"SELECT value FROM needed_collation_data INDEXED BY needed_collation_index",&needed_collation_count,&needed_collation_first,&needed_collation_last);
   int needed_collation_drop_rc=sqlite3_exec(clone,"DROP TABLE needed_collation_data",0,0,0);
   printf("needed-collated-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",needed_collation_register_rc,needed_collation_table_rc,needed_collation_first_rc,needed_collation_second_rc,needed_collation_index_rc,needed_collation_query_rc,needed_collation_count,needed_collation_first,needed_collation_last,needed_collation_drop_rc);
+  int needed_collation16_register_rc=sqlite3_collation_needed16(clone,0,needed_collation16);
+  int needed_collation16_table_rc=sqlite3_exec(clone,"CREATE TABLE needed_collation16_data(id INTEGER PRIMARY KEY,value TEXT)",0,0,0);
+  int needed_collation16_first_rc=sqlite3_exec(clone,"INSERT INTO needed_collation16_data VALUES(1,'a')",0,0,0);
+  int needed_collation16_second_rc=sqlite3_exec(clone,"INSERT INTO needed_collation16_data VALUES(2,'c')",0,0,0);
+  int needed_collation16_index_rc=sqlite3_exec(clone,"CREATE INDEX needed_collation16_index ON needed_collation16_data(value COLLATE LAZY16_REVERSE)",0,0,0);
+  int needed_collation16_count=-1,needed_collation16_first=-1,needed_collation16_last=-1;
+  int needed_collation16_query_rc=query_text_initials(clone,"SELECT value FROM needed_collation16_data INDEXED BY needed_collation16_index",&needed_collation16_count,&needed_collation16_first,&needed_collation16_last);
+  int needed_collation16_drop_rc=sqlite3_exec(clone,"DROP TABLE needed_collation16_data",0,0,0);
+  printf("needed16-collated-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",needed_collation16_register_rc,needed_collation16_table_rc,needed_collation16_first_rc,needed_collation16_second_rc,needed_collation16_index_rc,needed_collation16_query_rc,needed_collation16_count,needed_collation16_first,needed_collation16_last,needed_collation16_drop_rc);
 #ifdef NATIVE_ENGINE
   int deferred_fk_config_rc=zig_sqlite3_db_config_flag(clone,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
 #else
