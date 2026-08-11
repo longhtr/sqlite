@@ -54,6 +54,7 @@ pub const IndexTransform = union(enum) {
     numeric_sign,
     storage_type,
     octet_length,
+    text_length,
     numeric_not,
     integer_bit_not,
     is_null,
@@ -118,6 +119,26 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .null_ => 0,
             else => 1,
         } },
+        .text_length => return switch (value) {
+            .null_ => .null_,
+            .text => |text| result: {
+                var position: usize = 0;
+                var count: i64 = 0;
+                while (position < text.len and text[position] != 0) {
+                    const first = text[position];
+                    position += 1;
+                    if (first >= 0xc0) {
+                        while (position < text.len and (text[position] & 0xc0) == 0x80) {
+                            position += 1;
+                        }
+                    }
+                    count += 1;
+                }
+                break :result .{ .integer = count };
+            },
+            .blob => |blob| .{ .integer = @intCast(blob.len) },
+            .integer, .real => .null_,
+        },
         .octet_length => return switch (value) {
             .null_ => .null_,
             .text => |text| .{ .integer = @intCast(text.len) },
@@ -152,7 +173,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .real => |real| .{ .real = @abs(real) },
             .text, .blob => unreachable,
         },
-        .storage_type, .octet_length => unreachable,
+        .storage_type, .octet_length, .text_length => unreachable,
         .numeric_sign => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = if (integer < 0) -1 else if (integer > 0) 1 else 0 },
