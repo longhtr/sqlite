@@ -707,7 +707,9 @@ int main(void){
   int partial_explicit_rtrim_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_explicit_rtrim_index ON partial_explicit_collation_data(value) WHERE status COLLATE RTRIM='ready'",0,0,0);
   int partial_explicit_reversed_nocase_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_explicit_reversed_nocase_index ON partial_explicit_collation_data(value) WHERE 'active'=status COLLATE NOCASE",0,0,0);
   int partial_explicit_reversed_rtrim_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_explicit_reversed_rtrim_index ON partial_explicit_collation_data(value) WHERE 'ready'=status COLLATE RTRIM",0,0,0);
-  printf("partial-explicit-reversed-collation-index\t%d\t%d\n",partial_explicit_reversed_nocase_index_rc,partial_explicit_reversed_rtrim_index_rc);
+  int partial_explicit_literal_nocase_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_explicit_literal_nocase_index ON partial_explicit_collation_data(value) WHERE status='active' COLLATE NOCASE",0,0,0);
+  int partial_explicit_literal_rtrim_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_explicit_literal_rtrim_index ON partial_explicit_collation_data(value) WHERE status='ready' COLLATE RTRIM",0,0,0);
+  printf("partial-explicit-reversed-collation-index\t%d\t%d\t%d\t%d\n",partial_explicit_reversed_nocase_index_rc,partial_explicit_reversed_rtrim_index_rc,partial_explicit_literal_nocase_index_rc,partial_explicit_literal_rtrim_index_rc);
   int partial_explicit_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_explicit_collation_data VALUES(1,'inactive',7)",0,0,0);
   int partial_explicit_nocase_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_explicit_collation_data VALUES(2,'Active',7)",0,0,0);
   int partial_explicit_nocase_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_explicit_collation_data VALUES(3,'ACTIVE',7)",0,0,0);

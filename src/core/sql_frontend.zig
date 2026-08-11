@@ -5878,6 +5878,11 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         };
         const comparison_text = token_list[position.* + 1].text;
         position.* += 2;
+        if (position.* + 1 < token_list.len and token_list[position.*].typ == tokens.tk_collate) {
+            const explicit_name = token_list[position.* + 1].text;
+            text_collation = if (std.ascii.eqlIgnoreCase(explicit_name, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(explicit_name, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(explicit_name, "RTRIM")) .rtrim else return error.Syntax;
+            position.* += 2;
+        }
         return .{ .column_index = selected, .integer_primary_key = false, .operation = operation, .comparison_text = comparison_text, .text_collation = text_collation.? };
     }
     if (integer_column and (position.* == token_list.len or token_list[position.*].typ == tokens.tk_and or token_list[position.*].typ == tokens.tk_or or token_list[position.*].typ == tokens.tk_rp)) {
