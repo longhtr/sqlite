@@ -382,6 +382,8 @@ int main(void){
   int ceiling_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX ceiling_expression_index ON rounding_expression_data(ceiling(value))",0,0,0);
   int floor_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX floor_expression_index ON rounding_expression_data(floor(value))",0,0,0);
   int trunc_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX trunc_expression_index ON rounding_expression_data(trunc(value))",0,0,0);
+  int round_null_precision_index_rc=sqlite3_exec(clone,"CREATE INDEX round_null_precision_index ON rounding_expression_data(round(value,NULL))",0,0,0);
+  int round_null_value_index_rc=sqlite3_exec(clone,"CREATE INDEX round_null_value_index ON rounding_expression_data(round(NULL,value))",0,0,0);
   int rounding_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO rounding_expression_data VALUES(2,1.8)",0,0,0);
   int rounding_expression_second_rc=sqlite3_exec(clone,"INSERT INTO rounding_expression_data VALUES(2,2.2)",0,0,0);
   int rounding_expression_update_rc=sqlite3_exec(clone,"UPDATE rounding_expression_data SET value=1.4 WHERE id=2",0,0,0);
@@ -389,7 +391,7 @@ int main(void){
   int rounding_expression_count_rc=query_value(clone,"SELECT count(*) FROM rounding_expression_data",&rounding_expression_count);
   int rounding_expression_reindex_rc=sqlite3_exec(clone,"REINDEX ceil_expression_index",0,0,0);
   int rounding_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE rounding_expression_data",0,0,0);
-  printf("rounding-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",rounding_expression_table_rc,rounding_expression_first_rc,ceil_expression_index_rc,ceiling_expression_index_rc,floor_expression_index_rc,trunc_expression_index_rc,rounding_expression_duplicate_rc,rounding_expression_second_rc,rounding_expression_update_rc,rounding_expression_count_rc,(long long)rounding_expression_count,rounding_expression_reindex_rc,rounding_expression_drop_rc);
+  printf("rounding-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",rounding_expression_table_rc,rounding_expression_first_rc,ceil_expression_index_rc,ceiling_expression_index_rc,floor_expression_index_rc,trunc_expression_index_rc,round_null_precision_index_rc,round_null_value_index_rc,rounding_expression_duplicate_rc,rounding_expression_second_rc,rounding_expression_update_rc,rounding_expression_count_rc,(long long)rounding_expression_count,rounding_expression_reindex_rc,rounding_expression_drop_rc);
   int unary_math_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE unary_math_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int unary_math_expression_first_rc=sqlite3_exec(clone,"INSERT INTO unary_math_expression_data VALUES(1,4)",0,0,0);
   int sqrt_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX sqrt_expression_index ON unary_math_expression_data(sqrt(value))",0,0,0);
