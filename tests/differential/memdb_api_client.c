@@ -415,7 +415,7 @@ int main(void){
   int partial_text_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_text_data",0,0,0);
   printf("partial-text-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",partial_text_table_rc,partial_text_index_rc,partial_text_not_index_rc,partial_text_outside_rc,partial_text_inside_rc,partial_text_duplicate_rc,partial_text_not_duplicate_rc,partial_text_enter_conflict_rc,partial_text_delete_rc,partial_text_enter_rc,partial_text_count_rc,(long long)partial_text_count,partial_text_reindex_rc,partial_text_drop_rc);
   int partial_and_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_and_data(id INTEGER PRIMARY KEY,value INTEGER,lower_bound INTEGER,upper_bound INTEGER)",0,0,0);
-  int partial_and_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_and_index ON partial_and_data(value) WHERE lower_bound AND upper_bound < 10",0,0,0);
+  int partial_and_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_and_index ON partial_and_data(value) WHERE (lower_bound) AND (upper_bound < 10)",0,0,0);
   int partial_and_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_and_data VALUES(1,20,0,5)",0,0,0);
   int partial_and_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_and_data VALUES(2,20,1,5)",0,0,0);
   int partial_and_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_and_data VALUES(3,20,1,9)",0,0,0);

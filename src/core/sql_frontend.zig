@@ -5515,7 +5515,7 @@ fn resolveIndexPredicateInteger(token_list: []const Token, position: *usize) err
     return value;
 }
 
-fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const ResolvedColumn, position: *usize) error{Syntax}!btree.IndexPredicateTerm {
+fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const ResolvedColumn, position: *usize) error{Syntax}!btree.IndexPredicateTerm {
     var boolean_negated = false;
     if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_not) {
         boolean_negated = true;
@@ -5596,12 +5596,37 @@ fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const Resolve
     return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = operation, .comparison_value = comparison_value };
 }
 
+fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const ResolvedColumn, position: *usize) error{Syntax}!btree.IndexPredicateTerm {
+    const wrapped_term = position.* < token_list.len and token_list[position.*].typ == tokens.tk_lp;
+    if (wrapped_term) position.* += 1;
+    const term = try resolveIndexPredicateTermInner(token_list, columns, position);
+    if (wrapped_term) {
+        if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_rp) return error.Syntax;
+        position.* += 1;
+    }
+    return term;
+}
+
 fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedColumn) error{Syntax}!?btree.IndexPredicate {
     var position: usize = 0;
     while (position < token_list.len and token_list[position].typ != tokens.tk_where) : (position += 1) {}
     if (position == token_list.len) return null;
     position += 1;
-    const wrapped_predicate = position < token_list.len and token_list[position].typ == tokens.tk_lp;
+    var wrapped_predicate = false;
+    if (position < token_list.len and token_list[position].typ == tokens.tk_lp) {
+        var depth: usize = 0;
+        for (token_list[position..], position..) |token, index| {
+            if (token.typ == tokens.tk_lp) depth += 1;
+            if (token.typ == tokens.tk_rp) {
+                if (depth == 0) return error.Syntax;
+                depth -= 1;
+                if (depth == 0) {
+                    wrapped_predicate = index + 1 == token_list.len;
+                    break;
+                }
+            }
+        }
+    }
     if (wrapped_predicate) position += 1;
     const first = try resolveIndexPredicateTerm(token_list, columns, &position);
     var second: ?btree.IndexPredicateTerm = null;
