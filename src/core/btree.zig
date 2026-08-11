@@ -53,6 +53,7 @@ pub const IndexTransform = union(enum) {
     numeric_negate,
     numeric_abs,
     numeric_sign,
+    numeric_round,
     storage_type,
     octet_length,
     text_length,
@@ -180,6 +181,16 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = if (integer < 0) -integer else integer },
             .real => |real| .{ .real = @abs(real) },
             .text, .blob => unreachable,
+        },
+        .numeric_round => rounded: {
+            const real = switch (numeric) {
+                .null_ => break :rounded .null_,
+                .integer => |integer| @as(f64, @floatFromInt(integer)),
+                .real => |number| number,
+                .text, .blob => unreachable,
+            };
+            if (std.math.isNan(real) or real < -4_503_599_627_370_496.0 or real > 4_503_599_627_370_496.0) break :rounded .{ .real = real };
+            break :rounded .{ .real = @floatFromInt(@as(i64, @intFromFloat(real + if (real < 0) @as(f64, -0.5) else @as(f64, 0.5)))) };
         },
         .storage_type, .octet_length, .text_length, .unicode_value => unreachable,
         .numeric_sign => switch (numeric) {
