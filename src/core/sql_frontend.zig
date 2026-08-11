@@ -245,6 +245,7 @@ pub const Connection = struct {
     memory_adapter: ?btree.vfs.AbiAdapter = null,
     pending_deserialize_readonly: ?bool = null,
     attachments: ?attachment_runtime.Connection = null,
+    temp_database: ?*AttachedDatabase = null,
     shared_memdb: ?*memdb.Shared = null,
     filename: ?[:0]u8 = null,
     main_schema_name: ?[:0]u8 = null,
@@ -338,6 +339,7 @@ pub const Connection = struct {
         if (self.custom_error_message) |message| self.allocator.free(message);
         if (self.main_schema_name) |name| self.allocator.free(name);
         if (self.attachments) |*attachments| attachments.deinit();
+        if (self.temp_database) |temporary| temporary.destroy();
         for (self.scalar_functions.items) |definition| {
             if (definition.destroy) |destroy_callback| destroy_callback(definition.user_data);
             self.allocator.free(definition.name);
@@ -6683,7 +6685,24 @@ const LocatedDatabaseOutcome = struct {
     database: ?*btree.Database = null,
 };
 
+const LocatedTableOutcome = struct {
+    result: ResultCode,
+    database: ?*btree.Database = null,
+    schema_name: []const u8 = "",
+    table: ?btree.SchemaTable = null,
+};
+
 fn locateDatabase(connection: *Connection, database_name: ?[]const u8) LocatedDatabaseOutcome {
+    if (database_name) |name| {
+        if (std.ascii.eqlIgnoreCase(name, "temp")) {
+            if (connection.temp_database == null) {
+                connection.temp_database = AttachedDatabase.createMemory(connection.allocator) orelse return .{ .result = .no_memory };
+            }
+            const temporary = connection.temp_database.?;
+            const database = if (temporary.database) |*opened| opened else return .{ .result = .misuse };
+            return .{ .result = .ok, .database = database };
+        }
+    }
     if (schemaSliceMatches(connection, database_name)) {
         if (connection.pending_deserialize_readonly != null) {
             const opened = openPendingDeserializedDatabase(connection);
@@ -6699,22 +6718,75 @@ fn locateDatabase(connection: *Connection, database_name: ?[]const u8) LocatedDa
         const opened = openPendingAttachedDatabase(attached);
         if (opened != .ok) return .{ .result = opened };
     }
-    return .{ .result = .ok, .database = if (attached.database) |*database| database else return .{ .result = .misuse } };
+    const database = if (attached.database) |*opened| opened else return .{ .result = .misuse };
+    return .{ .result = .ok, .database = database };
 }
 
-/// Source `sqlite3LocateTable()`: resolve a table within the selected schema
-/// and preserve the precise storage-layer result for diagnostic suppression.
+fn locateTableWithDatabase(connection: *Connection, name: []const u8, database_name: ?[]const u8) LocatedTableOutcome {
+    if (database_name) |schema_name| {
+        const located_database = locateDatabase(connection, schema_name);
+        if (located_database.result != .ok) {
+            return .{ .result = located_database.result };
+        }
+        const table = located_database.database.?.schemaTable(name);
+        return .{ .result = table.result, .database = located_database.database, .schema_name = schema_name, .table = table.table };
+    }
+    if (connection.temp_database) |temporary| {
+        if (temporary.database) |*database| {
+            const table = database.schemaTable(name);
+            if (table.result == .ok) {
+                return .{ .result = .ok, .database = database, .schema_name = "temp", .table = table.table };
+            }
+            if (table.result != .not_found) {
+                return .{ .result = table.result };
+            }
+        }
+    }
+    const main_database = locateDatabase(connection, null);
+    if (main_database.result != .ok) {
+        return .{ .result = main_database.result };
+    }
+    const main_table = main_database.database.?.schemaTable(name);
+    if (main_table.result == .ok) {
+        return .{ .result = .ok, .database = main_database.database, .schema_name = "main", .table = main_table.table };
+    }
+    if (main_table.result != .not_found) {
+        return .{ .result = main_table.result };
+    }
+    if (connection.attachments) |*attachments| {
+        for (attachments.databases.items[2..]) |attached| {
+            const located_database = locateDatabase(connection, attached.name);
+            if (located_database.result != .ok) {
+                return .{ .result = located_database.result };
+            }
+            const table = located_database.database.?.schemaTable(name);
+            if (table.result == .ok) {
+                return .{ .result = .ok, .database = located_database.database, .schema_name = attached.name, .table = table.table };
+            }
+            if (table.result != .not_found) {
+                return .{ .result = table.result };
+            }
+        }
+    }
+    return .{ .result = .not_found };
+}
+
+/// Source `sqlite3LocateTable()`: resolve TEMP, main, then attached schemas
+/// for an unqualified name, or restrict lookup to the explicitly selected Db.
 fn locateTable(connection: *Connection, name: []const u8, database_name: ?[]const u8) btree.SchemaTableOutcome {
-    const located_database = locateDatabase(connection, database_name);
-    if (located_database.result != .ok) return .{ .result = located_database.result };
-    return located_database.database.?.schemaTable(name);
+    const located = locateTableWithDatabase(connection, name, database_name);
+    return .{ .result = located.result, .table = located.table };
 }
 
 /// Source `sqlite3LocateTableItem()`: parse an optionally schema-qualified
 /// FROM item, apply AS or bare aliases, and restrict lookup to its schema.
+fn schemaIdentifierToken(token: Token) bool {
+    return token.typ == tokens.tk_id or token.typ == tokens.tk_temp;
+}
+
 fn locateTableItem(connection: *Connection, token_list: []const Token, from_position: usize) LocateTableItemOutcome {
     var position = from_position + 1;
-    if (position >= token_list.len or token_list[position].typ != tokens.tk_id) {
+    if (position >= token_list.len or !schemaIdentifierToken(token_list[position])) {
         return .{ .result = .error_, .error_offset = if (position < token_list.len) @intCast(token_list[position].start) else -1 };
     }
     var database_name: ?[]const u8 = null;
@@ -6734,11 +6806,9 @@ fn locateTableItem(connection: *Connection, token_list: []const Token, from_posi
         qualifier = token_list[position].text;
         position += 1;
     }
-    const located_database = locateDatabase(connection, database_name);
-    if (located_database.result != .ok) return .{ .result = located_database.result, .error_offset = @intCast(token_list[from_position + 1].start) };
-    const located = located_database.database.?.schemaTable(table_name);
+    const located = locateTableWithDatabase(connection, table_name, database_name);
     if (located.result != .ok) return .{ .result = located.result, .error_offset = @intCast(token_list[from_position + 1].start) };
-    return .{ .result = .ok, .item = .{ .database = located_database.database.?, .table = located.table.?, .table_name = table_name, .qualifier = qualifier, .after = position } };
+    return .{ .result = .ok, .item = .{ .database = located.database.?, .table = located.table.?, .table_name = table_name, .qualifier = qualifier, .after = position } };
 }
 
 fn selectedColumnToken(token_list: []const Token, position: usize, limit: usize, qualifier: []const u8) ?struct { token: Token, next: usize } {
@@ -6876,7 +6946,7 @@ fn expressionAnalyzeAggregates(allocator: std.mem.Allocator, connection: *Connec
 
 fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize, from_position: usize) CompileOutcome {
     const allocator = connection.allocator;
-    if (from_position + 1 >= token_list.len or token_list[from_position + 1].typ != tokens.tk_id) {
+    if (from_position + 1 >= token_list.len or !schemaIdentifierToken(token_list[from_position + 1])) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
@@ -7755,7 +7825,7 @@ fn compileVirtualSchema(connection: *Connection, source: [:0]u8, token_list: []c
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
-    if (token_list[0].typ != tokens.tk_create or token_list[1].typ != tokens.tk_virtual or token_list[2].typ != tokens.tk_table or token_list[3].typ != tokens.tk_id) {
+    if (token_list[0].typ != tokens.tk_create or token_list[1].typ != tokens.tk_virtual or token_list[2].typ != tokens.tk_table or !schemaIdentifierToken(token_list[3])) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
@@ -7824,7 +7894,7 @@ fn compileVirtualSchema(connection: *Connection, source: [:0]u8, token_list: []c
 fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
     const allocator = connection.allocator;
     if (token_list.len > 1 and token_list[0].typ == tokens.tk_create and token_list[1].typ == tokens.tk_virtual) return compileVirtualSchema(connection, source, token_list, consumed);
-    if ((token_list.len == 3 or token_list.len == 5) and token_list[0].typ == tokens.tk_drop and token_list[1].typ == tokens.tk_table and token_list[2].typ == tokens.tk_id) {
+    if ((token_list.len == 3 or token_list.len == 5) and token_list[0].typ == tokens.tk_drop and token_list[1].typ == tokens.tk_table and schemaIdentifierToken(token_list[2])) {
         var virtual_schema_name: []const u8 = "main";
         var virtual_table_name = token_list[2].text;
         if (token_list.len == 5) {
@@ -7842,6 +7912,11 @@ fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const To
     const dropping = token_list[position].typ == tokens.tk_drop;
     if (!creating and !dropping) unreachable;
     position += 1;
+    var temporary = false;
+    if (creating and position < token_list.len and token_list[position].typ == tokens.tk_temp) {
+        temporary = true;
+        position += 1;
+    }
     if (position >= token_list.len or token_list[position].typ != tokens.tk_table) {
         const offset = if (position < token_list.len) token_list[position].start else source.len;
         allocator.free(source);
@@ -7857,12 +7932,12 @@ fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const To
             position += if (creating) 3 else 2;
         }
     }
-    if (position >= token_list.len or token_list[position].typ != tokens.tk_id) {
+    if (position >= token_list.len or !schemaIdentifierToken(token_list[position])) {
         const offset = if (position < token_list.len) token_list[position].start else source.len;
         allocator.free(source);
         return .{ .result = .error_, .error_offset = @intCast(offset), .consumed = consumed };
     }
-    var schema_name: []const u8 = "main";
+    var schema_name: []const u8 = if (temporary) "temp" else "main";
     var name = token_list[position].text;
     var name_start = token_list[position].start;
     var qualified = false;
@@ -7872,8 +7947,26 @@ fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const To
         name_start = token_list[position + 2].start;
         position += 3;
         qualified = true;
+        if (temporary and !std.ascii.eqlIgnoreCase(schema_name, "temp")) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
     } else {
         position += 1;
+    }
+    if (dropping and !qualified) {
+        if (connection.temp_database) |temporary_database| {
+            if (temporary_database.database) |*temporary_btree| {
+                const exists = temporary_btree.schemaTableExists(name);
+                if (exists.result != .ok) {
+                    allocator.free(source);
+                    return .{ .result = exists.result, .consumed = consumed };
+                }
+                if (exists.found) {
+                    schema_name = "temp";
+                }
+            }
+        }
     }
     const located_database = locateDatabase(connection, schema_name);
     if (located_database.result != .ok) {
@@ -7919,7 +8012,7 @@ fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const To
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };
     }
-    const normalized_sql: ?[]u8 = if (creating and qualified)
+    const normalized_sql: ?[]u8 = if (creating and (qualified or temporary))
         std.fmt.allocPrint(allocator, "CREATE TABLE {s}", .{source[name_start..token_list[token_list.len - 1].end]}) catch {
             allocator.free(source);
             return .{ .result = .no_memory, .consumed = consumed };
@@ -7927,7 +8020,11 @@ fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const To
     else
         null;
     var normalized_adopted = false;
-    defer if (!normalized_adopted) if (normalized_sql) |sql| allocator.free(sql);
+    defer if (!normalized_adopted) {
+        if (normalized_sql) |sql| {
+            allocator.free(sql);
+        }
+    };
     const owner = allocator.create(Owner) catch {
         allocator.free(source);
         return .{ .result = .no_memory, .consumed = consumed };
@@ -7980,24 +8077,22 @@ fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Toke
     }
     if (position >= token_list.len or token_list[position].typ != tokens.tk_into) return error.Syntax;
     position += 1;
-    if (position >= token_list.len or token_list[position].typ != tokens.tk_id) return error.Syntax;
-    var schema_name: []const u8 = "main";
+    if (position >= token_list.len or !schemaIdentifierToken(token_list[position])) return error.Syntax;
+    var requested_schema: ?[]const u8 = null;
     var table_name = token_list[position].text;
     if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_dot and token_list[position + 2].typ == tokens.tk_id) {
-        schema_name = table_name;
+        requested_schema = table_name;
         table_name = token_list[position + 2].text;
         position += 3;
     } else {
         position += 1;
     }
-    const located_database = locateDatabase(connection, schema_name);
-    if (located_database.result == .no_memory) return error.OutOfMemory;
-    if (located_database.result != .ok) return error.Syntax;
-    const database = located_database.database.?;
-    const schema_outcome = database.schemaTable(table_name);
-    if (schema_outcome.result == .no_memory) return error.OutOfMemory;
-    if (schema_outcome.result != .ok) return error.Syntax;
-    var schema = schema_outcome.table.?;
+    const located = locateTableWithDatabase(connection, table_name, requested_schema);
+    if (located.result == .no_memory) return error.OutOfMemory;
+    if (located.result != .ok) return error.Syntax;
+    const database = located.database.?;
+    const schema_name = located.schema_name;
+    var schema = located.table.?;
     defer schema.deinit();
     const resolved = try resolveColumns(allocator, schema.sql);
     defer {
@@ -8012,12 +8107,16 @@ fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Toke
         while (true) {
             if (position >= token_list.len or token_list[position].typ != tokens.tk_id) return error.Syntax;
             var found: ?usize = null;
-            for (resolved.columns, 0..) |column, index| if (std.ascii.eqlIgnoreCase(column.name, token_list[position].text)) {
-                found = index;
-                break;
-            };
+            for (resolved.columns, 0..) |column, index| {
+                if (std.ascii.eqlIgnoreCase(column.name, token_list[position].text)) {
+                    found = index;
+                    break;
+                }
+            }
             const column_index = found orelse return error.Syntax;
-            for (mappings.items) |prior| if (prior == column_index) return error.Syntax;
+            for (mappings.items) |prior| {
+                if (prior == column_index) return error.Syntax;
+            }
             try mappings.append(allocator, column_index);
             position += 1;
             if (position < token_list.len and token_list[position].typ == tokens.tk_comma) {
@@ -8029,7 +8128,9 @@ fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Toke
             break;
         }
     } else {
-        for (resolved.columns, 0..) |_, index| try mappings.append(allocator, index);
+        for (resolved.columns, 0..) |_, index| {
+            try mappings.append(allocator, index);
+        }
     }
     if (position >= token_list.len or token_list[position].typ != tokens.tk_values) return error.Syntax;
     position += 1;
@@ -8038,11 +8139,15 @@ fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Toke
     const scanned = try scanParameters(allocator, token_list);
     var parser = Parser.init(allocator, source, token_list, scanned.maximum, null);
     var parser_live = true;
-    defer if (parser_live) parser.deinitFailure();
+    defer if (parser_live) {
+        parser.deinitFailure();
+    };
     parser.parameter_names.appendSlice(allocator, scanned.names) catch {
         allocator.free(scanned.names);
         var owned = scanned.owned;
-        for (owned.items) |name| allocator.free(name);
+        for (owned.items) |name| {
+            allocator.free(name);
+        }
         owned.deinit(allocator);
         var map = scanned.map;
         map.deinit();
@@ -8057,7 +8162,9 @@ fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Toke
     defer value_registers.deinit(allocator);
     while (true) {
         try value_registers.append(allocator, try parser.expression(0));
-        if (parser.accept(tokens.tk_comma)) continue;
+        if (parser.accept(tokens.tk_comma)) {
+            continue;
+        }
         _ = try parser.require(tokens.tk_rp);
         break;
     }
@@ -8083,16 +8190,20 @@ fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Toke
     errdefer allocator.free(instructions);
     const parameters = try allocator.alloc(statement.ParameterMetadata, parser.maximum_parameter);
     errdefer allocator.free(parameters);
-    for (parameters, 0..) |*parameter, index| parameter.* = .{ .name = parser.parameter_names.items[index] };
+    for (parameters, 0..) |*parameter, index| {
+        parameter.* = .{ .name = parser.parameter_names.items[index] };
+    }
     const columns = try allocator.alloc(statement.ColumnMetadata, 0);
     errdefer allocator.free(columns);
     const indices = try allocator.dupe(usize, mappings.items);
     errdefer allocator.free(indices);
     var integer_primary_key: ?usize = null;
-    for (resolved.columns, 0..) |column, index| if (column.integer_primary_key) {
-        integer_primary_key = index;
-        break;
-    };
+    for (resolved.columns, 0..) |column, index| {
+        if (column.integer_primary_key) {
+            integer_primary_key = index;
+            break;
+        }
+    }
     parser.parameter_names.deinit(allocator);
     parser.parameter_names = .empty;
     parser.named_parameters.deinit();
@@ -8124,24 +8235,22 @@ fn buildRowMutation(connection: *Connection, source: [:0]u8, token_list: []const
         if (position >= token_list.len or token_list[position].typ != tokens.tk_from) return error.Syntax;
         position += 1;
     }
-    if (position >= token_list.len or token_list[position].typ != tokens.tk_id) return error.Syntax;
-    var schema_name: []const u8 = "main";
+    if (position >= token_list.len or !schemaIdentifierToken(token_list[position])) return error.Syntax;
+    var requested_schema: ?[]const u8 = null;
     var table_name = token_list[position].text;
     if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_dot and token_list[position + 2].typ == tokens.tk_id) {
-        schema_name = table_name;
+        requested_schema = table_name;
         table_name = token_list[position + 2].text;
         position += 3;
     } else {
         position += 1;
     }
-    const located_database = locateDatabase(connection, schema_name);
-    if (located_database.result == .no_memory) return error.OutOfMemory;
-    if (located_database.result != .ok) return error.Syntax;
-    const database = located_database.database.?;
-    const schema_outcome = database.schemaTable(table_name);
-    if (schema_outcome.result == .no_memory) return error.OutOfMemory;
-    if (schema_outcome.result != .ok) return error.Syntax;
-    var schema = schema_outcome.table.?;
+    const located = locateTableWithDatabase(connection, table_name, requested_schema);
+    if (located.result == .no_memory) return error.OutOfMemory;
+    if (located.result != .ok) return error.Syntax;
+    const database = located.database.?;
+    const schema_name = located.schema_name;
+    var schema = located.table.?;
     defer schema.deinit();
     const resolved = try resolveColumns(allocator, schema.sql);
     defer {
@@ -8153,10 +8262,12 @@ fn buildRowMutation(connection: *Connection, source: [:0]u8, token_list: []const
     if (old_mask.result == .no_memory) return error.OutOfMemory;
     if (old_mask.result != .ok) return error.Syntax;
     var primary_key: ?usize = null;
-    for (resolved.columns, 0..) |column, index| if (column.integer_primary_key) {
-        primary_key = index;
-        break;
-    };
+    for (resolved.columns, 0..) |column, index| {
+        if (column.integer_primary_key) {
+            primary_key = index;
+            break;
+        }
+    }
     const pk = primary_key orelse return error.Syntax;
     var target_column: usize = 0;
     if (updating) {
@@ -8164,10 +8275,12 @@ fn buildRowMutation(connection: *Connection, source: [:0]u8, token_list: []const
         position += 1;
         if (position >= token_list.len or token_list[position].typ != tokens.tk_id) return error.Syntax;
         var found: ?usize = null;
-        for (resolved.columns, 0..) |column, index| if (std.ascii.eqlIgnoreCase(column.name, token_list[position].text)) {
-            found = index;
-            break;
-        };
+        for (resolved.columns, 0..) |column, index| {
+            if (std.ascii.eqlIgnoreCase(column.name, token_list[position].text)) {
+                found = index;
+                break;
+            }
+        }
         target_column = found orelse return error.Syntax;
         position += 1;
         if (position >= token_list.len or token_list[position].typ != tokens.tk_eq) return error.Syntax;
@@ -8183,11 +8296,15 @@ fn buildRowMutation(connection: *Connection, source: [:0]u8, token_list: []const
     const scanned = try scanParameters(allocator, token_list);
     var parser = Parser.init(allocator, source, token_list, scanned.maximum, null);
     var parser_live = true;
-    defer if (parser_live) parser.deinitFailure();
+    defer if (parser_live) {
+        parser.deinitFailure();
+    };
     parser.parameter_names.appendSlice(allocator, scanned.names) catch {
         allocator.free(scanned.names);
         var owned = scanned.owned;
-        for (owned.items) |name| allocator.free(name);
+        for (owned.items) |name| {
+            allocator.free(name);
+        }
         owned.deinit(allocator);
         var map = scanned.map;
         map.deinit();
@@ -8226,7 +8343,9 @@ fn buildRowMutation(connection: *Connection, source: [:0]u8, token_list: []const
     errdefer allocator.free(instructions);
     const parameters = try allocator.alloc(statement.ParameterMetadata, parser.maximum_parameter);
     errdefer allocator.free(parameters);
-    for (parameters, 0..) |*parameter, index| parameter.* = .{ .name = parser.parameter_names.items[index] };
+    for (parameters, 0..) |*parameter, index| {
+        parameter.* = .{ .name = parser.parameter_names.items[index] };
+    }
     const columns = try allocator.alloc(statement.ColumnMetadata, 0);
     errdefer allocator.free(columns);
     parser.parameter_names.deinit(allocator);

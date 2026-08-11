@@ -101,6 +101,18 @@ int main(void){
   printf("malformed\t%d\t%d\t%lld\t%d\t%d\n", rc, borrowed==bad, (long long)borrowed_size, prepare_rc, replacement_rc);
 
   sqlite3_open(":memory:", &attached);
+  int temporary_create_rc=sqlite3_exec(clone,"CREATE TEMP TABLE t(id INTEGER PRIMARY KEY,x)",0,0,0);
+  int temporary_insert_rc=sqlite3_exec(clone,"INSERT INTO t VALUES(1,20)",0,0,0);
+  sqlite3_int64 temporary_value=-1,temporary_main_value=-1,temporary_after_update=-1,temporary_count=-1,temporary_main_after_drop=-1;
+  int temporary_query_rc=query_value(clone,"SELECT x FROM t",&temporary_value);
+  int temporary_main_query_rc=query_value(clone,"SELECT x FROM main.t",&temporary_main_value);
+  int temporary_update_rc=sqlite3_exec(clone,"UPDATE t SET x=21 WHERE id=1",0,0,0);
+  int temporary_update_query_rc=query_value(clone,"SELECT x FROM temp.t",&temporary_after_update);
+  int temporary_delete_rc=sqlite3_exec(clone,"DELETE FROM t WHERE id=1",0,0,0);
+  int temporary_count_rc=query_value(clone,"SELECT count(*) FROM t",&temporary_count);
+  int temporary_drop_rc=sqlite3_exec(clone,"DROP TABLE t",0,0,0);
+  int temporary_main_after_drop_rc=query_value(clone,"SELECT x FROM t",&temporary_main_after_drop);
+  printf("temporary\t%d\t%d\t%d\t%lld\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%lld\t%d\t%d\t%lld\n",temporary_create_rc,temporary_insert_rc,temporary_query_rc,(long long)temporary_value,temporary_main_query_rc,(long long)temporary_main_value,temporary_update_rc,temporary_update_query_rc,(long long)temporary_after_update,temporary_delete_rc,temporary_count_rc,(long long)temporary_count,temporary_drop_rc,temporary_main_after_drop_rc,(long long)temporary_main_after_drop);
   int attach_rc=sqlite3_exec(attached,"ATTACH ':memory:' AS aux",0,0,0);
   unsigned char *attached_image=sqlite3_serialize(source,"main",&size,0);
   int attached_deserialize_rc=sqlite3_deserialize(attached,"aux",attached_image,size,size,SQLITE_DESERIALIZE_FREEONCLOSE|SQLITE_DESERIALIZE_RESIZEABLE);
