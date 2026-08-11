@@ -789,6 +789,11 @@ int main(void){
   int partial_reversed_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_reversed_data(id INTEGER PRIMARY KEY,value INTEGER,marker INTEGER,status TEXT)",0,0,0);
   int partial_reversed_integer_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_reversed_integer_index ON partial_reversed_data(value) WHERE 5 < marker",0,0,0);
   int partial_reversed_text_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_reversed_text_index ON partial_reversed_data(value) WHERE 'm' < status",0,0,0);
+  int partial_reversed_integer_is_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_reversed_integer_is_index ON partial_reversed_data(value) WHERE 5 IS marker",0,0,0);
+  int partial_reversed_text_is_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_reversed_text_is_index ON partial_reversed_data(value) WHERE 'm' IS status",0,0,0);
+  int partial_reversed_integer_is_not_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_reversed_integer_is_not_index ON partial_reversed_data(value) WHERE 5 IS NOT marker",0,0,0);
+  int partial_reversed_text_is_not_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_reversed_text_is_not_index ON partial_reversed_data(value) WHERE 'm' IS NOT status",0,0,0);
+  printf("partial-reversed-is-index\t%d\t%d\t%d\t%d\n",partial_reversed_integer_is_index_rc,partial_reversed_text_is_index_rc,partial_reversed_integer_is_not_index_rc,partial_reversed_text_is_not_index_rc);
   int partial_reversed_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_reversed_data VALUES(1,20,1,'a')",0,0,0);
   int partial_reversed_integer_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_reversed_data VALUES(2,20,10,'a')",0,0,0);
   int partial_reversed_integer_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_reversed_data VALUES(3,20,20,'a')",0,0,0);
@@ -797,6 +802,9 @@ int main(void){
   int partial_reversed_enter_conflict_rc=sqlite3_exec(clone,"UPDATE partial_reversed_data SET marker=10 WHERE id=1",0,0,0);
   int partial_reversed_delete_rc=sqlite3_exec(clone,"DELETE FROM partial_reversed_data WHERE id=2",0,0,0);
   int partial_reversed_enter_rc=sqlite3_exec(clone,"UPDATE partial_reversed_data SET marker=10 WHERE id=1",0,0,0);
+  int partial_reversed_is_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_reversed_data VALUES(4,40,5,'m')",0,0,0);
+  int partial_reversed_is_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_reversed_data VALUES(5,40,5,'m')",0,0,0);
+  printf("partial-reversed-is-transition\t%d\t%d\n",partial_reversed_is_inside_rc,partial_reversed_is_duplicate_rc);
   sqlite3_int64 partial_reversed_count=-1;
   int partial_reversed_count_rc=query_value(clone,"SELECT count(*) FROM partial_reversed_data",&partial_reversed_count);
   int partial_reversed_reindex_rc=sqlite3_exec(clone,"REINDEX partial_reversed_integer_index",0,0,0);
