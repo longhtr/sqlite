@@ -33,7 +33,7 @@ pub const Value = union(enum) {
     blob: []const u8,
 };
 
-pub const IndexPredicateOperation = enum { is_not_null };
+pub const IndexPredicateOperation = enum { is_null, is_not_null };
 
 pub const IndexPredicate = struct {
     column_index: usize,
@@ -43,6 +43,10 @@ pub const IndexPredicate = struct {
 
 pub fn indexPredicateMatches(operation: IndexPredicateOperation, value: Value) bool {
     return switch (operation) {
+        .is_null => switch (value) {
+            .null_ => true,
+            else => false,
+        },
         .is_not_null => switch (value) {
             .null_ => false,
             else => true,

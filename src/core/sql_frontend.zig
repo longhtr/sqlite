@@ -5389,10 +5389,18 @@ fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedCol
     var position: usize = 0;
     while (position < token_list.len and token_list[position].typ != tokens.tk_where) : (position += 1) {}
     if (position == token_list.len) return null;
-    if (position + 5 != token_list.len or token_list[position + 1].typ != tokens.tk_id or token_list[position + 2].typ != tokens.tk_is or token_list[position + 3].typ != tokens.tk_not or token_list[position + 4].typ != tokens.tk_null) return error.Syntax;
+    if (position + 4 > token_list.len or token_list[position + 1].typ != tokens.tk_id or token_list[position + 2].typ != tokens.tk_is) return error.Syntax;
+    var operation: btree.IndexPredicateOperation = undefined;
+    if (position + 4 == token_list.len and token_list[position + 3].typ == tokens.tk_null) {
+        operation = .is_null;
+    } else if (position + 5 == token_list.len and token_list[position + 3].typ == tokens.tk_not and token_list[position + 4].typ == tokens.tk_null) {
+        operation = .is_not_null;
+    } else {
+        return error.Syntax;
+    }
     for (columns, 0..) |column, index| {
         if (std.ascii.eqlIgnoreCase(column.name, token_list[position + 1].text)) {
-            return .{ .column_index = index, .integer_primary_key = column.integer_primary_key, .operation = .is_not_null };
+            return .{ .column_index = index, .integer_primary_key = column.integer_primary_key, .operation = operation };
         }
     }
     return error.Syntax;
@@ -8426,13 +8434,9 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         return .{ .result = .error_, .consumed = consumed };
     }
     position += 1;
-    var predicate_name: ?[]const u8 = null;
-    if (position < token_list.len) {
-        if (position + 5 != token_list.len or token_list[position].typ != tokens.tk_where or token_list[position + 1].typ != tokens.tk_id or token_list[position + 2].typ != tokens.tk_is or token_list[position + 3].typ != tokens.tk_not or token_list[position + 4].typ != tokens.tk_null) {
-            allocator.free(source);
-            return .{ .result = .error_, .consumed = consumed };
-        }
-        predicate_name = token_list[position + 1].text;
+    if (position < token_list.len and token_list[position].typ != tokens.tk_where) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
     }
     const located = locateTableWithDatabase(connection, table_name, schema_name);
     if (located.result != .ok) {
@@ -8470,19 +8474,10 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             return .{ .result = .no_memory, .consumed = consumed };
         };
     }
-    var predicate: ?btree.IndexPredicate = null;
-    if (predicate_name) |name| {
-        for (resolved.columns, 0..) |column, index| {
-            if (std.ascii.eqlIgnoreCase(column.name, name)) {
-                predicate = .{ .column_index = index, .integer_primary_key = column.integer_primary_key, .operation = .is_not_null };
-                break;
-            }
-        }
-        if (predicate == null) {
-            allocator.free(source);
-            return .{ .result = .error_, .consumed = consumed };
-        }
-    }
+    const predicate = resolveIndexPredicate(token_list, resolved.columns) catch {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    };
     const owned_indices = selected_indices.toOwnedSlice(allocator) catch {
         allocator.free(source);
         return .{ .result = .no_memory, .consumed = consumed };
