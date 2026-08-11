@@ -3639,6 +3639,7 @@ const Owner = struct {
     names: std.ArrayList([:0]u8) = .empty,
     action: ?ProgramAction = null,
     indices: []usize = &.{},
+    index_collations: []btree.IndexCollation = &.{},
     functions: [1]vdbe.Function = undefined,
     dynamic_functions: []vdbe.Function = &.{},
     dynamic_collations: []vdbe.Collation = &.{},
@@ -3657,6 +3658,7 @@ const Owner = struct {
         allocator.free(self.parameters);
         allocator.free(self.columns);
         allocator.free(self.indices);
+        allocator.free(self.index_collations);
         allocator.free(self.dynamic_functions);
         allocator.free(self.dynamic_collations);
         allocator.free(self.virtual_sources);
@@ -4479,6 +4481,7 @@ const ResolvedColumn = struct {
     name: []const u8,
     declared_type: []const u8,
     collation: []const u8,
+    explicit_collation: bool,
     record_index: usize,
     integer_primary_key: bool,
     primary_key: bool,
@@ -4547,6 +4550,7 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var unique = false;
         var not_null = false;
         var collation: []const u8 = "BINARY";
+        var explicit_collation = false;
         var default_start: ?usize = null;
         var default_end = position;
         var generated_start: ?usize = null;
@@ -4565,6 +4569,7 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
             }
             if (index + 1 < position and parsed.tokens[index].typ == tokens.tk_collate) {
                 collation = parsed.tokens[index + 1].text;
+                explicit_collation = true;
             }
             if (parsed.tokens[index].typ == tokens.tk_default and index + 1 < position and default_start == null) {
                 default_start = index + 1;
@@ -4601,7 +4606,7 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
                 generated_virtual = storage_position >= position or parsed.tokens[storage_position].typ == tokens.tk_virtual or !std.ascii.eqlIgnoreCase(parsed.tokens[storage_position].text, "stored");
             }
         }
-        try columns.append(allocator, .{ .name = name, .declared_type = declared_type, .collation = collation, .record_index = record_index, .integer_primary_key = primary and std.ascii.eqlIgnoreCase(declared_type, "INTEGER"), .primary_key = primary, .unique = unique or primary, .not_null = not_null, .default_start = default_start, .default_end = default_end, .generated_start = generated_start, .generated_end = generated_end, .generated_virtual = generated_virtual, .scan_expression = false });
+        try columns.append(allocator, .{ .name = name, .declared_type = declared_type, .collation = collation, .explicit_collation = explicit_collation, .record_index = record_index, .integer_primary_key = primary and std.ascii.eqlIgnoreCase(declared_type, "INTEGER"), .primary_key = primary, .unique = unique or primary, .not_null = not_null, .default_start = default_start, .default_end = default_end, .generated_start = generated_start, .generated_end = generated_end, .generated_virtual = generated_virtual, .scan_expression = false });
         if (!generated_virtual) {
             record_index += 1;
         }
@@ -4953,12 +4958,17 @@ fn locateForeignKeyIndex(
         const partial = resolveIndexPredicate(index_columns.tokens, parent_columns) catch return error.ForeignKeyMismatch;
         if (partial != null) continue;
         var matches = true;
-        for (mappings, index_columns.columns) |mapping, index_column| {
+        for (mappings, index_columns.columns, 0..) |mapping, index_column, index| {
             const parent_name = mapping.parent_column orelse {
                 matches = false;
                 break;
             };
             if (!std.ascii.eqlIgnoreCase(parent_name, index_column.name)) {
+                matches = false;
+                break;
+            }
+            const effective_collation = if (index_column.explicit_collation) index_column.collation else parent_columns[result[index]].collation;
+            if (!std.ascii.eqlIgnoreCase(effective_collation, parent_columns[result[index]].collation)) {
                 matches = false;
                 break;
             }
@@ -5385,6 +5395,13 @@ const IndexMutationRow = struct {
     values: []const btree.Value,
 };
 
+fn indexCollation(name: []const u8) ?btree.IndexCollation {
+    if (std.ascii.eqlIgnoreCase(name, "BINARY")) return .binary;
+    if (std.ascii.eqlIgnoreCase(name, "NOCASE")) return .nocase;
+    if (std.ascii.eqlIgnoreCase(name, "RTRIM")) return .rtrim;
+    return null;
+}
+
 fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedColumn) error{Syntax}!?btree.IndexPredicate {
     var position: usize = 0;
     while (position < token_list.len and token_list[position].typ != tokens.tk_where) : (position += 1) {}
@@ -5467,6 +5484,8 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
         const unique = index_columns.tokens.len > 1 and index_columns.tokens[0].typ == tokens.tk_create and index_columns.tokens[1].typ == tokens.tk_unique;
         const selected = connection.allocator.alloc(usize, index_columns.columns.len) catch return .no_memory;
         defer connection.allocator.free(selected);
+        const selected_collations = connection.allocator.alloc(btree.IndexCollation, index_columns.columns.len) catch return .no_memory;
+        defer connection.allocator.free(selected_collations);
         var integer_primary_key_position: ?usize = null;
         for (index_columns.columns, 0..) |index_column, selected_position| {
             var found: ?usize = null;
@@ -5478,6 +5497,9 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
                 }
             }
             selected[selected_position] = found orelse return .corrupt;
+            const table_column = table_columns.columns[selected[selected_position]];
+            const collation_name = if (index_column.explicit_collation) index_column.collation else table_column.collation;
+            selected_collations[selected_position] = indexCollation(collation_name) orelse return .error_;
         }
         if (old_row) |row| {
             const matches = indexPredicateRowMatches(predicate, row) catch return .corrupt;
@@ -5507,7 +5529,7 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
                 key_values[selected.len] = .{ .integer = row.rowid };
                 const payload = btree.encodeRecord(connection.allocator, key_values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
                 defer connection.allocator.free(payload);
-                const inserted = if (unique) database.insertUniqueIndex(root_page, payload, selected.len) else database.insertIndex(root_page, payload);
+                const inserted = if (unique) database.insertUniqueIndexWithCollations(root_page, payload, selected.len, selected_collations) else database.insertIndexWithCollations(root_page, payload, selected_collations);
                 if (inserted != .ok) return inserted;
             }
         }
@@ -7115,6 +7137,7 @@ fn scanExpressionColumn(source: []const u8, token_list: []const Token, start: us
         .name = source[first .. last.start + last.text.len],
         .declared_type = "",
         .collation = "BINARY",
+        .explicit_collation = false,
         .record_index = 0,
         .integer_primary_key = false,
         .primary_key = false,
@@ -7977,7 +8000,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                     _ = database.rollbackStatementBatch();
                 }
             }
-            const created = database.createSchemaIndex(action.name, action.table_name, action.sql, action.table_root, owner.indices, action.integer_primary_key_position, action.predicate, action.unique, action.if_not_exists);
+            const created = database.createSchemaIndex(action.name, action.table_name, action.sql, action.table_root, owner.indices, action.integer_primary_key_position, owner.index_collations, action.predicate, action.unique, action.if_not_exists);
             if (created != .ok) break :blk created;
             const committed = database.commitStatementBatch();
             batch_active = false;
@@ -8425,6 +8448,8 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
     position += 3;
     var column_names = std.ArrayList([]const u8).empty;
     defer column_names.deinit(allocator);
+    var specified_collations = std.ArrayList(?[]const u8).empty;
+    defer specified_collations.deinit(allocator);
     while (true) {
         if (position >= token_list.len or token_list[position].typ != tokens.tk_id) {
             allocator.free(source);
@@ -8435,6 +8460,19 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             return .{ .result = .no_memory, .consumed = consumed };
         };
         position += 1;
+        var specified_collation: ?[]const u8 = null;
+        if (position < token_list.len and token_list[position].typ == tokens.tk_collate) {
+            if (position + 1 >= token_list.len or token_list[position + 1].typ != tokens.tk_id) {
+                allocator.free(source);
+                return .{ .result = .error_, .consumed = consumed };
+            }
+            specified_collation = token_list[position + 1].text;
+            position += 2;
+        }
+        specified_collations.append(allocator, specified_collation) catch {
+            allocator.free(source);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
         if (position < token_list.len and (token_list[position].typ == tokens.tk_asc or token_list[position].typ == tokens.tk_desc)) {
             position += 1;
         }
@@ -8471,6 +8509,8 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
     }
     var selected_indices = std.ArrayList(usize).empty;
     defer selected_indices.deinit(allocator);
+    var selected_collations = std.ArrayList(btree.IndexCollation).empty;
+    defer selected_collations.deinit(allocator);
     var integer_primary_key_position: ?usize = null;
     for (column_names.items, 0..) |column_name, selected_position| {
         var found: ?usize = null;
@@ -8481,7 +8521,16 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
                 break;
             }
         }
-        selected_indices.append(allocator, found orelse {
+        const selected = found orelse {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        };
+        selected_indices.append(allocator, selected) catch {
+            allocator.free(source);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        const collation_name = specified_collations.items[selected_position] orelse resolved.columns[selected].collation;
+        selected_collations.append(allocator, indexCollation(collation_name) orelse {
             allocator.free(source);
             return .{ .result = .error_, .consumed = consumed };
         }) catch {
@@ -8497,13 +8546,20 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         allocator.free(source);
         return .{ .result = .no_memory, .consumed = consumed };
     };
+    const owned_collations = selected_collations.toOwnedSlice(allocator) catch {
+        allocator.free(owned_indices);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
     const owner = allocator.create(Owner) catch {
+        allocator.free(owned_collations);
         allocator.free(owned_indices);
         allocator.free(source);
         return .{ .result = .no_memory, .consumed = consumed };
     };
     const instructions = allocator.alloc(vdbe.Instruction, 2) catch {
         allocator.destroy(owner);
+        allocator.free(owned_collations);
         allocator.free(owned_indices);
         allocator.free(source);
         return .{ .result = .no_memory, .consumed = consumed };
@@ -8518,6 +8574,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         .parameters = parameters,
         .columns = columns,
         .indices = owned_indices,
+        .index_collations = owned_collations,
         .action = .{ .create_index = .{
             .connection = connection,
             .database = located.database.?,

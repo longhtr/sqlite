@@ -61,6 +61,23 @@ static int query_scan(sqlite3 *db, const char *sql, int *count, sqlite3_int64 *f
   return rc;
 }
 
+static int query_text_initials(sqlite3 *db, const char *sql, int *count, int *first, int *last){
+  sqlite3_stmt *statement = 0;
+  int rc = sqlite3_prepare_v2(db, sql, -1, &statement, 0);
+  *count=0;
+  if(rc==SQLITE_OK){
+    while((rc=sqlite3_step(statement))==SQLITE_ROW){
+      const unsigned char *text=sqlite3_column_text(statement,0);
+      int value=text ? text[0] : -1;
+      if(*count==0) *first=value;
+      *last=value;
+      *count+=1;
+    }
+  }
+  sqlite3_finalize(statement);
+  return rc;
+}
+
 int main(void){
 #ifdef NATIVE_ENGINE
   int config_rc=zig_sqlite3_config_malloc(&fault_methods);
@@ -258,11 +275,46 @@ int main(void){
   int partial_range_count_rc=query_value(clone,"SELECT count(*) FROM partial_range_data",&partial_range_count);
   int partial_range_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_range_data",0,0,0);
   printf("partial-range-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\n",partial_range_table_rc,partial_range_index_rc,partial_range_outside_rc,partial_range_inside_rc,partial_range_duplicate_rc,partial_range_enter_conflict_rc,partial_range_delete_rc,partial_range_enter_rc,partial_range_count_rc,(long long)partial_range_count,partial_range_drop_rc);
+  int collated_table_rc=sqlite3_exec(clone,"CREATE TABLE collated_data(id INTEGER PRIMARY KEY,value TEXT COLLATE NOCASE)",0,0,0);
+  int collated_insert_b_rc=sqlite3_exec(clone,"INSERT INTO collated_data VALUES(1,'B')",0,0,0);
+  int collated_insert_a_rc=sqlite3_exec(clone,"INSERT INTO collated_data VALUES(2,'a')",0,0,0);
+  int collated_insert_c_rc=sqlite3_exec(clone,"INSERT INTO collated_data VALUES(3,'c')",0,0,0);
+  int collated_index_rc=sqlite3_exec(clone,"CREATE INDEX collated_data_value ON collated_data(value)",0,0,0);
+  int collated_count=-1;
+  int collated_first=-1,collated_last=-1;
+  int collated_query_rc=query_text_initials(clone,"SELECT value FROM collated_data INDEXED BY collated_data_value",&collated_count,&collated_first,&collated_last);
+  int collated_drop_rc=sqlite3_exec(clone,"DROP TABLE collated_data",0,0,0);
+  int collated_unique_table_rc=sqlite3_exec(clone,"CREATE TABLE collated_unique(id INTEGER PRIMARY KEY,value TEXT)",0,0,0);
+  int collated_unique_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX collated_unique_value ON collated_unique(value COLLATE NOCASE)",0,0,0);
+  int collated_unique_first_rc=sqlite3_exec(clone,"INSERT INTO collated_unique VALUES(1,'alpha')",0,0,0);
+  int collated_unique_duplicate_rc=sqlite3_exec(clone,"INSERT INTO collated_unique VALUES(2,'ALPHA')",0,0,0);
+  int collated_unique_drop_rc=sqlite3_exec(clone,"DROP TABLE collated_unique",0,0,0);
+  int collated_rtrim_table_rc=sqlite3_exec(clone,"CREATE TABLE collated_rtrim(id INTEGER PRIMARY KEY,value TEXT)",0,0,0);
+  int collated_rtrim_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX collated_rtrim_value ON collated_rtrim(value COLLATE RTRIM)",0,0,0);
+  int collated_rtrim_first_rc=sqlite3_exec(clone,"INSERT INTO collated_rtrim VALUES(1,'x')",0,0,0);
+  int collated_rtrim_duplicate_rc=sqlite3_exec(clone,"INSERT INTO collated_rtrim VALUES(2,'x ')",0,0,0);
+  int collated_rtrim_drop_rc=sqlite3_exec(clone,"DROP TABLE collated_rtrim",0,0,0);
+  printf("collated-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",collated_table_rc,collated_insert_b_rc,collated_insert_a_rc,collated_insert_c_rc,collated_index_rc,collated_query_rc,collated_count,(long long)collated_first,(long long)collated_last,collated_drop_rc,collated_unique_table_rc,collated_unique_index_rc,collated_unique_first_rc,collated_unique_duplicate_rc,collated_unique_drop_rc,collated_rtrim_table_rc,collated_rtrim_index_rc,collated_rtrim_first_rc,collated_rtrim_duplicate_rc,collated_rtrim_drop_rc);
 #ifdef NATIVE_ENGINE
   int deferred_fk_config_rc=zig_sqlite3_db_config_flag(clone,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
 #else
   int deferred_fk_config_rc=sqlite3_db_config(clone,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
 #endif
+  int collated_parent_create_rc=sqlite3_exec(clone,"CREATE TABLE collated_parent(id INTEGER PRIMARY KEY,code TEXT COLLATE NOCASE)",0,0,0);
+  int collated_parent_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX collated_parent_code ON collated_parent(code)",0,0,0);
+  int collated_child_create_rc=sqlite3_exec(clone,"CREATE TABLE collated_child(id INTEGER PRIMARY KEY,parent_code TEXT REFERENCES collated_parent(code))",0,0,0);
+  int collated_parent_insert_rc=sqlite3_exec(clone,"INSERT INTO collated_parent VALUES(1,'Alpha')",0,0,0);
+  int collated_child_insert_rc=sqlite3_exec(clone,"INSERT INTO collated_child VALUES(1,'ALPHA')",0,0,0);
+  int collated_child_drop_rc=sqlite3_exec(clone,"DROP TABLE collated_child",0,0,0);
+  int collated_parent_drop_rc=sqlite3_exec(clone,"DROP TABLE collated_parent",0,0,0);
+  int collated_mismatch_parent_rc=sqlite3_exec(clone,"CREATE TABLE collated_mismatch_parent(id INTEGER PRIMARY KEY,code TEXT COLLATE NOCASE)",0,0,0);
+  int collated_mismatch_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX collated_mismatch_code ON collated_mismatch_parent(code COLLATE BINARY)",0,0,0);
+  int collated_mismatch_child_rc=sqlite3_exec(clone,"CREATE TABLE collated_mismatch_child(id INTEGER PRIMARY KEY,parent_code TEXT REFERENCES collated_mismatch_parent(code))",0,0,0);
+  int collated_mismatch_parent_insert_rc=sqlite3_exec(clone,"INSERT INTO collated_mismatch_parent VALUES(1,'Alpha')",0,0,0);
+  int collated_mismatch_child_insert_rc=sqlite3_exec(clone,"INSERT INTO collated_mismatch_child VALUES(1,'Alpha')",0,0,0);
+  int collated_mismatch_child_drop_rc=sqlite3_exec(clone,"DROP TABLE collated_mismatch_child",0,0,0);
+  int collated_mismatch_parent_drop_rc=sqlite3_exec(clone,"DROP TABLE collated_mismatch_parent",0,0,0);
+  printf("collated-index-fk\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",collated_parent_create_rc,collated_parent_index_rc,collated_child_create_rc,collated_parent_insert_rc,collated_child_insert_rc,collated_child_drop_rc,collated_parent_drop_rc,collated_mismatch_parent_rc,collated_mismatch_index_rc,collated_mismatch_child_rc,collated_mismatch_parent_insert_rc,collated_mismatch_child_insert_rc,collated_mismatch_child_drop_rc,collated_mismatch_parent_drop_rc);
   int deferred_parent_create_rc=sqlite3_exec(clone,"CREATE TABLE deferred_parent(id INTEGER PRIMARY KEY)",0,0,0);
   int deferred_child_create_rc=sqlite3_exec(clone,"CREATE TABLE deferred_child(id INTEGER PRIMARY KEY,parent_id REFERENCES deferred_parent(id) DEFERRABLE INITIALLY DEFERRED)",0,0,0);
   int deferred_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
