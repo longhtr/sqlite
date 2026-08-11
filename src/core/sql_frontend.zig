@@ -4812,9 +4812,17 @@ fn resolveReversedIntegerIndexExpression(token_list: []const Token, position: us
     return .{ .column_name = token_list[operation_position + 1].text, .transform = .{ .integer_compare = .{ .operation = operation, .value = operand.value } }, .consumed = operation_position + 2 - position };
 }
 
-const ConcatIndexExpression = struct { column_name: []const u8, consumed: usize };
+const ConcatIndexExpression = struct { column_name: []const u8, constant_null: bool = false, consumed: usize };
 
 fn resolveConcatIndexExpression(token_list: []const Token, position: usize) ?ConcatIndexExpression {
+    if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_concat) {
+        if (token_list[position].typ == tokens.tk_id and token_list[position + 2].typ == tokens.tk_null) {
+            return .{ .column_name = token_list[position].text, .constant_null = true, .consumed = 3 };
+        }
+        if (token_list[position].typ == tokens.tk_null and token_list[position + 2].typ == tokens.tk_id) {
+            return .{ .column_name = token_list[position + 2].text, .constant_null = true, .consumed = 3 };
+        }
+    }
     if (position + 3 >= token_list.len or token_list[position].typ != tokens.tk_id or !std.ascii.eqlIgnoreCase(token_list[position].text, "concat") or token_list[position + 1].typ != tokens.tk_lp) return null;
     var cursor = position + 2;
     var column_name: ?[]const u8 = null;
@@ -4946,7 +4954,7 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var start = position;
         if (if (schema_is_index) resolveConcatIndexExpression(parsed.tokens, position) else null) |concat_expression| {
             scan_expression = true;
-            index_transform = .concat_single;
+            index_transform = if (concat_expression.constant_null) .constant_null else .concat_single;
             name = concat_expression.column_name;
         } else if (if (schema_is_index) resolveReversedRealIndexExpression(parsed.tokens, position) else null) |reversed_real_expression| {
             scan_expression = true;
@@ -9849,7 +9857,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         var transform: btree.IndexTransform = .identity;
         var column_name: []const u8 = undefined;
         if (resolveConcatIndexExpression(token_list, position)) |concat_expression| {
-            transform = .concat_single;
+            transform = if (concat_expression.constant_null) .constant_null else .concat_single;
             column_name = concat_expression.column_name;
             position += concat_expression.consumed;
         } else if (resolveReversedRealIndexExpression(token_list, position)) |reversed_real_expression| {

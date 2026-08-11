@@ -563,6 +563,9 @@ int main(void){
   int concat_leading_null_index_rc=sqlite3_exec(clone,"CREATE INDEX concat_leading_null_index ON concat_expression_data(concat(NULL,value))",0,0,0);
   int concat_trailing_null_index_rc=sqlite3_exec(clone,"CREATE INDEX concat_trailing_null_index ON concat_expression_data(concat(value,NULL))",0,0,0);
   int concat_surrounded_null_index_rc=sqlite3_exec(clone,"CREATE INDEX concat_surrounded_null_index ON concat_expression_data(concat(NULL,value,NULL))",0,0,0);
+  int concat_null_operator_index_rc=sqlite3_exec(clone,"CREATE INDEX concat_null_operator_index ON concat_expression_data(value||NULL)",0,0,0);
+  int reversed_concat_null_operator_index_rc=sqlite3_exec(clone,"CREATE INDEX reversed_concat_null_operator_index ON concat_expression_data(NULL||value)",0,0,0);
+  printf("concat-null-operator-index\t%d\t%d\n",concat_null_operator_index_rc,reversed_concat_null_operator_index_rc);
   int concat_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO concat_expression_data VALUES(2,'')",0,0,0);
   int concat_expression_second_rc=sqlite3_exec(clone,"INSERT INTO concat_expression_data VALUES(2,'value')",0,0,0);
   int concat_expression_update_rc=sqlite3_exec(clone,"UPDATE concat_expression_data SET value=NULL WHERE id=2",0,0,0);
