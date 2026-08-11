@@ -5742,6 +5742,24 @@ fn resolveIndexPredicateInteger(token_list: []const Token, position: *usize) err
 }
 
 fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const ResolvedColumn, position: *usize) error{Syntax}!btree.IndexPredicateTerm {
+    if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_null) {
+        position.* += 1;
+        if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_is) return error.Syntax;
+        position.* += 1;
+        const is_not = position.* < token_list.len and token_list[position.*].typ == tokens.tk_not;
+        if (is_not) position.* += 1;
+        if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_id) return error.Syntax;
+        var selected: ?usize = null;
+        for (columns, 0..) |column, index| {
+            if (std.ascii.eqlIgnoreCase(column.name, token_list[position.*].text)) {
+                selected = index;
+                break;
+            }
+        }
+        const column_index = selected orelse return error.Syntax;
+        position.* += 1;
+        return .{ .column_index = column_index, .integer_primary_key = columns[column_index].integer_primary_key, .operation = if (is_not) .is_not_null else .is_null };
+    }
     if (position.* < token_list.len and (token_list[position.*].typ == tokens.tk_integer or token_list[position.*].typ == tokens.tk_minus)) {
         const comparison_value = try resolveIndexPredicateInteger(token_list, position);
         if (position.* >= token_list.len) return error.Syntax;

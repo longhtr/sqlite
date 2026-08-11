@@ -600,6 +600,9 @@ int main(void){
   printf("partial-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\n",partial_table_create_rc,partial_null_insert_rc,partial_value_insert_rc,partial_index_create_rc,partial_second_null_rc,partial_duplicate_rc,partial_enter_rc,partial_enter_duplicate_rc,partial_leave_rc,partial_reuse_rc,partial_count_rc,(long long)partial_count,partial_drop_rc);
   int partial_null_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_null_data(id INTEGER PRIMARY KEY,marker INTEGER,value INTEGER)",0,0,0);
   int partial_null_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_null_index ON partial_null_data(value) WHERE marker IS NULL",0,0,0);
+  int partial_null_reversed_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_null_reversed_index ON partial_null_data(value) WHERE NULL IS marker",0,0,0);
+  int partial_not_null_reversed_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_null_reversed_index ON partial_null_data(value) WHERE NULL IS NOT marker",0,0,0);
+  printf("partial-null-reversed-index\t%d\t%d\n",partial_null_reversed_index_rc,partial_not_null_reversed_index_rc);
   int partial_null_first_rc=sqlite3_exec(clone,"INSERT INTO partial_null_data VALUES(1,NULL,7)",0,0,0);
   int partial_null_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_null_data VALUES(2,1,7)",0,0,0);
   int partial_null_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_null_data VALUES(3,NULL,7)",0,0,0);
