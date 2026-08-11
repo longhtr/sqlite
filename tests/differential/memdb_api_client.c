@@ -391,6 +391,17 @@ int main(void){
   int is_expression_reindex_rc=sqlite3_exec(clone,"REINDEX is_expression_index",0,0,0);
   int is_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE is_expression_data",0,0,0);
   printf("is-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",is_expression_table_rc,is_expression_first_rc,is_expression_index_rc,is_not_expression_index_rc,is_expression_second_rc,is_expression_false_duplicate_rc,is_expression_true_duplicate_rc,is_expression_count_rc,(long long)is_expression_count,is_expression_reindex_rc,is_expression_drop_rc);
+  int not_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE not_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
+  int not_expression_first_rc=sqlite3_exec(clone,"INSERT INTO not_expression_data VALUES(1,0)",0,0,0);
+  int not_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX not_expression_index ON not_expression_data(NOT value)",0,0,0);
+  int not_expression_second_rc=sqlite3_exec(clone,"INSERT INTO not_expression_data VALUES(2,20)",0,0,0);
+  int not_expression_false_duplicate_rc=sqlite3_exec(clone,"INSERT INTO not_expression_data VALUES(3,30)",0,0,0);
+  int not_expression_true_duplicate_rc=sqlite3_exec(clone,"INSERT INTO not_expression_data VALUES(3,0)",0,0,0);
+  sqlite3_int64 not_expression_count=-1;
+  int not_expression_count_rc=query_value(clone,"SELECT count(*) FROM not_expression_data",&not_expression_count);
+  int not_expression_reindex_rc=sqlite3_exec(clone,"REINDEX not_expression_index",0,0,0);
+  int not_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE not_expression_data",0,0,0);
+  printf("not-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",not_expression_table_rc,not_expression_first_rc,not_expression_index_rc,not_expression_second_rc,not_expression_false_duplicate_rc,not_expression_true_duplicate_rc,not_expression_count_rc,(long long)not_expression_count,not_expression_reindex_rc,not_expression_drop_rc);
   int partial_table_create_rc=sqlite3_exec(clone,"CREATE TABLE partial_index_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int partial_null_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(1,NULL)",0,0,0);
   int partial_value_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(2,20)",0,0,0);
