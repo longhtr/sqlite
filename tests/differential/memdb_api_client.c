@@ -399,11 +399,11 @@ int main(void){
   int partial_in_reindex_rc=sqlite3_exec(clone,"REINDEX partial_in_index",0,0,0);
   int partial_in_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_in_data",0,0,0);
   printf("partial-in-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",partial_in_table_rc,partial_in_index_rc,partial_not_in_index_rc,partial_in_not_member_rc,partial_in_member_rc,partial_in_duplicate_rc,partial_not_in_duplicate_rc,partial_in_enter_conflict_rc,partial_in_delete_rc,partial_in_enter_rc,partial_in_count_rc,(long long)partial_in_count,partial_in_reindex_rc,partial_in_drop_rc);
-  int partial_text_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_text_data(id INTEGER PRIMARY KEY,status TEXT,value INTEGER)",0,0,0);
+  int partial_text_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_text_data(id INTEGER PRIMARY KEY,status TEXT COLLATE NOCASE,value INTEGER)",0,0,0);
   int partial_text_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_text_index ON partial_text_data(value) WHERE status='active'",0,0,0);
   int partial_text_not_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_text_not_index ON partial_text_data(value) WHERE status!='active'",0,0,0);
   int partial_text_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_text_data VALUES(1,'inactive',7)",0,0,0);
-  int partial_text_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_text_data VALUES(2,'active',7)",0,0,0);
+  int partial_text_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_text_data VALUES(2,'ACTIVE',7)",0,0,0);
   int partial_text_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_text_data VALUES(3,'active',7)",0,0,0);
   int partial_text_not_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_text_data VALUES(3,'inactive',7)",0,0,0);
   int partial_text_enter_conflict_rc=sqlite3_exec(clone,"UPDATE partial_text_data SET status='active' WHERE id=1",0,0,0);
