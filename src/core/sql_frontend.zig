@@ -3622,7 +3622,7 @@ const ProgramAction = union(enum) {
     virtual_drop: struct { connection: *Connection, schema_name: []const u8, name: []const u8 },
     drop: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
     drop_index: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
-    reindex: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8 },
+    reindex: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, table: bool },
     insert: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, column_count: usize, integer_primary_key: ?usize, replace: bool, conflict_ignore: bool },
     update: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, target_column: usize, target_integer_primary_key: bool, foreign_key_old_mask: u32 },
     delete: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, foreign_key_old_mask: u32 },
@@ -5611,6 +5611,29 @@ fn reindexSecondaryIndex(connection: *Connection, database: *btree.Database, nam
     const predicate = resolveIndexPredicate(index_columns.tokens, table_columns.columns) catch return .corrupt;
     const unique = index_columns.tokens.len > 1 and index_columns.tokens[1].typ == tokens.tk_unique;
     return database.refillSchemaIndex(index_schema.root_page, table.root_page, selected, integer_primary_key_position, collations, sort_orders, predicate, unique);
+}
+
+fn reindexTableIndexes(connection: *Connection, database: *btree.Database, table_name: []const u8) ResultCode {
+    const opened = database.openCursor(1, .table);
+    if (opened.result != .ok) return opened.result;
+    var cursor = opened.cursor.?;
+    defer cursor.deinit();
+    var matched = false;
+    for (cursor.entries.items) |entry| {
+        const decoded = btree.decodeRecord(connection.allocator, entry.payload);
+        if (decoded.result != .ok) return decoded.result;
+        var record = decoded.record.?;
+        defer record.deinit();
+        if (record.values.len < 3) continue;
+        const object_type = schemaEntryText(record.values[0]) orelse continue;
+        const name = schemaEntryText(record.values[1]) orelse continue;
+        const owner = schemaEntryText(record.values[2]) orelse continue;
+        if (!std.ascii.eqlIgnoreCase(object_type, "index") or !std.ascii.eqlIgnoreCase(owner, table_name)) continue;
+        const refilled = reindexSecondaryIndex(connection, database, name);
+        if (refilled != .ok) return refilled;
+        matched = true;
+    }
+    return if (matched) .ok else .error_;
 }
 
 fn clearForeignKeyActionAllocations(connection: *Connection) void {
@@ -8138,7 +8161,7 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             defer if (batch_active) {
                 _ = action.database.rollbackStatementBatch();
             };
-            const refilled = reindexSecondaryIndex(action.connection, action.database, action.name);
+            const refilled = if (action.table) reindexTableIndexes(action.connection, action.database, action.name) else reindexSecondaryIndex(action.connection, action.database, action.name);
             if (refilled != .ok) break :blk refilled;
             const committed = action.database.commitStatementBatch();
             batch_active = false;
@@ -8732,12 +8755,29 @@ fn compileReindex(connection: *Connection, source: [:0]u8, token_list: []const T
         return .{ .result = .error_, .consumed = consumed };
     }
     const located = locateIndexWithDatabase(connection, index_name, requested_schema);
-    if (located.result != .ok) {
+    var database: *btree.Database = undefined;
+    var schema_name: []const u8 = undefined;
+    var table_target = false;
+    if (located.result == .ok) {
+        database = located.database.?;
+        schema_name = located.schema_name;
+        var schema_index = located.index.?;
+        schema_index.deinit();
+    } else if (located.result == .not_found) {
+        const table = locateTableWithDatabase(connection, index_name, requested_schema);
+        if (table.result != .ok) {
+            allocator.free(source);
+            return .{ .result = if (table.result == .not_found) .error_ else table.result, .consumed = consumed };
+        }
+        database = table.database.?;
+        schema_name = table.schema_name;
+        var schema_table = table.table.?;
+        schema_table.deinit();
+        table_target = true;
+    } else {
         allocator.free(source);
-        return .{ .result = if (located.result == .not_found) .error_ else located.result, .consumed = consumed };
+        return .{ .result = located.result, .consumed = consumed };
     }
-    var schema_index = located.index.?;
-    schema_index.deinit();
     const owner = allocator.create(Owner) catch {
         allocator.free(source);
         return .{ .result = .no_memory, .consumed = consumed };
@@ -8751,7 +8791,7 @@ fn compileReindex(connection: *Connection, source: [:0]u8, token_list: []const T
     const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
     instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
     instructions[1] = .{ .opcode = .halt };
-    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .reindex = .{ .connection = connection, .database = located.database.?, .schema_name = located.schema_name, .name = index_name } }, .program = .{ .instructions = instructions, .register_count = 1 } };
+    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .reindex = .{ .connection = connection, .database = database, .schema_name = schema_name, .name = index_name, .table = table_target } }, .program = .{ .instructions = instructions, .register_count = 1 } };
     owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
     owner.program.functions = owner.functions[0..];
     const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {

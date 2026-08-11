@@ -351,7 +351,7 @@ int main(void){
   int custom_collation_insert_rc=sqlite3_exec(clone,"INSERT INTO custom_collation_data VALUES(4,'d')",0,0,0);
   int custom_collation_after_query_rc=query_text_initials(clone,"SELECT value FROM custom_collation_data INDEXED BY custom_collation_index",&custom_collation_after_count,&custom_collation_after_first,&custom_collation_after_last);
   reverse_direction=1;
-  int custom_collation_reindex_rc=sqlite3_exec(clone,"REINDEX custom_collation_index",0,0,0);
+  int custom_collation_reindex_rc=sqlite3_exec(clone,"REINDEX custom_collation_data",0,0,0);
   int custom_collation_reindex_count=-1,custom_collation_reindex_first=-1,custom_collation_reindex_last=-1;
   int custom_collation_reindex_query_rc=query_text_initials(clone,"SELECT value FROM custom_collation_data INDEXED BY custom_collation_index",&custom_collation_reindex_count,&custom_collation_reindex_first,&custom_collation_reindex_last);
   reverse_direction=-1;
