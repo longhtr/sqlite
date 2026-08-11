@@ -1,14 +1,27 @@
 {
   "schema_version": 1,
   "id": "btree-careful-shared-cache-mutex-ordering",
-  "title": "B-tree careful shared-cache mutex ordering",
+  "title": "B-tree recursive shared-cache mutex entry, leave, and careful ordering",
   "status": "source-translated",
   "admission_ready": true,
   "scope": {
-    "rationale": "btreeLockCarefully is the deadlock-avoidance slow path for a failed nonblocking BtShared mutex acquisition: it releases locked later Btrees, acquires the requested mutex, then reacquires every later wanted mutex in ascending list order.",
+    "rationale": "sqlite3BtreeEnter/Leave provide recursive demand over a non-recursive BtShared mutex, while btreeLockCarefully is the deadlock-avoidance slow path that releases locked later Btrees, acquires the requested mutex, then reacquires every later wanted mutex in ascending list order.",
     "source_files": [{"path": "src/btmutex.c", "sha256": "1933f13ee20bd0bd515b5e76e84027435720eed64bc2e6009249b47534b7eaaa"}],
-    "source_entity_ids": ["src/btmutex.c::function::btreeLockCarefully::line-105"],
+    "source_entity_ids": ["src/btmutex.c::function::sqlite3BtreeEnter::line-71", "src/btmutex.c::function::btreeLockCarefully::line-105", "src/btmutex.c::function::sqlite3BtreeLeave::line-143"],
     "behavioral_block_ids": [
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::assert::line-76-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::assert::line-77-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::assert::line-78-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::assert::line-79-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::assert::line-80-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::assert::line-83-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::assert::line-84-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::assert::line-87-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::assert::line-91-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::if::line-93-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::return::line-93-column-22::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::if::line-95-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeEnter::behavior::return::line-95-column-19::ordinal-0",
       "src/btmutex.c::function::btreeLockCarefully::behavior::if::line-112-column-3::ordinal-0",
       "src/btmutex.c::function::btreeLockCarefully::behavior::return::line-115-column-5::ordinal-0",
       "src/btmutex.c::function::btreeLockCarefully::behavior::for::line-123-column-3::ordinal-0",
@@ -17,32 +30,44 @@
       "src/btmutex.c::function::btreeLockCarefully::behavior::assert::line-126-column-5::ordinal-0",
       "src/btmutex.c::function::btreeLockCarefully::behavior::if::line-127-column-5::ordinal-0",
       "src/btmutex.c::function::btreeLockCarefully::behavior::for::line-132-column-3::ordinal-0",
-      "src/btmutex.c::function::btreeLockCarefully::behavior::if::line-133-column-5::ordinal-0"
+      "src/btmutex.c::function::btreeLockCarefully::behavior::if::line-133-column-5::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeLeave::behavior::assert::line-144-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeLeave::behavior::if::line-145-column-3::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeLeave::behavior::assert::line-146-column-5::ordinal-0",
+      "src/btmutex.c::function::sqlite3BtreeLeave::behavior::if::line-148-column-5::ordinal-0"
     ],
-    "excluded_responsibilities": ["Recursive sqlite3BtreeEnter/Leave reference counting", "Connection-wide Btree EnterAll/LeaveAll", "BtShared mutex allocation and connection ownership"]
+    "excluded_responsibilities": ["Connection-wide Btree EnterAll/LeaveAll", "BtShared mutex allocation and connection ownership"]
   },
   "dependencies": {
     "atomic_unit_ids": ["btree-sharability-and-vdbe-usage-lock-masks"],
     "external_source_responsibilities": ["Connection mutex is already held; pNext is sorted by BtShared address; mutex try/enter/leave operations are supplied by the active Btree owner"],
-    "caller_closure": "The complete private slow path is assigned and is called by native VDBE Btree entry. The current bounded VDBE owner supplies a no-contention mutex seam; connection-backed BtShared mutex dispatch remains open."
+    "caller_closure": "Complete per-Btree recursive entry, careful acquisition, and leave bodies are assigned and called by native VDBE Btree entry/leave. The current bounded VDBE owner supplies a no-contention mutex seam; connection-backed BtShared mutex dispatch remains open."
   },
   "contracts": {
-    "inputs": ["Unlocked target Btree in an ascending same-connection pNext chain and typed try/lock/unlock operations"],
-    "outputs": ["Target locked; every later Btree with nonzero wantToLock locked; later unwanted Btrees left unlocked"],
+    "inputs": ["Btree in an ascending same-connection chain and typed try/lock/unlock operations"],
+    "outputs": ["Recursive enter demand with target lock acquisition; careful ordered reacquisition on contention; final leave unlock when demand reaches zero"],
     "ownership": "All Btree nodes, BtShared mutexes, and callback context are borrowed. No allocation or list mutation.",
-    "state_and_results": "A successful try locks only the target and returns immediately. A failed try unlocks each locked later node before blocking on target, then reacquires wanted later nodes in list order.",
+    "state_and_results": "Non-sharable entry/leave are no-ops. Sharable entry increments wantToLock and acquires only on the first level. Final leave unlocks at zero. A failed try unlocks each locked later node before blocking on target, then reacquires wanted later nodes in list order.",
     "locks_callbacks_io": "Caller holds the connection mutex. Mutex callbacks run synchronously and may block only in the lock operation after larger-address locks have been released. No I/O.",
     "failure_and_continuation": "Mutex enter/leave callbacks are infallible under the source interface. List/lock consistency is asserted before mutation."
   },
   "mappings": [{
+    "source_entity_id": "src/btmutex.c::function::sqlite3BtreeEnter::line-71",
+    "relation": "source-recursive-btree-entry-to-typed-mutex-operation-seam",
+    "zig_declaration_ids": ["src/core/internal/vdbe_lifecycle.zig::function::btreeEnter"]
+  }, {
     "source_entity_id": "src/btmutex.c::function::btreeLockCarefully::line-105",
     "relation": "source-deadlock-avoidance-to-typed-mutex-operation-seam",
     "zig_declaration_ids": ["src/core/internal/vdbe_lifecycle.zig::function::btreeLockCarefully"]
+  }, {
+    "source_entity_id": "src/btmutex.c::function::sqlite3BtreeLeave::line-143",
+    "relation": "source-recursive-btree-leave-to-typed-mutex-operation-seam",
+    "zig_declaration_ids": ["src/core/internal/vdbe_lifecycle.zig::function::btreeLeave"]
   }],
   "representation_differences": ["Opaque BtShared mutex access is represented by typed try/lock/unlock operations while Btree locked/wantToLock/pNext state remains source-layout data.", "The source lock helper also assigns BtShared.db; that opaque owner update remains the callback provider's responsibility and is not yet represented by the bounded VDBE seam."],
   "oracle": {
-    "protocol": "A native source-layout unit trace records callback order for successful try and failed try with one locked later node plus one unlocked wanted node; compare exact event order and every final locked flag. Pinned-C contended mutex trace remains pending.",
-    "internal_observations": ["try/unlock/lock callback sequence", "target and later locked flags", "wantToLock-driven reacquisition"],
+    "protocol": "A native source-layout unit trace records callback order for successful try, nested recursive enter/leave, and failed try with one locked later node plus one unlocked wanted node; compare exact event order, wantToLock, and every final locked flag. Pinned-C contended mutex trace remains pending.",
+    "internal_observations": ["try/unlock/lock callback sequence", "target and later locked flags", "recursive wantToLock and wanted-later reacquisition"],
     "normalization": "BtShared pointer addresses are represented by explicit ascending linked-list order; callback event order and lock state are exact."
   },
   "assurance": {
@@ -59,17 +84,17 @@
   },
   "integration": {
     "production_owner": "src/core/internal/vdbe_lifecycle.zig source-layout Btree entry layer",
-    "native_call_path": "enterBtrees increments wantToLock and calls btreeLockCarefully for an unlocked selected Btree. The bounded default seam succeeds without contention.",
+    "native_call_path": "enterBtrees/leaveBtrees call btreeEnter/btreeLeave for selected source-layout Btrees; first entry calls btreeLockCarefully. The bounded default seam succeeds without contention.",
     "bounded_owner_retired": "No. Real BtShared mutex dispatch and db publication remain open."
   },
   "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires real BtShared mutex integration, contended pinned-C trace, assurance closure, and independent review."},
-  "known_blockers": ["Connect operations to the configured BtShared mutex and publish BtShared.db.", "Run deterministic two-connection contention/reacquisition differential.", "Integrate source sqlite3BtreeEnter/Leave and EnterAll/LeaveAll owners.", "Independent fidelity review remains open."],
+  "known_blockers": ["Connect operations to the configured BtShared mutex and publish BtShared.db.", "Run deterministic two-connection contention/reacquisition differential.", "Integrate source EnterAll/LeaveAll owners.", "Independent fidelity review remains open."],
   "context_review": {
     "implementation_spans": ["upstream/sqlite/src/btmutex.c:19-154 was reviewed completely for lock/unlock helpers, recursive Btree entry assumptions, careful try/release/reacquire ordering, and leave behavior", "upstream/sqlite/src/btmutex.c:156-260 was reviewed for EnterAll/LeaveAll ordering and mutex assertions", "src/core/internal/vdbe_types.zig Btree layout and src/core/internal/vdbe_lifecycle.zig lock-mask caller were reviewed"],
     "callers": ["sqlite3BtreeEnter increments wantToLock and invokes the helper only for an unlocked sharable Btree", "Native enterBtrees invokes the helper for selected unlocked source-layout Btrees"],
     "callees": ["sqlite3_mutex_try performs the nonblocking fast path", "unlockBtreeMutex clears later locked state", "lockBtreeMutex blocks only after later locks are released and republishes locked state"],
-    "assertions_branches_cleanup": ["All nine active behavior IDs cover try success/return, both later-list traversals, sharability/order/lock-demand assertions, conditional unlock, and conditional reacquire", "No ownership cleanup exists", "Failed try releases all locked later nodes before target acquisition"],
-    "upstream_tests": ["Upstream shared-cache, mutex, unlock-notify, multi-connection, and threads tests cover this ordering boundary", "Project source-layout unit trace covers fast and contended callback order without a real mutex"]
+    "assertions_branches_cleanup": ["All 26 active behavior IDs cover chain/connection/lock assertions, non-sharable and recursive returns, try success, both later-list traversals, conditional unlock/reacquire, leave demand, and final unlock", "No ownership cleanup exists", "Failed try releases all locked later nodes before target acquisition"],
+    "upstream_tests": ["Upstream shared-cache, mutex, unlock-notify, multi-connection, and threads tests cover this ordering boundary", "Project source-layout unit trace covers recursive enter/leave plus fast and contended callback order without a real mutex"]
   },
   "evidence_receipts": []
 }

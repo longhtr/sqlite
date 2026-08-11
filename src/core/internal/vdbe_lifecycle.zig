@@ -67,6 +67,37 @@ fn btreeLockCarefully(tree: *types.Btree, operations: *const BtreeMutexOperation
     }
 }
 
+/// Source `sqlite3BtreeEnter()`: preserve recursive lock demand and route an
+/// unlocked sharable Btree through the ordered careful-acquisition path.
+fn btreeEnter(tree: *types.Btree, operations: *const BtreeMutexOperations) void {
+    std.debug.assert(tree.pNext == null or @intFromPtr(tree.pNext.?.pBt.?) > @intFromPtr(tree.pBt.?));
+    std.debug.assert(tree.pPrev == null or @intFromPtr(tree.pPrev.?.pBt.?) < @intFromPtr(tree.pBt.?));
+    std.debug.assert(tree.pNext == null or tree.pNext.?.db == tree.db);
+    std.debug.assert(tree.pPrev == null or tree.pPrev.?.db == tree.db);
+    std.debug.assert(tree.sharable != 0 or (tree.pNext == null and tree.pPrev == null));
+    std.debug.assert(tree.locked == 0 or tree.wantToLock > 0);
+    std.debug.assert(tree.sharable != 0 or tree.wantToLock == 0);
+
+    if (tree.sharable == 0) return;
+    tree.wantToLock += 1;
+    if (tree.locked != 0) return;
+    btreeLockCarefully(tree, operations);
+}
+
+/// Source `sqlite3BtreeLeave()`: release the non-recursive BtShared mutex only
+/// when the recursive wantToLock count reaches zero.
+fn btreeLeave(tree: *types.Btree, operations: *const BtreeMutexOperations) void {
+    if (tree.sharable != 0) {
+        std.debug.assert(tree.wantToLock > 0);
+        tree.wantToLock -= 1;
+        if (tree.wantToLock == 0) {
+            std.debug.assert(tree.locked != 0);
+            operations.unlock(operations.context, tree);
+            tree.locked = 0;
+        }
+    }
+}
+
 /// Source `sqlite3VdbeEnter()`: lock the non-TEMP shared btrees in the VM's
 /// lock mask in database order.
 pub fn enterBtrees(machine: *types.Vdbe) void {
@@ -78,10 +109,7 @@ pub fn enterBtrees(machine: *types.Vdbe) void {
             continue;
         }
         const tree = db.aDb.?[@intCast(index)].pBt orelse continue;
-        tree.wantToLock += 1;
-        if (tree.locked == 0) {
-            btreeLockCarefully(tree, &default_btree_mutex_operations);
-        }
+        btreeEnter(tree, &default_btree_mutex_operations);
     }
 }
 
@@ -95,12 +123,7 @@ pub fn leaveBtrees(machine: *types.Vdbe) void {
             continue;
         }
         const tree = db.aDb.?[@intCast(index)].pBt orelse continue;
-        if (tree.wantToLock > 0) {
-            tree.wantToLock -= 1;
-        }
-        if (tree.wantToLock == 0) {
-            tree.locked = 0;
-        }
+        btreeLeave(tree, &default_btree_mutex_operations);
     }
 }
 
@@ -590,6 +613,22 @@ test "source careful Btree lock preserves ascending reacquisition" {
     try std.testing.expectEqual(@as(u8, 1), first.locked);
     try std.testing.expectEqual(@as(u8, 1), second.locked);
     try std.testing.expectEqual(@as(u8, 1), third.locked);
+
+    harness.count = 0;
+    harness.try_result = result_ok;
+    first.pNext = null;
+    first.locked = 0;
+    first.wantToLock = 0;
+    btreeEnter(&first, &operations);
+    btreeEnter(&first, &operations);
+    try std.testing.expectEqual(@as(c_int, 2), first.wantToLock);
+    try std.testing.expectEqualSlices(u8, &.{0x11}, harness.events[0..harness.count]);
+    btreeLeave(&first, &operations);
+    try std.testing.expectEqual(@as(u8, 1), first.locked);
+    btreeLeave(&first, &operations);
+    try std.testing.expectEqual(@as(c_int, 0), first.wantToLock);
+    try std.testing.expectEqual(@as(u8, 0), first.locked);
+    try std.testing.expectEqualSlices(u8, &.{ 0x11, 0x31 }, harness.events[0..harness.count]);
 }
 
 fn testExecuteDone(_: ?*anyopaque, _: *types.Vdbe) c_int {

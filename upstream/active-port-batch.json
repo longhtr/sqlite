@@ -123,6 +123,24 @@
       "atomic_unit_id": "btree-careful-shared-cache-mutex-ordering",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btmutex.c::function::sqlite3BtreeEnter::line-71",
+      "source_sha256": "1837a33a782fe069e57399921d6027019fe34f2a554e0242c58203ac4207767a",
+      "zig_declaration_id": "src/core/internal/vdbe_lifecycle.zig::function::btreeEnter",
+      "zig_declaration_sha256": "aa737849e70c4c6778af074ed6063b9e88d1417de8d4423fa56f6bbf40a9c143",
+      "atomic_unit_id": "btree-careful-shared-cache-mutex-ordering",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/btmutex.c::function::sqlite3BtreeLeave::line-143",
+      "source_sha256": "9fe95407e11ae9bd0164646db4f922cc953a3f3a0b7076718ddf6d0c8361a1c1",
+      "zig_declaration_id": "src/core/internal/vdbe_lifecycle.zig::function::btreeLeave",
+      "zig_declaration_sha256": "05522bd2624273466d7dd5a864bd08338aabe2c70b67897bed021a8d74cd7679",
+      "atomic_unit_id": "btree-careful-shared-cache-mutex-ordering",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }
