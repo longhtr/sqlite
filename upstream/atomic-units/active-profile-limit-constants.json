@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "active-profile-limit-constants",
   "title": "Active-profile sqliteLimit.h constants",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "The 20 active immutable profile limits/defaults form one dependency-closed value unit; runtime enforcement remains in separately inventoried callers.",
@@ -216,7 +216,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "not-applicable immutable constants",
     "io_crash_concurrency": "not-applicable immutable constants",
     "malformed_input": "not-applicable immutable constants",

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "pthread-mutex-enter-leave-core",
   "title": "Pinned pthread mutex representation and nullable enter/leave dispatch",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the active pthread mutex storage/initializer identities and complete concrete plus public-wrapper enter/leave functions used by STATIC_MEM allocator locking.",
@@ -142,7 +142,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "No allocation in this unit.",
     "io_crash_concurrency": "No I/O. Contention and alarm release/reacquire are tested; exhaustive scheduler/interleaving evidence remains open.",
     "malformed_input": "Null wrappers are tested. Invalid ownership/reentry are source-precondition violations.",

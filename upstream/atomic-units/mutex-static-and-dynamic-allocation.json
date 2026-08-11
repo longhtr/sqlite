@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "mutex-static-and-dynamic-allocation",
   "title": "Core-mutex gating and pthread static/dynamic mutex allocation",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "These configuration fields and two complete allocation functions form the internal sqlite3MutexAlloc closure used to acquire STATIC_MEM and also preserve dynamic fast/recursive allocation and OOM semantics.",
@@ -126,7 +126,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "All deterministic dynamic allocation failure positions are tested sticky and one-shot. Static identities allocate no heap.",
     "io_crash_concurrency": "No I/O. Static identity and contended recursive operation are tested; process-wide initialization races remain open.",
     "malformed_input": "Kinds 0 through 13 are in scope; API armor is disabled in the profile.",

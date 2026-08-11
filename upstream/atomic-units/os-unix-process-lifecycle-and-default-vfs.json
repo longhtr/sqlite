@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "os-unix-process-lifecycle-and-default-vfs",
   "title": "Unix OS lifecycle, default Unix VFS, and memdb VFS registration",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "These functions are the active OS layer called by sqlite3_initialize: wrapper dispatch, the four-variant Linux Unix VFS table, shutdown, and memdb registration. Production owns concrete Unix locking-mode and memory adapters in one shared ABI registry.",
@@ -131,7 +131,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "Lifecycle registration uses process-static owners and is allocation-free. Per-open Unix/memdb ownership failures have native cleanup coverage.",
     "io_crash_concurrency": "Lifecycle performs no I/O. Posix has OFD cross-process and process-death evidence; no-lock, dotfile, and exclusive modes have method-tail and contention tests. Memdb source concurrency remains open.",
     "malformed_input": "Not input-driven at lifecycle level.",

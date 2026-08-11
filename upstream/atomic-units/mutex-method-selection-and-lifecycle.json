@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "mutex-method-selection-and-lifecycle",
   "title": "Configured/default/no-op mutex method selection and lifecycle",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "These functions select configured, pthread, or no-op mutex methods, publish allocation last across a memory barrier, invoke xMutexInit/xMutexEnd, and expose the profile concrete method tables.",
@@ -157,7 +157,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "No allocation by lifecycle itself; configured callback failure and dynamic mutex OOM are covered in dependencies.",
     "io_crash_concurrency": "No I/O. Publication uses seq_cst ordering and concurrent initialization is tested; formal weak-memory review remains open.",
     "malformed_input": "Missing configured callbacks remain a configuration precondition; default tables are complete.",

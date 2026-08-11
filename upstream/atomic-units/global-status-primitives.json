@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-status-primitives",
   "title": "Global status value, increment, decrement, and highwater primitives",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the complete status.c state identities and four lock-assuming primitives used directly by the global allocation core. Manager now uses the source ten-slot current/highwater model rather than allocator-specific counters.",
@@ -186,7 +186,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "No allocation and no OOM path.",
     "io_crash_concurrency": "No I/O. Allocator and page-cache slots use distinct source-corresponding mutex identities; concurrent status differential remains open.",
     "malformed_input": "Invalid operations are source-precondition violations; all ten valid slots are representable.",

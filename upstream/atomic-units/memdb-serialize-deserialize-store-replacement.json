@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "memdb-serialize-deserialize-store-replacement",
   "title": "Memdb serialization, deserialization, and store replacement",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "These three source functions resolve a schema to a private memdb store, expose copied or borrowed database images, and replace a schema store with caller-provided bytes and ownership/resize/read-only flags. Native public APIs preserve main and attached private-schema copy/NOCOPY sizing, serialize ordinary databases from the live Pager page by page, and stage replacement buffers with source-shaped capacity, configured maximum, resize, ownership, and read-only flags before retiring the selected database; remaining source-side allocation-failure assurance remains open.",
@@ -148,7 +148,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "Pinned C/Zig evidence covers deterministic private-store copy OOM with exact size output; native fault injection also covers direct FREEONCLOSE close, borrowed storage, read-only storage, successful resize, configured maximum, pre-publication backend OOM, exact NOMEM, old-database continuation, input release, and allocator-manager realloc failure with unchanged pointer/content/size. The pinned differential also verifies attached-schema copy OOM with exact size and deserialize OOM with preserved old pointer, size, and close continuation.",
     "io_crash_concurrency": "Serialize, deserialize, and prepare hold the recursive connection mutex; ordinary databases copy the live Pager snapshot page by page, and pending deserialized images open under that mutex on first non-empty prepare. Exact concurrent misuse traces and cross-schema store lock ordering remain open.",
     "malformed_input": "Negative size/capacity, null data and unknown schema have native guards; the pinned differential verifies malformed publication, exact borrow identity, deferred NOTADB and replacement rejection. The full source API-armor matrix remains open.",

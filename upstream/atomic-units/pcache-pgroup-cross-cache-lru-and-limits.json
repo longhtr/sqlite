@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "pcache-pgroup-cross-cache-lru-and-limits",
   "title": "PCache PGroup cross-cache LRU, limits, and recycling",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "These source responsibilities jointly own PGroup-wide maximum/minimum/pinned/purgeable accounting, cache registration, recyclable-page LRU membership, cross-cache buffer recycling, soft-create admission, limit enforcement, shrink, and page counts. Native unified mode now shares one intrusive LRU and exact page buffer across caches. The dossier also owns the PCache1/PgHdr1/PGroup fields that directly carry these semantics; static/bulk allocation-only fields remain with their allocation unit.",
@@ -620,7 +620,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "Cache-owner allocation failure returns null before hash allocation. Initial 256-bucket failure destroys that owner and leaves Cache unavailable so Pager returns NOMEM; later doubling failure is benign and preserves old buckets.",
     "io_crash_concurrency": "No I/O. Unified mode is selected only when core mutexes are disabled; broader configured/memory-management mutex profiles are out of selected scope.",
     "malformed_input": "Key zero, conflicting keys and invalid ownership have native guards; exact source assertions remain to be closed with the hash unit.",

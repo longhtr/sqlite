@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-allocator-core-for-connection-growth",
   "title": "Global allocator, size, free, realloc, statistics, and alarm core",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "These six malloc.c functions are the immediate global allocator closure beneath connection heap fallback and reallocation. They combine method-table calls, rounding, statistics, soft/hard alarms, and allocator ownership.",
@@ -158,7 +158,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "Manager tests cover one-shot/sticky allocation and realloc failures; the C/Zig trace covers hard-limit rejection with old-pointer and byte preservation.",
     "io_crash_concurrency": "No I/O. The matched configured-mutex trace proves exact STATIC_MEM release/reacquire around the no-op release-memory alarm; broader global allocator concurrency assurance remains separate.",
     "malformed_input": "Zero and excessive sizes are tested.",

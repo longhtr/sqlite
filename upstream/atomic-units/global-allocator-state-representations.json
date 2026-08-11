@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-allocator-state-representations",
   "title": "Global allocator configuration, limits, mutex, and method-table state representations",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "These are the complete private mem0 identities and the Sqlite3Config identities directly read by the admitted global allocation core. They consolidate into the process-lifetime Manager owner.",
@@ -204,7 +204,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "No representation allocation; backend initialization failure leaves started false.",
     "io_crash_concurrency": "No I/O. Manager mutex protects allocator/status state, but source mutex subsystem integration remains open.",
     "malformed_input": "Invalid callback/configuration inputs belong to configuration behavior.",

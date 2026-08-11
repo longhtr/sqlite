@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "memdb-file-storage-locking-and-mapping",
   "title": "Memdb shared/private storage, file methods, locking, and mapping",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "These active memdb.c methods own shared-versus-private store creation and last-close destruction, contiguous doubled-capacity byte I/O, rollback-only truncation/sync, reader/writer locks, fetch behavior, file controls, ABI method tails, access, and pathname handling. The dedicated native memdb owner now follows these target-profile traces. The source MemStore/MemFile/MemFS representations, method tables, selected mutex helpers, delegated VFS services, and memdb identity predicate are also assigned here.",
@@ -603,7 +603,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "Exact growth allocation failure returns IOERR_NOMEM without mutation; open/store/handle rollback passes. Configured dynamic FAST mutex allocation failure returns NOMEM before registry publication, frees partial state, and permits continuation.",
     "io_crash_concurrency": "No disk/crash semantics. Registry plus per-store serialization passes eight-thread shared open, concurrent precise growth, byte integrity, lock, close and last-reference coverage.",
     "malformed_input": "Negative fetch ranges, growth overflow, unknown/null controls, pathname categories, and size-limit boundaries are handled; deserialize-only flag combinations remain separate.",

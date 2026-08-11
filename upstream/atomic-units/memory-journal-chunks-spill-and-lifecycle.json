@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "memory-journal-chunks-spill-and-lifecycle",
   "title": "In-memory rollback-journal chunks, spill, and lifecycle",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "This unit owns the complete active memjournal.c chunk representation, sequential/header writes, cached reads, truncation, cleanup, optional atomic spill to the underlying VFS, open mode selection, identity, and size calculation. The native Journal is a direct source-shaped translation and its chunk/cursor/truncate/spill trace matches the pinned C implementation; production Pager ABI routing and complete failure assurance remain open.",
@@ -398,7 +398,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "First chunk OOM and cleanup are covered; every chunk boundary and spill-storage/open/write OOM/fault site remains open.",
     "io_crash_concurrency": "Successful real-VFS spill and readback pass. Failed-open/write restoration and crash boundaries need exact differential coverage; source unit is single-threaded.",
     "malformed_input": "Short read and forward-gap write are guarded; source relies on internal assertions for several invalid write shapes.",

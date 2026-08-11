@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "builtin-function-hash-and-lifecycle-registration",
   "title": "Process built-in function hash insertion, reset, and lifecycle registration",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "These entities own the process-global built-in function hash, overload insertion, and the registration entry invoked by sqlite3_initialize before PCache and OS initialization. Production initialization now resets and rebuilds all 178 active-profile definitions under the coordinator's recursive initialization lock, with no extra name/arity pairs and exact pinned-C hash-head/overload topology. The two load-extension and nine ALTER TABLE records use explicit erroring fallback callbacks pending callable-body integration.",
@@ -104,7 +104,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "Reset and insertion allocate nothing; function bodies and connection-local function allocation are outside scope.",
     "io_crash_concurrency": "No I/O. Production rebuild is serialized by the process initialization owner; concurrent public initialization is covered by the global lifecycle tests.",
     "malformed_input": "Definitions are compile-time-owned records with non-null names; insertion assertions and finite-chain tests cover structural misuse.",

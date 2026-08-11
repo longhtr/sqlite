@@ -16,7 +16,8 @@ Incomplete and unsafe for production data. Reusable source-corresponding slices 
 | Atomic-unit dossiers total | 47 |
 | Admission-ready dossiers | 47 |
 | Source-translated atomic units | 0 |
-| Internal-trace-equivalent atomic units | 47 |
+| Internal-trace-equivalent atomic units | 28 |
+| Subsystem-integrated atomic units | 19 |
 | Historical mechanical function claims | 1,738; 0 completion credit |
 | Active batch and durable checkpoints | 1 entries; 0 checkpoints |
 | Exact internal layouts | 69 |

@@ -12,7 +12,7 @@
     {
       "id": "active-profile-limit-constants",
       "path": "upstream/atomic-units/active-profile-limit-constants.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "btree-sharability-and-vdbe-usage-lock-masks",
@@ -142,77 +142,77 @@
     {
       "id": "global-allocator-core-for-connection-growth",
       "path": "upstream/atomic-units/global-allocator-core-for-connection-growth.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "profile-release-memory-noop",
       "path": "upstream/atomic-units/profile-release-memory-noop.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "global-status-primitives",
       "path": "upstream/atomic-units/global-status-primitives.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "global-allocator-state-representations",
       "path": "upstream/atomic-units/global-allocator-state-representations.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "global-allocator-init-shutdown",
       "path": "upstream/atomic-units/global-allocator-init-shutdown.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "pthread-mutex-enter-leave-core",
       "path": "upstream/atomic-units/pthread-mutex-enter-leave-core.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "mutex-static-and-dynamic-allocation",
       "path": "upstream/atomic-units/mutex-static-and-dynamic-allocation.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "builtin-function-hash-and-lifecycle-registration",
       "path": "upstream/atomic-units/builtin-function-hash-and-lifecycle-registration.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "global-library-initialize-shutdown",
       "path": "upstream/atomic-units/global-library-initialize-shutdown.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "mutex-method-selection-and-lifecycle",
       "path": "upstream/atomic-units/mutex-method-selection-and-lifecycle.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "global-initialization-state-representations",
       "path": "upstream/atomic-units/global-initialization-state-representations.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "pcache-process-lifecycle-and-static-buffer",
       "path": "upstream/atomic-units/pcache-process-lifecycle-and-static-buffer.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "os-unix-process-lifecycle-and-default-vfs",
       "path": "upstream/atomic-units/os-unix-process-lifecycle-and-default-vfs.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "pcache-static-slot-allocation-and-free",
       "path": "upstream/atomic-units/pcache-static-slot-allocation-and-free.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "memory-journal-chunks-spill-and-lifecycle",
       "path": "upstream/atomic-units/memory-journal-chunks-spill-and-lifecycle.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "key-info-reference-ownership",
@@ -222,17 +222,17 @@
     {
       "id": "memdb-file-storage-locking-and-mapping",
       "path": "upstream/atomic-units/memdb-file-storage-locking-and-mapping.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "memdb-serialize-deserialize-store-replacement",
       "path": "upstream/atomic-units/memdb-serialize-deserialize-store-replacement.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "pcache-pgroup-cross-cache-lru-and-limits",
       "path": "upstream/atomic-units/pcache-pgroup-cross-cache-lru-and-limits.json",
-      "status": "internal-trace-equivalent"
+      "status": "subsystem-integrated"
     },
     {
       "id": "vdbe-statement-metadata-columns-bindings-and-vlist",

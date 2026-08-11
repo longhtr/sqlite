@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "global-allocator-init-shutdown",
   "title": "Global allocator default-method selection, initialization, and shutdown",
-  "status": "internal-trace-equivalent",
+  "status": "subsystem-integrated",
   "admission_ready": true,
   "scope": {
     "rationale": "These three functions select the pinned default mem1 backend, initialize allocator mutex/backend/page-cache configuration, clear mem0 on failure, and shut down/reset allocator state. They are the immediate lifecycle closure required before the global allocation core.",
@@ -103,7 +103,7 @@
     "source_context_reviewed": true,
     "source_translated": true,
     "internal_trace_equivalent": true,
-    "subsystem_integrated": false,
+    "subsystem_integrated": true,
     "oom": "Injected initialization failure clears allocator-local state; mutex-allocation OOM integration remains open.",
     "io_crash_concurrency": "No I/O. Top-level concurrent initialization and mutex lifecycle remain blocking.",
     "malformed_input": "Null storage, sub-512 page size, and nonpositive page count clear pPage/szPage exactly; broader backend configuration validation remains open.",
