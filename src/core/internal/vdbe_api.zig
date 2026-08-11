@@ -4,6 +4,7 @@
 const std = @import("std");
 const global = @import("../global.zig");
 const public_api = @import("../public_api.zig");
+const varint = @import("../varint.zig");
 const db_allocator = @import("db_allocator.zig");
 const vdbe_aux = @import("vdbe_aux.zig");
 const vdbe_mem = @import("vdbe_mem.zig");
@@ -15,6 +16,7 @@ const result_no_memory: c_int = 7;
 const result_too_big: c_int = 18;
 const result_misuse: c_int = 21;
 const result_range: c_int = 25;
+const result_done: c_int = 101;
 const result_io_error_no_memory: c_int = 10 | (12 << 8);
 const statement_status_memory_used: c_int = 99;
 const utf8: u8 = 1;
@@ -91,6 +93,63 @@ pub fn invokeProfileCallback(connection: *types.Sqlite3, machine: *types.Vdbe, c
         }
     }
     machine.startTime = 0;
+}
+
+pub const ValueListCursorOperations = struct {
+    first: *const fn (*types.BtCursor, *c_int) c_int,
+    next: *const fn (*types.BtCursor, c_int) c_int,
+    eof: *const fn (*types.BtCursor) bool,
+    payload_size: *const fn (*types.BtCursor) u32,
+    payload_to_mem: *const fn (*types.BtCursor, u32, *types.Mem) c_int,
+};
+
+/// Source `valueFromValueList()`: validate the protected ValueList marker,
+/// advance its Btree cursor, decode the single-column record, and stabilize
+/// ephemeral output before returning it to a virtual table.
+pub fn valueFromValueList(
+    value_optional: ?*types.Mem,
+    output: *?*types.Mem,
+    next_value: bool,
+    operations: ValueListCursorOperations,
+) c_int {
+    output.* = null;
+    const value = value_optional orelse return result_misuse;
+    if (value.flags & types.mem_flag.dynamic == 0 or value.xDel != vdbe_mem.valueListFree) return result_error;
+    std.debug.assert(value.flags & (types.mem_flag.type_mask | types.mem_flag.terminated | types.mem_flag.subtype) ==
+        (types.mem_flag.null_ | types.mem_flag.terminated | types.mem_flag.subtype));
+    std.debug.assert(value.eSubtype == 'p');
+    std.debug.assert(value.u.zPType != null and std.mem.eql(u8, std.mem.span(value.u.zPType.?), "ValueList"));
+    const list: *types.ValueList = @ptrCast(@alignCast(value.z.?));
+    const cursor = list.pCsr.?;
+    var result: c_int = undefined;
+    if (next_value) {
+        result = operations.next(cursor, 0);
+    } else {
+        var ignored: c_int = 0;
+        result = operations.first(cursor, &ignored);
+        std.debug.assert(result == 0 or operations.eof(cursor));
+        if (operations.eof(cursor)) result = result_done;
+    }
+    if (result == 0) {
+        var record = std.mem.zeroes(types.Mem);
+        const size = operations.payload_size(cursor);
+        result = operations.payload_to_mem(cursor, size, &record);
+        if (result == 0) {
+            const bytes = record.z.?;
+            const serial = varint.get32(bytes + 1);
+            const offset: usize = 1 + serial.length;
+            const decoded = list.pOut.?;
+            vdbe_mem.serialGet(bytes + offset, serial.value, decoded);
+            decoded.enc = decoded.db.?.enc;
+            if (decoded.flags & types.mem_flag.ephemeral != 0 and vdbe_mem.makeWriteable(decoded) != 0) {
+                result = result_no_memory;
+            } else {
+                output.* = decoded;
+            }
+        }
+        vdbe_mem.release(&record);
+    }
+    return result;
 }
 
 test "source WAL callbacks scan every Btree and stop hooks after error" {
@@ -175,6 +234,66 @@ test "source profile callback publishes one elapsed interval" {
     try std.testing.expectEqual(@as(u32, 0x02), Harness.trace_event);
     try std.testing.expect(Harness.saw_machine);
     try std.testing.expectEqual(@as(i64, 0), machine.startTime);
+}
+
+test "source ValueList validates marker and decodes first record" {
+    const Harness = struct {
+        const record_bytes = [_]u8{ 2, 1, 42 };
+
+        fn first(_: *types.BtCursor, ignored: *c_int) c_int {
+            ignored.* = 0;
+            return 0;
+        }
+
+        fn next(_: *types.BtCursor, _: c_int) c_int {
+            return result_done;
+        }
+
+        fn eof(_: *types.BtCursor) bool {
+            return false;
+        }
+
+        fn payloadSize(_: *types.BtCursor) u32 {
+            return record_bytes.len;
+        }
+
+        fn payloadToMem(_: *types.BtCursor, size: u32, record: *types.Mem) c_int {
+            std.debug.assert(size == record_bytes.len);
+            record.z = @constCast(&record_bytes);
+            record.n = record_bytes.len;
+            record.flags = types.mem_flag.blob | types.mem_flag.static;
+            return 0;
+        }
+    };
+    const operations: ValueListCursorOperations = .{
+        .first = Harness.first,
+        .next = Harness.next,
+        .eof = Harness.eof,
+        .payload_size = Harness.payloadSize,
+        .payload_to_mem = Harness.payloadToMem,
+    };
+    var output_value = std.mem.zeroes(types.Mem);
+    var connection = std.mem.zeroes(types.Sqlite3);
+    connection.enc = 1;
+    output_value.db = &connection;
+    output_value.flags = types.mem_flag.null_;
+    var cursor_storage: usize = 0;
+    var list: types.ValueList = .{ .pCsr = @ptrCast(&cursor_storage), .pOut = &output_value };
+    var protected = std.mem.zeroes(types.Mem);
+    protected.flags = types.mem_flag.null_ | types.mem_flag.terminated | types.mem_flag.subtype | types.mem_flag.dynamic;
+    protected.eSubtype = 'p';
+    protected.u.zPType = "ValueList";
+    protected.z = @ptrCast(&list);
+    protected.xDel = vdbe_mem.valueListFree;
+    var output: ?*types.Mem = null;
+    try std.testing.expectEqual(@as(c_int, 0), valueFromValueList(&protected, &output, false, operations));
+    try std.testing.expect(output == &output_value);
+    try std.testing.expectEqual(types.mem_flag.integer, output_value.flags);
+    try std.testing.expectEqual(@as(i64, 42), output_value.u.i);
+    try std.testing.expectEqual(result_done, valueFromValueList(&protected, &output, true, operations));
+    try std.testing.expect(output == null);
+    protected.xDel = null;
+    try std.testing.expectEqual(result_error, valueFromValueList(&protected, &output, false, operations));
 }
 
 pub fn vdbeSafety(machine: *types.Vdbe) bool {

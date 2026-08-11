@@ -87,6 +87,15 @@
       "atomic_unit_id": "vdbe-statement-profile-callback-dispatch",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::valueFromValueList::line-1038",
+      "source_sha256": "0231cd3486a5f7200e925021b65e8311b07268a307078f80c15b8aa8cc431deb",
+      "zig_declaration_id": "src/core/internal/vdbe_api.zig::function::valueFromValueList",
+      "zig_declaration_sha256": "9327b7df1515915699cecd24d7c5356a07d14fc767d148b7bada94474bdad91f",
+      "atomic_unit_id": "vdbe-virtual-table-value-list-iteration",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

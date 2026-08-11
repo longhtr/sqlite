@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-virtual-table-value-list-iteration",
+  "title": "VDBE virtual-table IN value-list iteration",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "valueFromValueList is the protected source boundary behind sqlite3_vtab_in_first/next: it rejects forged values, positions a Btree cursor, decodes a one-column record into reusable Mem output, and stabilizes ephemeral payloads.",
+    "source_files": [{"path": "src/vdbeapi.c", "sha256": "233846129dc649ec3d1ae321612ee8833c937ee775766eb8e39deda07a6b19a6"}],
+    "source_entity_ids": ["src/vdbeapi.c::function::valueFromValueList::line-1038"],
+    "behavioral_block_ids": [
+      "src/vdbeapi.c::function::valueFromValueList::behavior::if::line-1047-column-3::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::return::line-1047-column-17::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::if::line-1048-column-3::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::return::line-1049-column-5::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::assert::line-1051-column-5::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::assert::line-1053-column-5::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::assert::line-1054-column-5::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::if::line-1057-column-3::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::assert::line-1062-column-5::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::if::line-1063-column-5::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::if::line-1065-column-3::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::if::line-1071-column-5::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::conditional::line-1075-column-22::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::if::line-1078-column-7::ordinal-0",
+      "src/vdbeapi.c::function::valueFromValueList::behavior::return::line-1086-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["ValueList construction in virtual-table IN planning", "Public sqlite3_vtab_in_first/next wrappers", "Concrete source-layout Btree cursor and pager ownership"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": ["vdbe-record-serial-type-length-and-value-decode", "vdbe-unpacked-record-allocation-and-decode", "vdbe-statement-metadata-columns-bindings-and-vlist"],
+    "external_source_responsibilities": ["sqlite3BtreeFirst/Next/Eof/PayloadSize and sqlite3VdbeMemFromBtreeZeroOffset over the exact source-layout cursor"],
+    "caller_closure": "The complete private iterator body is assigned. Named cursor operations preserve the exact Btree boundary until native source-layout Btree integration."
+  },
+  "contracts": {
+    "inputs": ["Nullable Mem carrying the protected dynamic ValueList marker, output pointer, first/next selector, and exact cursor operations"],
+    "outputs": ["MISUSE, ERROR, DONE, NOMEM, a cursor error, or OK with output pointing at the decoded reusable Mem"],
+    "ownership": "ValueList and cursor are borrowed. The temporary record Mem is always released. Decoded output belongs to ValueList and ephemeral payload is copied before exposure.",
+    "state_and_results": "Output is cleared first. Only a dynamic Mem whose destructor is the private valueListFree identity and whose subtype/type-name match ValueList may be dereferenced. First checks EOF; next propagates cursor status. Successful rows decode the first serial value.",
+    "locks_callbacks_io": "Caller owns required connection/Btree locks. Cursor operations may read Btree payload; this unit performs no direct VFS calls.",
+    "failure_and_continuation": "Forged values are rejected without dereference. Cursor/read/OOM errors leave output null and release temporary record ownership. DONE permits normal iteration completion."
+  },
+  "mappings": [{
+    "source_entity_id": "src/vdbeapi.c::function::valueFromValueList::line-1038",
+    "relation": "source-protected-value-list-iterator-to-native-operation",
+    "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::valueFromValueList"]
+  }],
+  "representation_differences": [
+    "Five source Btree/Mem-from-payload calls are grouped into a named ValueListCursorOperations value until the exact cursor owner is connected.",
+    "The private destructor identity remains the source-shaped vdbe_mem.valueListFree function pointer rather than a public tag."
+  ],
+  "oracle": {
+    "protocol": "A native source-layout unit trace checks hostile-marker rejection, a valid protected ValueList, first-row positioning, one-column serial-type-1 decoding to integer 42, DONE on next, and output-null continuation.",
+    "internal_observations": ["private destructor/type-name marker validation", "first/next result and output-null policy", "record serial decode and reusable output identity"],
+    "normalization": "Opaque cursor address is not compared; result, output identity, flags, and integer payload are exact. Pinned-C Btree trace remains pending."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Ephemeral-output make-writeable returns NOMEM; deterministic source-layout allocation trace remains pending.",
+    "io_crash_concurrency": "Concrete Btree read/lock/crash evidence remains external.",
+    "malformed_input": "Null and forged marker values are rejected before ValueList dereference.",
+    "continuation": "Errors and DONE leave output null; successful output can be overwritten by the next iteration as source specifies.",
+    "performance": "One cursor movement, one payload read, and one serial decode per value.",
+    "commands": ["zig build internal-vdbe-layout-test", "zig build btree-differential", "zig build test"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_api.zig source-layout virtual-table value API layer",
+    "native_call_path": "The protected iterator and native unit path are implemented; concrete Btree and exported wrapper integration remain pending.",
+    "bounded_owner_retired": "No. The bounded frontend retains separate sqlite3_vtab_in_first/next behavior."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pinned-C/Btree trace, wrapper integration, assurance closure, and independent review."},
+  "known_blockers": ["Connect exact source-layout Btree cursor operations and virtual-table IN construction.", "Port/export sqlite3_vtab_in_first/next against source-layout Mem.", "Add pinned-C malformed/OOM/iteration trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeapi.c:1020-1107 was reviewed completely for private destructor identity, ValueList validation, cursor first/next/EOF flow, payload ownership, record decode, encoding, ephemeral stabilization, and wrappers",
+      "src/core/internal/vdbe_types.zig ValueList/Mem/BtCursor and vdbe_mem serial/release/make-writeable owners were reviewed with current Btree boundaries"
+    ],
+    "callers": ["sqlite3_vtab_in_first and sqlite3_vtab_in_next are direct wrappers", "Virtual-table IN planning constructs the protected ValueList Mem", "Bounded public wrappers remain outside this unit"],
+    "callees": ["Btree first/next/eof/payload-size and Mem-from-Btree are named operations", "varint serial header and sqlite3VdbeSerialGet decode the sole column", "sqlite3VdbeMemMakeWriteable stabilizes ephemeral output and temporary Mem release is unconditional after a payload read"],
+    "assertions_branches_cleanup": ["All 15 active behavior IDs cover null/forged values, marker assertions, first/next/EOF, payload/read, decode, ephemeral OOM, and return", "Output is null before all validation and remains null on every failure/DONE path", "Temporary record ownership is released exactly once after every attempted payload read"],
+    "upstream_tests": ["Upstream vtab_in, bestindex, virtual-table, malformed extension, OOM, Btree, and value tests cover the source path", "Project native source-layout unit trace covers marker validation, decode, DONE, and continuation"]
+  },
+  "evidence_receipts": []
+}
