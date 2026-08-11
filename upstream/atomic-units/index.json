@@ -248,6 +248,11 @@
       "id": "vdbe-typed-value-bindings",
       "path": "upstream/atomic-units/vdbe-typed-value-bindings.json",
       "status": "internal-trace-equivalent"
+    },
+    {
+      "id": "vdbe-statement-explain-mode",
+      "path": "upstream/atomic-units/vdbe-statement-explain-mode.json",
+      "status": "internal-trace-equivalent"
     }
   ]
 }

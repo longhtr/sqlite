@@ -89,37 +89,51 @@
     {
       "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_double::line-1777",
       "relation": "source-double-bind-to-native-operation",
-      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindDouble"]
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::bindDouble"
+      ]
     },
     {
       "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_int64::line-1791",
       "relation": "source-int64-bind-to-native-operation",
-      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindInt64"]
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::bindInt64"
+      ]
     },
     {
       "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_null::line-1802",
       "relation": "source-null-bind-to-native-operation",
-      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindNull"]
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::bindNull"
+      ]
     },
     {
       "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_pointer::line-1812",
       "relation": "source-pointer-bind-to-native-operation",
-      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindPointer"]
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::bindPointer"
+      ]
     },
     {
       "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_value::line-1866",
       "relation": "source-value-storage-switch-to-native-operation",
-      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindValue"]
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::bindValue"
+      ]
     },
     {
       "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_zeroblob::line-1900",
       "relation": "source-zero-blob-bind-to-native-operation",
-      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindZeroBlob"]
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::bindZeroBlob"
+      ]
     },
     {
       "source_entity_id": "src/vdbeapi.c::function::sqlite3_bind_zeroblob64::line-1915",
       "relation": "source-wide-zero-blob-limit-to-native-operation",
-      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::bindZeroBlob64"]
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::bindZeroBlob64"
+      ]
     }
   ],
   "representation_differences": [
@@ -191,14 +205,14 @@
     ],
     "upstream_tests": [
       "Upstream bind, bindxfer, pointer, zeroblob, value, misuse, limit, destructor, reset, and finalize suites exercise these APIs",
-      "Project VDBE builder differential compares seven typed-binding transitions in a 392-observation source-layout trace; Mem differential covers delegated setters"
+      "Project VDBE builder differential compares seven typed-binding transitions in a 398-observation source-layout trace; Mem differential covers delegated setters"
     ]
   },
   "evidence_receipts": [
     {
       "command": "zig build vdbe-builder-differential -j2",
       "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
-      "result_sha256": "941a516f2e84e0395643d5657be308725614e1ed2b16b4724e9622858e6c1a64",
+      "result_sha256": "64fcae333fe895b44b36c18a7f6ad278f76b1989eff673cd4a7273babb9cd0bf",
       "source_scope_sha256": "062fe1ad1cfceb72fa827752fc666277acdbd4dff35668a2faaaafb76407b04f",
       "zig_scope_sha256": "4b08a459ffb397bcddba8a644c66a7bf2af2c27991845d1acffb15a9c4238b6e"
     }

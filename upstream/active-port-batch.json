@@ -60,6 +60,15 @@
       "atomic_unit_id": "vdbe-typed-value-bindings",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_stmt_explain::line-2044",
+      "source_sha256": "260a0a5e87cf3840e32ad16add3279d593416fe062f411ceb22235875de55248",
+      "zig_declaration_id": "src/core/internal/vdbe_api.zig::function::statementExplain",
+      "zig_declaration_sha256": "6a5222a8685bc390f51a0a575b8b9ee2fb57bf0a7d88d9b542fbfa5f8d633619",
+      "atomic_unit_id": "vdbe-statement-explain-mode",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

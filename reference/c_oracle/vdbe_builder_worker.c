@@ -296,6 +296,18 @@ int main(int argc, char **argv){
       printf("%s\t%d\tBINDTYPED\t%d\t%d\t%d\t%d\t%d\t%d\t%u\t%d\t%d\t%d\t%d\t%llu\n",zCase,seq++,a,b,mode,d,c,cell->flags,(unsigned)cell->enc,cell->n,cell->eSubtype,cell->xDel!=0,bindDestructorCalls,(unsigned long long)payload);
       sqlite3VdbeMemRelease(&value); continue;
     }
+    if( strcmp(command,"EXPLAINMODE")==0 ){
+      sqlite3 *explainDb=0; sqlite3_stmt *stmt=0; Vdbe *made; int mode,setup,beforeReprepare;
+      sscanf(line,"%*s %d %d",&mode,&setup);
+      if(sqlite3_open(":memory:",&explainDb)!=SQLITE_OK)return 19;
+      if(sqlite3_prepare_v2(explainDb,"SELECT 1",-1,&stmt,0)!=SQLITE_OK || !stmt)return 20;
+      made=(Vdbe*)stmt; beforeReprepare=(int)made->aCounter[SQLITE_STMTSTATUS_REPREPARE];
+      if(setup==1) made->eVdbeState=VDBE_RUN_STATE;
+      if(setup==2) made->prepFlags&=~SQLITE_PREPARE_SAVESQL;
+      c=sqlite3_stmt_explain(stmt,mode);
+      printf("%s\t%d\tEXPLAINMODE\t%d\t%d\t%d\t%d\t%d\t%d\n",zCase,seq++,mode,setup,c,made->explain,made->nResColumn,(int)made->aCounter[SQLITE_STMTSTATUS_REPREPARE]-beforeReprepare);
+      made->eVdbeState=VDBE_READY_STATE; made->prepFlags|=SQLITE_PREPARE_SAVESQL; sqlite3_finalize(stmt); sqlite3_close(explainDb); continue;
+    }
     if( strcmp(command,"BOUND")==0 ){
       Vdbe *made; sqlite3_value *value; sscanf(line,"%*s %d %d",&a,&b); made=createParse[a].pVdbe; if(!made)return 18;
       value=sqlite3VdbeGetBoundValue(made,b,SQLITE_AFF_INTEGER);

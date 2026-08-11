@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-statement-explain-mode",
+  "title": "VDBE statement explain-mode transition",
+  "status": "internal-trace-equivalent",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3_stmt_explain is the stateful boundary that validates mode changes, chooses in-place reuse versus reprepare, records EQP-op availability, and publishes the mode-specific result-column shape.",
+    "source_files": [
+      {
+        "path": "src/vdbeapi.c",
+        "sha256": "233846129dc649ec3d1ae321612ee8833c937ee775766eb8e39deda07a6b19a6"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeapi.c::function::sqlite3_stmt_explain::line-2044"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeapi.c::function::sqlite3_stmt_explain::behavior::if::line-2051-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_explain::behavior::if::line-2053-column-9::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_explain::behavior::if::line-2055-column-9::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_explain::behavior::if::line-2057-column-9::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_explain::behavior::if::line-2059-column-9::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_explain::behavior::if::line-2068-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_stmt_explain::behavior::return::line-2074-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "The sqlite3Reprepare compiler implementation",
+      "Public bounded Statement ownership and exported ABI dispatch",
+      "EXPLAIN opcode execution and rendering"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "vdbe-builder-state-representations",
+      "vdbe-statement-metadata-columns-bindings-and-vlist"
+    ],
+    "external_source_responsibilities": [
+      "Source sqlite3Reprepare compilation, operation swap, and binding transfer"
+    ],
+    "caller_closure": "The complete mode-transition body is assigned. Reprepare is a named injected source boundary until the native prepare owner is integrated."
+  },
+  "contracts": {
+    "inputs": [
+      "Nullable source-layout Vdbe, requested explain mode 0 through 2, and the native reprepare operation"
+    ],
+    "outputs": [
+      "MISUSE, ERROR, BUSY, or the reprepare result with explain, haveEqpOps, and nResColumn updated as source specifies"
+    ],
+    "ownership": "No allocation ownership changes locally. Reprepare retains responsibility for replacing bytecode and preserving statement-owned SQL and bindings.",
+    "state_and_results": "Equal mode is a no-op; invalid or unsaved-SQL modes return ERROR; running statements return BUSY; reusable programs switch in place; smaller/EQP-incomplete programs reprepare. Result columns are 8 for EXPLAIN, 4 for EQP, and nResAlloc otherwise.",
+    "locks_callbacks_io": "The connection mutex spans validation, optional reprepare, and result-column publication. The injected reprepare operation represents the source compiler call. No direct I/O.",
+    "failure_and_continuation": "Validation failures preserve explain mode. A reprepare result is returned after source-compatible explain and haveEqpOps publication, permitting the caller to inspect/reset the statement."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_stmt_explain::line-2044",
+      "relation": "source-explain-mode-transition-to-native-operation",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_api.zig::function::statementExplain"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The direct sqlite3Reprepare call is represented by a named function pointer so the exact mode-transition owner can be translated before the native prepare subsystem is integrated.",
+    "C bitfields use the exact VdbeFlags representation; mode and result-column arithmetic use explicit Zig casts after source range validation."
+  ],
+  "oracle": {
+    "protocol": "The shared VDBE builder worker will compare same-mode, invalid-mode, missing-SAVESQL, busy, EXPLAIN, and EQP transitions. Pinned C uses public sqlite3_stmt_explain on a prepared SELECT; Zig uses an exact source-layout Vdbe with a counted reprepare operation.",
+    "internal_observations": [
+      "result code, explain mode, and result-column count",
+      "reprepare count and EQP-op publication",
+      "validation failures without mode mutation"
+    ],
+    "normalization": "Prepared-program addresses and bytecode are not compared; mode-transition state and callback count are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": false,
+    "oom": "No local allocation; reprepare OOM remains owned by the prepare subsystem.",
+    "io_crash_concurrency": "No direct I/O; the source connection mutex scope is retained.",
+    "malformed_input": "Null statement, out-of-range mode, missing saved SQL, and running-state validation are explicit.",
+    "continuation": "Validation failures preserve the old mode; successful transitions publish a self-consistent result-column count.",
+    "performance": "Constant-time in-place path; reprepare cost is delegated exactly when source requires it.",
+    "commands": [
+      "zig build vdbe-builder-differential -j2",
+      "zig build internal-vdbe-layout-test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_api.zig source-layout statement API layer",
+    "native_call_path": "The pinned-C/public-prepare and source-layout-Zig worker paths compare exact transition state; native sqlite3Reprepare integration remains pending.",
+    "bounded_owner_retired": "No. Exported sqlite3_stmt_explain still uses the bounded Statement owner."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires native reprepare/public statement integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Integrate native sqlite3Reprepare and switch exported statement ownership.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeapi.c:2037-2087 was reviewed completely for adjacent query APIs, the full sqlite3_stmt_explain body, mutex scope, mode validation, reprepare selection, EQP state, and result-column arithmetic",
+      "src/core/internal/vdbe_api.zig statement metadata and src/core/internal/vdbe_types.zig exact Vdbe fields were reviewed with the current prepare boundary"
+    ],
+    "callers": [
+      "The public sqlite3_stmt_explain API is the sole direct caller",
+      "Statement metadata consumers read explain/nResColumn after transition",
+      "Exported bounded Statement ownership remains outside this unit"
+    ],
+    "callees": [
+      "Connection mutex enter/leave protects the complete transition",
+      "sqlite3Reprepare is called only when nMem or EQP-op availability prevents in-place reuse",
+      "The translated named reprepare operation preserves that call boundary without claiming compiler integration"
+    ],
+    "assertions_branches_cleanup": [
+      "All seven active behavior IDs cover null armor, equal/invalid/unsaved/busy/reusable/reprepare paths, result-column publication, and return",
+      "haveEqpOps changes only on the reprepare path and records whether mode 2 was requested",
+      "Every non-null path leaves the connection mutex exactly once"
+    ],
+    "upstream_tests": [
+      "Upstream stmt-explain, explain, EQP, schema/reprepare, misuse, busy, and API armor tests exercise this boundary",
+      "Project source-layout VDBE builder differential compares same/invalid/busy/unsaved/EXPLAIN/EQP transitions within a 398-observation trace"
+    ]
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build vdbe-builder-differential -j2",
+      "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
+      "result_sha256": "64fcae333fe895b44b36c18a7f6ad278f76b1989eff673cd4a7273babb9cd0bf",
+      "source_scope_sha256": "1e5fd51f79aaca4c95845b8bfa11392911fa888874dea3e1353cc034dcea3d1a",
+      "zig_scope_sha256": "bf76cdc7d6c74f6d066e7b344a55accdc5c98dc99ca3d73721b4d7f127f0e45e"
+    }
+  ]
+}

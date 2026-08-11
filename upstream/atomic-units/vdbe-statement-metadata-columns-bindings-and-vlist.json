@@ -466,7 +466,7 @@
     "UTF16NATIVE is selected from the Zig target endianness at compile time."
   ],
   "oracle": {
-    "protocol": "One shared worker exercises nullable/live column counts, every selected column conversion, invalid-column RANGE state, VList add/lookup/realloc OOM, direct/deprecated binding transfer and clear, expiration/list/status/SQL metadata, safety failures, byte-count destruction, and API-exit masking/OOM. C and Zig compare 392 observations, including the adjacent source-layout text and typed-value binding units.",
+    "protocol": "One shared worker exercises nullable/live column counts, every selected column conversion, invalid-column RANGE state, VList add/lookup/realloc OOM, direct/deprecated binding transfer and clear, expiration/list/status/SQL metadata, safety failures, byte-count destruction, and API-exit masking/OOM. C and Zig compare 398 observations, including the adjacent source-layout text, typed-value binding, and explain-mode units.",
     "internal_observations": [
       "result-row identity, values, encodings, byte counts, types, and RANGE result",
       "VList retained identity and lookups across realloc OOM",
@@ -536,7 +536,7 @@
     "upstream_tests": [
       "Upstream capi2/capi3, bind/bindxfer, column/value/UTF16, stmt/status/memused, schema/reprepare, misuse, OOM and statement-list suites cover the selected API surface",
       "Upstream planner parameter tests and VList consumers cover exact named/indexed variable behavior and QPSG interactions",
-      "Project source-layout worker compares 392 observations across values/encodings/bytes/types/RANGE, VList OOM retention, binding move/clear/expiration, adjacent text and typed-value binding, list/status/SQL/safety/MEMUSED and API-exit OOM",
+      "Project source-layout worker compares 398 observations across values/encodings/bytes/types/RANGE, VList OOM retention, binding move/clear/expiration, adjacent text, typed-value binding, explain-mode, list/status/SQL/safety/MEMUSED and API-exit OOM",
       "VDBE Mem/builder differentials and layout tests validate conversion, allocator, object-destruction and field dependencies; public owner switch waits for step/reset/finalize and bind setters"
     ]
   },
@@ -544,7 +544,7 @@
     {
       "command": "zig build vdbe-builder-differential -j1",
       "result_owner": "upstream/evidence/vdbe-builder-differential.txt",
-      "result_sha256": "941a516f2e84e0395643d5657be308725614e1ed2b16b4724e9622858e6c1a64",
+      "result_sha256": "64fcae333fe895b44b36c18a7f6ad278f76b1989eff673cd4a7273babb9cd0bf",
       "source_scope_sha256": "41cfa0c54231443687179876dd10a0bf17119dd4bb9fc5cfb5954ec2a0fb9e2a",
       "zig_scope_sha256": "ad2b9a6c3dadfea360fab68c7bd9ed760fb437932e33372a42c8283ab80cef2a"
     },

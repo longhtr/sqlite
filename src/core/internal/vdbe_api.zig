@@ -10,6 +10,7 @@ const vdbe_mem = @import("vdbe_mem.zig");
 pub const types = @import("vdbe_types.zig");
 
 const result_error: c_int = 1;
+const result_busy: c_int = 5;
 const result_no_memory: c_int = 7;
 const result_too_big: c_int = 18;
 const result_misuse: c_int = 21;
@@ -574,6 +575,41 @@ pub fn statementReadonly(machine_optional: ?*const types.Vdbe) c_int {
 
 pub fn statementIsExplain(machine_optional: ?*const types.Vdbe) c_int {
     return if (machine_optional) |machine| machine.flags.explain else 0;
+}
+
+pub const ReprepareFunction = *const fn (*types.Vdbe) c_int;
+
+/// Source `sqlite3_stmt_explain()`: switch explain mode in place when the
+/// existing register/program shape permits it, otherwise invoke the native
+/// reprepare owner and publish the resulting column count.
+pub fn statementExplain(machine_optional: ?*types.Vdbe, mode: c_int, reprepare: ReprepareFunction) c_int {
+    const machine = machine_optional orelse return result_misuse;
+    const connection = machine.db.?;
+    enterConnection(connection);
+    defer leaveConnection(connection);
+
+    var result: c_int = undefined;
+    if (@as(c_int, machine.flags.explain) == mode) {
+        result = 0;
+    } else if (mode < 0 or mode > 2) {
+        result = result_error;
+    } else if (machine.prepFlags & types.prepare_save_sql == 0) {
+        result = result_error;
+    } else if (machine.eVdbeState != types.vdbe_state.ready) {
+        result = result_busy;
+    } else if (machine.nMem >= 10 and (mode != 2 or machine.flags.haveEqpOps)) {
+        machine.flags.explain = @intCast(mode);
+        result = 0;
+    } else {
+        machine.flags.explain = @intCast(mode);
+        result = reprepare(machine);
+        machine.flags.haveEqpOps = mode == 2;
+    }
+    machine.nResColumn = if (machine.flags.explain != 0)
+        @intCast(12 - 4 * @as(c_int, machine.flags.explain))
+    else
+        machine.nResAlloc;
+    return result;
 }
 
 pub fn statementBusy(machine_optional: ?*const types.Vdbe) c_int {

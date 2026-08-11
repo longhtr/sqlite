@@ -12,6 +12,7 @@ const ProgressState = struct { result: c_int = 0, calls: usize = 0 };
 var vtab_disconnect_calls: c_int = 0;
 var module_destroy_calls: c_int = 0;
 var bind_destructor_calls: c_int = 0;
+var reprepare_calls: c_int = 0;
 fn testVtabDisconnect(_: ?*types.PublicVtab) callconv(.c) c_int {
     vtab_disconnect_calls += 1;
     return 0;
@@ -21,6 +22,10 @@ fn testModuleDestroy(_: ?*anyopaque) callconv(.c) void {
 }
 fn testBindDestructor(_: ?*anyopaque) callconv(.c) void {
     bind_destructor_calls += 1;
+}
+fn testReprepare(_: *types.Vdbe) c_int {
+    reprepare_calls += 1;
+    return 0;
 }
 fn progressCallback(raw: ?*anyopaque) callconv(.c) c_int {
     const state: *ProgressState = @ptrCast(@alignCast(raw.?));
@@ -564,6 +569,23 @@ pub fn main(init: std.process.Init) !void {
                 0;
             std.debug.print("{s}\t{d}\tBINDTYPED\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, owner_index, variable, mode, binding_input, result, cell.flags, cell.enc, cell.n, cell.eSubtype, @intFromBool(cell.xDel != null), bind_destructor_calls, payload });
             vdbe_mem.release(&value);
+            sequence += 1;
+            continue;
+        }
+        if (std.mem.eql(u8, command, "EXPLAINMODE")) {
+            const mode = try parseInt(try next(&tokens));
+            const setup = try parseInt(try next(&tokens));
+            var explain_machine = std.mem.zeroes(types.Vdbe);
+            explain_machine.db = &db;
+            explain_machine.eVdbeState = types.vdbe_state.ready;
+            explain_machine.prepFlags = types.prepare_save_sql;
+            explain_machine.nMem = 1;
+            explain_machine.nResAlloc = 1;
+            if (setup == 1) explain_machine.eVdbeState = types.vdbe_state.run;
+            if (setup == 2) explain_machine.prepFlags &= ~types.prepare_save_sql;
+            reprepare_calls = 0;
+            const result = api.statementExplain(&explain_machine, mode, testReprepare);
+            std.debug.print("{s}\t{d}\tEXPLAINMODE\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\n", .{ case_name, sequence, mode, setup, result, explain_machine.flags.explain, explain_machine.nResColumn, reprepare_calls });
             sequence += 1;
             continue;
         }
