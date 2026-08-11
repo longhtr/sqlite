@@ -5389,32 +5389,47 @@ fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedCol
     var position: usize = 0;
     while (position < token_list.len and token_list[position].typ != tokens.tk_where) : (position += 1) {}
     if (position == token_list.len) return null;
-    if (position + 4 > token_list.len or token_list[position + 1].typ != tokens.tk_id or token_list[position + 2].typ != tokens.tk_is) return error.Syntax;
+    if (position + 4 > token_list.len or token_list[position + 1].typ != tokens.tk_id) return error.Syntax;
+    var column_index: ?usize = null;
+    for (columns, 0..) |column, index| {
+        if (std.ascii.eqlIgnoreCase(column.name, token_list[position + 1].text)) {
+            column_index = index;
+            break;
+        }
+    }
+    const selected = column_index orelse return error.Syntax;
     var operation: btree.IndexPredicateOperation = undefined;
-    if (position + 4 == token_list.len and token_list[position + 3].typ == tokens.tk_null) {
+    var comparison_value: i64 = 0;
+    if (position + 4 == token_list.len and token_list[position + 2].typ == tokens.tk_is and token_list[position + 3].typ == tokens.tk_null) {
         operation = .is_null;
-    } else if (position + 5 == token_list.len and token_list[position + 3].typ == tokens.tk_not and token_list[position + 4].typ == tokens.tk_null) {
+    } else if (position + 5 == token_list.len and token_list[position + 2].typ == tokens.tk_is and token_list[position + 3].typ == tokens.tk_not and token_list[position + 4].typ == tokens.tk_null) {
         operation = .is_not_null;
+    } else if (position + 4 == token_list.len and token_list[position + 3].typ == tokens.tk_integer and (columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER"))) {
+        operation = switch (token_list[position + 2].typ) {
+            tokens.tk_eq => .integer_eq,
+            tokens.tk_ne => .integer_ne,
+            tokens.tk_lt => .integer_lt,
+            tokens.tk_le => .integer_le,
+            tokens.tk_gt => .integer_gt,
+            tokens.tk_ge => .integer_ge,
+            else => return error.Syntax,
+        };
+        comparison_value = std.fmt.parseInt(i64, token_list[position + 3].text, 10) catch return error.Syntax;
     } else {
         return error.Syntax;
     }
-    for (columns, 0..) |column, index| {
-        if (std.ascii.eqlIgnoreCase(column.name, token_list[position + 1].text)) {
-            return .{ .column_index = index, .integer_primary_key = column.integer_primary_key, .operation = operation };
-        }
-    }
-    return error.Syntax;
+    return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = operation, .comparison_value = comparison_value };
 }
 
 fn indexPredicateRowMatches(predicate: ?btree.IndexPredicate, row: IndexMutationRow) error{Corrupt}!bool {
     const filter = predicate orelse return true;
     if (filter.column_index >= row.values.len) return error.Corrupt;
     const value: btree.Value = if (filter.integer_primary_key) .{ .integer = row.rowid } else row.values[filter.column_index];
-    return btree.indexPredicateMatches(filter.operation, value);
+    return btree.indexPredicateMatches(filter, value);
 }
 
 /// Bounded source `sqlite3GenerateIndexKey()` mutation owner for ordinary
-/// ordinary indexes created by `compileIndexSchema()`.
+/// indexes created by `compileIndexSchema()`.
 fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, table_name: []const u8, old_row: ?IndexMutationRow, new_row: ?IndexMutationRow) ResultCode {
     const table_outcome = database.schemaTable(table_name);
     if (table_outcome.result != .ok) return table_outcome.result;

@@ -33,16 +33,17 @@ pub const Value = union(enum) {
     blob: []const u8,
 };
 
-pub const IndexPredicateOperation = enum { is_null, is_not_null };
+pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge };
 
 pub const IndexPredicate = struct {
     column_index: usize,
     integer_primary_key: bool,
     operation: IndexPredicateOperation,
+    comparison_value: i64 = 0,
 };
 
-pub fn indexPredicateMatches(operation: IndexPredicateOperation, value: Value) bool {
-    return switch (operation) {
+pub fn indexPredicateMatches(predicate: IndexPredicate, value: Value) bool {
+    return switch (predicate.operation) {
         .is_null => switch (value) {
             .null_ => true,
             else => false,
@@ -50,6 +51,22 @@ pub fn indexPredicateMatches(operation: IndexPredicateOperation, value: Value) b
         .is_not_null => switch (value) {
             .null_ => false,
             else => true,
+        },
+        .integer_eq, .integer_ne, .integer_lt, .integer_le, .integer_gt, .integer_ge => {
+            const order = switch (value) {
+                .integer => |integer| std.math.order(integer, predicate.comparison_value),
+                .real => |real| std.math.order(real, @as(f64, @floatFromInt(predicate.comparison_value))),
+                else => return false,
+            };
+            return switch (predicate.operation) {
+                .integer_eq => order == .eq,
+                .integer_ne => order != .eq,
+                .integer_lt => order == .lt,
+                .integer_le => order != .gt,
+                .integer_gt => order == .gt,
+                .integer_ge => order != .lt,
+                else => unreachable,
+            };
         },
     };
 }
@@ -676,7 +693,7 @@ pub const Database = struct {
             if (predicate) |filter| {
                 if (filter.column_index >= record.values.len) return .corrupt;
                 const value: Value = if (filter.integer_primary_key) .{ .integer = rowid } else record.values[filter.column_index];
-                if (!indexPredicateMatches(filter.operation, value)) continue;
+                if (!indexPredicateMatches(filter, value)) continue;
             }
             const key_values = self.allocator.alloc(Value, column_indices.len + 1) catch return .no_memory;
             defer self.allocator.free(key_values);

@@ -246,6 +246,18 @@ int main(void){
   int partial_null_count_rc=query_value(clone,"SELECT count(*) FROM partial_null_data",&partial_null_count);
   int partial_null_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_null_data",0,0,0);
   printf("partial-null-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\n",partial_null_table_rc,partial_null_index_rc,partial_null_first_rc,partial_null_outside_rc,partial_null_duplicate_rc,partial_null_enter_conflict_rc,partial_null_delete_rc,partial_null_enter_rc,partial_null_count_rc,(long long)partial_null_count,partial_null_drop_rc);
+  int partial_range_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_range_data(id INTEGER PRIMARY KEY,marker INTEGER,value INTEGER)",0,0,0);
+  int partial_range_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_range_index ON partial_range_data(value) WHERE marker >= 10",0,0,0);
+  int partial_range_outside_rc=sqlite3_exec(clone,"INSERT INTO partial_range_data VALUES(1,5,7)",0,0,0);
+  int partial_range_inside_rc=sqlite3_exec(clone,"INSERT INTO partial_range_data VALUES(2,10,7)",0,0,0);
+  int partial_range_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_range_data VALUES(3,11,7)",0,0,0);
+  int partial_range_enter_conflict_rc=sqlite3_exec(clone,"UPDATE partial_range_data SET marker=12 WHERE id=1",0,0,0);
+  int partial_range_delete_rc=sqlite3_exec(clone,"DELETE FROM partial_range_data WHERE id=2",0,0,0);
+  int partial_range_enter_rc=sqlite3_exec(clone,"UPDATE partial_range_data SET marker=12 WHERE id=1",0,0,0);
+  sqlite3_int64 partial_range_count=-1;
+  int partial_range_count_rc=query_value(clone,"SELECT count(*) FROM partial_range_data",&partial_range_count);
+  int partial_range_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_range_data",0,0,0);
+  printf("partial-range-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\n",partial_range_table_rc,partial_range_index_rc,partial_range_outside_rc,partial_range_inside_rc,partial_range_duplicate_rc,partial_range_enter_conflict_rc,partial_range_delete_rc,partial_range_enter_rc,partial_range_count_rc,(long long)partial_range_count,partial_range_drop_rc);
 #ifdef NATIVE_ENGINE
   int deferred_fk_config_rc=zig_sqlite3_db_config_flag(clone,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
 #else
