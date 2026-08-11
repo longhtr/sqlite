@@ -1178,6 +1178,18 @@ fn disposeInput(mem: *types.Mem, source: [*]const u8, ownership: StringOwnership
     }
 }
 
+/// Source `invokeValueDestructor()`: consume a rejected non-dynamic input and
+/// publish SQLITE_TOOBIG when a valid function context is available.
+pub fn invokeValueDestructor(pointer: ?*const anyopaque, ownership: StringOwnership, context: ?*types.Context) c_int {
+    switch (ownership) {
+        .static, .transient => {},
+        .custom => |destructor| destructor(if (pointer) |value| @ptrCast(@constCast(value)) else null),
+        .dynamic => unreachable,
+    }
+    if (context) |active| resultErrorTooBig(active);
+    return 18;
+}
+
 fn valueToText(value: *types.Mem, encoding_argument: u8) ?[*]const u8 {
     const encoding = encoding_argument & ~@as(u8, 8);
     std.debug.assert(encoding >= 1 and encoding <= 3);
@@ -1224,8 +1236,7 @@ pub fn resultBlob(context: *types.Context, source: ?[*]const u8, length: c_int, 
 
 pub fn resultBlob64(context: *types.Context, source: ?[*]const u8, length: u64, ownership: StringOwnership) void {
     if (length > std.math.maxInt(c_int)) {
-        if (source) |pointer| disposeInput(context.pOut.?, pointer, ownership);
-        context.isError = 18;
+        _ = invokeValueDestructor(if (source) |pointer| @ptrCast(pointer) else null, ownership, context);
         return;
     }
     setResultStrOrError(context, source, @intCast(length), 0, ownership);
@@ -1243,8 +1254,7 @@ pub fn resultText64(context: *types.Context, source: ?[*]const u8, length_argume
         length &= ~@as(u64, 1);
     }
     if (length > std.math.maxInt(c_int)) {
-        if (source) |pointer| disposeInput(context.pOut.?, pointer, ownership);
-        context.isError = 18;
+        _ = invokeValueDestructor(if (source) |pointer| @ptrCast(pointer) else null, ownership, context);
         return;
     }
     setResultStrOrError(context, source, @intCast(length), encoding, ownership);
@@ -1832,6 +1842,25 @@ test "Mem ownership release and setters" {
     try std.testing.expectEqual(@as(i64, -42), mem.u.i);
     setDouble(&mem, std.math.nan(f64));
     try std.testing.expectEqual(types.mem_flag.null_, mem.flags);
+}
+
+test "source rejected result input runs destructor and publishes too-big" {
+    const Harness = struct {
+        var calls: c_int = 0;
+        fn destroy(_: ?*anyopaque) callconv(.c) void {
+            calls += 1;
+        }
+    };
+    Harness.calls = 0;
+    var output = std.mem.zeroes(types.Mem);
+    init(&output, null, types.mem_flag.null_);
+    var context = std.mem.zeroes(types.Context);
+    context.pOut = &output;
+    var byte: u8 = 1;
+    try std.testing.expectEqual(@as(c_int, 18), invokeValueDestructor(&byte, .{ .custom = Harness.destroy }, &context));
+    try std.testing.expectEqual(@as(c_int, 1), Harness.calls);
+    try std.testing.expectEqual(@as(c_int, 18), context.isError);
+    try std.testing.expect(output.flags & types.mem_flag.string != 0);
 }
 
 test "source Mem overflow and RCStr terminator paths are bounded" {

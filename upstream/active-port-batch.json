@@ -96,6 +96,15 @@
       "atomic_unit_id": "vdbe-virtual-table-value-list-iteration",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::invokeValueDestructor::line-434",
+      "source_sha256": "b047a176e415204380295ca49a7a5841e87bb424f3d049096b544da09da44a0a",
+      "zig_declaration_id": "src/core/internal/vdbe_mem.zig::function::invokeValueDestructor",
+      "zig_declaration_sha256": "8c1eb4fd44a516a0b520d809d47749c12783ac93647d513893516bbdc6f07364",
+      "atomic_unit_id": "vdbe-rejected-result-value-destruction",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

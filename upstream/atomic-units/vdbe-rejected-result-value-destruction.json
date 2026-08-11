@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-rejected-result-value-destruction",
+  "title": "VDBE rejected result-value destruction and too-big publication",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "invokeValueDestructor is the shared API-armor cleanup boundary for rejected blob/text/pointer result inputs: it consumes custom ownership exactly once and publishes SQLITE_TOOBIG when a live function context exists.",
+    "source_files": [{"path": "src/vdbeapi.c", "sha256": "233846129dc649ec3d1ae321612ee8833c937ee775766eb8e39deda07a6b19a6"}],
+    "source_entity_ids": ["src/vdbeapi.c::function::invokeValueDestructor::line-434"],
+    "behavioral_block_ids": [
+      "src/vdbeapi.c::function::invokeValueDestructor::behavior::assert::line-439-column-3::ordinal-0",
+      "src/vdbeapi.c::function::invokeValueDestructor::behavior::if::line-440-column-3::ordinal-0",
+      "src/vdbeapi.c::function::invokeValueDestructor::behavior::if::line-442-column-9::ordinal-0",
+      "src/vdbeapi.c::function::invokeValueDestructor::behavior::assert::line-452-column-3::ordinal-0",
+      "src/vdbeapi.c::function::invokeValueDestructor::behavior::return::line-455-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Public sqlite3_result_* API armor entry checks", "Normal result Mem string/blob installation", "Function-context allocation and finalization"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": ["vdbe-record-serial-type-length-and-value-decode", "vdbe-statement-metadata-columns-bindings-and-vlist"],
+    "external_source_responsibilities": ["Source result-error-too-big Mem message publication"],
+    "caller_closure": "The complete private cleanup body is assigned and integrated into the source-layout 64-bit blob/text result limit paths. Nullable public wrappers remain follow-on work."
+  },
+  "contracts": {
+    "inputs": ["Rejected nullable value pointer, non-dynamic ownership strategy, and optional source-layout Context"],
+    "outputs": ["SQLITE_TOOBIG after optional custom destruction and optional context error publication"],
+    "ownership": "Static and transient inputs remain caller-owned. Custom input is destroyed exactly once. SQLITE_DYNAMIC is a documented-invalid input for these callers and remains unreachable.",
+    "state_and_results": "A live context receives sqlite3_result_error_toobig; null context performs cleanup only. Return is always SQLITE_TOOBIG.",
+    "locks_callbacks_io": "Caller owns the connection mutex when context is live. Custom destructor runs synchronously before error publication. No I/O.",
+    "failure_and_continuation": "Cleanup has no allocation dependency except the existing static too-big result message path. The context remains a valid error result and can be finalized normally."
+  },
+  "mappings": [{
+    "source_entity_id": "src/vdbeapi.c::function::invokeValueDestructor::line-434",
+    "relation": "source-rejected-value-cleanup-to-native-operation",
+    "zig_declaration_ids": ["src/core/internal/vdbe_mem.zig::function::invokeValueDestructor"]
+  }],
+  "representation_differences": [
+    "C destructor sentinels are represented by the existing typed StringOwnership union; the source SQLITE_DYNAMIC assertion is an unreachable union branch.",
+    "The rejected pointer is a nullable const anyopaque value and is const-cast only for the source-compatible destructor call."
+  ],
+  "oracle": {
+    "protocol": "A native source-layout unit trace rejects a custom-owned byte with a live Context and compares return, exactly-once destructor count, context isError, and static too-big result text storage. The integrated blob64/text64 paths call the same owner.",
+    "internal_observations": ["destructor count", "SQLITE_TOOBIG return and context error", "result Mem text flag"],
+    "normalization": "Rejected pointer address is not compared; ownership count and error state are exact. Pinned-C API-armor trace remains pending."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "The operation itself allocates no owned input; static error-message behavior is retained.",
+    "io_crash_concurrency": "No I/O; caller mutex contract remains external.",
+    "malformed_input": "Null context and null pointer are valid cleanup inputs; dynamic ownership is source-documented invalid.",
+    "continuation": "Live context remains finalized as a normal TOOBIG function result.",
+    "performance": "Constant time and at most one destructor callback.",
+    "commands": ["zig build vdbe-mem-differential -j1", "zig build test"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_mem.zig source-layout function-result memory layer",
+    "native_call_path": "The helper is used by source-layout resultBlob64 and resultText64 over-limit paths; nullable exported result APIs remain pending.",
+    "bounded_owner_retired": "No. Public bounded result wrappers still own API dispatch."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pinned-C API-armor trace, public result integration, assurance closure, and independent review."},
+  "known_blockers": ["Port nullable public sqlite3_result_blob/text/pointer wrappers against source-layout Context.", "Add pinned-C invalid-context/destructor trace.", "Retire bounded public result ownership.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeapi.c:383-650 was reviewed completely for setResultStrOrError, invokeValueDestructor, blob/blob64, pointer, text/text64 API-armor cleanup, limits, destructor assertions, and error publication",
+      "src/core/internal/vdbe_mem.zig typed ownership, resultErrorTooBig, resultBlob64, and resultText64 owners were reviewed with exact Context/Mem fields"
+    ],
+    "callers": ["sqlite3_result_blob invalid length/context, blob64 oversized/null context, result_pointer null context, and text/text64 null/oversized paths", "Source-layout resultBlob64 and resultText64 now use this helper for over-limit input", "Nullable exported wrappers remain outside this unit"],
+    "callees": ["Custom destructor runs for custom ownership only", "resultErrorTooBig publishes context isError and static message when context is non-null"],
+    "assertions_branches_cleanup": ["All five active behavior IDs cover invalid dynamic ownership, no-op sentinels, custom destruction, nullable context behavior, and return", "Destructor executes before context error publication", "Every accepted ownership strategy is consumed or retained exactly once"],
+    "upstream_tests": ["Upstream result, result64, destructor, API armor, misuse, limits, and OOM suites cover this source boundary", "Project native source-layout unit trace covers custom destruction and live-context TOOBIG publication"]
+  },
+  "evidence_receipts": []
+}
