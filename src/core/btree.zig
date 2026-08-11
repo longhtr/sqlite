@@ -530,9 +530,11 @@ pub const IndexPredicateTerm = struct {
     text_collation: IndexPredicateTextCollation = .binary,
 };
 
+pub const IndexPredicateTruth = enum { false_, true_, null_ };
+
 pub const IndexPredicateNode = union(enum) {
     term: IndexPredicateTerm,
-    constant: bool,
+    constant: IndexPredicateTruth,
     and_,
     or_,
     not_,
@@ -670,8 +672,20 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
     };
 }
 
+fn indexPredicateTermTruth(predicate: IndexPredicateTerm, value: Value) IndexPredicateTruth {
+    const null_propagates = switch (predicate.operation) {
+        .is_null, .is_not_null, .integer_is, .integer_is_not, .text_is, .text_is_not => false,
+        else => true,
+    };
+    if (null_propagates and switch (value) {
+        .null_ => true,
+        else => false,
+    }) return .null_;
+    return if (indexPredicateMatches(predicate, value)) .true_ else .false_;
+}
+
 pub fn indexPredicateRecordMatches(predicate: IndexPredicate, values: []const Value, rowid: i64) ?bool {
-    var stack: [8]bool = undefined;
+    var stack: [8]IndexPredicateTruth = undefined;
     var stack_count: usize = 0;
     for (predicate.nodes) |optional_node| {
         const node = optional_node orelse break;
@@ -679,7 +693,7 @@ pub fn indexPredicateRecordMatches(predicate: IndexPredicate, values: []const Va
             .term => |term| {
                 if (term.column_index >= values.len or stack_count == stack.len) return null;
                 const value: Value = if (term.integer_primary_key) .{ .integer = rowid } else values[term.column_index];
-                stack[stack_count] = indexPredicateMatches(term, value);
+                stack[stack_count] = indexPredicateTermTruth(term, value);
                 stack_count += 1;
             },
             .constant => |constant| {
@@ -689,22 +703,26 @@ pub fn indexPredicateRecordMatches(predicate: IndexPredicate, values: []const Va
             },
             .not_ => {
                 if (stack_count == 0) return null;
-                stack[stack_count - 1] = !stack[stack_count - 1];
+                stack[stack_count - 1] = switch (stack[stack_count - 1]) {
+                    .false_ => .true_,
+                    .true_ => .false_,
+                    .null_ => .null_,
+                };
             },
             .and_, .or_ => {
                 if (stack_count < 2) return null;
                 const right = stack[stack_count - 1];
                 stack_count -= 1;
-                const conjunction = switch (node) {
-                    .and_ => true,
-                    .or_ => false,
+                const left = stack[stack_count - 1];
+                stack[stack_count - 1] = switch (node) {
+                    .and_ => if (left == .false_ or right == .false_) .false_ else if (left == .true_ and right == .true_) .true_ else .null_,
+                    .or_ => if (left == .true_ or right == .true_) .true_ else if (left == .false_ and right == .false_) .false_ else .null_,
                     else => unreachable,
                 };
-                stack[stack_count - 1] = if (conjunction) stack[stack_count - 1] and right else stack[stack_count - 1] or right;
             },
         }
     }
-    return if (stack_count == 1) stack[0] else null;
+    return if (stack_count == 1) stack[0] == .true_ else null;
 }
 
 pub const RecordView = struct {

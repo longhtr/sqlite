@@ -620,7 +620,8 @@ int main(void){
   int partial_not_false_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_false_index ON partial_constant_data(value) WHERE NOT 0",0,0,0);
   int partial_float_false_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_false_index ON partial_constant_data(value) WHERE 0.0",0,0,0);
   int partial_float_true_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_float_true_index ON partial_constant_data(value) WHERE -1.5",0,0,0);
-  printf("partial-float-constant-index\t%d\t%d\n",partial_float_false_index_rc,partial_float_true_index_rc);
+  int partial_not_null_constant_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_not_null_constant_index ON partial_constant_data(value) WHERE NOT NULL",0,0,0);
+  printf("partial-float-constant-index\t%d\t%d\t%d\n",partial_float_false_index_rc,partial_float_true_index_rc,partial_not_null_constant_index_rc);
   int partial_constant_first_rc=sqlite3_exec(clone,"INSERT INTO partial_constant_data VALUES(1,7)",0,0,0);
   int partial_constant_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_constant_data VALUES(2,7)",0,0,0);
   int partial_constant_second_rc=sqlite3_exec(clone,"INSERT INTO partial_constant_data VALUES(2,8)",0,0,0);
@@ -843,6 +844,9 @@ int main(void){
   int partial_not_comparison_enter_rc=sqlite3_exec(clone,"UPDATE partial_not_comparison_data SET a=0 WHERE id=1",0,0,0);
   int partial_not_comparison_delete_rc=sqlite3_exec(clone,"DELETE FROM partial_not_comparison_data WHERE id=2",0,0,0);
   int partial_not_comparison_enter_after_delete_rc=sqlite3_exec(clone,"UPDATE partial_not_comparison_data SET a=0 WHERE id=1",0,0,0);
+  int partial_not_comparison_null_first_rc=sqlite3_exec(clone,"INSERT INTO partial_not_comparison_data VALUES(3,20,NULL)",0,0,0);
+  int partial_not_comparison_null_second_rc=sqlite3_exec(clone,"INSERT INTO partial_not_comparison_data VALUES(4,20,NULL)",0,0,0);
+  printf("partial-not-comparison-null\t%d\t%d\n",partial_not_comparison_null_first_rc,partial_not_comparison_null_second_rc);
   sqlite3_int64 partial_not_comparison_count=-1;
   int partial_not_comparison_count_rc=query_value(clone,"SELECT count(*) FROM partial_not_comparison_data",&partial_not_comparison_count);
   int partial_not_comparison_reindex_rc=sqlite3_exec(clone,"REINDEX partial_not_comparison_index",0,0,0);

@@ -5999,7 +5999,7 @@ fn resolveIndexPredicatePrimary(token_list: []const Token, columns: []const Reso
             var constant = std.fmt.parseFloat(f64, token_list[literal_position].text) catch return error.Syntax;
             if (negative) constant = -constant;
             position.* = probe_position;
-            try appendIndexPredicateNode(predicate, node_count, .{ .constant = constant != 0 and !std.math.isNan(constant) });
+            try appendIndexPredicateNode(predicate, node_count, .{ .constant = if (constant != 0 and !std.math.isNan(constant)) .true_ else .false_ });
             term_count.* += 1;
             return;
         }
@@ -6009,14 +6009,14 @@ fn resolveIndexPredicatePrimary(token_list: []const Token, columns: []const Reso
         const constant = try resolveIndexPredicateInteger(token_list, &probe_position);
         if (probe_position == token_list.len or token_list[probe_position].typ == tokens.tk_and or token_list[probe_position].typ == tokens.tk_or or token_list[probe_position].typ == tokens.tk_rp) {
             position.* = probe_position;
-            try appendIndexPredicateNode(predicate, node_count, .{ .constant = constant != 0 });
+            try appendIndexPredicateNode(predicate, node_count, .{ .constant = if (constant != 0) .true_ else .false_ });
             term_count.* += 1;
             return;
         }
     }
     if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_null and (position.* + 1 == token_list.len or token_list[position.* + 1].typ == tokens.tk_and or token_list[position.* + 1].typ == tokens.tk_or or token_list[position.* + 1].typ == tokens.tk_rp)) {
         position.* += 1;
-        try appendIndexPredicateNode(predicate, node_count, .{ .constant = false });
+        try appendIndexPredicateNode(predicate, node_count, .{ .constant = .null_ });
         term_count.* += 1;
         return;
     }
