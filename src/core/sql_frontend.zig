@@ -4598,6 +4598,26 @@ fn resolveUnaryMathIndexOperation(name: []const u8) ?btree.IndexUnaryMath {
     return null;
 }
 
+const BinaryMathIndexExpression = struct { column_name: []const u8, operation: btree.IndexBinaryMath, operand: i64, consumed: usize };
+
+fn resolveBinaryMathIndexExpression(token_list: []const Token, position: usize) ?BinaryMathIndexExpression {
+    if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 2].typ != tokens.tk_id or token_list[position + 3].typ != tokens.tk_comma) return null;
+    const operation: btree.IndexBinaryMath = if (std.ascii.eqlIgnoreCase(token_list[position].text, "pow") or std.ascii.eqlIgnoreCase(token_list[position].text, "power"))
+        .power
+    else if (std.ascii.eqlIgnoreCase(token_list[position].text, "mod"))
+        .modulo
+    else if (std.ascii.eqlIgnoreCase(token_list[position].text, "atan2"))
+        .arc_tangent_two
+    else if (std.ascii.eqlIgnoreCase(token_list[position].text, "log"))
+        .logarithm
+    else
+        return null;
+    const operand = resolveSignedIndexOperand(token_list, position + 4) orelse return null;
+    const end_position = position + 4 + operand.consumed;
+    if (end_position >= token_list.len or token_list[end_position].typ != tokens.tk_rp) return null;
+    return .{ .column_name = token_list[position + 2].text, .operation = operation, .operand = operand.value, .consumed = end_position + 1 - position };
+}
+
 const MinMaxIndexExpression = struct { column_name: []const u8, comparison: i64, maximum: bool, consumed: usize };
 
 fn resolveMinMaxIndexExpression(token_list: []const Token, position: usize) ?MinMaxIndexExpression {
@@ -4663,7 +4683,11 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var index_transform: btree.IndexTransform = .identity;
         var name: []const u8 = undefined;
         var start = position;
-        if (schema_is_index and position + 3 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and resolveUnaryMathIndexOperation(parsed.tokens[position].text) != null and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_rp) {
+        if (if (schema_is_index) resolveBinaryMathIndexExpression(parsed.tokens, position) else null) |binary_math_expression| {
+            scan_expression = true;
+            index_transform = .{ .binary_math = .{ .operation = binary_math_expression.operation, .operand = binary_math_expression.operand } };
+            name = binary_math_expression.column_name;
+        } else if (schema_is_index and position + 3 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and resolveUnaryMathIndexOperation(parsed.tokens[position].text) != null and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_rp) {
             scan_expression = true;
             index_transform = .{ .unary_math = resolveUnaryMathIndexOperation(parsed.tokens[position].text).? };
             name = parsed.tokens[position + 2].text;
@@ -9224,7 +9248,11 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if (wrapped_expression) position += 1;
         var transform: btree.IndexTransform = .identity;
         var column_name: []const u8 = undefined;
-        if (position + 3 < token_list.len and token_list[position].typ == tokens.tk_id and resolveUnaryMathIndexOperation(token_list[position].text) != null and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_rp) {
+        if (resolveBinaryMathIndexExpression(token_list, position)) |binary_math_expression| {
+            transform = .{ .binary_math = .{ .operation = binary_math_expression.operation, .operand = binary_math_expression.operand } };
+            column_name = binary_math_expression.column_name;
+            position += binary_math_expression.consumed;
+        } else if (position + 3 < token_list.len and token_list[position].typ == tokens.tk_id and resolveUnaryMathIndexOperation(token_list[position].text) != null and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_rp) {
             transform = .{ .unary_math = resolveUnaryMathIndexOperation(token_list[position].text).? };
             column_name = token_list[position + 2].text;
             position += 4;
@@ -9436,7 +9464,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         };
         const numeric_transform = switch (specified_transforms.items[selected_position]) {
             .identity, .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single, .substring, .is_null, .is_not_null, .null_coalesce_integer, .null_if_integer => false,
-            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_compare, .integer_is, .integer_between, .integer_in, .scalar_min_integer, .scalar_max_integer, .unary_math => true,
+            .numeric_negate, .numeric_abs, .numeric_sign, .numeric_round, .numeric_ceil, .numeric_floor, .numeric_trunc, .numeric_not, .integer_bit_not, .integer_add, .integer_multiply, .integer_divide, .integer_remainder, .integer_bit_and, .integer_bit_or, .integer_shift_left, .integer_shift_right, .integer_compare, .integer_is, .integer_between, .integer_in, .scalar_min_integer, .scalar_max_integer, .unary_math, .binary_math => true,
         };
         if (numeric_transform and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {
             allocator.free(source);
