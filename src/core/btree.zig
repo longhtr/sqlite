@@ -62,6 +62,7 @@ pub const IndexTransform = union(enum) {
     text_trim,
     text_ltrim,
     text_rtrim,
+    concat_single,
     substring: IndexSubstring,
     numeric_not,
     integer_bit_not,
@@ -206,6 +207,12 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             else => 1,
         } },
         .substring => |substring| return substringIndexValue(value, substring),
+        .concat_single => return switch (value) {
+            .null_ => .{ .text = "" },
+            .text => value,
+            .blob => |blob| .{ .text = blob },
+            .integer, .real => .null_,
+        },
         .text_trim, .text_ltrim, .text_rtrim => return switch (value) {
             .null_ => .null_,
             .text, .blob => |input| trimmed: {
@@ -318,7 +325,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             if (std.math.isNan(real) or real < -4_503_599_627_370_496.0 or real > 4_503_599_627_370_496.0) break :rounded .{ .real = real };
             break :rounded .{ .real = @floatFromInt(@as(i64, @intFromFloat(real + if (real < 0) @as(f64, -0.5) else @as(f64, 0.5)))) };
         },
-        .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim => unreachable,
+        .storage_type, .octet_length, .text_length, .unicode_value, .text_trim, .text_ltrim, .text_rtrim, .concat_single => unreachable,
         .numeric_sign => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = if (integer < 0) -1 else if (integer > 0) 1 else 0 },

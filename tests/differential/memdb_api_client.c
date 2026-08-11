@@ -405,6 +405,17 @@ int main(void){
   int substring_expression_reindex_rc=sqlite3_exec(clone,"REINDEX substring_expression_index",0,0,0);
   int substring_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE substring_expression_data",0,0,0);
   printf("substring-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",substring_expression_table_rc,substring_expression_first_rc,substring_expression_index_rc,substring_alias_index_rc,substring_expression_duplicate_rc,substring_expression_second_rc,substring_expression_update_rc,substring_expression_count_rc,(long long)substring_expression_count,substring_expression_reindex_rc,substring_expression_drop_rc);
+  int concat_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE concat_expression_data(id INTEGER PRIMARY KEY,value TEXT)",0,0,0);
+  int concat_expression_first_rc=sqlite3_exec(clone,"INSERT INTO concat_expression_data VALUES(1,NULL)",0,0,0);
+  int concat_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX concat_expression_index ON concat_expression_data(concat(value))",0,0,0);
+  int concat_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO concat_expression_data VALUES(2,'')",0,0,0);
+  int concat_expression_second_rc=sqlite3_exec(clone,"INSERT INTO concat_expression_data VALUES(2,'value')",0,0,0);
+  int concat_expression_update_rc=sqlite3_exec(clone,"UPDATE concat_expression_data SET value=NULL WHERE id=2",0,0,0);
+  sqlite3_int64 concat_expression_count=-1;
+  int concat_expression_count_rc=query_value(clone,"SELECT count(*) FROM concat_expression_data",&concat_expression_count);
+  int concat_expression_reindex_rc=sqlite3_exec(clone,"REINDEX concat_expression_index",0,0,0);
+  int concat_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE concat_expression_data",0,0,0);
+  printf("concat-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",concat_expression_table_rc,concat_expression_first_rc,concat_expression_index_rc,concat_expression_duplicate_rc,concat_expression_second_rc,concat_expression_update_rc,concat_expression_count_rc,(long long)concat_expression_count,concat_expression_reindex_rc,concat_expression_drop_rc);
   int ifnull_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE ifnull_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int ifnull_expression_first_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(1,NULL)",0,0,0);
   int ifnull_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX ifnull_expression_index ON ifnull_expression_data(ifnull(value,-1))",0,0,0);
