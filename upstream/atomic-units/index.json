@@ -237,7 +237,7 @@
     {
       "id": "vdbe-statement-metadata-columns-bindings-and-vlist",
       "path": "upstream/atomic-units/vdbe-statement-metadata-columns-bindings-and-vlist.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     }
   ]
 }

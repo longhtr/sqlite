@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-statement-metadata-columns-bindings-and-vlist",
   "title": "VDBE statement metadata, result columns, bindings, and variable lists",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These 37 coupled active-profile routines form the allocation-aware prepared-statement observation and binding layer: API safety, result-column access, VList variable identity, binding transfer/clear, statement metadata, counters, and API-exit OOM conversion.",
@@ -478,7 +478,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "The neutral VList case forces heap realloc OOM and proves old-list continuation. Existing Mem and P4 dependencies cover conversion/allocation ownership; APIEXIT proves sticky OOM normalization.",
