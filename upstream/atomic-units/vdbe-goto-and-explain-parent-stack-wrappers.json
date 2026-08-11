@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-goto-and-explain-parent-stack-wrappers",
   "title": "VDBE unconditional goto and EXPLAIN parent-stack wrappers",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "These source-shaped code-generation wrappers preserve unconditional jump operands and the addrExplain parent chain used to nest and pop EXPLAIN QUERY PLAN nodes.",
@@ -88,7 +88,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Goto dependency coverage exercises sticky and one-shot append OOM; parent/pop allocate nothing.",
