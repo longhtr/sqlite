@@ -727,6 +727,17 @@ int main(void){
   int partial_explicit_collation_reindex_rc=sqlite3_exec(clone,"REINDEX partial_explicit_nocase_index",0,0,0);
   int partial_explicit_collation_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_explicit_collation_data",0,0,0);
   printf("partial-explicit-collation-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",partial_explicit_collation_table_rc,partial_explicit_nocase_index_rc,partial_explicit_rtrim_index_rc,partial_explicit_outside_rc,partial_explicit_nocase_inside_rc,partial_explicit_nocase_duplicate_rc,partial_explicit_rtrim_inside_rc,partial_explicit_rtrim_duplicate_rc,partial_explicit_enter_conflict_rc,partial_explicit_delete_rc,partial_explicit_enter_rc,partial_explicit_collation_count_rc,(long long)partial_explicit_collation_count,partial_explicit_collation_reindex_rc,partial_explicit_collation_drop_rc);
+  int partial_collation_precedence_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_collation_precedence_data(id INTEGER PRIMARY KEY,status TEXT,value INTEGER)",0,0,0);
+  int partial_collation_literal_first_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_collation_literal_first_index ON partial_collation_precedence_data(value) WHERE 'active' COLLATE NOCASE=status COLLATE BINARY",0,0,0);
+  int partial_collation_column_first_index_rc=sqlite3_exec(clone,"CREATE INDEX partial_collation_column_first_index ON partial_collation_precedence_data(value) WHERE status COLLATE BINARY='active' COLLATE NOCASE",0,0,0);
+  int partial_collation_precedence_first_rc=sqlite3_exec(clone,"INSERT INTO partial_collation_precedence_data VALUES(1,'Active',7)",0,0,0);
+  int partial_collation_precedence_duplicate_rc=sqlite3_exec(clone,"INSERT INTO partial_collation_precedence_data VALUES(2,'ACTIVE',7)",0,0,0);
+  int partial_collation_precedence_exact_rc=sqlite3_exec(clone,"INSERT INTO partial_collation_precedence_data VALUES(2,'active',8)",0,0,0);
+  sqlite3_int64 partial_collation_precedence_count=-1;
+  int partial_collation_precedence_count_rc=query_value(clone,"SELECT count(*) FROM partial_collation_precedence_data",&partial_collation_precedence_count);
+  int partial_collation_precedence_reindex_rc=sqlite3_exec(clone,"REINDEX partial_collation_literal_first_index",0,0,0);
+  int partial_collation_precedence_drop_rc=sqlite3_exec(clone,"DROP TABLE partial_collation_precedence_data",0,0,0);
+  printf("partial-collation-precedence-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",partial_collation_precedence_table_rc,partial_collation_literal_first_index_rc,partial_collation_column_first_index_rc,partial_collation_precedence_first_rc,partial_collation_precedence_duplicate_rc,partial_collation_precedence_exact_rc,partial_collation_precedence_count_rc,(long long)partial_collation_precedence_count,partial_collation_precedence_reindex_rc,partial_collation_precedence_drop_rc);
   int partial_text_in_table_rc=sqlite3_exec(clone,"CREATE TABLE partial_text_in_data(id INTEGER PRIMARY KEY,status TEXT COLLATE NOCASE,value INTEGER)",0,0,0);
   int partial_text_in_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_text_in_index ON partial_text_in_data(value) WHERE status IN ('active','pending')",0,0,0);
   int partial_text_not_in_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX partial_text_not_in_index ON partial_text_in_data(value) WHERE status NOT IN ('active','pending')",0,0,0);

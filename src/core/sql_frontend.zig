@@ -5827,7 +5827,9 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         if (position.* + 1 < token_list.len and token_list[position.*].typ == tokens.tk_collate) {
             const explicit_name = token_list[position.* + 1].text;
             const column_collation: btree.IndexPredicateTextCollation = if (std.ascii.eqlIgnoreCase(explicit_name, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(explicit_name, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(explicit_name, "RTRIM")) .rtrim else return error.Syntax;
-            if (literal_collation == null) text_collation = column_collation;
+            if (literal_collation == null) {
+                text_collation = column_collation;
+            }
             position.* += 2;
         }
         return .{ .column_index = column_index, .integer_primary_key = false, .operation = operation, .comparison_text = comparison_text, .text_collation = text_collation.? };
@@ -5850,9 +5852,11 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
     const integer_column = columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER");
     const text_column = std.ascii.eqlIgnoreCase(columns[selected].declared_type, "TEXT");
     var text_collation: ?btree.IndexPredicateTextCollation = if (std.ascii.eqlIgnoreCase(columns[selected].collation, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "RTRIM")) .rtrim else null;
+    var explicit_column_collation = false;
     if (text_column and position.* + 1 < token_list.len and token_list[position.*].typ == tokens.tk_collate) {
         const explicit_name = token_list[position.* + 1].text;
         text_collation = if (std.ascii.eqlIgnoreCase(explicit_name, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(explicit_name, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(explicit_name, "RTRIM")) .rtrim else return error.Syntax;
+        explicit_column_collation = true;
         position.* += 2;
     }
     const text_not_between = position.* < token_list.len and token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_between;
@@ -5887,7 +5891,10 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
         position.* += 2;
         if (position.* + 1 < token_list.len and token_list[position.*].typ == tokens.tk_collate) {
             const explicit_name = token_list[position.* + 1].text;
-            text_collation = if (std.ascii.eqlIgnoreCase(explicit_name, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(explicit_name, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(explicit_name, "RTRIM")) .rtrim else return error.Syntax;
+            const literal_collation: btree.IndexPredicateTextCollation = if (std.ascii.eqlIgnoreCase(explicit_name, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(explicit_name, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(explicit_name, "RTRIM")) .rtrim else return error.Syntax;
+            if (!explicit_column_collation) {
+                text_collation = literal_collation;
+            }
             position.* += 2;
         }
         return .{ .column_index = selected, .integer_primary_key = false, .operation = operation, .comparison_text = comparison_text, .text_collation = text_collation.? };
@@ -5910,7 +5917,10 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
             position.* += 1;
             if (position.* + 1 < token_list.len and token_list[position.*].typ == tokens.tk_collate) {
                 const explicit_name = token_list[position.* + 1].text;
-                text_collation = if (std.ascii.eqlIgnoreCase(explicit_name, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(explicit_name, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(explicit_name, "RTRIM")) .rtrim else return error.Syntax;
+                const literal_collation: btree.IndexPredicateTextCollation = if (std.ascii.eqlIgnoreCase(explicit_name, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(explicit_name, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(explicit_name, "RTRIM")) .rtrim else return error.Syntax;
+                if (!explicit_column_collation) {
+                    text_collation = literal_collation;
+                }
                 position.* += 2;
             }
             return .{ .column_index = selected, .integer_primary_key = false, .operation = if (is_not) .text_is_not else .text_is, .comparison_text = comparison_text, .text_collation = text_collation.? };
