@@ -320,8 +320,8 @@ int main(void){
   int bitwise_expression_right_index_rc=sqlite3_exec(clone,"CREATE INDEX bitwise_expression_right_index ON bitwise_expression_data(value>>1)",0,0,0);
   int bitwise_expression_not_index_rc=sqlite3_exec(clone,"CREATE INDEX bitwise_expression_not_index ON bitwise_expression_data(~value)",0,0,0);
   int bitwise_expression_conflict_rc=sqlite3_exec(clone,"INSERT INTO bitwise_expression_data VALUES(2,22)",0,0,0);
-  int bitwise_expression_second_rc=sqlite3_exec(clone,"INSERT INTO bitwise_expression_data VALUES(2,21)",0,0,0);
-  int bitwise_expression_update_rc=sqlite3_exec(clone,"UPDATE bitwise_expression_data SET value=24 WHERE id=2",0,0,0);
+  int bitwise_expression_second_rc=sqlite3_exec(clone,"INSERT INTO bitwise_expression_data VALUES(2,21.5)",0,0,0);
+  int bitwise_expression_update_rc=sqlite3_exec(clone,"UPDATE bitwise_expression_data SET value=24.5 WHERE id=2",0,0,0);
   sqlite3_int64 bitwise_expression_count=-1;
   int bitwise_expression_count_rc=query_value(clone,"SELECT count(*) FROM bitwise_expression_data",&bitwise_expression_count);
   int bitwise_expression_reindex_rc=sqlite3_exec(clone,"REINDEX bitwise_expression_and_index",0,0,0);

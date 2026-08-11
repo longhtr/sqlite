@@ -79,6 +79,15 @@ fn numericIndexValue(value: Value) Value {
     return .{ .integer = 0 };
 }
 
+fn integerIndexValue(value: Value) ?i64 {
+    return switch (numericIndexValue(value)) {
+        .integer => |integer| integer,
+        .real => |real| if (std.math.isNan(real)) 0 else if (real < -9223372036854774784.0) std.math.minInt(i64) else if (real > 9223372036854774784.0) std.math.maxInt(i64) else @intFromFloat(real),
+        .null_ => null,
+        .text, .blob => unreachable,
+    };
+}
+
 fn shiftIndexInteger(integer: i64, amount: i64, shift_left: bool) i64 {
     var left = shift_left;
     var magnitude = amount;
@@ -131,10 +140,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .real => |real| .{ .integer = @intFromBool(real == 0) },
             .text, .blob => unreachable,
         },
-        .integer_bit_not => switch (numeric) {
-            .integer => |integer| .{ .integer = ~integer },
-            else => .null_,
-        },
+        .integer_bit_not => .{ .integer = ~(integerIndexValue(numeric) orelse return .null_) },
         .integer_add => |addition| switch (numeric) {
             .null_ => .null_,
             .integer => |integer| .{ .integer = std.math.add(i64, integer, addition) catch return .{ .real = @as(f64, @floatFromInt(integer)) + @as(f64, @floatFromInt(addition)) } },
@@ -159,22 +165,10 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .real => |real| .{ .real = @rem(real, @as(f64, @floatFromInt(divisor))) },
             .text, .blob => unreachable,
         },
-        .integer_bit_and => |mask| switch (numeric) {
-            .integer => |integer| .{ .integer = integer & mask },
-            else => .null_,
-        },
-        .integer_bit_or => |mask| switch (numeric) {
-            .integer => |integer| .{ .integer = integer | mask },
-            else => .null_,
-        },
-        .integer_shift_left => |amount| switch (numeric) {
-            .integer => |integer| .{ .integer = shiftIndexInteger(integer, amount, true) },
-            else => .null_,
-        },
-        .integer_shift_right => |amount| switch (numeric) {
-            .integer => |integer| .{ .integer = shiftIndexInteger(integer, amount, false) },
-            else => .null_,
-        },
+        .integer_bit_and => |mask| .{ .integer = (integerIndexValue(numeric) orelse return .null_) & mask },
+        .integer_bit_or => |mask| .{ .integer = (integerIndexValue(numeric) orelse return .null_) | mask },
+        .integer_shift_left => |amount| .{ .integer = shiftIndexInteger(integerIndexValue(numeric) orelse return .null_, amount, true) },
+        .integer_shift_right => |amount| .{ .integer = shiftIndexInteger(integerIndexValue(numeric) orelse return .null_, amount, false) },
         .integer_between => |comparison| switch (numeric) {
             .null_ => .null_,
             .integer => |integer| {
