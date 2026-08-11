@@ -429,6 +429,18 @@ int main(void){
   int nullif_expression_reindex_rc=sqlite3_exec(clone,"REINDEX nullif_expression_index",0,0,0);
   int nullif_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE nullif_expression_data",0,0,0);
   printf("nullif-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",nullif_expression_table_rc,nullif_expression_first_rc,nullif_expression_index_rc,nullif_expression_second_rc,nullif_expression_duplicate_rc,nullif_expression_null_rc,nullif_expression_update_rc,nullif_expression_count_rc,(long long)nullif_expression_count,nullif_expression_reindex_rc,nullif_expression_drop_rc);
+  int minmax_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE minmax_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
+  int minmax_expression_first_rc=sqlite3_exec(clone,"INSERT INTO minmax_expression_data VALUES(1,5)",0,0,0);
+  int min_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX min_expression_index ON minmax_expression_data(min(value,10))",0,0,0);
+  int max_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX max_expression_index ON minmax_expression_data(max(value,10))",0,0,0);
+  int minmax_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO minmax_expression_data VALUES(2,5)",0,0,0);
+  int minmax_expression_second_rc=sqlite3_exec(clone,"INSERT INTO minmax_expression_data VALUES(2,20)",0,0,0);
+  int minmax_expression_update_rc=sqlite3_exec(clone,"UPDATE minmax_expression_data SET value=5 WHERE id=2",0,0,0);
+  sqlite3_int64 minmax_expression_count=-1;
+  int minmax_expression_count_rc=query_value(clone,"SELECT count(*) FROM minmax_expression_data",&minmax_expression_count);
+  int minmax_expression_reindex_rc=sqlite3_exec(clone,"REINDEX min_expression_index",0,0,0);
+  int minmax_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE minmax_expression_data",0,0,0);
+  printf("minmax-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",minmax_expression_table_rc,minmax_expression_first_rc,min_expression_index_rc,max_expression_index_rc,minmax_expression_duplicate_rc,minmax_expression_second_rc,minmax_expression_update_rc,minmax_expression_count_rc,(long long)minmax_expression_count,minmax_expression_reindex_rc,minmax_expression_drop_rc);
   int null_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE null_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int null_expression_first_rc=sqlite3_exec(clone,"INSERT INTO null_expression_data VALUES(1,NULL)",0,0,0);
   int null_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX null_expression_index ON null_expression_data(value IS NULL)",0,0,0);

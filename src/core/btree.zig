@@ -69,6 +69,8 @@ pub const IndexTransform = union(enum) {
     is_not_null,
     null_coalesce_integer: i64,
     null_if_integer: i64,
+    scalar_min_integer: i64,
+    scalar_max_integer: i64,
     integer_add: i64,
     integer_multiply: i64,
     integer_divide: i64,
@@ -277,11 +279,23 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
             .real => |real| if (real == @as(f64, @floatFromInt(comparison))) .null_ else value,
             .null_, .text, .blob => value,
         },
+        .scalar_min_integer => |comparison| return switch (value) {
+            .null_ => .null_,
+            .integer => |integer| if (integer < comparison) value else .{ .integer = comparison },
+            .real => |real| if (real < @as(f64, @floatFromInt(comparison))) value else .{ .integer = comparison },
+            .text, .blob => .{ .integer = comparison },
+        },
+        .scalar_max_integer => |comparison| return switch (value) {
+            .null_ => .null_,
+            .integer => |integer| if (integer >= comparison) value else .{ .integer = comparison },
+            .real => |real| if (real >= @as(f64, @floatFromInt(comparison))) value else .{ .integer = comparison },
+            .text, .blob => value,
+        },
         else => {},
     }
     const numeric = numericIndexValue(value);
     return switch (transform) {
-        .identity, .is_null, .is_not_null, .null_coalesce_integer, .null_if_integer, .substring => unreachable,
+        .identity, .is_null, .is_not_null, .null_coalesce_integer, .null_if_integer, .scalar_min_integer, .scalar_max_integer, .substring => unreachable,
         .numeric_negate => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = -integer },
