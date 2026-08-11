@@ -154,7 +154,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     };
 }
 
-pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, text_eq, text_ne };
+pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, text_eq, text_ne, text_in, text_not_in };
 
 pub const IndexPredicateTextCollation = enum { binary, nocase, rtrim };
 
@@ -165,6 +165,7 @@ pub const IndexPredicateTerm = struct {
     comparison_value: i64 = 0,
     comparison_value_high: i64 = 0,
     comparison_text: []const u8 = "",
+    comparison_text_high: []const u8 = "",
     text_collation: IndexPredicateTextCollation = .binary,
 };
 
@@ -206,13 +207,21 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
             .null_ => false,
             else => true,
         },
-        .text_eq, .text_ne => {
+        .text_eq, .text_ne, .text_in, .text_not_in => {
             const text = switch (value) {
                 .text => |text| text,
                 else => return false,
             };
-            const matches = indexPredicateTextEquals(text, predicate.comparison_text, predicate.text_collation);
-            return if (predicate.operation == .text_eq) matches else !matches;
+            const first_matches = indexPredicateTextEquals(text, predicate.comparison_text, predicate.text_collation);
+            const matches = if (predicate.operation == .text_in or predicate.operation == .text_not_in)
+                first_matches or indexPredicateTextEquals(text, predicate.comparison_text_high, predicate.text_collation)
+            else
+                first_matches;
+            return switch (predicate.operation) {
+                .text_eq, .text_in => matches,
+                .text_ne, .text_not_in => !matches,
+                else => unreachable,
+            };
         },
         .integer_is, .integer_is_not => {
             const matches = switch (value) {

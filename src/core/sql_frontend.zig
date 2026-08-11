@@ -5581,6 +5581,15 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
     const integer_column = columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER");
     const text_column = std.ascii.eqlIgnoreCase(columns[selected].declared_type, "TEXT");
     const text_collation: ?btree.IndexPredicateTextCollation = if (std.ascii.eqlIgnoreCase(columns[selected].collation, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "RTRIM")) .rtrim else null;
+    const text_not_in = position.* < token_list.len and token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_in;
+    if (!boolean_negated and text_column and text_collation != null and position.* < token_list.len and (token_list[position.*].typ == tokens.tk_in or text_not_in)) {
+        position.* += if (text_not_in) 2 else 1;
+        if (position.* + 4 >= token_list.len or token_list[position.*].typ != tokens.tk_lp or token_list[position.* + 1].typ != tokens.tk_string or token_list[position.* + 2].typ != tokens.tk_comma or token_list[position.* + 3].typ != tokens.tk_string or token_list[position.* + 4].typ != tokens.tk_rp) return error.Syntax;
+        const first_text = token_list[position.* + 1].text;
+        const second_text = token_list[position.* + 3].text;
+        position.* += 5;
+        return .{ .column_index = selected, .integer_primary_key = false, .operation = if (text_not_in) .text_not_in else .text_in, .comparison_text = first_text, .comparison_text_high = second_text, .text_collation = text_collation.? };
+    }
     if (!boolean_negated and text_column and text_collation != null and position.* + 1 < token_list.len and (token_list[position.*].typ == tokens.tk_eq or token_list[position.*].typ == tokens.tk_ne) and token_list[position.* + 1].typ == tokens.tk_string) {
         const operation: btree.IndexPredicateOperation = if (token_list[position.*].typ == tokens.tk_eq) .text_eq else .text_ne;
         const comparison_text = token_list[position.* + 1].text;
