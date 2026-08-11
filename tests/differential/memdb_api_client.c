@@ -810,6 +810,8 @@ int main(void){
   int like_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX like_expression_index ON pattern_expression_data(value LIKE 'a%')",0,0,0);
   int not_like_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX not_like_expression_index ON pattern_expression_data(value NOT LIKE 'z%')",0,0,0);
   int glob_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX glob_expression_index ON pattern_expression_data(value GLOB '[A-C]*')",0,0,0);
+  int pattern_expression_invalid_rc=sqlite3_exec(clone,"CREATE INDEX pattern_expression_invalid ON pattern_expression_data(value LIKE 'a%' ESCAPE 'xx')",0,0,0);
+  printf("pattern-expression-invalid\t%d\n",pattern_expression_invalid_rc);
   int like_function_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX like_function_expression_index ON pattern_expression_data(like('a%',value))",0,0,0);
   int not_like_function_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX not_like_function_expression_index ON pattern_expression_data(NOT like('z%',value))",0,0,0);
   int like_escape_function_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX like_escape_function_expression_index ON pattern_expression_data(like('a!_%',value,'!'))",0,0,0);
