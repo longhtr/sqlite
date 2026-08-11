@@ -4515,6 +4515,18 @@ const IfnullIndexExpression = struct {
     consumed: usize,
 };
 
+const SignedIndexOperand = struct { value: i64, consumed: usize };
+
+fn resolveSignedIndexOperand(token_list: []const Token, position: usize) ?SignedIndexOperand {
+    if (position >= token_list.len) return null;
+    const negative = token_list[position].typ == tokens.tk_minus;
+    const literal_position = position + @intFromBool(negative);
+    if (literal_position >= token_list.len or token_list[literal_position].typ != tokens.tk_integer) return null;
+    var value = std.fmt.parseInt(i64, token_list[literal_position].text, 10) catch return null;
+    if (negative) value = -value;
+    return .{ .value = value, .consumed = literal_position + 1 - position };
+}
+
 fn resolveIfnullIndexExpression(token_list: []const Token, position: usize) ?IfnullIndexExpression {
     if (position + 5 >= token_list.len or token_list[position].typ != tokens.tk_id or !std.ascii.eqlIgnoreCase(token_list[position].text, "ifnull") or token_list[position + 1].typ != tokens.tk_lp or token_list[position + 2].typ != tokens.tk_id or token_list[position + 3].typ != tokens.tk_comma) return null;
     var literal_position = position + 4;
@@ -4657,16 +4669,20 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
                 generated_virtual = storage_position >= position or parsed.tokens[storage_position].typ == tokens.tk_virtual or !std.ascii.eqlIgnoreCase(parsed.tokens[storage_position].text, "stored");
             }
         }
-        if (schema_is_index and start + 3 == position and (parsed.tokens[start + 1].typ == tokens.tk_plus or parsed.tokens[start + 1].typ == tokens.tk_minus or parsed.tokens[start + 1].typ == tokens.tk_star or parsed.tokens[start + 1].typ == tokens.tk_slash) and parsed.tokens[start + 2].typ == tokens.tk_integer) {
-            var operand = std.fmt.parseInt(i64, parsed.tokens[start + 2].text, 10) catch return error.Syntax;
-            scan_expression = true;
-            if (parsed.tokens[start + 1].typ == tokens.tk_star) {
-                index_transform = .{ .integer_multiply = operand };
-            } else if (parsed.tokens[start + 1].typ == tokens.tk_slash) {
-                index_transform = .{ .integer_divide = operand };
-            } else {
-                if (parsed.tokens[start + 1].typ == tokens.tk_minus) operand = -operand;
-                index_transform = .{ .integer_add = operand };
+        if (schema_is_index and start + 2 < position and (parsed.tokens[start + 1].typ == tokens.tk_plus or parsed.tokens[start + 1].typ == tokens.tk_minus or parsed.tokens[start + 1].typ == tokens.tk_star or parsed.tokens[start + 1].typ == tokens.tk_slash)) {
+            if (resolveSignedIndexOperand(parsed.tokens, start + 2)) |resolved_operand| {
+                if (start + 2 + resolved_operand.consumed == position) {
+                    var operand = resolved_operand.value;
+                    scan_expression = true;
+                    if (parsed.tokens[start + 1].typ == tokens.tk_star) {
+                        index_transform = .{ .integer_multiply = operand };
+                    } else if (parsed.tokens[start + 1].typ == tokens.tk_slash) {
+                        index_transform = .{ .integer_divide = operand };
+                    } else {
+                        if (parsed.tokens[start + 1].typ == tokens.tk_minus) operand = -operand;
+                        index_transform = .{ .integer_add = operand };
+                    }
+                }
             }
         }
         try columns.append(allocator, .{ .name = name, .declared_type = declared_type, .collation = collation, .explicit_collation = explicit_collation, .descending = descending, .record_index = record_index, .integer_primary_key = primary and std.ascii.eqlIgnoreCase(declared_type, "INTEGER"), .primary_key = primary, .unique = unique or primary, .not_null = not_null, .default_start = default_start, .default_end = default_end, .generated_start = generated_start, .generated_end = generated_end, .generated_virtual = generated_virtual, .scan_expression = scan_expression, .index_transform = index_transform });
@@ -9042,20 +9058,19 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if ((switch (transform) {
             .identity => true,
             else => false,
-        }) and position + 1 < token_list.len and (token_list[position].typ == tokens.tk_plus or token_list[position].typ == tokens.tk_minus or token_list[position].typ == tokens.tk_star or token_list[position].typ == tokens.tk_slash) and token_list[position + 1].typ == tokens.tk_integer) {
-            var operand = std.fmt.parseInt(i64, token_list[position + 1].text, 10) catch {
-                allocator.free(source);
-                return .{ .result = .error_, .consumed = consumed };
-            };
-            if (token_list[position].typ == tokens.tk_star) {
-                transform = .{ .integer_multiply = operand };
-            } else if (token_list[position].typ == tokens.tk_slash) {
-                transform = .{ .integer_divide = operand };
-            } else {
-                if (token_list[position].typ == tokens.tk_minus) operand = -operand;
-                transform = .{ .integer_add = operand };
+        }) and position < token_list.len and (token_list[position].typ == tokens.tk_plus or token_list[position].typ == tokens.tk_minus or token_list[position].typ == tokens.tk_star or token_list[position].typ == tokens.tk_slash)) {
+            if (resolveSignedIndexOperand(token_list, position + 1)) |resolved_operand| {
+                var operand = resolved_operand.value;
+                if (token_list[position].typ == tokens.tk_star) {
+                    transform = .{ .integer_multiply = operand };
+                } else if (token_list[position].typ == tokens.tk_slash) {
+                    transform = .{ .integer_divide = operand };
+                } else {
+                    if (token_list[position].typ == tokens.tk_minus) operand = -operand;
+                    transform = .{ .integer_add = operand };
+                }
+                position += 1 + resolved_operand.consumed;
             }
-            position += 2;
         }
         if (wrapped_expression) {
             if (position >= token_list.len or token_list[position].typ != tokens.tk_rp) {

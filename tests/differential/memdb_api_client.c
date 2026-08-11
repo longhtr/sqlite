@@ -291,7 +291,7 @@ int main(void){
   int additive_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE additive_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int additive_expression_first_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(1,20)",0,0,0);
   int additive_expression_second_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(2,10)",0,0,0);
-  int additive_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX additive_expression_index ON additive_expression_data((value+5))",0,0,0);
+  int additive_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX additive_expression_index ON additive_expression_data((value+-5))",0,0,0);
   int additive_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO additive_expression_data VALUES(3,20)",0,0,0);
   int additive_expression_update_rc=sqlite3_exec(clone,"UPDATE additive_expression_data SET value=20 WHERE id=2",0,0,0);
   sqlite3_int64 additive_expression_count=-1;
@@ -302,8 +302,8 @@ int main(void){
   int multiplicative_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE multiplicative_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int multiplicative_expression_first_rc=sqlite3_exec(clone,"INSERT INTO multiplicative_expression_data VALUES(1,20)",0,0,0);
   int multiplicative_expression_second_rc=sqlite3_exec(clone,"INSERT INTO multiplicative_expression_data VALUES(2,10)",0,0,0);
-  int multiplicative_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX multiplicative_expression_index ON multiplicative_expression_data(value*2)",0,0,0);
-  int divisive_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX divisive_expression_index ON multiplicative_expression_data(value/2)",0,0,0);
+  int multiplicative_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX multiplicative_expression_index ON multiplicative_expression_data(value*-2)",0,0,0);
+  int divisive_expression_index_rc=sqlite3_exec(clone,"CREATE INDEX divisive_expression_index ON multiplicative_expression_data(value/-2)",0,0,0);
   int multiplicative_expression_duplicate_rc=sqlite3_exec(clone,"INSERT INTO multiplicative_expression_data VALUES(3,20)",0,0,0);
   int multiplicative_expression_update_rc=sqlite3_exec(clone,"UPDATE multiplicative_expression_data SET value=20 WHERE id=2",0,0,0);
   sqlite3_int64 multiplicative_expression_count=-1;
