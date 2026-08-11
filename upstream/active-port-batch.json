@@ -114,6 +114,15 @@
       "atomic_unit_id": "vdbe-expanded-sql-host-parameter-scan",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btmutex.c::function::btreeLockCarefully::line-105",
+      "source_sha256": "24e19739f3d50233e54a6f9fb7de7289cf394dca6a0337e7bfb992e1ba611958",
+      "zig_declaration_id": "src/core/internal/vdbe_lifecycle.zig::function::btreeLockCarefully",
+      "zig_declaration_sha256": "e3c25e6ff681d840db8c3ac829d2ad36000e4051326b83cfedd558cce331ee8e",
+      "atomic_unit_id": "btree-careful-shared-cache-mutex-ordering",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

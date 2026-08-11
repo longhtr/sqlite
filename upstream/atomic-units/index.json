@@ -283,6 +283,11 @@
       "id": "vdbe-expanded-sql-host-parameter-scan",
       "path": "upstream/atomic-units/vdbe-expanded-sql-host-parameter-scan.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-careful-shared-cache-mutex-ordering",
+      "path": "upstream/atomic-units/btree-careful-shared-cache-mutex-ordering.json",
+      "status": "source-translated"
     }
   ]
 }

@@ -20,6 +20,53 @@ pub const result_range: c_int = 25;
 pub const result_row: c_int = 100;
 pub const result_done: c_int = 101;
 
+const BtreeMutexOperations = struct {
+    context: ?*anyopaque,
+    tryLock: *const fn (?*anyopaque, *types.Btree) c_int,
+    lock: *const fn (?*anyopaque, *types.Btree) void,
+    unlock: *const fn (?*anyopaque, *types.Btree) void,
+};
+
+fn defaultBtreeTryLock(_: ?*anyopaque, _: *types.Btree) c_int {
+    return result_ok;
+}
+fn defaultBtreeLock(_: ?*anyopaque, _: *types.Btree) void {}
+fn defaultBtreeUnlock(_: ?*anyopaque, _: *types.Btree) void {}
+const default_btree_mutex_operations = BtreeMutexOperations{
+    .context = null,
+    .tryLock = defaultBtreeTryLock,
+    .lock = defaultBtreeLock,
+    .unlock = defaultBtreeUnlock,
+};
+
+/// Source `btreeLockCarefully()`: try the requested BtShared lock without
+/// blocking, or release and reacquire all later wanted locks in address order.
+fn btreeLockCarefully(tree: *types.Btree, operations: *const BtreeMutexOperations) void {
+    if (operations.tryLock(operations.context, tree) == result_ok) {
+        tree.locked = 1;
+        return;
+    }
+
+    var later = tree.pNext;
+    while (later) |current| : (later = current.pNext) {
+        std.debug.assert(current.sharable != 0);
+        std.debug.assert(current.locked == 0 or current.wantToLock > 0);
+        if (current.locked != 0) {
+            operations.unlock(operations.context, current);
+            current.locked = 0;
+        }
+    }
+    operations.lock(operations.context, tree);
+    tree.locked = 1;
+    later = tree.pNext;
+    while (later) |current| : (later = current.pNext) {
+        if (current.wantToLock != 0) {
+            operations.lock(operations.context, current);
+            current.locked = 1;
+        }
+    }
+}
+
 /// Source `sqlite3VdbeEnter()`: lock the non-TEMP shared btrees in the VM's
 /// lock mask in database order.
 pub fn enterBtrees(machine: *types.Vdbe) void {
@@ -32,7 +79,9 @@ pub fn enterBtrees(machine: *types.Vdbe) void {
         }
         const tree = db.aDb.?[@intCast(index)].pBt orelse continue;
         tree.wantToLock += 1;
-        tree.locked = 1;
+        if (tree.locked == 0) {
+            btreeLockCarefully(tree, &default_btree_mutex_operations);
+        }
     }
 }
 
@@ -484,6 +533,63 @@ pub fn logAbort(allocator: std.mem.Allocator, machine: *const types.Vdbe, result
     const message = if (machine.zErrMsg) |text| std.mem.span(text) else "error";
     const prefix = if (machine.pFrame != null) "/* trigger */ " else "";
     return std.fmt.allocPrint(allocator, "statement aborts at {d}: {s}; [{s}{s}] ({d})", .{ operation_index, message, prefix, sql, result });
+}
+
+test "source careful Btree lock preserves ascending reacquisition" {
+    const Harness = struct {
+        events: [8]u8 = [_]u8{0} ** 8,
+        count: usize = 0,
+        try_result: c_int = result_ok,
+
+        fn record(context: ?*anyopaque, prefix: u8, tree: *types.Btree) void {
+            const self: *@This() = @ptrCast(@alignCast(context.?));
+            self.events[self.count] = prefix + tree.inTrans;
+            self.count += 1;
+        }
+        fn tryLock(context: ?*anyopaque, tree: *types.Btree) c_int {
+            record(context, 0x10, tree);
+            return @as(*@This(), @ptrCast(@alignCast(context.?))).try_result;
+        }
+        fn lock(context: ?*anyopaque, tree: *types.Btree) void {
+            record(context, 0x20, tree);
+        }
+        fn unlock(context: ?*anyopaque, tree: *types.Btree) void {
+            record(context, 0x30, tree);
+        }
+    };
+    var harness = Harness{};
+    const operations = BtreeMutexOperations{
+        .context = &harness,
+        .tryLock = Harness.tryLock,
+        .lock = Harness.lock,
+        .unlock = Harness.unlock,
+    };
+    var first = std.mem.zeroes(types.Btree);
+    first.inTrans = 1;
+    first.sharable = 1;
+    btreeLockCarefully(&first, &operations);
+    try std.testing.expectEqual(@as(u8, 1), first.locked);
+    try std.testing.expectEqualSlices(u8, &.{0x11}, harness.events[0..harness.count]);
+
+    harness.count = 0;
+    harness.try_result = result_busy;
+    first.locked = 0;
+    var second = std.mem.zeroes(types.Btree);
+    second.inTrans = 2;
+    second.sharable = 1;
+    second.locked = 1;
+    second.wantToLock = 1;
+    var third = std.mem.zeroes(types.Btree);
+    third.inTrans = 3;
+    third.sharable = 1;
+    third.wantToLock = 1;
+    first.pNext = &second;
+    second.pNext = &third;
+    btreeLockCarefully(&first, &operations);
+    try std.testing.expectEqualSlices(u8, &.{ 0x11, 0x32, 0x21, 0x22, 0x23 }, harness.events[0..harness.count]);
+    try std.testing.expectEqual(@as(u8, 1), first.locked);
+    try std.testing.expectEqual(@as(u8, 1), second.locked);
+    try std.testing.expectEqual(@as(u8, 1), third.locked);
 }
 
 fn testExecuteDone(_: ?*anyopaque, _: *types.Vdbe) c_int {
