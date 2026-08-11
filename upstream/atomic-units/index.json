@@ -288,6 +288,11 @@
       "id": "btree-careful-shared-cache-mutex-ordering",
       "path": "upstream/atomic-units/btree-careful-shared-cache-mutex-ordering.json",
       "status": "source-translated"
+    },
+    {
+      "id": "schema-sibling-index-root-page-corruption-check",
+      "path": "upstream/atomic-units/schema-sibling-index-root-page-corruption-check.json",
+      "status": "source-translated"
     }
   ]
 }

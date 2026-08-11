@@ -153,6 +153,18 @@ pub const Index = extern struct {
     }
 };
 
+/// Source `sqlite3IndexHasDuplicateRootPage()`: detect a sibling index on the
+/// same table that aliases the target index root page.
+pub fn indexHasDuplicateRootPage(index: *Index) bool {
+    var sibling = index.table.?.indexes;
+    while (sibling) |candidate| : (sibling = candidate.next) {
+        if (candidate.root_page == index.root_page and candidate != index) {
+            return true;
+        }
+    }
+    return false;
+}
+
 pub const Schema = extern struct {
     cookie: c_int,
     generation: c_int,
@@ -173,6 +185,25 @@ pub const table_flag = struct {
 
 fn expectOffset(comptime Type: type, comptime field: []const u8, expected: usize) !void {
     try std.testing.expectEqual(expected, @offsetOf(Type, field));
+}
+
+test "source index duplicate root page checks sibling identity" {
+    var table = std.mem.zeroes(Table);
+    var first = std.mem.zeroes(Index);
+    var target = std.mem.zeroes(Index);
+    var last = std.mem.zeroes(Index);
+    first.table = &table;
+    target.table = &table;
+    last.table = &table;
+    first.root_page = 2;
+    target.root_page = 5;
+    last.root_page = 5;
+    first.next = &target;
+    target.next = &last;
+    table.indexes = &first;
+    try std.testing.expect(indexHasDuplicateRootPage(&target));
+    last.root_page = 7;
+    try std.testing.expect(!indexHasDuplicateRootPage(&target));
 }
 
 test "active schema storage topology matches the pinned profile" {

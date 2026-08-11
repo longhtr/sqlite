@@ -159,6 +159,15 @@
       "atomic_unit_id": "btree-careful-shared-cache-mutex-ordering",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/prepare.c::function::sqlite3IndexHasDuplicateRootPage::line-62",
+      "source_sha256": "28976b5ae842f02b1fb4a5213cca25adcfd9fc1b98386a042174e73e033b5b31",
+      "zig_declaration_id": "src/core/internal/schema_types.zig::function::indexHasDuplicateRootPage",
+      "zig_declaration_sha256": "3524c5fec8c6f2d1e1f00066cc16ec8a32d4c3b44a0d6f7bea56ea27a275ba27",
+      "atomic_unit_id": "schema-sibling-index-root-page-corruption-check",
+      "class": "short",
+      "complete": true
     }
   ]
 }

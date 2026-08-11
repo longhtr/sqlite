@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "schema-sibling-index-root-page-corruption-check",
+  "title": "Schema sibling-index root-page corruption check",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3IndexHasDuplicateRootPage detects a corrupt schema in which two distinct indexes on one table claim the same B-tree root page while correctly ignoring the target index itself.",
+    "source_files": [{"path": "src/prepare.c", "sha256": "bf077b16c691e81824700915c1e85a512d85b05c623b2d0ae1136937e0e3dad7"}],
+    "source_entity_ids": ["src/prepare.c::function::sqlite3IndexHasDuplicateRootPage::line-62"],
+    "behavioral_block_ids": [
+      "src/prepare.c::function::sqlite3IndexHasDuplicateRootPage::behavior::for::line-64-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3IndexHasDuplicateRootPage::behavior::if::line-65-column-5::ordinal-0",
+      "src/prepare.c::function::sqlite3IndexHasDuplicateRootPage::behavior::return::line-65-column-46::ordinal-0",
+      "src/prepare.c::function::sqlite3IndexHasDuplicateRootPage::behavior::return::line-67-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Schema row parsing", "Index allocation and hash insertion", "Corruption error publication"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Source-layout Table.indexes and Index.next sibling-list integrity"],
+    "caller_closure": "The complete predicate body is assigned. Integration into schema initialization before index publication remains open."
+  },
+  "contracts": {
+    "inputs": ["Index with a non-null owning table and a finite sibling index list"],
+    "outputs": ["True only when a distinct sibling has the same root-page number"],
+    "ownership": "Index, table, and sibling list are borrowed and never mutated.",
+    "state_and_results": "Traversal starts at table.indexes, compares root-page equality and pointer inequality, and stops on the first duplicate.",
+    "locks_callbacks_io": "Caller owns schema mutex requirements. No callbacks, allocation, or I/O.",
+    "failure_and_continuation": "The source assumes valid non-null ownership links; a list without duplicates returns false."
+  },
+  "mappings": [{
+    "source_entity_id": "src/prepare.c::function::sqlite3IndexHasDuplicateRootPage::line-62",
+    "relation": "source-sibling-root-check-to-native-schema-predicate",
+    "zig_declaration_ids": ["src/core/internal/schema_types.zig::function::indexHasDuplicateRootPage"]
+  }],
+  "representation_differences": ["The source integer predicate result is represented as Zig bool; sibling pointers and 32-bit root pages remain source-layout fields."],
+  "oracle": {
+    "protocol": "A native source-layout unit trace builds a three-index sibling list, checks a duplicate after the target, changes that sibling root, and checks the no-duplicate result; compare booleans and unchanged list state.",
+    "internal_observations": ["duplicate predicate", "self-identity exclusion", "sibling list/root-page immutability"],
+    "normalization": "Pointer addresses are not compared except for target identity; root-page numbers and predicate are exact. Pinned-C schema initialization trace remains pending."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O or mutable shared state; caller schema mutex remains external.",
+    "malformed_input": "Duplicate root pages return true; null owner and cyclic list violate the source precondition.",
+    "continuation": "Predicate does not mutate schema objects.",
+    "performance": "Linear in sibling indexes with early success return.",
+    "commands": ["zig build test", "zig build internal-parse-layout-test"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/schema_types.zig source-layout schema owner",
+    "native_call_path": "The predicate is compiled and unit-traced against source-layout Index/Table values; schema initialization dispatch remains pending.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires schema initialization integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Call the predicate from source-shaped schema index initialization.", "Add pinned-C malformed duplicate-root schema fixture.", "Verify exact corruption error publication and continuation.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/prepare.c:1-70 was reviewed for schema-corruption reporting context and the complete duplicate-root predicate", "upstream/sqlite/src/prepare.c:70-180 was reviewed for schema initialization caller context", "src/core/internal/schema_types.zig Table/Index source-layout fields and current schema owners were reviewed"],
+    "callers": ["Schema initialization checks a newly parsed index against already linked siblings", "Native source-layout unit trace calls the predicate directly"],
+    "callees": ["Direct Table.indexes, Index.next, root_page, and pointer-identity reads only"],
+    "assertions_branches_cleanup": ["All four active behavior IDs cover sibling traversal, duplicate condition, early true, and final false", "The target index is excluded by pointer identity even though it necessarily shares its own root page", "No cleanup or mutation exists"],
+    "upstream_tests": ["Upstream corrupt-schema, duplicate-root, prepare, schema reload, and writable-schema suites cover this predicate", "Project source-layout unit trace covers duplicate, self exclusion, and no-duplicate outcomes"]
+  },
+  "evidence_receipts": []
+}
