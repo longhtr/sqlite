@@ -5853,57 +5853,59 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
     return .{ .column_index = selected, .integer_primary_key = columns[selected].integer_primary_key, .operation = operation, .comparison_value = comparison_value };
 }
 
-fn resolveIndexPredicateTerm(token_list: []const Token, columns: []const ResolvedColumn, position: *usize) error{Syntax}!btree.IndexPredicateTerm {
-    const wrapped_term = position.* < token_list.len and token_list[position.*].typ == tokens.tk_lp;
-    if (wrapped_term) position.* += 1;
-    const term = try resolveIndexPredicateTermInner(token_list, columns, position);
-    if (wrapped_term) {
-        if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_rp) return error.Syntax;
-        position.* += 1;
-    }
-    return term;
+const IndexPredicateParseError = error{Syntax};
+
+fn appendIndexPredicateNode(predicate: *btree.IndexPredicate, node_count: *usize, node: btree.IndexPredicateNode) IndexPredicateParseError!void {
+    if (node_count.* == predicate.nodes.len) return error.Syntax;
+    predicate.nodes[node_count.*] = node;
+    node_count.* += 1;
 }
 
-fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedColumn) error{Syntax}!?btree.IndexPredicate {
+fn resolveIndexPredicatePrimary(token_list: []const Token, columns: []const ResolvedColumn, position: *usize, predicate: *btree.IndexPredicate, node_count: *usize, term_count: *usize) IndexPredicateParseError!void {
+    const negated_group = position.* + 1 < token_list.len and token_list[position.*].typ == tokens.tk_not and token_list[position.* + 1].typ == tokens.tk_lp;
+    if (negated_group) position.* += 1;
+    if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_lp) {
+        position.* += 1;
+        try resolveIndexPredicateOr(token_list, columns, position, predicate, node_count, term_count);
+        if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_rp) return error.Syntax;
+        position.* += 1;
+        if (negated_group) try appendIndexPredicateNode(predicate, node_count, .not_);
+        return;
+    }
+    if (negated_group or term_count.* == 8) return error.Syntax;
+    const term = try resolveIndexPredicateTermInner(token_list, columns, position);
+    try appendIndexPredicateNode(predicate, node_count, .{ .term = term });
+    term_count.* += 1;
+}
+
+fn resolveIndexPredicateAnd(token_list: []const Token, columns: []const ResolvedColumn, position: *usize, predicate: *btree.IndexPredicate, node_count: *usize, term_count: *usize) IndexPredicateParseError!void {
+    try resolveIndexPredicatePrimary(token_list, columns, position, predicate, node_count, term_count);
+    while (position.* < token_list.len and token_list[position.*].typ == tokens.tk_and) {
+        position.* += 1;
+        try resolveIndexPredicatePrimary(token_list, columns, position, predicate, node_count, term_count);
+        try appendIndexPredicateNode(predicate, node_count, .and_);
+    }
+}
+
+fn resolveIndexPredicateOr(token_list: []const Token, columns: []const ResolvedColumn, position: *usize, predicate: *btree.IndexPredicate, node_count: *usize, term_count: *usize) IndexPredicateParseError!void {
+    try resolveIndexPredicateAnd(token_list, columns, position, predicate, node_count, term_count);
+    while (position.* < token_list.len and token_list[position.*].typ == tokens.tk_or) {
+        position.* += 1;
+        try resolveIndexPredicateAnd(token_list, columns, position, predicate, node_count, term_count);
+        try appendIndexPredicateNode(predicate, node_count, .or_);
+    }
+}
+
+fn resolveIndexPredicate(token_list: []const Token, columns: []const ResolvedColumn) IndexPredicateParseError!?btree.IndexPredicate {
     var position: usize = 0;
     while (position < token_list.len and token_list[position].typ != tokens.tk_where) : (position += 1) {}
     if (position == token_list.len) return null;
     position += 1;
-    var wrapped_predicate = false;
-    if (position < token_list.len and token_list[position].typ == tokens.tk_lp) {
-        var depth: usize = 0;
-        for (token_list[position..], position..) |token, index| {
-            if (token.typ == tokens.tk_lp) depth += 1;
-            if (token.typ == tokens.tk_rp) {
-                if (depth == 0) return error.Syntax;
-                depth -= 1;
-                if (depth == 0) {
-                    wrapped_predicate = index + 1 == token_list.len;
-                    break;
-                }
-            }
-        }
-    }
-    if (wrapped_predicate) position += 1;
     var predicate = btree.IndexPredicate{};
-    predicate.terms[0] = try resolveIndexPredicateTerm(token_list, columns, &position);
-    var term_count: usize = 1;
-    while (position < token_list.len and (!wrapped_predicate or token_list[position].typ != tokens.tk_rp)) {
-        if (term_count == predicate.terms.len) return error.Syntax;
-        predicate.combinations[term_count - 1] = switch (token_list[position].typ) {
-            tokens.tk_and => .and_,
-            tokens.tk_or => .or_,
-            else => return error.Syntax,
-        };
-        position += 1;
-        predicate.terms[term_count] = try resolveIndexPredicateTerm(token_list, columns, &position);
-        term_count += 1;
-    }
-    if (wrapped_predicate) {
-        if (position >= token_list.len or token_list[position].typ != tokens.tk_rp) return error.Syntax;
-        position += 1;
-    }
-    if (position != token_list.len) return error.Syntax;
+    var node_count: usize = 0;
+    var term_count: usize = 0;
+    try resolveIndexPredicateOr(token_list, columns, &position, &predicate, &node_count, &term_count);
+    if (position != token_list.len or term_count == 0) return error.Syntax;
     return predicate;
 }
 

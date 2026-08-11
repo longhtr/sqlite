@@ -530,11 +530,15 @@ pub const IndexPredicateTerm = struct {
     text_collation: IndexPredicateTextCollation = .binary,
 };
 
-pub const IndexPredicateCombination = enum { and_, or_ };
+pub const IndexPredicateNode = union(enum) {
+    term: IndexPredicateTerm,
+    and_,
+    or_,
+    not_,
+};
 
 pub const IndexPredicate = struct {
-    terms: [8]?IndexPredicateTerm = .{ null, null, null, null, null, null, null, null },
-    combinations: [7]IndexPredicateCombination = .{ .and_, .and_, .and_, .and_, .and_, .and_, .and_ },
+    nodes: [23]?IndexPredicateNode = .{null} ** 23,
 };
 
 fn indexPredicateTextOrder(value: []const u8, literal: []const u8, collation: IndexPredicateTextCollation) ?std.math.Order {
@@ -666,25 +670,35 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
 }
 
 pub fn indexPredicateRecordMatches(predicate: IndexPredicate, values: []const Value, rowid: i64) ?bool {
-    const first = predicate.terms[0] orelse return null;
-    if (first.column_index >= values.len) return null;
-    const first_value: Value = if (first.integer_primary_key) .{ .integer = rowid } else values[first.column_index];
-    var disjunction = false;
-    var conjunction = indexPredicateMatches(first, first_value);
-    for (predicate.terms[1..], 1..) |optional_term, index| {
-        const term = optional_term orelse break;
-        if (term.column_index >= values.len) return null;
-        const value: Value = if (term.integer_primary_key) .{ .integer = rowid } else values[term.column_index];
-        const matches = indexPredicateMatches(term, value);
-        switch (predicate.combinations[index - 1]) {
-            .and_ => conjunction = conjunction and matches,
-            .or_ => {
-                disjunction = disjunction or conjunction;
-                conjunction = matches;
+    var stack: [8]bool = undefined;
+    var stack_count: usize = 0;
+    for (predicate.nodes) |optional_node| {
+        const node = optional_node orelse break;
+        switch (node) {
+            .term => |term| {
+                if (term.column_index >= values.len or stack_count == stack.len) return null;
+                const value: Value = if (term.integer_primary_key) .{ .integer = rowid } else values[term.column_index];
+                stack[stack_count] = indexPredicateMatches(term, value);
+                stack_count += 1;
+            },
+            .not_ => {
+                if (stack_count == 0) return null;
+                stack[stack_count - 1] = !stack[stack_count - 1];
+            },
+            .and_, .or_ => {
+                if (stack_count < 2) return null;
+                const right = stack[stack_count - 1];
+                stack_count -= 1;
+                const conjunction = switch (node) {
+                    .and_ => true,
+                    .or_ => false,
+                    else => unreachable,
+                };
+                stack[stack_count - 1] = if (conjunction) stack[stack_count - 1] and right else stack[stack_count - 1] or right;
             },
         }
     }
-    return disjunction or conjunction;
+    return if (stack_count == 1) stack[0] else null;
 }
 
 pub const RecordView = struct {
