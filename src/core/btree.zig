@@ -197,7 +197,7 @@ pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     };
 }
 
-pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not, text_lt, text_le, text_gt, text_ge };
+pub const IndexPredicateOperation = enum { is_null, is_not_null, integer_eq, integer_ne, integer_lt, integer_le, integer_gt, integer_ge, integer_between, integer_not_between, integer_in, integer_not_in, integer_is, integer_is_not, text_eq, text_ne, text_in, text_not_in, text_is, text_is_not, text_lt, text_le, text_gt, text_ge, text_between, text_not_between };
 
 pub const IndexPredicateTextCollation = enum { binary, nocase, rtrim };
 
@@ -255,6 +255,16 @@ pub fn indexPredicateMatches(predicate: IndexPredicateTerm, value: Value) bool {
         .is_not_null => switch (value) {
             .null_ => false,
             else => true,
+        },
+        .text_between, .text_not_between => {
+            const text = switch (value) {
+                .text => |text| text,
+                else => return false,
+            };
+            const low_order = indexPredicateTextOrder(text, predicate.comparison_text, predicate.text_collation) orelse return false;
+            const high_order = indexPredicateTextOrder(text, predicate.comparison_text_high, predicate.text_collation) orelse return false;
+            const between = low_order != .lt and high_order != .gt;
+            return if (predicate.operation == .text_between) between else !between;
         },
         .text_lt, .text_le, .text_gt, .text_ge => {
             const text = switch (value) {

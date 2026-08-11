@@ -5608,6 +5608,15 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
     const integer_column = columns[selected].integer_primary_key or std.ascii.eqlIgnoreCase(columns[selected].declared_type, "INTEGER");
     const text_column = std.ascii.eqlIgnoreCase(columns[selected].declared_type, "TEXT");
     const text_collation: ?btree.IndexPredicateTextCollation = if (std.ascii.eqlIgnoreCase(columns[selected].collation, "BINARY")) .binary else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "NOCASE")) .nocase else if (std.ascii.eqlIgnoreCase(columns[selected].collation, "RTRIM")) .rtrim else null;
+    const text_not_between = position.* < token_list.len and token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_between;
+    if (!boolean_negated and text_column and text_collation != null and position.* < token_list.len and (token_list[position.*].typ == tokens.tk_between or text_not_between)) {
+        position.* += if (text_not_between) 2 else 1;
+        if (position.* + 2 >= token_list.len or token_list[position.*].typ != tokens.tk_string or token_list[position.* + 1].typ != tokens.tk_and or token_list[position.* + 2].typ != tokens.tk_string) return error.Syntax;
+        const low_text = token_list[position.*].text;
+        const high_text = token_list[position.* + 2].text;
+        position.* += 3;
+        return .{ .column_index = selected, .integer_primary_key = false, .operation = if (text_not_between) .text_not_between else .text_between, .comparison_text = low_text, .comparison_text_high = high_text, .text_collation = text_collation.? };
+    }
     const text_not_in = position.* < token_list.len and token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_in;
     if (!boolean_negated and text_column and text_collation != null and position.* < token_list.len and (token_list[position.*].typ == tokens.tk_in or text_not_in)) {
         position.* += if (text_not_in) 2 else 1;
