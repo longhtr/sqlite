@@ -816,6 +816,43 @@ pub const Database = struct {
         return .ok;
     }
 
+    /// Source `sqlite3RefillIndex()` path used by REINDEX. Clear the existing
+    /// root and repopulate it with the current key information atomically.
+    pub fn refillSchemaIndex(self: *Database, root_page: u32, table_root: u32, column_indices: []const usize, integer_primary_key_position: ?usize, collations: []const IndexCollation, sort_orders: []const IndexSortOrder, predicate: ?IndexPredicate, unique: bool) ResultCode {
+        if (!self.writable) return .read_only;
+        if (column_indices.len == 0 or collations.len != column_indices.len or sort_orders.len != column_indices.len) return .misuse;
+        const table_opened = self.openCursor(table_root, .table);
+        if (table_opened.result != .ok) return table_opened.result;
+        var table_cursor = table_opened.cursor.?;
+        defer table_cursor.deinit();
+        const cleared = rebuildIndex(self, root_page, &.{});
+        if (cleared != .ok) return cleared;
+        for (table_cursor.entries.items) |entry| {
+            const rowid = entry.rowid orelse return .corrupt;
+            const decoded = decodeRecord(self.allocator, entry.payload);
+            if (decoded.result != .ok) return decoded.result;
+            var record = decoded.record.?;
+            defer record.deinit();
+            if (predicate) |filter| {
+                if (filter.column_index >= record.values.len) return .corrupt;
+                const value: Value = if (filter.integer_primary_key) .{ .integer = rowid } else record.values[filter.column_index];
+                if (!indexPredicateMatches(filter, value)) continue;
+            }
+            const key_values = self.allocator.alloc(Value, column_indices.len + 1) catch return .no_memory;
+            defer self.allocator.free(key_values);
+            for (column_indices, 0..) |column_index, index| {
+                if (column_index >= record.values.len) return .corrupt;
+                key_values[index] = if (integer_primary_key_position == index) .{ .integer = rowid } else record.values[column_index];
+            }
+            key_values[column_indices.len] = .{ .integer = rowid };
+            const payload = encodeRecord(self.allocator, key_values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+            defer self.allocator.free(payload);
+            const inserted = if (unique) self.insertUniqueIndexWithKeyInfo(root_page, payload, column_indices.len, collations, sort_orders) else self.insertIndexWithKeyInfo(root_page, payload, collations, sort_orders);
+            if (inserted != .ok) return inserted;
+        }
+        return .ok;
+    }
+
     pub fn dropSchemaTable(self: *Database, name: []const u8, if_exists: bool) ResultCode {
         if (!self.writable) return .read_only;
         const opened = self.openCursor(1, .table);

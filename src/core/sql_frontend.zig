@@ -3622,6 +3622,7 @@ const ProgramAction = union(enum) {
     virtual_drop: struct { connection: *Connection, schema_name: []const u8, name: []const u8 },
     drop: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
     drop_index: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
+    reindex: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8 },
     insert: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, column_count: usize, integer_primary_key: ?usize, replace: bool, conflict_ignore: bool },
     update: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, target_column: usize, target_integer_primary_key: bool, foreign_key_old_mask: u32 },
     delete: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, foreign_key_old_mask: u32 },
@@ -5564,6 +5565,52 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
         }
     }
     return .ok;
+}
+
+fn reindexSecondaryIndex(connection: *Connection, database: *btree.Database, name: []const u8) ResultCode {
+    const index_outcome = database.schemaIndex(name);
+    if (index_outcome.result != .ok) return index_outcome.result;
+    var index_schema = index_outcome.table.?;
+    defer index_schema.deinit();
+    const index_columns = resolveColumns(connection.allocator, index_schema.sql) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+    defer {
+        connection.allocator.free(index_columns.columns);
+        connection.allocator.free(index_columns.tokens);
+        connection.allocator.free(index_columns.source);
+    }
+    var on_position: usize = 0;
+    while (on_position < index_columns.tokens.len and index_columns.tokens[on_position].typ != tokens.tk_on) : (on_position += 1) {}
+    if (on_position + 1 >= index_columns.tokens.len or index_columns.tokens[on_position + 1].typ != tokens.tk_id) return .corrupt;
+    const table_name = index_columns.tokens[on_position + 1].text;
+    const table_outcome = database.schemaTable(table_name);
+    if (table_outcome.result != .ok) return table_outcome.result;
+    var table = table_outcome.table.?;
+    defer table.deinit();
+    const table_columns = resolveColumns(connection.allocator, table.sql) catch |err| return if (err == error.OutOfMemory) .no_memory else .error_;
+    defer {
+        connection.allocator.free(table_columns.columns);
+        connection.allocator.free(table_columns.tokens);
+        connection.allocator.free(table_columns.source);
+    }
+    const selected = connection.allocator.alloc(usize, index_columns.columns.len) catch return .no_memory;
+    defer connection.allocator.free(selected);
+    const collations = connection.allocator.alloc(btree.IndexCollation, index_columns.columns.len) catch return .no_memory;
+    defer connection.allocator.free(collations);
+    const sort_orders = connection.allocator.alloc(btree.IndexSortOrder, index_columns.columns.len) catch return .no_memory;
+    defer connection.allocator.free(sort_orders);
+    var integer_primary_key_position: ?usize = null;
+    for (index_columns.columns, 0..) |index_column, selected_position| {
+        const column_index = resolvedColumnIndex(table_columns.columns, index_column.name) orelse return .corrupt;
+        selected[selected_position] = column_index;
+        const table_column = table_columns.columns[column_index];
+        if (table_column.integer_primary_key) integer_primary_key_position = selected_position;
+        const collation_name = if (index_column.explicit_collation) index_column.collation else table_column.collation;
+        collations[selected_position] = indexCollation(connection, collation_name) orelse return .error_;
+        sort_orders[selected_position] = if (index_column.descending) .descending else .ascending;
+    }
+    const predicate = resolveIndexPredicate(index_columns.tokens, table_columns.columns) catch return .corrupt;
+    const unique = index_columns.tokens.len > 1 and index_columns.tokens[1].typ == tokens.tk_unique;
+    return database.refillSchemaIndex(index_schema.root_page, table.root_page, selected, integer_primary_key_position, collations, sort_orders, predicate, unique);
 }
 
 fn clearForeignKeyActionAllocations(connection: *Connection) void {
@@ -8080,6 +8127,23 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             batch_active = false;
             break :blk action.connection.afterWrite(committed, null, action.schema_name, action.name, 0);
         },
+        .reindex => |action| blk: {
+            const permission = action.connection.beforeWrite();
+            if (permission != .ok) break :blk permission;
+            const enlisted = enlistTransactionDatabase(action.connection, action.database);
+            if (enlisted != .ok) break :blk enlisted;
+            const begin = action.database.beginStatementBatch();
+            if (begin != .ok) break :blk begin;
+            var batch_active = true;
+            defer if (batch_active) {
+                _ = action.database.rollbackStatementBatch();
+            };
+            const refilled = reindexSecondaryIndex(action.connection, action.database, action.name);
+            if (refilled != .ok) break :blk refilled;
+            const committed = action.database.commitStatementBatch();
+            batch_active = false;
+            break :blk action.connection.afterWrite(committed, null, action.schema_name, action.name, 0);
+        },
         .vacuum => |action| blk: {
             const database = action.connection.database orelse break :blk .misuse;
             if (action.connection.autovacuum_callback) |callback| _ = callback(action.connection.autovacuum_context, "main", 0, 0, 4096);
@@ -8648,6 +8712,57 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
     return .{ .result = .ok, .statement = prepared, .consumed = consumed };
 }
 
+fn compileReindex(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
+    const allocator = connection.allocator;
+    if (token_list.len != 2 and token_list.len != 4) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    var requested_schema: ?[]const u8 = null;
+    var index_name = token_list[1].text;
+    if (token_list.len == 4) {
+        if (token_list[1].typ != tokens.tk_id or token_list[2].typ != tokens.tk_dot or token_list[3].typ != tokens.tk_id) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        requested_schema = index_name;
+        index_name = token_list[3].text;
+    } else if (token_list[1].typ != tokens.tk_id) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const located = locateIndexWithDatabase(connection, index_name, requested_schema);
+    if (located.result != .ok) {
+        allocator.free(source);
+        return .{ .result = if (located.result == .not_found) .error_ else located.result, .consumed = consumed };
+    }
+    var schema_index = located.index.?;
+    schema_index.deinit();
+    const owner = allocator.create(Owner) catch {
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const instructions = allocator.alloc(vdbe.Instruction, 2) catch {
+        allocator.destroy(owner);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const parameters = allocator.alloc(statement.ParameterMetadata, 0) catch unreachable;
+    const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
+    instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
+    instructions[1] = .{ .opcode = .halt };
+    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .reindex = .{ .connection = connection, .database = located.database.?, .schema_name = located.schema_name, .name = index_name } }, .program = .{ .instructions = instructions, .register_count = 1 } };
+    owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
+    owner.program.functions = owner.functions[0..];
+    const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
+        Owner.destroy(allocator, owner);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    prepared.adoptOwner(owner, Owner.destroy);
+    prepared.markWritable();
+    return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+}
+
 fn compileDropIndex(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
     const allocator = connection.allocator;
     var position: usize = 2;
@@ -8729,6 +8844,7 @@ fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const To
     const allocator = connection.allocator;
     if (token_list.len > 1 and token_list[0].typ == tokens.tk_create and token_list[1].typ == tokens.tk_virtual) return compileVirtualSchema(connection, source, token_list, consumed);
     if (token_list.len > 1 and token_list[0].typ == tokens.tk_create and (token_list[1].typ == tokens.tk_index or token_list[1].typ == tokens.tk_unique)) return compileIndexSchema(connection, source, token_list, consumed);
+    if (token_list[0].typ == tokens.tk_reindex) return compileReindex(connection, source, token_list, consumed);
     if (token_list.len > 1 and token_list[0].typ == tokens.tk_drop and token_list[1].typ == tokens.tk_index) return compileDropIndex(connection, source, token_list, consumed);
     if ((token_list.len == 3 or token_list.len == 5) and token_list[0].typ == tokens.tk_drop and token_list[1].typ == tokens.tk_table and schemaIdentifierToken(token_list[2])) {
         var virtual_schema_name: []const u8 = "main";
@@ -9643,7 +9759,7 @@ fn compile(connection: *Connection, source_bytes: []const u8) CompileOutcome {
     if (tokenized.tokens[0].typ == tokens.tk_pragma or tokenized.tokens[0].typ == tokens.tk_vacuum or
         (tokenized.tokens[0].typ == tokens.tk_select and tokenized.tokens.len > 1 and tokenized.tokens[1].typ == tokens.tk_id and schema_program_runtime.singleRowWindowValue(tokenized.tokens[1].text) != null))
         return compileAdvanced(connection, source, tokenized.tokens, tokenized.consumed);
-    if (tokenized.tokens[0].typ == tokens.tk_create or tokenized.tokens[0].typ == tokens.tk_drop)
+    if (tokenized.tokens[0].typ == tokens.tk_create or tokenized.tokens[0].typ == tokens.tk_drop or tokenized.tokens[0].typ == tokens.tk_reindex)
         return compileSchema(connection, source, tokenized.tokens, tokenized.consumed);
     if (tokenized.tokens[0].typ == tokens.tk_insert)
         return compileInsert(connection, source, tokenized.tokens, tokenized.consumed);
