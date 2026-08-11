@@ -322,6 +322,17 @@ int main(void){
   int absolute_expression_reindex_rc=sqlite3_exec(clone,"REINDEX absolute_expression_index",0,0,0);
   int absolute_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE absolute_expression_data",0,0,0);
   printf("absolute-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",absolute_expression_table_rc,absolute_expression_first_rc,absolute_expression_index_rc,absolute_expression_conflict_rc,absolute_expression_second_rc,absolute_expression_update_rc,absolute_expression_count_rc,(long long)absolute_expression_count,absolute_expression_reindex_rc,absolute_expression_drop_rc);
+  int ifnull_expression_table_rc=sqlite3_exec(clone,"CREATE TABLE ifnull_expression_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
+  int ifnull_expression_first_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(1,NULL)",0,0,0);
+  int ifnull_expression_index_rc=sqlite3_exec(clone,"CREATE UNIQUE INDEX ifnull_expression_index ON ifnull_expression_data(ifnull(value,0))",0,0,0);
+  int ifnull_expression_conflict_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(2,0)",0,0,0);
+  int ifnull_expression_second_rc=sqlite3_exec(clone,"INSERT INTO ifnull_expression_data VALUES(2,1)",0,0,0);
+  int ifnull_expression_update_rc=sqlite3_exec(clone,"UPDATE ifnull_expression_data SET value=NULL WHERE id=2",0,0,0);
+  sqlite3_int64 ifnull_expression_count=-1;
+  int ifnull_expression_count_rc=query_value(clone,"SELECT count(*) FROM ifnull_expression_data",&ifnull_expression_count);
+  int ifnull_expression_reindex_rc=sqlite3_exec(clone,"REINDEX ifnull_expression_index",0,0,0);
+  int ifnull_expression_drop_rc=sqlite3_exec(clone,"DROP TABLE ifnull_expression_data",0,0,0);
+  printf("ifnull-expression-index\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\n",ifnull_expression_table_rc,ifnull_expression_first_rc,ifnull_expression_index_rc,ifnull_expression_conflict_rc,ifnull_expression_second_rc,ifnull_expression_update_rc,ifnull_expression_count_rc,(long long)ifnull_expression_count,ifnull_expression_reindex_rc,ifnull_expression_drop_rc);
   int partial_table_create_rc=sqlite3_exec(clone,"CREATE TABLE partial_index_data(id INTEGER PRIMARY KEY,value INTEGER)",0,0,0);
   int partial_null_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(1,NULL)",0,0,0);
   int partial_value_insert_rc=sqlite3_exec(clone,"INSERT INTO partial_index_data VALUES(2,20)",0,0,0);

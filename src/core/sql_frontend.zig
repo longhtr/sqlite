@@ -4547,7 +4547,11 @@ fn resolveColumns(allocator: std.mem.Allocator, sql: []const u8) !struct { sourc
         var index_transform: btree.IndexTransform = .identity;
         var name: []const u8 = undefined;
         var start = position;
-        if (schema_is_index and position + 3 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "abs") and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_rp) {
+        if (schema_is_index and position + 5 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "ifnull") and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_comma and parsed.tokens[position + 4].typ == tokens.tk_integer and parsed.tokens[position + 5].typ == tokens.tk_rp) {
+            scan_expression = true;
+            index_transform = .{ .null_coalesce_integer = std.fmt.parseInt(i64, parsed.tokens[position + 4].text, 10) catch return error.Syntax };
+            name = parsed.tokens[position + 2].text;
+        } else if (schema_is_index and position + 3 < parsed.tokens.len and parsed.tokens[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(parsed.tokens[position].text, "abs") and parsed.tokens[position + 1].typ == tokens.tk_lp and parsed.tokens[position + 2].typ == tokens.tk_id and parsed.tokens[position + 3].typ == tokens.tk_rp) {
             scan_expression = true;
             index_transform = .numeric_abs;
             name = parsed.tokens[position + 2].text;
@@ -8886,7 +8890,15 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
         if (wrapped_expression) position += 1;
         var transform: btree.IndexTransform = .identity;
         var column_name: []const u8 = undefined;
-        if (position + 3 < token_list.len and token_list[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(token_list[position].text, "abs") and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_rp) {
+        if (position + 5 < token_list.len and token_list[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(token_list[position].text, "ifnull") and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_comma and token_list[position + 4].typ == tokens.tk_integer and token_list[position + 5].typ == tokens.tk_rp) {
+            const replacement = std.fmt.parseInt(i64, token_list[position + 4].text, 10) catch {
+                allocator.free(source);
+                return .{ .result = .error_, .consumed = consumed };
+            };
+            transform = .{ .null_coalesce_integer = replacement };
+            column_name = token_list[position + 2].text;
+            position += 6;
+        } else if (position + 3 < token_list.len and token_list[position].typ == tokens.tk_id and std.ascii.eqlIgnoreCase(token_list[position].text, "abs") and token_list[position + 1].typ == tokens.tk_lp and token_list[position + 2].typ == tokens.tk_id and token_list[position + 3].typ == tokens.tk_rp) {
             transform = .numeric_abs;
             column_name = token_list[position + 2].text;
             position += 4;
@@ -9007,7 +9019,7 @@ fn compileIndexSchema(connection: *Connection, source: [:0]u8, token_list: []con
             return .{ .result = .error_, .consumed = consumed };
         };
         const transformed = switch (specified_transforms.items[selected_position]) {
-            .identity => false,
+            .identity, .null_coalesce_integer => false,
             .numeric_negate, .numeric_abs, .integer_add, .integer_multiply, .integer_divide => true,
         };
         if (transformed and !resolved.columns[selected].integer_primary_key and !std.ascii.eqlIgnoreCase(resolved.columns[selected].declared_type, "INTEGER")) {

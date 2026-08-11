@@ -46,6 +46,7 @@ pub const IndexTransform = union(enum) {
     identity,
     numeric_negate,
     numeric_abs,
+    null_coalesce_integer: i64,
     integer_add: i64,
     integer_multiply: i64,
     integer_divide: i64,
@@ -65,11 +66,15 @@ fn numericIndexValue(value: Value) Value {
 pub fn transformIndexValue(transform: IndexTransform, value: Value) Value {
     switch (transform) {
         .identity => return value,
+        .null_coalesce_integer => |replacement| return switch (value) {
+            .null_ => .{ .integer = replacement },
+            else => value,
+        },
         else => {},
     }
     const numeric = numericIndexValue(value);
     return switch (transform) {
-        .identity => unreachable,
+        .identity, .null_coalesce_integer => unreachable,
         .numeric_negate => switch (numeric) {
             .null_ => .null_,
             .integer => |integer| if (integer == std.math.minInt(i64)) .{ .real = -@as(f64, @floatFromInt(integer)) } else .{ .integer = -integer },
