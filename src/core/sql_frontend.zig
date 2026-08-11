@@ -5548,14 +5548,16 @@ fn resolveIndexPredicateTermInner(token_list: []const Token, columns: []const Re
     var comparison_value: i64 = 0;
     if (token_list[position.*].typ == tokens.tk_is) {
         position.* += 1;
-        if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_not) {
-            operation = .is_not_null;
+        const is_not = position.* < token_list.len and token_list[position.*].typ == tokens.tk_not;
+        if (is_not) position.* += 1;
+        if (position.* < token_list.len and token_list[position.*].typ == tokens.tk_null) {
+            operation = if (is_not) .is_not_null else .is_null;
             position.* += 1;
         } else {
-            operation = .is_null;
+            if (!integer_column) return error.Syntax;
+            operation = if (is_not) .integer_is_not else .integer_is;
+            comparison_value = try resolveIndexPredicateInteger(token_list, position);
         }
-        if (position.* >= token_list.len or token_list[position.*].typ != tokens.tk_null) return error.Syntax;
-        position.* += 1;
     } else {
         if (!integer_column) return error.Syntax;
         const not_in = token_list[position.*].typ == tokens.tk_not and position.* + 1 < token_list.len and token_list[position.* + 1].typ == tokens.tk_in;
