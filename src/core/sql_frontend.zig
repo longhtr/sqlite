@@ -7676,9 +7676,24 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             break :blk .error_;
         },
         .create => |action| blk: {
+            const database = action.database;
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
-            break :blk action.connection.afterWrite(action.database.createSchemaTable(action.name, action.sql, action.if_not_exists), null, action.schema_name, action.name, 0);
+            const enlisted = enlistTransactionDatabase(action.connection, database);
+            if (enlisted != .ok) break :blk enlisted;
+            const begin = database.beginStatementBatch();
+            if (begin != .ok) break :blk begin;
+            var batch_active = true;
+            defer {
+                if (batch_active) {
+                    _ = database.rollbackStatementBatch();
+                }
+            }
+            const created = database.createSchemaTable(action.name, action.sql, action.if_not_exists);
+            if (created != .ok) break :blk created;
+            const committed = database.commitStatementBatch();
+            batch_active = false;
+            break :blk action.connection.afterWrite(committed, null, action.schema_name, action.name, 0);
         },
         .drop => |action| blk: {
             std.debug.assert(action.connection.foreign_key_action_allocations.items.len == 0);
@@ -7686,14 +7701,16 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             const database = action.database;
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
+            const enlisted = enlistTransactionDatabase(action.connection, database);
+            if (enlisted != .ok) break :blk enlisted;
             const begin = database.beginStatementBatch();
             if (begin != .ok) break :blk begin;
             var batch_active = true;
             defer {
-                if (batch_active) _ = database.rollbackStatementBatch();
+                if (batch_active) {
+                    _ = database.rollbackStatementBatch();
+                }
             }
-            const enlisted = enlistTransactionDatabase(action.connection, database);
-            if (enlisted != .ok) break :blk enlisted;
             const cleared = dropTableForeignKeyActions(action.connection, database, action.schema_name, action.name);
             if (cleared != .ok) break :blk cleared;
             const dropped = database.dropSchemaTable(action.name, action.if_exists);

@@ -563,48 +563,68 @@ pub const Database = struct {
             if (view.values.len >= 2 and schemaTextEqual(view.values[0], "table") and schemaTextEqual(view.values[1], name))
                 return if (if_not_exists) .ok else .error_;
         }
-        var rc = self.pager.beginWrite();
-        if (rc != .ok) return rc;
+        const owns_transaction = self.mutation_batch_depth == 0;
+        var rc: ResultCode = .ok;
+        if (owns_transaction) {
+            rc = self.pager.beginWrite();
+            if (rc != .ok) return rc;
+        }
         const planned = RebuildPlanner.init(self, 1, .table);
         if (planned.result != .ok) {
-            _ = self.pager.rollback();
+            if (owns_transaction) {
+                _ = self.pager.rollback();
+            }
             return planned.result;
         }
         var planner = planned.planner.?;
         defer planner.deinit();
         if (planner.auto_vacuum) {
-            _ = self.pager.rollback();
+            if (owns_transaction) {
+                _ = self.pager.rollback();
+            }
             return .error_;
         }
         const allocated = planner.allocate();
         if (allocated.result != .ok) {
-            _ = self.pager.rollback();
+            if (owns_transaction) {
+                _ = self.pager.rollback();
+            }
             return allocated.result;
         }
         const root_page = allocated.page;
         rc = writeTableLeaf(&planner, root_page, &.{});
         if (rc == .ok) {
             const schema_payload = encodeSchemaRecord(self.allocator, name, root_page, sql) catch |err| {
-                _ = self.pager.rollback();
+                if (owns_transaction) {
+                    _ = self.pager.rollback();
+                }
                 return if (err == error.OutOfMemory) .no_memory else .too_big;
             };
             defer self.allocator.free(schema_payload);
             const copy = self.allocator.dupe(u8, schema_payload) catch {
-                _ = self.pager.rollback();
+                if (owns_transaction) {
+                    _ = self.pager.rollback();
+                }
                 return .no_memory;
             };
             cursor.entries.append(self.allocator, .{ .rowid = next_rowid, .payload = copy }) catch {
                 self.allocator.free(copy);
-                _ = self.pager.rollback();
+                if (owns_transaction) {
+                    _ = self.pager.rollback();
+                }
                 return .no_memory;
             };
             if (!entriesFitLeaf(self, cursor.entries.items, 100)) rc = .too_big else rc = writeTableLeaf(&planner, 1, cursor.entries.items);
         }
         if (rc == .ok) rc = bumpSchemaCookie(&planner);
         if (rc == .ok) rc = planner.finishFreelist();
-        if (rc == .ok) rc = self.pager.commit();
+        if (rc == .ok and owns_transaction) {
+            rc = self.pager.commit();
+        }
         if (rc != .ok) {
-            _ = self.pager.rollback();
+            if (owns_transaction) {
+                _ = self.pager.rollback();
+            }
             return rc;
         }
         self.declared_pages = planner.next_page;

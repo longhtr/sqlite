@@ -127,6 +127,23 @@ int main(void){
   int transaction_commit_autocommit=sqlite3_get_autocommit(clone);
   int transaction_after_commit_rc=query_value(clone,"SELECT count(*) FROM main.t",&transaction_after_commit_count);
   printf("transaction\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%d\t%lld\n",transaction_begin_rc,transaction_insert_rollback_rc,transaction_active,transaction_before_rollback_rc,(long long)transaction_before_rollback_count,transaction_rollback_rc,transaction_rollback_autocommit,transaction_after_rollback_rc,(long long)transaction_after_rollback_count,transaction_second_begin_rc,transaction_insert_commit_rc,transaction_commit_rc,transaction_commit_autocommit,transaction_after_commit_rc,(long long)transaction_after_commit_count);
+  int ddl_rollback_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
+  int ddl_rollback_create_rc=sqlite3_exec(clone,"CREATE TABLE txn_ddl_rollback(id INTEGER PRIMARY KEY)",0,0,0);
+  int ddl_rollback_rc=sqlite3_exec(clone,"ROLLBACK",0,0,0);
+  sqlite3_int64 ddl_rollback_count=-1,ddl_commit_count=-1,ddl_drop_count=-1;
+  int ddl_rollback_query_rc=query_value(clone,"SELECT count(*) FROM txn_ddl_rollback",&ddl_rollback_count);
+  int ddl_commit_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
+  int ddl_commit_create_rc=sqlite3_exec(clone,"CREATE TABLE txn_ddl_commit(id INTEGER PRIMARY KEY)",0,0,0);
+  int ddl_commit_rc=sqlite3_exec(clone,"COMMIT",0,0,0);
+  int ddl_commit_insert_rc=sqlite3_exec(clone,"INSERT INTO txn_ddl_commit VALUES(1)",0,0,0);
+  int ddl_commit_query_rc=query_value(clone,"SELECT count(*) FROM txn_ddl_commit",&ddl_commit_count);
+  int ddl_drop_create_rc=sqlite3_exec(clone,"CREATE TABLE txn_ddl_drop(id INTEGER PRIMARY KEY)",0,0,0);
+  int ddl_drop_begin_rc=sqlite3_exec(clone,"BEGIN",0,0,0);
+  int ddl_drop_rc=sqlite3_exec(clone,"DROP TABLE txn_ddl_drop",0,0,0);
+  int ddl_drop_rollback_rc=sqlite3_exec(clone,"ROLLBACK",0,0,0);
+  int ddl_drop_insert_rc=sqlite3_exec(clone,"INSERT INTO txn_ddl_drop VALUES(1)",0,0,0);
+  int ddl_drop_query_rc=query_value(clone,"SELECT count(*) FROM txn_ddl_drop",&ddl_drop_count);
+  printf("transaction-ddl\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%lld\n",ddl_rollback_begin_rc,ddl_rollback_create_rc,ddl_rollback_rc,ddl_rollback_query_rc,ddl_commit_begin_rc,ddl_commit_create_rc,ddl_commit_rc,ddl_commit_insert_rc,ddl_commit_query_rc,(long long)ddl_commit_count,ddl_drop_create_rc,ddl_drop_begin_rc,ddl_drop_rc,ddl_drop_rollback_rc,ddl_drop_insert_rc,ddl_drop_query_rc,(long long)ddl_drop_count);
 #ifdef NATIVE_ENGINE
   int deferred_fk_config_rc=zig_sqlite3_db_config_flag(clone,SQLITE_DBCONFIG_ENABLE_FKEY,1,0);
 #else
