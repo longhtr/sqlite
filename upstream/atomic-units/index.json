@@ -117,7 +117,7 @@
     {
       "id": "vdbe-saved-sql-and-reprepare-bytecode-swap",
       "path": "upstream/atomic-units/vdbe-saved-sql-and-reprepare-bytecode-swap.json",
-      "status": "source-context-reviewed"
+      "status": "source-translated"
     },
     {
       "id": "vdbe-subprogram-intrusive-linkage",

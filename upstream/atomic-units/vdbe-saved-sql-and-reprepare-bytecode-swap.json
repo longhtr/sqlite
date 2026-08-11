@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "vdbe-saved-sql-and-reprepare-bytecode-swap",
   "title": "VDBE saved SQL ownership and reprepare bytecode swap",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeSetSql owns the saved SQL copy and preparation metadata; sqlite3VdbeSwap exchanges a recompiled VDBE body while deliberately restoring handle list links and saved SQL identity, then propagating preparation/counter state to the persistent statement. These are one reprepare ownership boundary.",
@@ -126,7 +126,7 @@
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
     "oom": "Deterministic SQL duplicate allocation failure preserves metadata and null ownership; later cases clean all saved SQL exactly once.",
