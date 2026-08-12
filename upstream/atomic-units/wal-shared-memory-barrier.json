@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "wal-shared-memory-barrier",
+  "title": "WAL shared-memory publication barrier",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "walShmBarrier orders duplicated WAL-index header publication and validation plus read-lock snapshot checks, while intentionally doing nothing for a connection-private heap index.",
+    "source_files": [{"path": "src/wal.c", "sha256": "0c0467f7c4de773512b3327b0d3973fc31d50cf74603d6aec0e3b3e1c787e217"}],
+    "source_entity_ids": ["src/wal.c::function::walShmBarrier::line-918"],
+    "behavioral_block_ids": ["src/wal.c::function::walShmBarrier::behavior::if::line-919-column-3::ordinal-0"],
+    "excluded_responsibilities": ["VFS-specific cross-process shared-memory implementation", "WAL lock acquisition", "WAL-index header checksum"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Process sequentially-consistent memory barrier", "Operating-system WAL shared-memory transport"],
+    "caller_closure": "The helper and its duplicated-header publication/read plus read-lock validation call sites are integrated in the production WAL-index owner."
+  },
+  "contracts": {
+    "inputs": ["WAL owner with shared-file or connection-private heap-index mode"],
+    "outputs": ["No value"],
+    "ownership": "Borrowed WAL owner; no allocation.",
+    "state_and_results": "Issues a sequentially-consistent barrier unless exclusive heap-index mode makes the index connection-private.",
+    "locks_callbacks_io": "Does not acquire WAL locks. Delegates shared-mode ordering to the process memory-barrier primitive.",
+    "failure_and_continuation": "Infallible and leaves WAL fields unchanged."
+  },
+  "mappings": [{
+    "source_entity_id": "src/wal.c::function::walShmBarrier::line-918",
+    "relation": "source-wal-shared-memory-barrier",
+    "zig_declaration_ids": ["src/core/internal/wal_core.zig::function::sharedMemoryBarrier"]
+  }],
+  "representation_differences": ["The source delegates to sqlite3OsShmBarrier for a file-backed index. The internal Zig WAL owner delegates to its process sequentially-consistent barrier; the Unix production VFS separately implements the exact xShmBarrier mutex round-trip."],
+  "oracle": {
+    "protocol": "Exercise the shared and heap-index branches, then validate duplicated-header write/read and read-lock snapshot paths.",
+    "internal_observations": ["exclusive-mode predicate", "barrier call placement", "header copy order", "unchanged WAL fields"],
+    "normalization": "Barrier implementation details are normalized to the source ordering boundary."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "Ordering call sites are integrated; cross-process concurrency stress remains pending.",
+    "malformed_input": "No encoded input.",
+    "continuation": "Infallible and state-preserving.",
+    "performance": "One sequentially-consistent barrier in shared mode and constant-time no-op in heap mode.",
+    "commands": ["zig build test", "zig build wal-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/wal_core.zig WAL-index owner",
+    "native_call_path": "Header publication, duplicate-header validation, and both read-lock snapshot checks invoke the helper.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires seeded concurrency trace, assurance closure, and independent review."},
+  "known_blockers": ["Add shared/heap barrier instrumentation and cross-process publication stress.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/wal.c:918-954, 2598-2628, 3128-3165, and 3245-3275 were reviewed", "src/core/internal/wal_core.zig duplicated-header and read-lock paths plus src/core/mutex.zig and src/core/unix_vfs.zig barriers were reviewed"],
+    "callers": ["walIndexWriteHdr between second and first header copy", "walIndexTryHdr between first and second header reads", "walTryBeginRead after read-lock acquisition and before shared-header validation"],
+    "callees": ["sqlite3OsShmBarrier in the source", "mutex.memoryBarrier in the internal Zig owner", "Unix VFS xShmBarrier for file-backed production transport"],
+    "assertions_branches_cleanup": ["The only generated behavior block is assigned", "Heap-index mode skips the barrier", "No ownership or cleanup paths exist"],
+    "upstream_tests": ["Upstream WAL concurrency and WAL-index recovery tests exercise publication ordering", "Project WAL tests cover both mode branches and integrated call sites"]
+  },
+  "evidence_receipts": []
+}

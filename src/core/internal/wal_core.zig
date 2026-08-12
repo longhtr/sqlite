@@ -1,5 +1,6 @@
 //! Source-shaped WAL index mapping, hashing, locking, iteration, and savepoint undo.
 const std = @import("std");
+const mutex = @import("../mutex.zig");
 
 pub const Error = error{ NoMemory, Range, Busy, Corrupt, Io, ReadOnly, Retry, Protocol };
 pub const hash_table_page_count: usize = 4096;
@@ -168,6 +169,12 @@ pub fn indexPage(wal: *Wal, index: usize) Error!*IndexPage {
     return indexPageReallocate(wal, index);
 }
 
+/// Source `walShmBarrier()`: skip the external shared-memory barrier only
+/// while the WAL index is connection-private heap memory.
+pub fn sharedMemoryBarrier(wal: *const Wal) void {
+    if (!wal.exclusive_mode) mutex.memoryBarrier();
+}
+
 /// Source `walIndexWriteHdr()` (`src/wal.c:942-954`).
 pub fn indexWriteHeader(wal: *Wal) void {
     std.debug.assert(wal.write_lock);
@@ -175,6 +182,7 @@ pub fn indexWriteHeader(wal: *Wal) void {
     wal.header.version = 3_007_000;
     wal.header.checksum = headerChecksum(&wal.header);
     wal.published_headers[1] = wal.header;
+    sharedMemoryBarrier(wal);
     wal.published_headers[0] = wal.header;
 }
 
@@ -453,6 +461,7 @@ pub fn limitSize(wal: *Wal, maximum: usize) void {
 /// Source `walIndexTryHdr()`.
 pub fn indexTryHeader(wal: *Wal, changed: *bool) bool {
     const first = wal.published_headers[0];
+    sharedMemoryBarrier(wal);
     const second = wal.published_headers[1];
     if (!std.meta.eql(first, second) or !first.initialized or !std.mem.eql(u32, &first.checksum, &headerChecksum(&first))) return false;
     if (!std.meta.eql(wal.header, first)) {
@@ -738,6 +747,7 @@ pub fn tryBeginRead(wal: *Wal, changed: *bool, force_wal: bool, attempts: *usize
     }
     if (!force_wal and wal.backfill == wal.header.max_frame) {
         lockShared(wal, 3) catch return error.Retry;
+        sharedMemoryBarrier(wal);
         if (!std.meta.eql(wal.published_headers[0], wal.header)) {
             unlockShared(wal, 3);
             return error.Retry;
@@ -761,6 +771,7 @@ pub fn tryBeginRead(wal: *Wal, changed: *bool, force_wal: bool, attempts: *usize
     if (selected == 0) return error.Retry;
     lockShared(wal, @intCast(3 + selected)) catch return error.Retry;
     wal.minimum_frame = wal.backfill + 1;
+    sharedMemoryBarrier(wal);
     if (wal.read_marks[selected] != maximum or !std.meta.eql(wal.published_headers[0], wal.header)) {
         unlockShared(wal, @intCast(3 + selected));
         return error.Retry;
@@ -1009,6 +1020,10 @@ test "WAL index append cleanup and savepoint undo" {
     wal.header.database_pages = 9;
     wal.header.page_size = 65_536;
     try std.testing.expectEqual(@as(u32, 65_536), pageSize(&wal));
+    sharedMemoryBarrier(&wal);
+    wal.exclusive_mode = true;
+    sharedMemoryBarrier(&wal);
+    wal.exclusive_mode = false;
     try std.testing.expectEqual(@as(usize, 383), hashPage(1));
     try std.testing.expectEqual(@as(usize, 0), nextHash(hash_table_slot_count - 1));
     setLimit(null, 31);

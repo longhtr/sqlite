@@ -591,6 +591,15 @@
       "atomic_unit_id": "wal-page-size-observation",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::walShmBarrier::line-918",
+      "source_sha256": "a19a313df422bc972b0bc43f1c80c416d4b51becf6c82fc6d7d17ca04751f1df",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::sharedMemoryBarrier",
+      "zig_declaration_sha256": "c56b81782848e5df326710d95ff2cf893d316f31204cec7600f76e9f39883b76",
+      "atomic_unit_id": "wal-shared-memory-barrier",
+      "class": "short",
+      "complete": true
     }
   ]
 }
