@@ -13006,7 +13006,12 @@ test "public open close error and deferred statement lifecycle" {
     var database: ?*sqlite3 = null;
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &database));
     try std.testing.expect(database != null);
+    try std.testing.expectEqualStrings(":memory:", std.mem.span(sqlite3_db_filename(database, null).?));
     try std.testing.expectEqualStrings(":memory:", std.mem.span(sqlite3_db_filename(database, "main").?));
+    try std.testing.expect(sqlite3_db_filename(database, "temp") == null);
+    try std.testing.expect(sqlite3_db_filename(database, "missing") == null);
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(database, "ATTACH ':memory:' AS aux", null, null, null));
+    try std.testing.expectEqualStrings(":memory:", std.mem.span(sqlite3_db_filename(database, "aux").?));
     try std.testing.expectEqual(@as(c_int, 0), sqlite3_db_readonly(database, "main"));
     var prepared: ?*statement.sqlite3_stmt = null;
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(database, "SELECT 40+2", -1, &prepared, null));

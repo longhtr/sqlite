@@ -744,6 +744,15 @@
       "atomic_unit_id": "wal-shared-memory-barrier",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3_db_filename::line-5027",
+      "source_sha256": "ef5d318a958c1cf1c7ba5f59ef6ed4823e3d6ae127ebf2298822d61d91a101d3",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::databaseFilename",
+      "zig_declaration_sha256": "20c057c3fe95cdc0dde59a38bd2e2db803f6c18339a92b76ae11e8da4d281e46",
+      "atomic_unit_id": "memdb-serialize-deserialize-store-replacement",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }
