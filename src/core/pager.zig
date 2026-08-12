@@ -386,6 +386,27 @@ pub const Pager = struct {
             (@as(u32, input[offset + 2]) << 8) | input[offset + 3];
     }
 
+    /// Source `read32bits()`: read one big-endian u32 and preserve the output
+    /// value unless the complete four-byte VFS read succeeds.
+    fn read32Bits(file: *vfs.sqlite3_file, offset: i64, output: *u32) ResultCode {
+        var bytes: [4]u8 = undefined;
+        const methods = file.pMethods orelse return .io_error;
+        const read_fn = methods.xRead orelse return .io_error;
+        const rc = ResultCode.fromC(read_fn(file, &bytes, bytes.len, offset));
+        if (rc == .ok) output.* = getU32(&bytes, 0);
+        return rc;
+    }
+
+    /// Source `write32bits()`: encode one u32 in big-endian order and return
+    /// the exact VFS write result.
+    fn write32Bits(file: *vfs.sqlite3_file, offset: i64, value: u32) ResultCode {
+        var bytes: [4]u8 = undefined;
+        putU32(&bytes, 0, value);
+        const methods = file.pMethods orelse return .io_error;
+        const write_fn = methods.xWrite orelse return .io_error;
+        return ResultCode.fromC(write_fn(file, &bytes, bytes.len, offset));
+    }
+
     /// Upstream: sqlite3PagerReadFileheader. Short reads are normalized to
     /// success with the unread suffix left zero-filled.
     pub fn readFileHeader(self: *Pager, output: []u8) ResultCode {
@@ -631,17 +652,16 @@ pub const Pager = struct {
         const data = self.temp_page;
         var offset: u64 = sector_size;
         for (0..record_count) |_| {
-            var number_bytes: [4]u8 = undefined;
-            rc = ResultCode.fromC(source.read(&number_bytes, offset));
+            var page_number: u32 = 0;
+            rc = read32Bits(source.abiFile(), @intCast(offset), &page_number);
             if (rc != .ok) return rc;
-            const page_number = getU32(&number_bytes, 0);
             if (page_number == 0 or page_number == @as(u32, @intCast(pending_byte / self.page_size + 1))) return .corrupt;
             rc = ResultCode.fromC(source.read(data, offset + 4));
             if (rc != .ok) return rc;
-            var checksum_bytes: [4]u8 = undefined;
-            rc = ResultCode.fromC(source.read(&checksum_bytes, offset + 4 + self.page_size));
+            var checksum: u32 = 0;
+            rc = read32Bits(source.abiFile(), @intCast(offset + 4 + self.page_size), &checksum);
             if (rc != .ok) return rc;
-            if (getU32(&checksum_bytes, 0) != self.journalChecksum(data)) return .corrupt;
+            if (checksum != self.journalChecksum(data)) return .corrupt;
             if (page_number <= original_pages) {
                 if (write_database) {
                     const database_offset = std.math.mul(u64, page_number - 1, self.page_size) catch return .full;
@@ -1149,15 +1169,11 @@ pub const Pager = struct {
 
     fn appendJournalRecord(self: *Pager, page: *page_cache.Page) ResultCode {
         const journal = if (self.journal) |*value| value else return .misuse;
-        var number: [4]u8 = undefined;
-        putU32(&number, 0, page.key);
-        var rc = ResultCode.fromC(journal.write(&number, self.journal_offset));
+        var rc = write32Bits(journal.abiFile(), @intCast(self.journal_offset), page.key);
         if (rc != .ok) return rc;
         rc = ResultCode.fromC(journal.write(page.data, self.journal_offset + 4));
         if (rc != .ok) return rc;
-        var checksum: [4]u8 = undefined;
-        putU32(&checksum, 0, self.journalChecksum(page.data));
-        rc = ResultCode.fromC(journal.write(&checksum, self.journal_offset + 4 + self.page_size));
+        rc = write32Bits(journal.abiFile(), @intCast(self.journal_offset + 4 + self.page_size), self.journalChecksum(page.data));
         if (rc != .ok) return rc;
         self.journal_offset += self.page_size + 8;
         self.journal_records += 1;
@@ -2041,6 +2057,21 @@ fn createHotJournal(memory: *vfs.MemoryVfs, adapter: *vfs.AbiAdapter, name: []co
     try std.testing.expectEqual(ResultCode.ok, writer.commitPhaseOne());
     memory.crash();
     writer.crashClose();
+}
+
+test "journal 32-bit file helpers preserve big-endian values and failed-read output" {
+    var journal = memory_journal.Journal.open(std.testing.allocator, null, null, vfs.OPEN_READWRITE | vfs.OPEN_MAIN_JOURNAL, -1).journal;
+    defer _ = journal.close();
+    try std.testing.expectEqual(ResultCode.ok, Pager.write32Bits(journal.abiFile(), 0, 0x1234_abcd));
+    var raw: [4]u8 = undefined;
+    try std.testing.expectEqual(vfs.OK, journal.read(&raw, 0));
+    try std.testing.expectEqualSlices(u8, &.{ 0x12, 0x34, 0xab, 0xcd }, &raw);
+    var value: u32 = 0;
+    try std.testing.expectEqual(ResultCode.ok, Pager.read32Bits(journal.abiFile(), 0, &value));
+    try std.testing.expectEqual(@as(u32, 0x1234_abcd), value);
+    value = 0xfeed_beef;
+    try std.testing.expectEqual(ResultCode.fromC(vfs.IOERR_SHORT_READ), Pager.read32Bits(journal.abiFile(), 1, &value));
+    try std.testing.expectEqual(@as(u32, 0xfeed_beef), value);
 }
 
 test "rollback journal checksum follows the source reverse stride and wraps" {

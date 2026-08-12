@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "id": "pager-big-endian-file-u32-io",
+  "title": "Pager big-endian file u32 I/O",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "read32bits and write32bits centralize exact four-byte big-endian integer transport through sqlite3_file and preserve the read output on failure.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::read32bits::line-1099",
+      "src/pager.c::function::write32bits::line-1118"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::read32bits::behavior::if::line-1102-column-3::ordinal-0",
+      "src/pager.c::function::read32bits::behavior::return::line-1105-column-3::ordinal-0",
+      "src/pager.c::function::write32bits::behavior::return::line-1121-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Journal record framing and checksums",
+      "File ownership and opening",
+      "Interpretation of transported integer fields"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "memory-journal-chunks-spill-and-lifecycle"
+    ],
+    "external_source_responsibilities": [
+      "sqlite3_file provides a live xRead or xWrite method",
+      "Callers supply valid nonnegative file offsets"
+    ],
+    "caller_closure": "Both complete helpers and generated blocks are assigned; production journal append and playback consume them."
+  },
+  "contracts": {
+    "inputs": [
+      "Borrowed sqlite3_file",
+      "Signed file offset",
+      "Borrowed output pointer or u32 input value"
+    ],
+    "outputs": [
+      "Exact VFS ResultCode and decoded output only after successful read"
+    ],
+    "ownership": "No allocation or ownership transfer.",
+    "state_and_results": "read32Bits performs one four-byte read, decodes big-endian only on success, and leaves output unchanged on every failure. write32Bits encodes exactly four big-endian bytes and performs one write.",
+    "locks_callbacks_io": "Exactly one sqlite3_io_methods xRead or xWrite call; caller owns synchronization.",
+    "failure_and_continuation": "Missing methods map to IOERR. VFS primary/extended result codes are preserved. Failed read does not publish partial bytes."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::read32bits::line-1099",
+      "relation": "source-big-endian-u32-file-read",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.read32Bits"
+      ]
+    },
+    {
+      "source_entity_id": "src/pager.c::function::write32bits::line-1118",
+      "relation": "source-big-endian-u32-file-write",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.write32Bits"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Zig uses ResultCode instead of a raw integer result and typed u32 pointers.",
+    "The helpers dispatch through the public sqlite3_io_methods layout used by both VFS files and the memory-journal owner."
+  ],
+  "oracle": {
+    "protocol": "Write 0x1234abcd at offset zero into a memory journal, inspect exact bytes 12 34 ab cd, read the value back, then short-read from offset one and require an existing 0xfeedbeef output to remain unchanged.",
+    "internal_observations": [
+      "serialized four bytes",
+      "decoded u32",
+      "exact short-read result",
+      "output value after failure"
+    ],
+    "normalization": "Compare exact bytes, u32 value, and ResultCode."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation inside helpers; memory-journal growth belongs to xWrite.",
+    "io_crash_concurrency": "One VFS operation per call; atomicity and locking belong to the VFS/caller.",
+    "malformed_input": "Typed four-byte local buffers prevent partial decode; missing methods return IOERR.",
+    "continuation": "Failed reads preserve caller output and both helpers leave file ownership intact.",
+    "performance": "Constant time and fixed stack storage.",
+    "commands": [
+      "zig build test",
+      "zig build rollback-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig rollback journal append and playback",
+    "native_call_path": "appendJournalRecord uses write32Bits for page number and checksum; playbackJournal uses read32Bits for both fields.",
+    "bounded_owner_retired": "Inline four-byte buffers in append/playback are retired."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires pinned-C I/O fault trace, wider journal call-site conversion, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Convert remaining super-journal and journal-header integer I/O as those owners are ported.",
+    "Add pinned-C short-read/write and extended-code trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:1089-1123 and all read32bits/write32bits callers were reviewed",
+      "src/core/pager.zig big-endian helpers, journal append/playback, and direct file-I/O test were reviewed",
+      "src/core/memory_journal.zig sqlite3_file dispatch and short-read behavior were reviewed"
+    ],
+    "callers": [
+      "Source super-journal, journal-header, playback, subjournal, and journal-record paths",
+      "Production appendJournalRecord and playbackJournal"
+    ],
+    "callees": [
+      "sqlite3OsRead/sqlite3OsWrite and sqlite3Get4byte/sqlite3Put4byte",
+      "sqlite3_io_methods.xRead/xWrite and Pager.getU32/putU32"
+    ],
+    "assertions_branches_cleanup": [
+      "read success publication and failure non-publication branches assigned",
+      "write return block assigned",
+      "No allocation or cleanup"
+    ],
+    "upstream_tests": [
+      "Upstream journal, super-journal, I/O error, and corruption suites exercise these helpers",
+      "Project direct helper test and rollback/hot-journal suites exercise production consumers"
+    ]
+  },
+  "evidence_receipts": []
+}

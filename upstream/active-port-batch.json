@@ -15,6 +15,24 @@
       "atomic_unit_id": "pager-rollback-journal-checksum",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::read32bits::line-1099",
+      "source_sha256": "48b01353208d8e3b73f9fbda1db809dd4f5c51f44289da43f99f99dacbf40b57",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.read32Bits",
+      "zig_declaration_sha256": "b6e3e2f77df15e3a76fd88504a84fcdfe0fcd11c754b1c185f4fbcfa32245d14",
+      "atomic_unit_id": "pager-big-endian-file-u32-io",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::write32bits::line-1118",
+      "source_sha256": "5ce29786c165094ea13dcac4e82966805bccabee39391b277b022ac55ef6d41c",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.write32Bits",
+      "zig_declaration_sha256": "9d30482ca3c618aa1da32c53b57364d48e609cc1a053bcb0a4ccdf0e4b2cf500",
+      "atomic_unit_id": "pager-big-endian-file-u32-io",
+      "class": "short",
+      "complete": true
     }
   ]
 }
