@@ -413,6 +413,11 @@
       "id": "btree-nonnull-cursor-validity",
       "path": "upstream/atomic-units/btree-nonnull-cursor-validity.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-cursor-integer-key",
+      "path": "upstream/atomic-units/btree-cursor-integer-key.json",
+      "status": "source-translated"
     }
   ]
 }

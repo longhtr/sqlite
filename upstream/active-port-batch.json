@@ -474,6 +474,15 @@
       "atomic_unit_id": "btree-nonnull-cursor-validity",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeIntegerKey::line-4921",
+      "source_sha256": "3da5b997a83c07197e09d8041aa7b895aacce7ea450fc9c5d30827dfeeb39d1c",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::cursorIntegerKey",
+      "zig_declaration_sha256": "fce09da0193bba080b54cba6d77522d5bce3eb1aa7dc3a3c90dab16052241d63",
+      "atomic_unit_id": "btree-cursor-integer-key",
+      "class": "short",
+      "complete": true
     }
   ]
 }

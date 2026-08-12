@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "btree-cursor-integer-key",
+  "title": "B-tree cursor integer-key observation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeIntegerKey returns the populated CellInfo integer key/rowid for a valid cursor on an ordinary table B-tree.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreeIntegerKey::line-4921"],
+    "behavioral_block_ids": [
+      "src/btree.c::function::sqlite3BtreeIntegerKey::behavior::assert::line-4922-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeIntegerKey::behavior::assert::line-4923-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeIntegerKey::behavior::assert::line-4924-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeIntegerKey::behavior::return::line-4926-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["CellInfo lazy parsing", "Index B-tree key comparison", "Cursor movement"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Caller-held cursor mutex and populated table CellInfo"], "caller_closure": "The complete integer-key observation after CellInfo population is assigned; lazy getCellInfo integration remains open."},
+  "contracts": {
+    "inputs": ["Valid Cursor under B-tree mutex on integer-key Page with CellInfo populated"],
+    "outputs": ["Current table rowid/integer key"],
+    "ownership": "Borrowed Cursor/Page; no mutation or allocation.",
+    "state_and_results": "Returns CellInfo.key exactly.",
+    "locks_callbacks_io": "Caller holds cursor mutex; no callbacks or I/O.",
+    "failure_and_continuation": "Invalid/index/unpopulated cursor violates source preconditions."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3BtreeIntegerKey::line-4921", "relation": "source-current-table-cell-integer-key", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::cursorIntegerKey"]}],
+  "representation_differences": ["The Zig model stores decoded varint bits as u64; table rowid consumers interpret the same bits as signed i64 when needed.", "CellInfo must already be populated instead of invoking source getCellInfo lazily."],
+  "oracle": {"protocol": "Populate valid integer-key cursor CellInfo key 41 and compare exact returned bits.", "internal_observations": ["cursor valid state", "page integer_key", "CellInfo.key", "returned key"], "normalization": "Nonnegative rowid trace has identical signed/unsigned representation."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation; lazy parse external.", "io_crash_concurrency": "No I/O; caller mutex external.", "malformed_input": "Invalid/index/stale CellInfo violates precondition.", "continuation": "Pure observation.", "performance": "Constant time after CellInfo population.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig table CellInfo owner", "native_call_path": "Typed observation and nonzero trace exist; lazy parser/VDBE consumers remain pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires lazy CellInfo/caller integration, signed-boundary trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect source-shaped lazy getCellInfo.", "Connect rowid consumers.", "Add positive/negative pinned-C rowid trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:4916-4927 was reviewed completely", "src/core/internal/btree_core.zig table-cell parser, CellInfo, and cursor state owners were reviewed"],
+    "callers": ["VDBE Rowid and table cursor paths", "Unit trace invokes the owner directly"],
+    "callees": ["Source getCellInfo represented by populated-CellInfo precondition"],
+    "assertions_branches_cleanup": ["All three source assertions and return block are assigned", "No allocation, mutation, or cleanup"],
+    "upstream_tests": ["Upstream table rowid, cursor movement, and VDBE tests cover this observation", "Project unit trace covers valid integer-key result"]
+  },
+  "evidence_receipts": []
+}
