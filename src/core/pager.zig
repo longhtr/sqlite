@@ -159,6 +159,7 @@ pub const Pager = struct {
     database_pages: u32 = 0,
     maximum_pages: u32 = maximum_page_count,
     read_only: bool = true,
+    memory_file: bool = false,
     has_held_shared_lock: bool = false,
     configured: bool = false,
     file_version: [16]u8 = .{0} ** 16,
@@ -295,6 +296,7 @@ pub const Pager = struct {
             .wal_name = wal_name,
             .cache = cache,
             .read_only = !options.writable,
+            .memory_file = output_flags & vfs.OPEN_MEMORY != 0,
             .wal_external_index = options.wal_external_index,
             .journal_spill_threshold = options.journal_spill_threshold,
         };
@@ -547,6 +549,13 @@ pub const Pager = struct {
     /// journal pathname.
     pub fn journalName(self: *const Pager) [:0]const u8 {
         return self.journal_name;
+    }
+
+    /// Source `sqlite3PagerFilename()`: return the full Pager pathname unless
+    /// a caller requests the legacy empty name for the memdb VFS.
+    pub fn databaseName(self: *const Pager, null_if_memdb: bool) [:0]const u8 {
+        if (null_if_memdb and (self.memory_file or vfs.isMemdbVfs(self.abi_vfs))) return "";
+        return self.filename;
     }
 
     /// Source `setSectorSize()`: normalize the VFS device sector size once per
@@ -2215,7 +2224,27 @@ test "pager owner accessors preserve VFS file and journal name identity" {
 
     try std.testing.expect(pager.filesystem() == &adapter.abi);
     try std.testing.expect(pager.databaseFile() == pager.file);
+    try std.testing.expectEqualStrings("owner-access.db", pager.databaseName(false));
+    try std.testing.expectEqualStrings("owner-access.db", pager.databaseName(true));
     try std.testing.expectEqualStrings("owner-access.db-journal", pager.journalName());
+}
+
+test "pager filename hides only memory VFS names when requested" {
+    var memory = vfs.MemoryVfs.initMemdb(std.testing.allocator);
+    defer memory.deinit();
+    var original_memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer original_memory.deinit();
+    var original_adapter = vfs.AbiAdapter.init("pager-filename-original", &original_memory);
+    var context = vfs.MemdbContext{ .native = &memory, .original = &original_adapter.abi };
+    var adapter = vfs.MemdbAdapter.init(&context);
+    const opened = memory.open("filename.db", vfs.OPEN_READWRITE | vfs.OPEN_CREATE | vfs.OPEN_MAIN_DB);
+    try std.testing.expectEqual(vfs.OK, opened.rc);
+    try std.testing.expectEqual(vfs.OK, memory.closeAndDestroy(opened.file.?));
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "filename.db", .{ .writable = true }).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+
+    try std.testing.expectEqualStrings("filename.db", pager.databaseName(false));
+    try std.testing.expectEqualStrings("", pager.databaseName(true));
 }
 
 test "database moved detection preserves empty unsupported moved and error results" {

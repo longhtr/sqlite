@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "id": "pager-database-filename-observation",
+  "title": "Pager database filename observation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerFilename returns the Pager-owned full pathname, except that legacy user-facing callers may request an empty name for memory-backed database files.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::sqlite3PagerFilename::line-7134"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::sqlite3PagerFilename::behavior::if::line-7136-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerFilename::behavior::return::line-7137-column-5::ordinal-0",
+      "src/pager.c::function::sqlite3PagerFilename::behavior::return::line-7139-column-5::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Connection schema-name resolution",
+      "Public sqlite3_db_filename alias policy",
+      "SQLite filename URI suffix layout"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Pager opening records the canonical pathname and VFS OPEN_MEMORY result",
+      "The memdb VFS identity helper recognizes the wrapped memdb transport"
+    ],
+    "caller_closure": "The complete memory-name branch and pathname return are assigned and exercised for ordinary and memdb-backed runtime Pagers."
+  },
+  "contracts": {
+    "inputs": [
+      "Borrowed Pager",
+      "Legacy null-if-memory flag"
+    ],
+    "outputs": [
+      "Borrowed sentinel-terminated pathname or empty sentinel string"
+    ],
+    "ownership": "The returned name remains Pager-owned, except the static empty string; no transfer.",
+    "state_and_results": "When null_if_memdb is true and the opened file reported OPEN_MEMORY or the VFS is the memdb wrapper, return empty. Otherwise return the exact Pager filename, including memory names needed for internal matching when suppression is false.",
+    "locks_callbacks_io": "Pure observation; no lock, callback, or I/O.",
+    "failure_and_continuation": "Infallible for a live Pager."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerFilename::line-7134",
+      "relation": "source-pager-filename-with-memory-suppression",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.databaseName"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Zig returns a sentinel slice rather than a raw const char pointer.",
+    "Runtime Pager records the VFS OPEN_MEMORY output explicitly in addition to checking the memdb wrapper identity; this covers memory-file adapters without inferring from arbitrary VFS names."
+  ],
+  "oracle": {
+    "protocol": "Open an ordinary Pager and require its name with suppression both false and true; open a memdb-VFS Pager and require the exact name without suppression and empty with suppression.",
+    "internal_observations": [
+      "OPEN_MEMORY result",
+      "memdb VFS identity",
+      "Pager-owned filename",
+      "suppression flag",
+      "returned bytes"
+    ],
+    "normalization": "Filename bytes and empty/non-empty selection compare exactly."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O or mutable state.",
+    "malformed_input": "Typed live Pager only.",
+    "continuation": "Pure observation preserves all owner state.",
+    "performance": "Constant time.",
+    "commands": [
+      "zig build test",
+      "zig build pager-differential",
+      "zig build memdb-api-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig Pager filename/VFS owner",
+    "native_call_path": "Pager.databaseName serves internal Pager filename policy; the public connection filename API separately preserves user-visible names and schema aliases.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires pinned-C ordinary/memdb filename differential, caller audit, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Audit remaining internal shared-cache and URI filename consumers.",
+    "Add pinned-C filename-database/URI suffix observations.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:7118-7143 and memdb.c:905-922 were reviewed",
+      "src/core/pager.zig Pager.open/databaseName/tests and src/core/vfs.zig memdb identity/open output were reviewed"
+    ],
+    "callers": [
+      "Legacy user-facing filename reporting passes suppression true",
+      "Internal shared-cache matching passes suppression false",
+      "Runtime Pager trace covers ordinary and memdb transports"
+    ],
+    "callees": [
+      "sqlite3IsMemdb and Pager memDb state in the source",
+      "VFS OPEN_MEMORY result and vfs.isMemdbVfs in Zig"
+    ],
+    "assertions_branches_cleanup": [
+      "All three generated branch/return blocks are assigned",
+      "Memory suppression is conditional on the caller flag",
+      "No allocation or cleanup"
+    ],
+    "upstream_tests": [
+      "Upstream URI, memdb, shared-cache, and filename API tests exercise both modes",
+      "Project Pager and public memdb API suites exercise ordinary and memory-visible names"
+    ]
+  },
+  "evidence_receipts": []
+}

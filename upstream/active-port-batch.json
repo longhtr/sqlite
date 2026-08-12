@@ -1050,6 +1050,15 @@
       "atomic_unit_id": "pager-page-rekey-and-flags",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerFilename::line-7134",
+      "source_sha256": "87bcba7c75ba9b640239d3c759f73b83d3cc3e3ebb50852d36bb108997fa27a8",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.databaseName",
+      "zig_declaration_sha256": "d06bf96176812abdbbd7b084416ed0f6e2e8a1776e3376bb5134da85720b6ff1",
+      "atomic_unit_id": "pager-database-filename-observation",
+      "class": "short",
+      "complete": true
     }
   ]
 }
