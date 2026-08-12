@@ -15,11 +15,11 @@ Incomplete and unsafe for production data. Reusable source-corresponding slices 
 | Behavioral inventory | 25,930 blocks in 2,457 functions |
 | Atomic-unit dossiers total | 103 |
 | Admission-ready dossiers | 103 |
-| Source-translated atomic units | 52 |
+| Source-translated atomic units | 53 |
 | Internal-trace-equivalent atomic units | 31 |
 | Subsystem-integrated atomic units | 19 |
 | Historical mechanical function claims | 1,738; 0 completion credit |
-| Active batch and durable checkpoints | 93 entries; 0 checkpoints |
+| Active batch and durable checkpoints | 95 entries; 0 checkpoints |
 | Exact internal layouts | 69 |
 | Purposeful tools | 111 purposeful Python scripts |
 | Bounded opcode mappings | 107/190; 0 integrated |

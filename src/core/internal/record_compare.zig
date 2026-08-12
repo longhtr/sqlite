@@ -298,6 +298,7 @@ pub const KeyAccessor = *const fn (?*const anyopaque, usize) Value;
 /// Source `sqlite3VdbeIdxKeyCompare()`: compare an encoded index key against
 /// caller-provided unpacked fields without materializing the record.
 pub fn indexKeyCompare(record: []const u8, key_count: usize, context: ?*const anyopaque, accessor: KeyAccessor) Error!std.math.Order {
+    if (record.len == 0 or record.len > std.math.maxInt(i32)) return error.CorruptRecord;
     var cursor = try Cursor.init(record);
     var index: usize = 0;
     while (index < key_count) : (index += 1) {
@@ -343,13 +344,38 @@ pub fn findIndexKey(record_count: usize, records_context: ?*const anyopaque, rec
 /// Source `sqlite3VdbeIdxRowid()`: validate an index record and decode its
 /// final field as the integer table rowid without allocating a full record.
 pub fn indexRowid(record: []const u8) Error!i64 {
-    var cursor = try Cursor.init(record);
-    var last: ?Field = null;
-    while (try cursor.next()) |field| {
-        last = field;
-    }
-    if (cursor.data_offset != record.len) return error.CorruptRecord;
-    const field = last orelse return error.CorruptRecord;
-    if (field.serial_type < 1 or field.serial_type > 9 or field.serial_type == 7) return error.CorruptRecord;
-    return recordDecodeInteger(field.serial_type, field.bytes);
+    const header = try readVarint(record, 0);
+    if (header.value < 3 or header.value > record.len) return error.CorruptRecord;
+    const header_end: usize = @intCast(header.value);
+    const serial = record[header_end - 1];
+    if (serial < 1 or serial > 9 or serial == 7) return error.CorruptRecord;
+    const serial_type: u32 = serial;
+    const length = serialTypeLength(serial_type);
+    if (length > record.len - header_end) return error.CorruptRecord;
+    return recordDecodeInteger(serial_type, record[record.len - length ..]);
+}
+
+const TestKeyContext = struct { values: []const Value };
+
+fn testKeyValue(context: ?*const anyopaque, index: usize) Value {
+    const key: *const TestKeyContext = @ptrCast(@alignCast(context.?));
+    return key.values[index];
+}
+
+test "source index rowid validates the final integer serial value" {
+    try std.testing.expectEqual(@as(i64, -1), try indexRowid(&.{ 3, 15, 1, 'x', 0xff }));
+    try std.testing.expectEqual(@as(i64, 0), try indexRowid(&.{ 3, 15, 8, 'x' }));
+    try std.testing.expectEqual(@as(i64, 1), try indexRowid(&.{ 3, 15, 9, 'x' }));
+    try std.testing.expectEqual(@as(i64, 1), try indexRowid(&.{ 3, 0x80, 9, 'x' }));
+    try std.testing.expectError(error.CorruptRecord, indexRowid(&.{}));
+    try std.testing.expectError(error.CorruptRecord, indexRowid(&.{ 2, 1 }));
+    try std.testing.expectError(error.CorruptRecord, indexRowid(&.{ 3, 15, 7, 'x' } ++ [_]u8{0} ** 8));
+    try std.testing.expectError(error.CorruptRecord, indexRowid(&.{ 3, 15, 2, 'x', 0xff }));
+}
+
+test "source index key comparison rejects invalid payload sizes and ignores rowid" {
+    const key_values = [_]Value{.{ .text = "x" }};
+    const context = TestKeyContext{ .values = &key_values };
+    try std.testing.expectEqual(std.math.Order.eq, try indexKeyCompare(&.{ 3, 15, 1, 'x', 5 }, 1, &context, testKeyValue));
+    try std.testing.expectError(error.CorruptRecord, indexKeyCompare(&.{}, 1, &context, testKeyValue));
 }

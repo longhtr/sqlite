@@ -7,8 +7,8 @@
       "internal-trace-equivalent": 31,
       "inventoried": 0,
       "scaffolded": 0,
-      "source-context-reviewed": 1,
-      "source-translated": 52,
+      "source-context-reviewed": 0,
+      "source-translated": 53,
       "subsystem-integrated": 19
     },
     "authoritative_process": "docs/ENGINEERING_PROCESS.md",
@@ -94,7 +94,7 @@
     "utf_active_entities_differentially_checked": 13,
     "vdbe_opcode_coverage_warning": "A mapped case proves name-level runtime presence only, not complete SQLite semantics or fidelity.",
     "vlist_entities_differentially_checked": 0,
-    "zig_source_lines": 90307
+    "zig_source_lines": 90333
   },
   "overall_status": "incomplete-control-revalidation-and-source-port",
   "public_api": {
@@ -145,7 +145,7 @@
     "atomic_unit_dossiers_admission_ready": 103,
     "atomic_unit_dossiers_total": 103,
     "atomic_units_assurance_passed": 0,
-    "atomic_units_source_translated_or_later": 102,
+    "atomic_units_source_translated_or_later": 103,
     "atomic_units_subsystem_integrated_or_later": 19,
     "behavioral_blocks_assigned_to_atomic_units": 1378,
     "behavioral_blocks_inventoried": 25930,
@@ -202,14 +202,14 @@
     "reviewed_coverage_percent": 32.75,
     "source_dependency_file_units": 85,
     "unresolved_legacy_target_references": 402,
-    "zig_declaration_inventory": 13540
+    "zig_declaration_inventory": 13543
   },
   "translation_tracking": {
-    "active_batch_entries": 93,
+    "active_batch_entries": 95,
     "active_batch_schema": 2,
     "active_batch_short_functions": 56,
     "active_batch_status": "active",
-    "active_batch_substantive_functions": 37,
+    "active_batch_substantive_functions": 39,
     "checkpoint_ledger": "upstream/port-checkpoints.json",
     "completion_credit": 0,
     "durable_checkpoints": 0,
@@ -217,8 +217,7 @@
       "internal-trace-equivalent": 60,
       "legacy-candidate-target-resolved": 200,
       "legacy-candidate-unresolved": 159,
-      "source-context-reviewed": 2,
-      "source-translated": 16,
+      "source-translated": 18,
       "subsystem-integrated": 57,
       "targeted-differential-passed": 76,
       "unmapped": 1168

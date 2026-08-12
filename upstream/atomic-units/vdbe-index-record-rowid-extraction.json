@@ -2,12 +2,20 @@
   "schema_version": 1,
   "id": "vdbe-index-record-rowid-extraction",
   "title": "VDBE index-record rowid extraction and prefix comparison",
-  "status": "source-context-reviewed",
+  "status": "source-translated",
   "admission_ready": true,
   "scope": {
     "rationale": "sqlite3VdbeIdxRowid and sqlite3VdbeIdxKeyCompare acquire untrusted encoded index records, validate/decode the final integer rowid or compare the prefix against an unpacked key, and release temporary payload ownership on every post-read path.",
-    "source_files": [{"path": "src/vdbeaux.c", "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"}],
-    "source_entity_ids": ["src/vdbeaux.c::function::sqlite3VdbeIdxRowid::line-5191", "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::line-5270"],
+    "source_files": [
+      {
+        "path": "src/vdbeaux.c",
+        "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::line-5191",
+      "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::line-5270"
+    ],
     "behavioral_block_ids": [
       "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::behavior::assert::line-5204-column-3::ordinal-0",
       "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::behavior::assert::line-5206-column-3::ordinal-0",
@@ -33,61 +41,116 @@
       "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::behavior::return::line-5294-column-5::ordinal-0",
       "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::behavior::return::line-5298-column-3::ordinal-0"
     ],
-    "excluded_responsibilities": ["Btree cursor payload acquisition", "Index-prefix comparison", "VDBE IdxRowid opcode execution"]
+    "excluded_responsibilities": [
+      "Raw pager/B-tree payload acquisition outside the materialized native cursor",
+      "VDBE opcodes other than IdxRowid"
+    ]
   },
   "dependencies": {
-    "atomic_unit_ids": ["vdbe-record-serial-type-length-and-value-decode"],
-    "external_source_responsibilities": ["Valid Btree cursor and complete payload acquisition into temporary Mem"],
-    "caller_closure": "The complete source body is assigned. The current Zig candidate consumes an already-borrowed record slice and awaits source-layout cursor/payload ownership review before translation promotion."
+    "atomic_unit_ids": [
+      "vdbe-record-serial-type-length-and-value-decode"
+    ],
+    "external_source_responsibilities": [
+      "Valid Btree cursor and complete payload acquisition into temporary Mem"
+    ],
+    "caller_closure": "The complete bodies are assigned. Production materialized B-tree cursors own full payload acquisition, and index seek plus IdxRowid opcode paths invoke these validators."
   },
   "contracts": {
-    "inputs": ["Database connection, valid Btree index cursor, and rowid output"],
-    "outputs": ["OK with decoded rowid, cursor/payload error, or CORRUPT for malformed header/final serial value"],
+    "inputs": [
+      "Database connection, valid Btree index cursor, and rowid output"
+    ],
+    "outputs": [
+      "OK with decoded rowid, cursor/payload error, or CORRUPT for malformed header/final serial value"
+    ],
     "ownership": "Cursor is borrowed; temporary full-record Mem allocation is released on success and corruption.",
     "state_and_results": "Header size must be 3 through record length. Final header serial type must be integer 1 through 9 excluding 7, and its payload must fit at the record tail.",
     "locks_callbacks_io": "Caller owns Btree cursor locks. One full payload read may perform pager I/O.",
     "failure_and_continuation": "Payload errors propagate. Malformed records return CORRUPT after cleanup without publishing rowid."
   },
-  "mappings": [{
-    "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::line-5191",
-    "relation": "candidate-slice-record-rowid-validation",
-    "zig_declaration_ids": ["src/core/internal/record_compare.zig::function::indexRowid"]
-  }, {
-    "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::line-5270",
-    "relation": "candidate-slice-index-prefix-comparison",
-    "zig_declaration_ids": ["src/core/internal/record_compare.zig::function::indexKeyCompare"]
-  }],
-  "representation_differences": ["The current Zig candidate receives a bounded encoded-record slice after payload acquisition and therefore does not yet own source temporary-Mem allocation or cursor errors.", "It validates all fields through a record cursor rather than reading the final header serial varint directly."],
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::line-5191",
+      "relation": "candidate-slice-record-rowid-validation",
+      "zig_declaration_ids": [
+        "src/core/internal/record_compare.zig::function::indexRowid"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::line-5270",
+      "relation": "candidate-slice-index-prefix-comparison",
+      "zig_declaration_ids": [
+        "src/core/internal/record_compare.zig::function::indexKeyCompare"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The native B-tree cursor materializes and owns complete record payloads when opened, so these owners borrow exact payload slices instead of allocating a temporary Mem per call.",
+    "indexRowid reads the final header byte directly like source; indexKeyCompare streams exactly the requested prefix against typed unpacked fields."
+  ],
   "oracle": {
     "protocol": "Promotion requires a pinned-C/Zig matrix over valid integer serial types 1-6/8/9, malformed header sizes, forbidden serial types, truncated rowid payloads, payload errors, and cleanup state.",
-    "internal_observations": ["result/error class", "decoded signed rowid", "temporary payload ownership and unchanged output on failure"],
+    "internal_observations": [
+      "result/error class",
+      "decoded signed rowid",
+      "temporary payload ownership and unchanged output on failure"
+    ],
     "normalization": "Cursor transport may be normalized to exact payload bytes only after payload error and cleanup behavior is separately retained."
   },
   "assurance": {
     "source_context_reviewed": true,
-    "source_translated": false,
+    "source_translated": true,
     "internal_trace_equivalent": false,
     "subsystem_integrated": false,
-    "oom": "Temporary payload allocation failure remains unverified against the slice candidate.",
-    "io_crash_concurrency": "Btree payload error/lock behavior remains pending.",
-    "malformed_input": "All source corruption branches are inventoried; exact differential is pending.",
-    "continuation": "Output preservation and cleanup on failure remain pending.",
-    "performance": "Source reads one complete index record; candidate walks all serial fields.",
-    "commands": ["zig build btree-differential", "zig build vdbe-differential"]
+    "oom": "No per-call allocation after cursor materialization; cursor-opening allocation has bounded B-tree coverage.",
+    "io_crash_concurrency": "Materialized cursor payload transport is integrated, but exact pinned-C cursor error/cleanup trace remains pending.",
+    "malformed_input": "Direct tests cover valid serial 1/8/9 plus short header, forbidden serial, truncated integer, and zero payload; broad record tests cover all serial classes.",
+    "continuation": "Rowid publishes only after validation; comparison errors do not mutate the cursor or key.",
+    "performance": "One direct final-header/record-tail decode for rowid and one streaming prefix pass for key comparison.",
+    "commands": [
+      "zig build btree-differential",
+      "zig build vdbe-differential"
+    ]
   },
   "integration": {
-    "production_owner": "src/core/internal/record_compare.zig candidate used by src/core/vdbe.zig",
-    "native_call_path": "A bounded slice-based opcode path exists, but source cursor/payload ownership and differential promotion are open.",
-    "bounded_owner_retired": "No."
+    "production_owner": "src/core/internal/record_compare.zig through materialized src/core/btree.zig Cursor payload ownership",
+    "native_call_path": "Production B-tree seek and VDBE IdxRowid call the translated slice owners; exact source cursor transport equivalence remains unpromoted.",
+    "bounded_owner_retired": "No separate simplified rowid/prefix decoder remains."
   },
-  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires source translation, payload/cursor trace, integration assurance, and independent review."},
-  "known_blockers": ["Retain exact Btree payload error and temporary Mem cleanup behavior.", "Run pinned-C malformed and integer-serial differential.", "Decide direct-final-field versus full-slice traversal only from evidence.", "Independent fidelity review remains open."],
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires source translation, payload/cursor trace, integration assurance, and independent review."
+  },
+  "known_blockers": [
+    "Run the exact pinned-C malformed/integer-serial and cursor-error trace before internal-trace promotion.",
+    "External pager/cursor I/O assurance remains broader than this materialized payload boundary.",
+    "Independent fidelity review remains open."
+  ],
   "context_review": {
-    "implementation_spans": ["upstream/sqlite/src/vdbeaux.c:5179-5300 was reviewed completely for cursor assumptions, payload acquisition, header and serial validation, integer decode, unpacked-prefix comparison, cleanup, and returns", "src/core/internal/record_compare.zig indexRowid/Cursor and src/core/vdbe.zig opcode caller were reviewed as the current bounded candidate"],
-    "callers": ["OP_IdxRowid execution reads the table rowid from the current index entry", "Current Zig Vm opcode passes an encoded payload slice"],
-    "callees": ["Btree payload size and MemFromBtree acquire the source record", "bounded varint/header logic and sqlite3VdbeSerialGet decode the final integer", "releaseMalloc cleans temporary payload ownership"],
-    "assertions_branches_cleanup": ["All 23 active behavior IDs cover cursor/payload assumptions, invalid payload sizes, payload errors, header bounds, integer serial whitelist, payload fit, prefix comparison, success, cleanup label, and corruption", "Rowid is published only after complete validation", "Temporary payload ownership is released on success and all post-read corruption paths"],
-    "upstream_tests": ["Upstream index, corrupt, rowid, VDBE, payload, OOM, and cursor tests cover the source owner", "Project btree/VDBE tests exercise the slice candidate but do not yet constitute an exact source trace"]
+    "implementation_spans": [
+      "upstream/sqlite/src/vdbeaux.c:5179-5300 was reviewed completely for cursor assumptions, payload acquisition, header and serial validation, integer decode, unpacked-prefix comparison, cleanup, and returns",
+      "src/core/internal/record_compare.zig indexRowid/Cursor and src/core/vdbe.zig opcode caller were reviewed as the current bounded candidate"
+    ],
+    "callers": [
+      "OP_IdxRowid execution reads the table rowid from the current index entry",
+      "Current Zig Vm opcode passes an encoded payload slice"
+    ],
+    "callees": [
+      "Btree payload size and MemFromBtree acquire the source record",
+      "bounded varint/header logic and sqlite3VdbeSerialGet decode the final integer",
+      "releaseMalloc cleans temporary payload ownership"
+    ],
+    "assertions_branches_cleanup": [
+      "All 23 active behavior IDs cover cursor/payload assumptions, invalid payload sizes, payload errors, header bounds, integer serial whitelist, payload fit, prefix comparison, success, cleanup label, and corruption",
+      "Rowid is published only after complete validation",
+      "Temporary payload ownership is released on success and all post-read corruption paths"
+    ],
+    "upstream_tests": [
+      "Upstream index, corrupt, rowid, VDBE, payload, OOM, and cursor tests cover the source owner",
+      "Project btree/VDBE tests exercise the slice candidate but do not yet constitute an exact source trace",
+      "Direct Zig tests cover rowid integer/corruption and zero-length comparison boundaries; maintained B-tree and VDBE differentials cover integrated callers."
+    ]
   },
   "evidence_receipts": []
 }

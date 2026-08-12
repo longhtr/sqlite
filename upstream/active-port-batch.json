@@ -843,6 +843,24 @@
       "atomic_unit_id": "memdb-serialize-deserialize-store-replacement",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeIdxRowid::line-5191",
+      "source_sha256": "bc40f6118793e2462917c09dd43da4bd2f5b767d3ea00d5aab67b7085eb8064c",
+      "zig_declaration_id": "src/core/internal/record_compare.zig::function::indexRowid",
+      "zig_declaration_sha256": "ba45adef9475f8ec7e56225ff776248b369e2085aa12cf7a0af83e0c7f0d6d9e",
+      "atomic_unit_id": "vdbe-index-record-rowid-extraction",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeIdxKeyCompare::line-5270",
+      "source_sha256": "0e107e785dfdcaf8472b4a03c30db32e23ed9cd861c1d04fbb5f67c9a47d3547",
+      "zig_declaration_id": "src/core/internal/record_compare.zig::function::indexKeyCompare",
+      "zig_declaration_sha256": "5cecbee5ac3ae5e24312b2d8373ac869ae8a502b91a0c62cfa0a20e20c53b3b2",
+      "atomic_unit_id": "vdbe-index-record-rowid-extraction",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }
