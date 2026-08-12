@@ -480,10 +480,13 @@ pub fn restartLog(wal: *Wal, random_salt: u32) Error!void {
     wal.read_lock = -1;
 }
 
-fn framePageNumber(wal: *Wal, frame: u32) Error!u32 {
-    const location = try hashGet(wal, framePage(frame));
+/// Source `walFramePgno()`: resolve one WAL frame through its mapped index
+/// page-number array. Source callers guarantee a positive mapped frame.
+fn framePageNumber(wal: *Wal, frame: u32) u32 {
+    std.debug.assert(frame > 0);
+    const location = hashGet(wal, framePage(frame)) catch unreachable;
     const index: usize = @intCast(frame - location.zero - 1);
-    if (index >= location.page_numbers.len) return error.Range;
+    std.debug.assert(index < location.page_numbers.len);
     return location.page_numbers[index];
 }
 
@@ -494,7 +497,7 @@ pub fn undo(wal: *Wal, callback: UndoCallback, context: ?*anyopaque) Error!void 
     wal.header = wal.published_headers[0];
     var frame = wal.header.max_frame + 1;
     while (frame <= maximum) : (frame += 1) {
-        const page_number = try framePageNumber(wal, frame);
+        const page_number = framePageNumber(wal, frame);
         if (page_number == 1) return error.Corrupt;
         try callback(context, page_number);
     }
@@ -807,7 +810,7 @@ pub fn findFrame(wal: *Wal, page_number: u32) Error!u32 {
     if (wal.header.max_frame == 0 or (wal.read_lock == 0 and !wal.unreliable_index)) return 0;
     var frame = wal.header.max_frame;
     while (frame >= wal.minimum_frame and frame > 0) : (frame -= 1) {
-        if (try framePageNumber(wal, frame) == page_number) return frame;
+        if (framePageNumber(wal, frame) == page_number) return frame;
     }
     return 0;
 }
@@ -1039,7 +1042,20 @@ test "WAL index append cleanup and savepoint undo" {
     sharedMemoryBarrier(&wal);
     wal.exclusive_mode = false;
     try std.testing.expectEqual(@as(usize, 383), hashPage(1));
+    try std.testing.expectEqual(@as(usize, (std.math.maxInt(u32) *% 383) & (hash_table_slot_count - 1)), hashPage(std.math.maxInt(u32)));
     try std.testing.expectEqual(@as(usize, 0), nextHash(hash_table_slot_count - 1));
+    try std.testing.expectEqual(@as(usize, 1), nextHash(0));
+
+    var frame_lookup = Wal{ .allocator = std.testing.allocator };
+    defer frame_lookup.deinit();
+    const first_page = try indexPage(&frame_lookup, 0);
+    first_page.page_numbers[0] = 17;
+    first_page.page_numbers[first_hash_page_count - 1] = 29;
+    const second_page = try indexPage(&frame_lookup, 1);
+    second_page.page_numbers[0] = 31;
+    try std.testing.expectEqual(@as(u32, 17), framePageNumber(&frame_lookup, 1));
+    try std.testing.expectEqual(@as(u32, 29), framePageNumber(&frame_lookup, first_hash_page_count));
+    try std.testing.expectEqual(@as(u32, 31), framePageNumber(&frame_lookup, first_hash_page_count + 1));
     setLimit(null, 31);
     setLimit(&wal, 31);
     try std.testing.expectEqual(@as(i64, 31), wal.maximum_size);

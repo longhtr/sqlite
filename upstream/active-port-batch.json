@@ -861,6 +861,33 @@
       "atomic_unit_id": "vdbe-index-record-rowid-extraction",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::walHash::line-1138",
+      "source_sha256": "a6f485a9325f355b1bf135a5825bc2b91399f539762a4072f825d2a9ee12fcc4",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::hashPage",
+      "zig_declaration_sha256": "01677aff5cce8ee35bc47809264525c80fb5ef7a286911b3e300822934ec491d",
+      "atomic_unit_id": "wal-hash-probing-and-frame-page-number",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::walNextHash::line-1143",
+      "source_sha256": "b9071d4d766fc749bb7c9fe140ca4d54a200698a4c0fabd0054d8f5b991bcdc6",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::nextHash",
+      "zig_declaration_sha256": "dc49659447c6add9494c4c7a1418681494db9dd9f040414a8d1f2e4104b6377a",
+      "atomic_unit_id": "wal-hash-probing-and-frame-page-number",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::walFramePgno::line-1218",
+      "source_sha256": "0e4f51d678a46f5f798480a590889c349e39b35895552b697281fe7628d2ed67",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::framePageNumber",
+      "zig_declaration_sha256": "f2d6ee33c7b4c9b3fb918c0281cd9b878d952b44dbd86221c4bdbb16f30d2c41",
+      "atomic_unit_id": "wal-hash-probing-and-frame-page-number",
+      "class": "short",
+      "complete": true
     }
   ]
 }

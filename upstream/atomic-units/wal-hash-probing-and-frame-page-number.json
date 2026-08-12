@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "id": "wal-hash-probing-and-frame-page-number",
+  "title": "WAL hash probing and frame page-number lookup",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "walHash, walNextHash, and walFramePgno form the allocation-free WAL-index addressing core: they compute the initial power-of-two slot, advance collision probes with wraparound, and resolve a frame to its database page number across the smaller first index page and later full pages.",
+    "source_files": [
+      {
+        "path": "src/wal.c",
+        "sha256": "0c0467f7c4de773512b3327b0d3973fc31d50cf74603d6aec0e3b3e1c787e217"
+      }
+    ],
+    "source_entity_ids": [
+      "src/wal.c::function::walHash::line-1138",
+      "src/wal.c::function::walNextHash::line-1143",
+      "src/wal.c::function::walFramePgno::line-1218"
+    ],
+    "behavioral_block_ids": [
+      "src/wal.c::function::walHash::behavior::assert::line-1139-column-3::ordinal-0",
+      "src/wal.c::function::walHash::behavior::assert::line-1140-column-3::ordinal-0",
+      "src/wal.c::function::walHash::behavior::return::line-1141-column-3::ordinal-0",
+      "src/wal.c::function::walNextHash::behavior::return::line-1144-column-3::ordinal-0",
+      "src/wal.c::function::walFramePgno::behavior::if::line-1221-column-3::ordinal-0",
+      "src/wal.c::function::walFramePgno::behavior::return::line-1222-column-5::ordinal-0",
+      "src/wal.c::function::walFramePgno::behavior::return::line-1224-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "WAL-index page mapping and allocation",
+      "Hash insertion and cleanup",
+      "Frame payload I/O"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Mapped WAL-index page arrays and source frame-page partition constants"
+    ],
+    "caller_closure": "The complete active bodies are assigned. WAL index append/find, undo, recovery, and checkpoint owners call the hash and frame-page-number helpers through the typed native Wal owner."
+  },
+  "contracts": {
+    "inputs": [
+      "Nonzero database page number, prior hash slot, or positive WAL frame number with a mapped index page"
+    ],
+    "outputs": [
+      "Initial hash slot, wrapped next slot, or database page number recorded for the frame"
+    ],
+    "ownership": "Borrowed scalar or WAL-index page slices; no allocation, release, or mutation.",
+    "state_and_results": "Hash multiplication wraps at u32 width before the slot mask. Probe advancement wraps at the power-of-two slot count. Frame lookup applies the smaller first-page offset and full later-page modulo exactly.",
+    "locks_callbacks_io": "Caller owns WAL-index locks and valid mappings. No callbacks or direct I/O.",
+    "failure_and_continuation": "Zero/out-of-range frames are rejected by the typed boundary; valid inputs leave WAL state unchanged."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/wal.c::function::walHash::line-1138",
+      "relation": "source-u32-wrapping-hash-slot",
+      "zig_declaration_ids": [
+        "src/core/internal/wal_core.zig::function::hashPage"
+      ]
+    },
+    {
+      "source_entity_id": "src/wal.c::function::walNextHash::line-1143",
+      "relation": "source-wrapping-linear-probe",
+      "zig_declaration_ids": [
+        "src/core/internal/wal_core.zig::function::nextHash"
+      ]
+    },
+    {
+      "source_entity_id": "src/wal.c::function::walFramePgno::line-1218",
+      "relation": "source-frame-index-page-number-lookup",
+      "zig_declaration_ids": [
+        "src/core/internal/wal_core.zig::function::framePageNumber"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The C WAL-index header offset is represented by IndexPage.page_numbers already sliced past metadata on the first typed index page.",
+    "The typed helper returns Range for frame zero or an unavailable array position instead of relying on source caller assertions and mapped-memory invariants."
+  ],
+  "oracle": {
+    "protocol": "Exercise initial and maximum-u32 page hashes, probe wraparound, first/last first-page frames, and the first frame on the second WAL-index page, then retain the maintained WAL differential for integrated append/find/checkpoint callers.",
+    "internal_observations": [
+      "hash slot and wraparound slot",
+      "selected WAL-index page and offset",
+      "resolved database page number",
+      "zero-frame rejection"
+    ],
+    "normalization": "Scalar slots, offsets, page numbers, and errors are exact; mapped addresses are not observed."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No direct I/O; callers own mapped-index locking and publication.",
+    "malformed_input": "Typed zero/out-of-range frame guards supplement source assertions without weakening valid-frame behavior.",
+    "continuation": "Pure lookups do not mutate WAL state.",
+    "performance": "Constant-time arithmetic and one indexed page-number load.",
+    "commands": [
+      "zig build wal-differential",
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/wal_core.zig typed WAL-index owner",
+    "native_call_path": "indexAppend uses hashPage/nextHash; undo, recovery, checkpoint, and frame search use framePageNumber.",
+    "bounded_owner_retired": "No duplicate typed hash or frame-page-number owner remains."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires exact pinned-C scalar trace, mapped-index concurrency assurance, and independent review."
+  },
+  "known_blockers": [
+    "Add an exact pinned-C scalar trace before internal-trace promotion.",
+    "Mapped WAL-index publication and concurrent-reader assurance remain broader subsystem work.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/wal.c:1132-1225 was reviewed completely for hash constants, collision wraparound, hash-page partitioning, first-page metadata offset, and later-page modulo lookup",
+      "src/core/internal/wal_core.zig hashPage, nextHash, framePage, hashGet, framePageNumber, and their production callers were reviewed"
+    ],
+    "callers": [
+      "walIndexAppend inserts page numbers using walHash/walNextHash",
+      "WAL undo, recovery, checkpoint iteration, and frame lookup consume walFramePgno-equivalent results"
+    ],
+    "callees": [
+      "Hash arithmetic uses only fixed constants",
+      "Frame lookup consumes typed hashGet/framePage and one mapped page_numbers entry"
+    ],
+    "assertions_branches_cleanup": [
+      "All seven active behavior blocks are assigned",
+      "Hash power-of-two and nonzero-page assumptions are retained",
+      "First and later index-page branches are represented by framePage plus zero-relative page slices",
+      "No cleanup is required"
+    ],
+    "upstream_tests": [
+      "Upstream WAL, walro, wal2, checkpoint, savepoint, corruption, and recovery tests cover these helpers through callers",
+      "Project WAL unit and differential tests cover hash insertion plus first/second index-page lookup"
+    ]
+  },
+  "evidence_receipts": []
+}
