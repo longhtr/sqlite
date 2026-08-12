@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "id": "pager-mmap-and-journal-size-limits",
+  "title": "Pager mmap and journal-size limits",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerSetMmapLimit stores the requested mapping limit and immediately reapplies the file-control/fetch policy, while sqlite3PagerJournalSizeLimit accepts limits at least -1, ignores lower values, propagates accepted limits to WAL, and returns the live limit.",
+    "source_files": [{"path": "src/pager.c", "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"}],
+    "source_entity_ids": ["src/pager.c::function::sqlite3PagerSetMmapLimit::line-3595", "src/pager.c::function::sqlite3PagerJournalSizeLimit::line-7519"],
+    "behavioral_block_ids": ["src/pager.c::function::sqlite3PagerJournalSizeLimit::behavior::if::line-7520-column-3::ordinal-0", "src/pager.c::function::sqlite3PagerJournalSizeLimit::behavior::return::line-7524-column-3::ordinal-0"],
+    "excluded_responsibilities": ["VFS file-control implementation", "Attached WAL limit mutation", "Journal truncation policy"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["pagerFixMaplimit VFS hint boundary and sqlite3WalLimit attached-WAL owner"], "caller_closure": "Both setter bodies are assigned for the bounded Pager. WAL propagation remains open because this model has no attached WAL pointer."},
+  "contracts": {
+    "inputs": ["Pager and mmap byte limit plus file/method capability", "Pager and signed journal byte limit"],
+    "outputs": ["Updated mmap/fetch policy", "Live journal size limit"],
+    "ownership": "Mutates Pager scalar state only.",
+    "state_and_results": "Mmap stores every request then applies active-file policy. Journal limits >=-1 replace state; <-1 are no-ops; live state is returned.",
+    "locks_callbacks_io": "Mmap policy models capability and fetch selection; actual file-control callback is external. Journal setter has no I/O in the bounded owner.",
+    "failure_and_continuation": "No local failure path. Unsupported mmap file/method retains the stored limit but skips fetch-policy update."
+  },
+  "mappings": [
+    {"source_entity_id": "src/pager.c::function::sqlite3PagerSetMmapLimit::line-3595", "relation": "source-store-and-reapply-pager-mmap-limit", "zig_declaration_ids": ["src/core/internal/pager_core.zig::function::setMmapLimit"]},
+    {"source_entity_id": "src/pager.c::function::sqlite3PagerJournalSizeLimit::line-7519", "relation": "source-validated-journal-size-limit-set-and-get", "zig_declaration_ids": ["src/core/internal/pager_core.zig::function::setJournalSizeLimit"]}
+  ],
+  "representation_differences": ["Mmap limit is u64 in the bounded Pager; the source API uses nonnegative sqlite3_int64 configuration values.", "File openness/method version are explicit inputs instead of inspecting sqlite3_file.", "Attached WAL limit propagation remains external."],
+  "oracle": {"protocol": "Set active version-3 mmap limit 8192 and observe use_fetch; set journal limit 1024, then attempt -2 and observe retained 1024.", "internal_observations": ["mmap_size", "use_fetch", "getter_generation", "journal_size_limit", "returned limit"], "normalization": "Byte limits compare exactly; accepted/no-op journal branches are explicit."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "Actual mmap file-control and WAL propagation are external; scalar state mutation has no I/O.", "malformed_input": "Journal limits below -1 are safe no-ops. Mmap signed-negative public normalization remains caller-owned.", "continuation": "Every call leaves a valid scalar configuration.", "performance": "Constant time plus external file-control when integrated.",
+    "commands": ["zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/pager_core.zig Pager configuration owner", "native_call_path": "Typed setters and accepted/rejected traces exist; VFS and WAL side effects remain pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires VFS/WAL integration, signed boundary and pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect SQLITE_FCNTL_MMAP_SIZE to active VFS file.", "Propagate journal limit to attached WAL.", "Normalize negative mmap public inputs.", "Add pinned-C capability/limit trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/pager.c:3552-3600 and 7508-7525 were reviewed completely", "src/core/internal/pager_core.zig mmap/fixMapLimit/journal truncation owners and tests were reviewed"],
+    "callers": ["B-tree mmap configuration and journal-size-limit PRAGMA/file-control paths", "Unit trace invokes both setters directly"],
+    "callees": ["pagerFixMaplimit represented by fixMapLimit", "sqlite3WalLimit remains external"],
+    "assertions_branches_cleanup": ["All generated active blocks are assigned; mmap's straight-line store/call is included by entity assignment", "Journal accepted and rejected branches plus return are traced", "No allocation or cleanup"],
+    "upstream_tests": ["Upstream mmap and journal-size-limit tests cover these setters", "Project trace covers active mmap and journal accepted/no-op branches"]
+  },
+  "evidence_receipts": []
+}

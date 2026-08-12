@@ -438,6 +438,11 @@
       "id": "pager-readonly-and-journal-mode-observations",
       "path": "upstream/atomic-units/pager-readonly-and-journal-mode-observations.json",
       "status": "source-translated"
+    },
+    {
+      "id": "pager-mmap-and-journal-size-limits",
+      "path": "upstream/atomic-units/pager-mmap-and-journal-size-limits.json",
+      "status": "source-translated"
     }
   ]
 }

@@ -528,6 +528,24 @@
       "atomic_unit_id": "pager-readonly-and-journal-mode-observations",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerSetMmapLimit::line-3595",
+      "source_sha256": "67ec79cd286aaaa73026424cfe4b89d750b1972a3ed43e7a614a00425351db82",
+      "zig_declaration_id": "src/core/internal/pager_core.zig::function::setMmapLimit",
+      "zig_declaration_sha256": "e7b8bc04d6b2b1aefbcf9d4aaf258597fdce54e8cc5f5c5981095a07f0897ef0",
+      "atomic_unit_id": "pager-mmap-and-journal-size-limits",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerJournalSizeLimit::line-7519",
+      "source_sha256": "0e40021376f0b9c32a0ccf435718e2fffadf9509e6e00c953ff62a52a2d85af5",
+      "zig_declaration_id": "src/core/internal/pager_core.zig::function::setJournalSizeLimit",
+      "zig_declaration_sha256": "0dd2bc7bc88f2a0b06dc5eea571273d6e80d0387eb69a27870f13b3fd6a5dd89",
+      "atomic_unit_id": "pager-mmap-and-journal-size-limits",
+      "class": "short",
+      "complete": true
     }
   ]
 }
