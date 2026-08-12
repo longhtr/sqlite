@@ -105,6 +105,11 @@ pub const Wal = struct {
     }
 };
 
+/// Source `sqlite3WalLimit()`.
+pub fn setLimit(wal: ?*Wal, byte_limit: i64) void {
+    if (wal) |value| value.maximum_size = byte_limit;
+}
+
 /// Source `sqlite3WalDbsize()`.
 pub fn databaseSize(wal: ?*const Wal) u32 {
     const value = wal orelse return 0;
@@ -994,6 +999,9 @@ test "WAL index append cleanup and savepoint undo" {
     var wal = Wal{ .allocator = std.testing.allocator, .write_lock = true };
     defer wal.deinit();
     wal.header.database_pages = 9;
+    setLimit(null, 31);
+    setLimit(&wal, 31);
+    try std.testing.expectEqual(@as(i64, 31), wal.maximum_size);
     try std.testing.expectEqual(@as(u32, 0), databaseSize(null));
     try std.testing.expectEqual(@as(u32, 0), databaseSize(&wal));
     wal.read_lock = 0;

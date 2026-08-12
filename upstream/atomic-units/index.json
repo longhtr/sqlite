@@ -458,6 +458,11 @@
       "id": "wal-savepoint-capture",
       "path": "upstream/atomic-units/wal-savepoint-capture.json",
       "status": "source-translated"
+    },
+    {
+      "id": "wal-size-limit-setting",
+      "path": "upstream/atomic-units/wal-size-limit-setting.json",
+      "status": "source-translated"
     }
   ]
 }

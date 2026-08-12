@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "wal-size-limit-setting",
+  "title": "WAL size-limit setting",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3WalLimit stores the exact reset-truncation size limit when a WAL exists and is a no-op for null WAL.",
+    "source_files": [{"path": "src/wal.c", "sha256": "0c0467f7c4de773512b3327b0d3973fc31d50cf74603d6aec0e3b3e1c787e217"}],
+    "source_entity_ids": ["src/wal.c::function::sqlite3WalLimit::line-1750"],
+    "behavioral_block_ids": ["src/wal.c::function::sqlite3WalLimit::behavior::if::line-1751-column-3::ordinal-0"],
+    "excluded_responsibilities": ["WAL reset/truncation", "Pager journal-size limit validation", "WAL open"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["WAL reset owner that consumes maximum_size"], "caller_closure": "The complete nullable setter is assigned; pager propagation and reset consumption remain separate."},
+  "contracts": {
+    "inputs": ["Nullable Wal and signed byte limit"],
+    "outputs": ["No return value"],
+    "ownership": "Mutates only maximum_size on non-null Wal.",
+    "state_and_results": "Null is no-op; every i64 value is stored exactly for non-null WAL.",
+    "locks_callbacks_io": "No callbacks or I/O; caller synchronization external.",
+    "failure_and_continuation": "No failure path."
+  },
+  "mappings": [{"source_entity_id": "src/wal.c::function::sqlite3WalLimit::line-1750", "relation": "source-nullable-exact-wal-size-limit-store", "zig_declaration_ids": ["src/core/internal/wal_core.zig::function::setLimit"]}],
+  "representation_differences": ["The field is named maximum_size instead of mxWalSize."],
+  "oracle": {"protocol": "Invoke null setter safely, then set non-null limit 31 and observe exact field.", "internal_observations": ["nullable Wal", "input limit", "maximum_size"], "normalization": "Signed byte limit is exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; synchronization external.", "malformed_input": "All i64 values are accepted exactly as source specifies.", "continuation": "Scalar state remains valid.", "performance": "Constant time.",
+    "commands": ["zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/wal_core.zig Wal size/reset owner", "native_call_path": "Typed nullable setter and null/non-null trace exist; pager propagation remains pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pager propagation/reset integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect pager journal-size setter to attached WAL.", "Validate reset truncation consumption.", "Add pinned-C null/non-null trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/wal.c:1738-1752 was reviewed completely", "src/core/internal/wal_core.zig maximum_size write/reset consumption and tests were reviewed"],
+    "callers": ["sqlite3PagerJournalSizeLimit propagation", "Unit trace invokes setter directly"],
+    "callees": ["Direct Wal.maximum_size field"],
+    "assertions_branches_cleanup": ["The sole nullable if block is assigned", "No allocation, cleanup, or error"],
+    "upstream_tests": ["Upstream WAL size-limit and journal-size-limit tests cover this setter", "Project trace covers null and exact non-null store"]
+  },
+  "evidence_receipts": []
+}

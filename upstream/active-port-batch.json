@@ -573,6 +573,15 @@
       "atomic_unit_id": "wal-savepoint-capture",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::sqlite3WalLimit::line-1750",
+      "source_sha256": "05806fb9841b389bf313231a98d60e199341d20240c43d997009e36a3ef67629",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::setLimit",
+      "zig_declaration_sha256": "717533f933f5644ee2dce503f8f8e6d25d9497cee56c81ae51ec5d226a74b1d8",
+      "atomic_unit_id": "wal-size-limit-setting",
+      "class": "short",
+      "complete": true
     }
   ]
 }
