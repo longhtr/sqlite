@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "btree-cell-size-cache-lookup",
+  "title": "B-tree cell-size cache computation and lookup",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "computeCellSize calculates and stores a missing cell size, while cachedCellSize returns an existing size or delegates to the computation path.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::computeCellSize::line-7619", "src/btree.c::function::cachedCellSize::line-7625"],
+    "behavioral_block_ids": [
+      "src/btree.c::function::computeCellSize::behavior::assert::line-7620-column-3::ordinal-0",
+      "src/btree.c::function::computeCellSize::behavior::assert::line-7621-column-3::ordinal-0",
+      "src/btree.c::function::computeCellSize::behavior::return::line-7623-column-3::ordinal-0",
+      "src/btree.c::function::cachedCellSize::behavior::assert::line-7626-column-3::ordinal-0",
+      "src/btree.c::function::cachedCellSize::behavior::if::line-7627-column-3::ordinal-0",
+      "src/btree.c::function::cachedCellSize::behavior::return::line-7627-column-22::ordinal-0",
+      "src/btree.c::function::cachedCellSize::behavior::return::line-7628-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Cell payload parsing implementation", "Cell-array construction", "Page balancing"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Page-specific cell-size callback semantics represented by leaf length or cellSizeNoPayload"],
+    "caller_closure": "Both complete helpers and the population caller that consumes their cache state are assigned in the production B-tree owner."
+  },
+  "contracts": {
+    "inputs": ["Cell array and in-range cell index"],
+    "outputs": ["Computed or cached cell byte size"],
+    "ownership": "Cell buffers are borrowed; only the parallel size slot is mutated.",
+    "state_and_results": "compute requires an empty size slot and stores the computed value. cached returns a nonzero slot unchanged or computes and stores it.",
+    "locks_callbacks_io": "Caller owns the B-tree mutex. No I/O or callbacks outside the page-specific size calculation.",
+    "failure_and_continuation": "Zig reports Range or Corrupt for invalid bounded representation; a failed computation leaves the cache slot zero."
+  },
+  "mappings": [
+    {"source_entity_id": "src/btree.c::function::computeCellSize::line-7619", "relation": "source-btree-cell-size-cache-fill", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::computeCellSize"]},
+    {"source_entity_id": "src/btree.c::function::cachedCellSize::line-7625", "relation": "source-btree-cell-size-cache-lookup", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::cachedCellSize"]}
+  ],
+  "representation_differences": ["Zig uses bounded slices and usize sizes instead of C pointer arrays and u16 cache entries, and returns explicit range/corruption errors."],
+  "oracle": {
+    "protocol": "Trace an empty cache slot through computation, then repeat through the cached path and verify no size change.",
+    "internal_observations": ["index bounds", "prior size", "computed size", "stored size", "returned size"],
+    "normalization": "Valid cell sizes compare as exact integers."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; caller owns B-tree synchronization.",
+    "malformed_input": "Bounds and malformed non-leaf cells return explicit errors.",
+    "continuation": "Failed computation preserves the zero cache slot.",
+    "performance": "Cached lookup is constant time; miss performs one bounded cell-size decode.",
+    "commands": ["zig build test", "zig build btree-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/btree_core.zig cell-array owner",
+    "native_call_path": "Cell-cache population invokes computeCellSize for empty slots; balancing owners consume the populated size array.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Add pinned-C valid/malformed cell-array differential.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:7594-7643 was reviewed for population, computation, cache hit, assertions, and downstream balancing ownership", "src/core/internal/btree_core.zig CellArray, cellSizeNoPayload, populateCellCache, and tests were reviewed"],
+    "callers": ["populateCellCache fills selected size-cache ranges", "B-tree balance paths consume cached cell sizes", "Unit trace exercises miss then hit"],
+    "callees": ["Source page xCellSize callback", "Zig leaf length or cellSizeNoPayload representation"],
+    "assertions_branches_cleanup": ["All seven generated blocks are assigned", "Index and empty-slot preconditions are preserved", "No allocation or cleanup paths exist"],
+    "upstream_tests": ["Upstream B-tree balance and corruption tests exercise the source helpers", "Project B-tree core and differential suites exercise cell-cache population"]
+  },
+  "evidence_receipts": []
+}
