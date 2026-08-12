@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "btree-basic-state-observations",
+  "title": "B-tree reserve, transaction, and read-only observations",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Three small B-tree observations expose the live reserved trailer under an already-held shared mutex, the connection-local transaction state with null mapping to NONE, and the shared read-only flag. Together they form a dependency-free B-tree state observation boundary.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": [
+      "src/btree.c::function::sqlite3BtreeGetReserveNoMutex::line-3124",
+      "src/btree.c::function::sqlite3BtreeTxnState::line-11327",
+      "src/btree.c::function::sqlite3BtreeIsReadonly::line-11552"
+    ],
+    "behavioral_block_ids": [
+      "src/btree.c::function::sqlite3BtreeGetReserveNoMutex::behavior::assert::line-3126-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeGetReserveNoMutex::behavior::return::line-3128-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeTxnState::behavior::assert::line-11328-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeTxnState::behavior::return::line-11329-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeTxnState::behavior::conditional::line-11329-column-10::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeIsReadonly::behavior::return::line-11553-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Transaction transitions", "Read-only flag derivation from VFS open flags", "Requested-reserve maximum"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["B-tree lock discipline and state mutation owners"], "caller_closure": "All three observation bodies are assigned; public transaction/read-only consumers remain separately integrated."},
+  "contracts": {
+    "inputs": ["Valid Btree for reserve/read-only observations; nullable Btree for transaction state"],
+    "outputs": ["Live reserved bytes, NONE/READ/WRITE transaction state, and read-only boolean"],
+    "ownership": "All inputs are borrowed; no allocation or mutation.",
+    "state_and_results": "Null transaction input returns NONE. Reserve returns the live format reserve, not a pending larger request. Read-only returns the B-tree open-state flag.",
+    "locks_callbacks_io": "Reserve requires the shared B-tree mutex already held; transaction requires the owning connection mutex for non-null input; read-only is a direct immutable-state observation. No callbacks or I/O.",
+    "failure_and_continuation": "Total for valid lock/state preconditions and has no error result."
+  },
+  "mappings": [
+    {"source_entity_id": "src/btree.c::function::sqlite3BtreeGetReserveNoMutex::line-3124", "relation": "source-live-reserve-under-held-mutex", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::reserveNoMutex"]},
+    {"source_entity_id": "src/btree.c::function::sqlite3BtreeTxnState::line-11327", "relation": "source-nullable-connection-transaction-state", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::transactionState"]},
+    {"source_entity_id": "src/btree.c::function::sqlite3BtreeIsReadonly::line-11552", "relation": "source-btree-read-only-flag-observation", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::isReadOnly"]}
+  ],
+  "representation_differences": ["Live reserve is stored directly as reserved_bytes rather than pageSize-usableSize.", "The Zig Transaction enum names NONE/READ/WRITE states rather than exposing integer constants.", "The Zig Btree owner stores read_only directly rather than in BtShared.btsFlags."],
+  "oracle": {"protocol": "Seed a Btree with 12 reserved bytes, NONE transaction, and writable state; observe exact values and separately observe null transaction state.", "internal_observations": ["reserved_bytes", "transaction enum", "read_only flag", "null transaction input"], "normalization": "Transaction enum values are compared semantically; reserve bytes and boolean are exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; lock preconditions remain caller-owned.", "malformed_input": "Null is accepted only by transactionState; null reserve/read-only inputs are outside the source contract.", "continuation": "Pure observations leave state unchanged.", "performance": "Constant time.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig B-tree state owner", "native_call_path": "Typed owners and initial scalar branches are unit-traced; native lock/public API wiring remains open.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires native locking/public integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect source mutex ownership.", "Connect VFS-derived read-only state and public consumers.", "Add pinned-C observations.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:3113-3129, 11321-11330, and 11547-11554 were reviewed completely", "src/core/internal/btree_core.zig page format, transaction, and Btree ownership were reviewed"],
+    "callers": ["Backup reserve observation", "sqlite3_txn_state-style connection APIs", "Read-only database APIs and mutation guards", "Unit trace invokes each owner directly"],
+    "callees": ["No production callees beyond direct state reads"],
+    "assertions_branches_cleanup": ["All six active blocks are assigned", "Null transaction conditional maps to NONE", "No allocation, mutation, or cleanup"],
+    "upstream_tests": ["Upstream backup/reserve, transaction-state, read-only, URI, and VFS tests cover these observations", "Project unit trace covers live reserve, null/non-null NONE transaction, and writable state"]
+  },
+  "evidence_receipts": []
+}

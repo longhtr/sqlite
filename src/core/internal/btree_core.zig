@@ -102,7 +102,7 @@ pub const Shared = struct {
     }
 };
 
-pub const Btree = struct { shared: *Shared, sharable: bool = false, read_uncommitted: bool = false, transaction: Transaction = .none, has_incrblob_cursor: bool = false, savepoint_count: usize = 0 };
+pub const Btree = struct { shared: *Shared, sharable: bool = false, read_uncommitted: bool = false, read_only: bool = false, transaction: Transaction = .none, has_incrblob_cursor: bool = false, savepoint_count: usize = 0 };
 pub const Cursor = struct {
     allocator: std.mem.Allocator,
     tree: *Btree,
@@ -974,6 +974,22 @@ pub fn pageSize(tree: *const Btree) u32 {
     return tree.shared.usable_size + tree.shared.reserved_bytes;
 }
 
+/// Source `sqlite3BtreeGetReserveNoMutex()` after the caller has acquired the
+/// shared B-tree mutex.
+pub fn reserveNoMutex(tree: *const Btree) u8 {
+    return tree.shared.reserved_bytes;
+}
+
+/// Source `sqlite3BtreeTxnState()` with the source null-Btree NONE result.
+pub fn transactionState(tree: ?*const Btree) Transaction {
+    return if (tree) |value| value.transaction else .none;
+}
+
+/// Source `sqlite3BtreeIsReadonly()`.
+pub fn isReadOnly(tree: *const Btree) bool {
+    return tree.read_only;
+}
+
 /// Source `sqlite3BtreeGetRequestedReserve()`: reserve bytes may grow to a
 /// pending file-control request but never report less than the live page
 /// format currently reserves.
@@ -988,6 +1004,10 @@ test "source page size and requested reserve reflect live page format" {
     shared.usable_size = 4084;
     shared.reserved_bytes = 12;
     try std.testing.expectEqual(@as(u32, 4096), pageSize(&tree));
+    try std.testing.expectEqual(@as(u8, 12), reserveNoMutex(&tree));
+    try std.testing.expectEqual(Transaction.none, transactionState(null));
+    try std.testing.expectEqual(Transaction.none, transactionState(&tree));
+    try std.testing.expect(!isReadOnly(&tree));
     shared.requested_reserved_bytes = 8;
     try std.testing.expectEqual(@as(u8, 12), requestedReserve(&tree));
     shared.requested_reserved_bytes = 24;

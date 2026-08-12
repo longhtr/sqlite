@@ -338,6 +338,11 @@
       "id": "btree-live-page-size-observation",
       "path": "upstream/atomic-units/btree-live-page-size-observation.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-basic-state-observations",
+      "path": "upstream/atomic-units/btree-basic-state-observations.json",
+      "status": "source-translated"
     }
   ]
 }
