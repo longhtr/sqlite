@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "btree-cursor-initialization",
+  "title": "B-tree cursor validation, initialization, and publication",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "btreeCursor validates root, transaction, write, lock, and read-only preconditions; maps an empty schema root to zero; initializes a cursor; marks same-root cursors as multiple; publishes it on the shared list; selects read/write pager behavior; and lazily allocates write temporary space.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::btreeCursor::line-4689"],
+    "behavioral_block_ids": [
+      "src/btree.c::function::btreeCursor::behavior::assert::line-4699-column-3::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::assert::line-4700-column-3::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::assert::line-4709-column-3::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::assert::line-4711-column-3::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::assert::line-4714-column-3::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::assert::line-4715-column-3::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::assert::line-4716-column-3::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::assert::line-4717-column-3::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::if::line-4719-column-3::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::if::line-4720-column-5::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::return::line-4721-column-7::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::if::line-4722-column-11::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::assert::line-4723-column-7::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::for::line-4738-column-3::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::if::line-4739-column-5::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::if::line-4747-column-3::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::if::line-4750-column-5::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::return::line-4750-column-29::ordinal-0",
+      "src/btree.c::function::btreeCursor::behavior::return::line-4754-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Sharable wrapper mutex entry/leave", "Public sharable dispatch", "KeyInfo comparison ownership"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Shared-cache table-lock establishment/checks and connection mutex ownership"], "caller_closure": "The initialization body is assigned. The typed model has no KeyInfo field yet, so index/table distinction remains an external caller responsibility."},
+  "contracts": {
+    "inputs": ["Btree, positive root page, writable flag, active transaction; write requests require write transaction and writable media"],
+    "outputs": ["Allocator-owned invalid Cursor linked into Shared or exact bounded error"],
+    "ownership": "On success Shared owns Cursor. On allocation/temp-space failure no cursor remains published and all cursor storage is freed.",
+    "state_and_results": "Empty read-only schema root 1 maps to root 0. Same-root cursors all gain multiple. Read cursors set pager_readonly; write cursors acquire temporary space.",
+    "locks_callbacks_io": "Caller/shared-cache wrapper owns lock discipline. This body allocates cursor/list/temp memory but performs no pager I/O.",
+    "failure_and_continuation": "Root zero is corrupt; missing/wrong transaction or read-only write is rejected. OOM leaves list and previous cursor flags unchanged."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::btreeCursor::line-4689", "relation": "source-cursor-validation-initialization-and-publication", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::openCursor"]}],
+  "representation_differences": ["Zig allocates Cursor instead of filling caller-prezeroed opaque storage.", "A boolean pager_readonly represents PAGER_GET_READONLY; writable represents BTCF_WriteFlag.", "KeyInfo is not stored in this bounded Cursor model.", "Explicit errors enforce several source assertions in release builds."],
+  "oracle": {"protocol": "Exercise zero root, inactive transaction, empty schema, writable temporary-space allocation, same-root multiple marking, invalid initial state, and read-only rejection; bounded allocation suite checks publication rollback.", "internal_observations": ["root", "transaction", "read_only", "Shared.cursors", "Cursor.state", "multiple", "pager_readonly", "temporary_space"], "normalization": "Allocator-owned cursor identity replaces caller storage; source flags compare by semantic booleans."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "Cursor allocation, list append, and temporary-space allocation are bounded; errdefers remove publication and free cursor storage before returning NoMemory.", "io_crash_concurrency": "No I/O; sharable lock wrapper and actual connection mutex remain external.", "malformed_input": "Root zero reports Corrupt. Absent transactions and forbidden writes report ReadOnly.", "continuation": "Failure leaves prior cursor list and multiple flags unchanged; success leaves an invalid cursor ready for movement.", "performance": "Linear scan of open cursors plus allocation; same source complexity.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig Shared/Btree/Cursor owner", "native_call_path": "createCursor and cursorWithLock dispatch through this owner in production internal paths; broader SQL runtime still uses the separate database cursor owner.", "bounded_owner_retired": "The prior simplified openCursor omitted empty-schema, multiple, pager-mode, read-only, and temporary-space behavior and is retired."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires KeyInfo/lock integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Represent KeyInfo and integer-key distinction.", "Connect actual shared-cache mutex/lock assertions.", "Add pinned-C initialization/OOM trace.", "Unify with the integrated database cursor owner.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:4650-4755 was reviewed completely for all documented preconditions and body behavior", "src/core/internal/btree_core.zig Cursor, Shared list/lifetime, lock wrapper, temporary-space owner, page count, and call sites were reviewed"],
+    "callers": ["btreeCursorWithLock and sqlite3BtreeCursor wrappers", "Internal createCursor call graph", "Bounded allocation and direct source-behavior tests"],
+    "callees": ["hasSharedCacheTableLock/hasReadConflicts represented by wrapper/caller preconditions", "btreePagecount represented by pageCount", "allocateTempSpace represented by allocateTemporarySpace"],
+    "assertions_branches_cleanup": ["All 19 active behavioral blocks are assigned", "Cursor list publication rolls back if temporary-space allocation fails", "Multiple flags mutate only after all failing operations have completed"],
+    "upstream_tests": ["Upstream cursor open, empty schema, read-only, shared-cache, and allocation fault tests cover this owner", "Project direct test covers all modeled branches and bounded suite covers allocation failures"]
+  },
+  "evidence_receipts": []
+}

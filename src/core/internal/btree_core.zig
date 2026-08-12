@@ -126,6 +126,8 @@ pub const Cursor = struct {
     valid_key: bool = false,
     valid_overflow: bool = false,
     pinned: bool = false,
+    multiple: bool = false,
+    pager_readonly: bool = true,
     hints: u8 = 0,
     info: CellInfo = .{},
     pub fn deinit(self: *Cursor) void {
@@ -577,12 +579,42 @@ pub fn beginStatement(tree: *Btree, statement: usize) Error!void {
     tree.savepoint_count = statement;
 }
 
+/// Source `btreeCursor()` with allocator-owned cursor storage replacing the
+/// caller-provided `BtCursor` object.
 fn openCursor(tree: *Btree, root: u32, writable: bool) Error!*Cursor {
-    if (root == 0 or (writable and tree.transaction != .write)) return error.ReadOnly;
+    if (root == 0) return error.Corrupt;
+    if (tree.transaction == .none or (writable and tree.transaction != .write)) return error.ReadOnly;
+    if (writable and tree.read_only) return error.ReadOnly;
+
+    var effective_root = root;
+    if (root == 1 and pageCount(tree.shared) == 0) {
+        if (writable) return error.ReadOnly;
+        effective_root = 0;
+    }
+
     const cursor = tree.shared.allocator.create(Cursor) catch return error.NoMemory;
     errdefer tree.shared.allocator.destroy(cursor);
-    cursor.* = .{ .allocator = tree.shared.allocator, .tree = tree, .root = root, .writable = writable };
+    cursor.* = .{
+        .allocator = tree.shared.allocator,
+        .tree = tree,
+        .root = effective_root,
+        .writable = writable,
+        .pager_readonly = !writable,
+    };
+    const insertion_index = tree.shared.cursors.items.len;
     tree.shared.cursors.append(tree.shared.allocator, cursor) catch return error.NoMemory;
+    errdefer {
+        const removed = tree.shared.cursors.orderedRemove(insertion_index);
+        std.debug.assert(removed == cursor);
+    }
+
+    if (writable) _ = try allocateTemporarySpace(tree.shared);
+    for (tree.shared.cursors.items) |other| {
+        if (other != cursor and other.root == effective_root) {
+            other.multiple = true;
+            cursor.multiple = true;
+        }
+    }
     return cursor;
 }
 
@@ -2129,6 +2161,32 @@ fn allocationExercise(allocator: std.mem.Allocator) !void {
     _ = createCursor(&tree, 2, false) catch |failure| return if (failure == error.NoMemory) error.OutOfMemory else failure;
     setHasContent(&shared, 1) catch |failure| return if (failure == error.NoMemory) error.OutOfMemory else failure;
     _ = schema(&tree, 16, null) catch |failure| return if (failure == error.NoMemory) error.OutOfMemory else failure;
+}
+
+test "source btree cursor initialization enforces state and ownership" {
+    var shared = Shared.init(std.testing.allocator);
+    defer shared.deinit();
+    var tree = Btree{ .shared = &shared };
+
+    try std.testing.expectError(error.Corrupt, openCursor(&tree, 0, false));
+    try std.testing.expectError(error.ReadOnly, openCursor(&tree, 2, false));
+    tree.transaction = .read;
+    const empty_schema = try openCursor(&tree, 1, false);
+    try std.testing.expectEqual(@as(u32, 0), empty_schema.root);
+    try std.testing.expect(empty_schema.pager_readonly);
+    try std.testing.expect(!empty_schema.multiple);
+
+    tree.transaction = .write;
+    const write_cursor = try openCursor(&tree, 2, true);
+    try std.testing.expect(!write_cursor.pager_readonly);
+    try std.testing.expect(shared.temporary_space != null);
+    const read_cursor = try openCursor(&tree, 2, false);
+    try std.testing.expect(write_cursor.multiple);
+    try std.testing.expect(read_cursor.multiple);
+    try std.testing.expectEqual(CursorState.invalid, write_cursor.state);
+
+    tree.read_only = true;
+    try std.testing.expectError(error.ReadOnly, openCursor(&tree, 3, true));
 }
 
 test "extended btree source surface is compile-covered" {

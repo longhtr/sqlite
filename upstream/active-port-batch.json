@@ -492,6 +492,15 @@
       "atomic_unit_id": "global-shared-cache-setting",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::btreeCursor::line-4689",
+      "source_sha256": "f180aea06d6c5a20904800c96f7211109978f0ae9c0458ffa690e90a31377ab3",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::openCursor",
+      "zig_declaration_sha256": "5eb57ed3b458d65eaf141892849c058403e2c98b314a654709ebfc0bf103dbe8",
+      "atomic_unit_id": "btree-cursor-initialization",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

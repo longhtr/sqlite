@@ -423,6 +423,11 @@
       "id": "global-shared-cache-setting",
       "path": "upstream/atomic-units/global-shared-cache-setting.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-cursor-initialization",
+      "path": "upstream/atomic-units/btree-cursor-initialization.json",
+      "status": "source-translated"
     }
   ]
 }
