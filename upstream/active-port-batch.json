@@ -672,6 +672,24 @@
       "atomic_unit_id": "btree-overflow-cache-invalidation",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerPageRefcount::line-6892",
+      "source_sha256": "147f5f4e517626f96055518def9845ae8c9d9f71798e2ab8abb218f11c25116c",
+      "zig_declaration_id": "src/core/internal/pager_core.zig::function::pageReferenceCount",
+      "zig_declaration_sha256": "92f93a57a3a8e966aa020cc619f6f92d3ab6ece96f09721fa178167acdedd5b2",
+      "atomic_unit_id": "pager-memory-classification-and-page-refcount",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerIsMemdb::line-6951",
+      "source_sha256": "1b29c35d0ae66e8e8c724fd61b80877fec769b427d5e2360046f9182ee12b635",
+      "zig_declaration_id": "src/core/internal/pager_core.zig::function::isMemoryDatabase",
+      "zig_declaration_sha256": "63cad93e7e9a2d21fecf0f8226d6b8bad62163f497975ec55de8d1783a547a58",
+      "atomic_unit_id": "pager-memory-classification-and-page-refcount",
+      "class": "short",
+      "complete": true
     }
   ]
 }

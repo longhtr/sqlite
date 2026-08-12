@@ -498,6 +498,11 @@
       "id": "btree-overflow-cache-invalidation",
       "path": "upstream/atomic-units/btree-overflow-cache-invalidation.json",
       "status": "source-translated"
+    },
+    {
+      "id": "pager-memory-classification-and-page-refcount",
+      "path": "upstream/atomic-units/pager-memory-classification-and-page-refcount.json",
+      "status": "source-translated"
     }
   ]
 }

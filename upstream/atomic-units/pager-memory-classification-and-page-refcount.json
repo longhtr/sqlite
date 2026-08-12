@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "pager-memory-classification-and-page-refcount",
+  "title": "Pager memory classification and page reference observation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerIsMemdb classifies temporary-file and mem-VFS-backed pagers as memory databases, while sqlite3PagerPageRefcount exposes the live page-cache reference count.",
+    "source_files": [{"path": "src/pager.c", "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"}],
+    "source_entity_ids": ["src/pager.c::function::sqlite3PagerPageRefcount::line-6892", "src/pager.c::function::sqlite3PagerIsMemdb::line-6951"],
+    "behavioral_block_ids": ["src/pager.c::function::sqlite3PagerPageRefcount::behavior::return::line-6893-column-3::ordinal-0", "src/pager.c::function::sqlite3PagerIsMemdb::behavior::return::line-6952-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Page reference mutation", "Temporary pager opening", "Memory-VFS implementation"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Page cache owns and updates the reference count", "Pager construction sets temporary and memory-VFS identities"],
+    "caller_closure": "Both complete observation helpers are assigned and exercised against live Pager/CachedPage owners."
+  },
+  "contracts": {
+    "inputs": ["Borrowed Pager or CachedPage"],
+    "outputs": ["Memory-backed boolean or live reference count"],
+    "ownership": "Pure observations; no ownership transfer.",
+    "state_and_results": "Memory classification is temporary OR memory_vfs. Reference result is the exact cache-page references field.",
+    "locks_callbacks_io": "Caller owns synchronization; no callbacks or I/O.",
+    "failure_and_continuation": "Infallible."
+  },
+  "mappings": [
+    {"source_entity_id": "src/pager.c::function::sqlite3PagerPageRefcount::line-6892", "relation": "source-pager-page-reference-observation", "zig_declaration_ids": ["src/core/internal/pager_core.zig::function::pageReferenceCount"]},
+    {"source_entity_id": "src/pager.c::function::sqlite3PagerIsMemdb::line-6951", "relation": "source-pager-memory-classification", "zig_declaration_ids": ["src/core/internal/pager_core.zig::function::isMemoryDatabase"]}
+  ],
+  "representation_differences": ["Zig returns usize and bool instead of C int. Temporary and memVfs fields are named temporary and memory_vfs."],
+  "oracle": {
+    "protocol": "Observe reference count 1 on a fetched page, then classify ordinary false, memory-VFS true, and temporary true states.",
+    "internal_observations": ["temporary flag", "memory_vfs flag", "cached page references", "returned values"],
+    "normalization": "Booleans normalize to zero/nonzero and counts compare exactly."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; caller owns synchronization.",
+    "malformed_input": "Typed non-null owners only.",
+    "continuation": "Pure observations.",
+    "performance": "Constant time.",
+    "commands": ["zig build test", "zig build pager-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/pager_core.zig Pager and cache-page owner",
+    "native_call_path": "Temporary opening asserts memory classification; fetched-page ownership exposes exact references for B-tree and pager lifecycle decisions.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Add pinned-C temp/mem-VFS and page-reference differential.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/pager.c:6878-6900 and 6942-6960 were reviewed", "src/core/internal/pager_core.zig Pager/CachedPage fields, temporary opening, get/unref paths, and tests were reviewed"],
+    "callers": ["B-tree page reinitialization consumes page reference count in the source", "Journal-mode and filename owners consume memory classification", "Unit trace observes live Pager/CachedPage state"],
+    "callees": ["sqlite3PcachePageRefcount in the source", "Direct typed field observations in Zig"],
+    "assertions_branches_cleanup": ["Both generated return blocks are assigned", "Temporary and memory-VFS cases are independent OR operands", "No allocation or cleanup paths exist"],
+    "upstream_tests": ["Upstream pager, memdb, temp, pcache, and B-tree tests exercise these observations", "Project pager core/differential suites exercise page ownership and memory-backed modes"]
+  },
+  "evidence_receipts": []
+}

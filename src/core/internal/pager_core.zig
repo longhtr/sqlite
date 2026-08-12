@@ -60,6 +60,7 @@ pub const Pager = struct {
     full_sync: bool = false,
     extra_sync: bool = false,
     temporary: bool = false,
+    memory_vfs: bool = false,
     read_only: bool = false,
     exclusive: bool = false,
     no_lock: bool = false,
@@ -482,6 +483,17 @@ pub fn openTemporary(pager: *Pager) void {
     pager.temporary = true;
     pager.file_open = true;
     pager.no_lock = true;
+    std.debug.assert(isMemoryDatabase(pager));
+}
+
+/// Source `sqlite3PagerIsMemdb()`.
+pub fn isMemoryDatabase(pager: *const Pager) bool {
+    return pager.temporary or pager.memory_vfs;
+}
+
+/// Source `sqlite3PagerPageRefcount()`.
+pub fn pageReferenceCount(page: *const CachedPage) usize {
+    return page.references;
 }
 
 /// Source `sqlite3PagerSetPagesize()`.
@@ -1166,6 +1178,11 @@ test "checkpoint batch rollback journal playback restores the original database 
     try beginWriteTransaction(&pager, false, false);
     try openRollbackJournal(&pager);
     const cached = try getPage(&pager, 1, false);
+    try std.testing.expectEqual(@as(usize, 1), pageReferenceCount(cached));
+    try std.testing.expect(!isMemoryDatabase(&pager));
+    pager.memory_vfs = true;
+    try std.testing.expect(isMemoryDatabase(&pager));
+    pager.memory_vfs = false;
     try addPageToRollbackJournal(&pager, &cached.page, cached.data);
     @memset(pager.database.items, 0x7b);
     try rollbackTransaction(&pager);
