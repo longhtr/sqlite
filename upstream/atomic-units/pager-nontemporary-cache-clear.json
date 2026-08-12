@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "pager-nontemporary-cache-clear",
+  "title": "Pager non-temporary cache clearing",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerClearCache resets all cached database pages for non-temporary pagers while preserving the temporary-database cache required by its storage model.",
+    "source_files": [{"path": "src/pager.c", "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"}],
+    "source_entity_ids": ["src/pager.c::function::sqlite3PagerClearCache::line-7541"],
+    "behavioral_block_ids": ["src/pager.c::function::sqlite3PagerClearCache::behavior::assert::line-7542-column-3::ordinal-0", "src/pager.c::function::sqlite3PagerClearCache::behavior::if::line-7543-column-3::ordinal-0"],
+    "excluded_responsibilities": ["B-tree transaction-state eligibility", "PCache eviction policy", "Temporary database close"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Caller invokes only when B-tree cache clearing is eligible"],
+    "caller_closure": "The complete temporary guard and cache retirement are assigned on the production Pager page-cache owner."
+  },
+  "contracts": {
+    "inputs": ["Mutable Pager"],
+    "outputs": ["No value"],
+    "ownership": "Non-temporary call consumes every Pager-owned cached page/data allocation; Pager retains empty cache capacity.",
+    "state_and_results": "Temporary Pager is unchanged. Other pagers have zero cached and mapped pages afterward.",
+    "locks_callbacks_io": "Caller owns Pager synchronization. No callbacks or I/O.",
+    "failure_and_continuation": "Infallible and leaves the Pager reusable."
+  },
+  "mappings": [{
+    "source_entity_id": "src/pager.c::function::sqlite3PagerClearCache::line-7541",
+    "relation": "source-pager-nontemporary-cache-clear",
+    "zig_declaration_ids": ["src/core/internal/pager_core.zig::function::clearCache"]
+  }],
+  "representation_differences": ["The source delegates to pager_reset/PCache. The bounded Zig Pager explicitly frees its cached page/data owners and resets mapped_pages."],
+  "oracle": {
+    "protocol": "Populate a non-temporary Pager cache and clear it, then repeat with temporary=true and verify retained cache ownership.",
+    "internal_observations": ["temporary flag", "cache identities/count", "mapped_pages", "post-call ownership"],
+    "normalization": "Cache implementation details normalize to page identities and counts."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; caller owns Pager synchronization.",
+    "malformed_input": "Typed Pager ownership invariants only.",
+    "continuation": "Pager remains reusable and pages may be fetched again.",
+    "performance": "Linear in cached page count.",
+    "commands": ["zig build test", "zig build pager-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/pager_core.zig cache owner",
+    "native_call_path": "The helper retires the same CachedPage allocations used by getPage/lookupPage/unrefPage and WAL-change cache invalidation.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires temporary/non-temporary differential, assurance closure, and independent review."},
+  "known_blockers": ["Add pinned-C cache-clear differential with temporary and non-temporary page identities.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/pager.c:7525-7545 and pager_reset were reviewed", "src/core/internal/pager_core.zig Pager cache ownership, WAL-change reset, get/lookup/unref, deinit, and tests were reviewed"],
+    "callers": ["sqlite3BtreeClearCache after transaction eligibility", "VACUUM/cache-reset owners", "Unit post-rollback clear trace"],
+    "callees": ["pager_reset/sqlite3PcacheClear in the source", "Explicit CachedPage data and owner destruction in Zig"],
+    "assertions_branches_cleanup": ["Both generated blocks are assigned", "Temporary Pager is exact no-op", "Non-temporary call retires every cached allocation and clears mapped count"],
+    "upstream_tests": ["Upstream pager, vacuum, temp, memdb, cache, and OOM tests exercise cache clearing", "Project pager core/differential suites exercise cache ownership and WAL invalidation"]
+  },
+  "evidence_receipts": []
+}

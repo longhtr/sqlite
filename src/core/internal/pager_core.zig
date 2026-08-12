@@ -757,6 +757,17 @@ pub fn beginReadTransaction(pager: *Pager, wal_changed: bool) Error!void {
     pager.state = .reader;
 }
 
+/// Source `sqlite3PagerClearCache()`.
+pub fn clearCache(pager: *Pager) void {
+    if (pager.temporary) return;
+    for (pager.cache.items) |cached| {
+        pager.allocator.free(cached.data);
+        pager.allocator.destroy(cached);
+    }
+    pager.cache.clearRetainingCapacity();
+    pager.mapped_pages = 0;
+}
+
 /// Source `pagerPagecount()`: prefer a committed WAL size and otherwise round
 /// the database byte-size up to a page boundary.
 pub fn pageCount(pager: *Pager, wal_pages: u32) Error!u32 {
@@ -1209,6 +1220,8 @@ test "checkpoint batch rollback journal playback restores the original database 
     try rollbackTransaction(&pager);
     try std.testing.expectEqualSlices(u8, cached.data, pager.database.items);
     try std.testing.expectEqual(PagerState.reader, pager.state);
+    clearCache(&pager);
+    try std.testing.expectEqual(@as(usize, 0), pager.cache.items.len);
 }
 
 test "pager source savepoint journal locking and sector primitives" {

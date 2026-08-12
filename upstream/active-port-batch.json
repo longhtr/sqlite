@@ -735,6 +735,15 @@
       "atomic_unit_id": "pager-temporary-page-space",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerClearCache::line-7541",
+      "source_sha256": "1d3f87d1eec9be8851e2947448664f78f322d7e8f43c98cbc8c3f6b129e2f14f",
+      "zig_declaration_id": "src/core/internal/pager_core.zig::function::clearCache",
+      "zig_declaration_sha256": "cb9e4d2097be3150f8d54fca28eaa3e305444f6594e845ed160071fc91c70cce",
+      "atomic_unit_id": "pager-nontemporary-cache-clear",
+      "class": "short",
+      "complete": true
     }
   ]
 }

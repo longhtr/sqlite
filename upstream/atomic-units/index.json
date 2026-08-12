@@ -518,6 +518,11 @@
       "id": "pager-temporary-page-space",
       "path": "upstream/atomic-units/pager-temporary-page-space.json",
       "status": "source-translated"
+    },
+    {
+      "id": "pager-nontemporary-cache-clear",
+      "path": "upstream/atomic-units/pager-nontemporary-cache-clear.json",
+      "status": "source-translated"
     }
   ]
 }
