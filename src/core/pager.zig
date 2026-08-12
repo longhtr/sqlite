@@ -24,6 +24,7 @@ pub const maximum_page_count: u32 = limits.max_page_count;
 pub const pending_byte: u64 = 0x4000_0000;
 
 pub const readonly_rollback = ResultCode.fromC(8 | (3 << 8));
+pub const readonly_database_moved = ResultCode.fromC(8 | (4 << 8));
 pub const ioerr_fstat = ResultCode.fromC(10 | (7 << 8));
 
 pub const State = enum(u8) {
@@ -425,8 +426,22 @@ pub const Pager = struct {
         return checksum;
     }
 
+    /// Source `databaseIsUnmoved()`: ask the VFS whether a nonempty database
+    /// has been renamed or unlinked, preserving the historical NOTFOUND-as-
+    /// unchanged fallback.
+    pub fn databaseIsUnmoved(self: *Pager) ResultCode {
+        if (self.database_pages == 0) return .ok;
+        var moved: c_int = 0;
+        const rc = ResultCode.fromC(vfs.osFileControl(self.file, vfs.FCNTL_HAS_MOVED, &moved));
+        if (rc == .not_found) return .ok;
+        if (rc != .ok) return rc;
+        return if (moved != 0) readonly_database_moved else .ok;
+    }
+
     fn openJournalFile(self: *Pager, truncate_existing: bool) ResultCode {
         if (self.journal != null) return .ok;
+        const unmoved = self.databaseIsUnmoved();
+        if (unmoved != .ok) return unmoved;
         const opened = memory_journal.Journal.open(
             self.allocator,
             self.abi_vfs,
@@ -1979,6 +1994,56 @@ fn stopAfterOneBusy(context: ?*anyopaque) bool {
     const calls: *usize = @ptrCast(@alignCast(context.?));
     calls.* += 1;
     return false;
+}
+
+const MovedProbe = struct {
+    delegate: *const vfs.sqlite3_io_methods,
+    result: c_int = vfs.OK,
+    moved: c_int = 0,
+};
+var moved_probe: ?*MovedProbe = null;
+
+fn probeMovedFileControl(file: *vfs.sqlite3_file, operation: c_int, argument: ?*anyopaque) callconv(.c) c_int {
+    const probe = moved_probe orelse return vfs.NOTFOUND;
+    if (operation == vfs.FCNTL_HAS_MOVED) {
+        if (probe.result != vfs.OK) return probe.result;
+        const output: *c_int = @ptrCast(@alignCast(argument orelse return vfs.ERROR));
+        output.* = probe.moved;
+        return vfs.OK;
+    }
+    const control = probe.delegate.xFileControl orelse return vfs.NOTFOUND;
+    return control(file, operation, argument);
+}
+
+test "database moved detection preserves empty unsupported moved and error results" {
+    const fixture = try readFixture("valid-empty-4096.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "moved.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-moved", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "moved.db", .{ .writable = true }).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+
+    const original_methods = pager.file.pMethods.?;
+    var probe = MovedProbe{ .delegate = original_methods };
+    var probing_methods = original_methods.*;
+    probing_methods.xFileControl = probeMovedFileControl;
+    moved_probe = &probe;
+    defer moved_probe = null;
+    pager.file.pMethods = &probing_methods;
+
+    try std.testing.expectEqual(ResultCode.ok, pager.beginRead());
+    try std.testing.expectEqual(ResultCode.ok, pager.databaseIsUnmoved());
+    probe.moved = 1;
+    try std.testing.expectEqual(readonly_database_moved, pager.databaseIsUnmoved());
+    probe.result = vfs.IOERR;
+    try std.testing.expectEqual(ResultCode.io_error, pager.databaseIsUnmoved());
+    probe.result = vfs.NOTFOUND;
+    try std.testing.expectEqual(ResultCode.ok, pager.databaseIsUnmoved());
+    pager.database_pages = 0;
+    probe.result = vfs.IOERR;
+    try std.testing.expectEqual(ResultCode.ok, pager.databaseIsUnmoved());
 }
 
 const BusyHintProbe = struct {

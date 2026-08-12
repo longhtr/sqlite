@@ -520,6 +520,11 @@
       "status": "source-translated"
     },
     {
+      "id": "pager-database-movement-check",
+      "path": "upstream/atomic-units/pager-database-movement-check.json",
+      "status": "source-translated"
+    },
+    {
       "id": "pager-journal-mode-change-readiness",
       "path": "upstream/atomic-units/pager-journal-mode-change-readiness.json",
       "status": "source-translated"

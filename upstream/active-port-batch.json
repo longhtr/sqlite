@@ -942,6 +942,15 @@
       "atomic_unit_id": "pager-truncate-image-state",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::databaseIsUnmoved::line-4188",
+      "source_sha256": "7cff34c2ec41c00a7732fabd43df30a9cee42a036c0b3ea52506b4e8ad906649",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.databaseIsUnmoved",
+      "zig_declaration_sha256": "fdb7968d962fae831d86bfcc1d6aeff1b35eedebdea087cf7d6610c635f5725a",
+      "atomic_unit_id": "pager-database-movement-check",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

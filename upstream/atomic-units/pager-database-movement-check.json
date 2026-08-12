@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "id": "pager-database-movement-check",
+  "title": "Pager database movement check",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "databaseIsUnmoved protects rollback-journal creation and WAL close/checkpoint behavior from operating on a database file that has been renamed or unlinked. It preserves historical compatibility by treating an unsupported SQLITE_FCNTL_HAS_MOVED control as unchanged.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::databaseIsUnmoved::line-4188"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::databaseIsUnmoved::behavior::if::line-4192-column-3::ordinal-0",
+      "src/pager.c::function::databaseIsUnmoved::behavior::return::line-4192-column-26::ordinal-0",
+      "src/pager.c::function::databaseIsUnmoved::behavior::if::line-4193-column-3::ordinal-0",
+      "src/pager.c::function::databaseIsUnmoved::behavior::return::line-4193-column-27::ordinal-0",
+      "src/pager.c::function::databaseIsUnmoved::behavior::assert::line-4194-column-3::ordinal-0",
+      "src/pager.c::function::databaseIsUnmoved::behavior::if::line-4196-column-3::ordinal-0",
+      "src/pager.c::function::databaseIsUnmoved::behavior::if::line-4201-column-9::ordinal-0",
+      "src/pager.c::function::databaseIsUnmoved::behavior::return::line-4204-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "VFS implementation of SQLITE_FCNTL_HAS_MOVED",
+      "Rollback-journal file creation after a successful check",
+      "WAL close and checkpoint policy"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Open database sqlite3_file owns the VFS file-control implementation"
+    ],
+    "caller_closure": "The complete movement-check body and all active behavior blocks are assigned. Production rollback-journal opening now performs the check before creating or truncating the journal."
+  },
+  "contracts": {
+    "inputs": [
+      "Live Pager with an open database file"
+    ],
+    "outputs": [
+      "OK, exact VFS file-control error, or SQLITE_READONLY_DBMOVED"
+    ],
+    "ownership": "The Pager and sqlite3_file are borrowed. The movement output is stack-owned scalar storage passed synchronously to the VFS.",
+    "state_and_results": "An empty image returns OK without dispatch. SQLITE_NOTFOUND is normalized to OK. SQLITE_OK with nonzero movement returns READONLY_DBMOVED; all other results pass through.",
+    "locks_callbacks_io": "Caller owns Pager synchronization. One synchronous xFileControl may inspect filesystem identity; no callback is invoked.",
+    "failure_and_continuation": "Movement or VFS failure prevents journal opening without mutating transaction ownership. Unsupported controls preserve historical continuation."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::databaseIsUnmoved::line-4188",
+      "relation": "source-has-moved-file-control-with-notfound-fallback",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.databaseIsUnmoved"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The source has an explicit temp-file fast path. Native transient/memory VFS implementations return SQLITE_NOTFOUND for this control, which reaches the same OK result; the explicit empty-image fast path is preserved.",
+    "SQLITE_READONLY_DBMOVED is carried as an extended ResultCode value rather than a named enum member."
+  ],
+  "oracle": {
+    "protocol": "Open a nonempty Pager through an intercepted ABI VFS and return unchanged, moved, arbitrary I/O error, and NOTFOUND outcomes; then set the logical image empty and verify no dispatch-dependent failure.",
+    "internal_observations": [
+      "logical database page count",
+      "file-control operation",
+      "file-control result",
+      "movement scalar",
+      "Pager result code",
+      "journal publication state"
+    ],
+    "normalization": "Operation and result codes compare exactly; pointers are identity-only."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "The check is a synchronous VFS identity query. Journal creation remains unstarted on failure; caller owns serialization.",
+    "malformed_input": "Null file-control argument cannot arise because Pager supplies stack storage. Nonzero movement values are all treated as moved.",
+    "continuation": "NOTFOUND and empty images continue; moved/error outcomes preserve Pager state for rollback or close handling.",
+    "performance": "Constant-time fast paths plus one VFS file-control query.",
+    "commands": [
+      "zig build test",
+      "zig build pager-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig Pager and src/core/unix_vfs.zig SQLITE_FCNTL_HAS_MOVED owner",
+    "native_call_path": "Pager.beginJournal -> Pager.openJournalFile -> Pager.databaseIsUnmoved -> sqlite3_file.xFileControl; Unix VFS compares current file identity and returns the movement scalar.",
+    "bounded_owner_retired": "Rollback-journal opening no longer omits the source movement guard."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires WAL-close integration, scoped durable trace promotion, and independent review."
+  },
+  "known_blockers": [
+    "Apply the same movement check to source-equivalent WAL close/checkpoint-on-close policy.",
+    "Capture a scoped durable journal-open movement receipt before internal-trace promotion.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:4183-4205 complete body and historical NOTFOUND contract were reviewed",
+      "upstream/sqlite/src/pager.c journal-open and WAL-close call sites were reviewed",
+      "src/core/pager.zig journal ownership and src/core/unix_vfs.zig HAS_MOVED implementation were reviewed",
+      "src/core/internal/pager_core.zig historical disconnected movement model was reviewed and not credited"
+    ],
+    "callers": [
+      "Rollback-journal opening before sqlite3JournalOpen",
+      "WAL close/checkpoint-on-close policy",
+      "Pager intercepted-VFS unit trace"
+    ],
+    "callees": [
+      "vfs.osFileControl with SQLITE_FCNTL_HAS_MOVED"
+    ],
+    "assertions_branches_cleanup": [
+      "Empty/temp fast paths, filename assertion, NOTFOUND fallback, moved branch, and return are assigned",
+      "No journal is published when the check fails",
+      "No cleanup is required for stack-owned movement storage"
+    ],
+    "upstream_tests": [
+      "Upstream dbfuzz, pager, WAL, journal, readonly, moved-file, and VFS tests exercise this boundary",
+      "Project Unix VFS tests cover HAS_MOVED and Pager tests cover all movement result branches"
+    ]
+  },
+  "evidence_receipts": []
+}
