@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "btree-cursor-payload-file-offset",
+  "title": "B-tree cursor payload file offset",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeOffset returns the database-file byte offset at which the current cell payload begins: page size times zero-based page number plus the payload offset within the page.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreeOffset::line-4945"],
+    "behavioral_block_ids": [
+      "src/btree.c::function::sqlite3BtreeOffset::behavior::assert::line-4946-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeOffset::behavior::assert::line-4947-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeOffset::behavior::return::line-4949-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Cell-info parsing", "Payload reads/writes", "Pager page-number validation"]
+  },
+  "dependencies": {"atomic_unit_ids": ["btree-live-page-size-observation"], "external_source_responsibilities": ["Caller-held cursor mutex and populated CellInfo"], "caller_closure": "The complete offset arithmetic is assigned; cell-info population and public consumers remain open."},
+  "contracts": {
+    "inputs": ["Valid Cursor under its B-tree mutex, with current page and payload_offset populated"],
+    "outputs": ["Absolute database-file payload-start byte offset"],
+    "ownership": "Borrowed cursor/page state; no allocation or mutation.",
+    "state_and_results": "Uses physical page size, one-based page number converted to zero-based, and payload offset within current page.",
+    "locks_callbacks_io": "Caller holds cursor B-tree mutex; no callbacks or I/O.",
+    "failure_and_continuation": "Invalid state or missing page violates source/model assertions; valid state is total."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3BtreeOffset::line-4945", "relation": "source-page-base-plus-cell-payload-offset", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::cursorPayloadOffset"]}],
+  "representation_differences": ["The Zig CellInfo.payload_offset is already relative to page start for the model owner, corresponding to pCell+aData offset in source.", "Typed pageSize helper replaces direct BtShared.pageSize access."],
+  "oracle": {"protocol": "Use page 2 of a 4,096-byte format with payload offset 7 and compare absolute offset 4,103.", "internal_observations": ["page size", "page number", "payload_offset", "absolute offset"], "normalization": "Byte offsets are exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; caller mutex external.", "malformed_input": "Invalid cursor/page/info violates assertions.", "continuation": "Pure observation leaves cursor state unchanged.", "performance": "Constant time.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig cursor/cell owner", "native_call_path": "Typed arithmetic and nonzero-page trace exist; payload consumers remain pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires cell-info/caller integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect source-shaped CellInfo population on cursor positioning.", "Connect public payload offset consumer.", "Add pinned-C multi-page trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:4919-4951 was reviewed completely for integer key, pin, and payload offset context", "src/core/internal/btree_core.zig Cursor/Page/CellInfo/pageSize owners were reviewed"],
+    "callers": ["Incremental blob and payload-address consumers", "Unit trace invokes the owner directly"],
+    "callees": ["Typed pageSize owner corresponding to direct source field read"],
+    "assertions_branches_cleanup": ["Both source assertions and return block are assigned", "One-based page conversion is explicit", "No allocation or cleanup"],
+    "upstream_tests": ["Upstream incremental-blob, payload, page-size, and overflow tests cover this offset", "Project unit trace covers page 2 plus nonzero payload offset"]
+  },
+  "evidence_receipts": []
+}

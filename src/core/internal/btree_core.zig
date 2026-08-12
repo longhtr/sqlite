@@ -227,7 +227,11 @@ test "source cursor last-page check requires every rightmost ancestor" {
     try cursor.ancestors.append(std.testing.allocator, &second_page);
     try cursor.ancestor_indices.append(std.testing.allocator, 2);
     try std.testing.expect(cursorOnLastPage(&cursor));
+    cursor.page = &second_page;
+    cursor.info.payload_offset = 7;
+    try std.testing.expectEqual(@as(u64, 4103), cursorPayloadOffset(&cursor));
     try std.testing.expectEqual(@as(u64, 0), maxRecordSize(&cursor));
+    cursor.page = null;
     cursor.ancestor_indices.items[0] = 0;
     try std.testing.expect(!cursorOnLastPage(&cursor));
     cursor.ancestors.clearRetainingCapacity();
@@ -1074,6 +1078,13 @@ pub fn transactionState(tree: ?*const Btree) Transaction {
 /// Source `sqlite3BtreeIsReadonly()`.
 pub fn isReadOnly(tree: *const Btree) bool {
     return tree.read_only;
+}
+
+/// Source `sqlite3BtreeOffset()` for the current payload start.
+pub fn cursorPayloadOffset(cursor: *const Cursor) u64 {
+    std.debug.assert(cursor.state == .valid);
+    const page = cursor.page.?;
+    return @as(u64, pageSize(cursor.tree)) * (page.number - 1) + cursor.info.payload_offset;
 }
 
 /// Source `sqlite3BtreeMaxRecordSize()`.

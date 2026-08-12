@@ -388,6 +388,11 @@
       "id": "btree-cursor-hint-flags",
       "path": "upstream/atomic-units/btree-cursor-hint-flags.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-cursor-payload-file-offset",
+      "path": "upstream/atomic-units/btree-cursor-payload-file-offset.json",
+      "status": "source-translated"
     }
   ]
 }
