@@ -807,6 +807,15 @@
       "atomic_unit_id": "pager-conditional-subjournal-page",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeNewDb::line-3554",
+      "source_sha256": "c646e45646ff643b24fd34410589a77551517f8508a827a99a64edbbb28f4ad0",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::initializeNewDatabase",
+      "zig_declaration_sha256": "5c983aaa5fc698dadb31210f7b0592bfe20364bbce10f60128239e05a18415bc",
+      "atomic_unit_id": "btree-new-database-initialization-entry",
+      "class": "short",
+      "complete": true
     }
   ]
 }

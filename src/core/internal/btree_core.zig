@@ -1355,6 +1355,12 @@ pub fn initializeDatabase(shared: *Shared) Error!void {
     try zeroPage(page, 0x0d);
     shared.page_size_fixed = true;
 }
+/// Source `sqlite3BtreeNewDb()`.
+pub fn initializeNewDatabase(tree: *Btree) Error!void {
+    tree.shared.database_pages = 0;
+    try initializeDatabase(tree.shared);
+}
+
 /// Source `sqlite3BtreeBeginTrans()`.
 pub fn beginTransaction(tree: *Btree, write: bool, schema_version: ?*u32) Error!void {
     if (write and tree.shared.writer != null and tree.shared.writer != tree) return error.Locked;
@@ -2327,7 +2333,15 @@ test "btree core page cursor lock and integrity primitives" {
     defer shared.deinit();
     shared.usable_size = 512;
     shared.pending_byte_page = 50;
+    var tree = Btree{ .shared = &shared, .sharable = true, .transaction = .write };
     const root = try testPage(&shared, 2, false);
+    const page_one_data = try allocator.alloc(u8, 512);
+    @memset(page_one_data, 0);
+    const page_one = try pageFromData(&shared, 1, page_one_data);
+    shared.page_one = page_one;
+    try initializeNewDatabase(&tree);
+    try std.testing.expectEqual(@as(u32, 1), shared.database_pages);
+    try std.testing.expectEqual(@as(u8, 1), page_one.data[31]);
     const left_page = try testPage(&shared, 3, true);
     const right_page = try testPage(&shared, 4, true);
     try appendTestCell(root, &.{ 0, 0, 0, 3, 1 });
@@ -2336,7 +2350,6 @@ test "btree core page cursor lock and integrity primitives" {
     try appendTestCell(left_page, "left");
     try appendTestCell(right_page, "right");
 
-    var tree = Btree{ .shared = &shared, .sharable = true, .transaction = .write };
     shared.transaction = .write;
     try lockTable(&tree, 2, true);
     const cursor = try createCursor(&tree, 2, true);

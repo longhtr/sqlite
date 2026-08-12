@@ -553,6 +553,11 @@
       "id": "pager-conditional-subjournal-page",
       "path": "upstream/atomic-units/pager-conditional-subjournal-page.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-new-database-initialization-entry",
+      "path": "upstream/atomic-units/btree-new-database-initialization-entry.json",
+      "status": "source-translated"
     }
   ]
 }
