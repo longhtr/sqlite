@@ -726,6 +726,15 @@
       "atomic_unit_id": "pager-journal-mode-change-readiness",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerTempSpace::line-3882",
+      "source_sha256": "de818de5b4716683b4c91884d24700454ce839a3d7ea40da4d62ea62bd2610a2",
+      "zig_declaration_id": "src/core/internal/pager_core.zig::function::temporarySpace",
+      "zig_declaration_sha256": "fd0a70ffcbf955f1b6a8fce476bce5854799c59c3a978b87f791871504862f9d",
+      "atomic_unit_id": "pager-temporary-page-space",
+      "class": "short",
+      "complete": true
     }
   ]
 }

@@ -513,6 +513,11 @@
       "id": "pager-journal-mode-change-readiness",
       "path": "upstream/atomic-units/pager-journal-mode-change-readiness.json",
       "status": "source-translated"
+    },
+    {
+      "id": "pager-temporary-page-space",
+      "path": "upstream/atomic-units/pager-temporary-page-space.json",
+      "status": "source-translated"
     }
   ]
 }

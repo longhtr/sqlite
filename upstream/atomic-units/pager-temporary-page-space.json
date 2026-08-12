@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "pager-temporary-page-space",
+  "title": "Pager temporary page workspace",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerTempSpace exposes the stable page-sized temporary workspace owned by a Pager for rollback and cooperating modules.",
+    "source_files": [{"path": "src/pager.c", "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"}],
+    "source_entity_ids": ["src/pager.c::function::sqlite3PagerTempSpace::line-3882"],
+    "behavioral_block_ids": ["src/pager.c::function::sqlite3PagerTempSpace::behavior::return::line-3883-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Rollback workspace contents", "Page-size validation", "Pager opening"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Pager owns and retires the workspace with page-size changes and destruction"],
+    "caller_closure": "The complete workspace accessor and its Pager allocation/deallocation lifetime are assigned in the production Pager owner."
+  },
+  "contracts": {
+    "inputs": ["Mutable Pager"],
+    "outputs": ["Stable mutable page-sized byte slice"],
+    "ownership": "Pager retains ownership; callers borrow until page-size change or Pager destruction.",
+    "state_and_results": "First access lazily allocates page_size bytes; repeated access returns the same storage. Page-size change retires old storage.",
+    "locks_callbacks_io": "Caller owns Pager synchronization. No callbacks or I/O.",
+    "failure_and_continuation": "Lazy allocation may return NoMemory without publishing partial storage."
+  },
+  "mappings": [{
+    "source_entity_id": "src/pager.c::function::sqlite3PagerTempSpace::line-3882",
+    "relation": "source-pager-temporary-page-space",
+    "zig_declaration_ids": ["src/core/internal/pager_core.zig::function::temporarySpace"]
+  }],
+  "representation_differences": ["The source allocates pTmpSpace during Pager creation/page-size setup and the accessor is infallible. Zig lazily allocates on first bounded access and therefore returns NoMemory; once allocated, pointer stability and page-sized ownership match."],
+  "oracle": {
+    "protocol": "Access twice at page size 4096, compare length and pointer identity, then change page size and observe old workspace retirement before reallocation.",
+    "internal_observations": ["page size", "allocation result", "workspace pointer", "workspace length", "post-resize owner state"],
+    "normalization": "Allocation timing is normalized; successful workspace bytes and lifetime boundaries compare exactly."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Lazy allocation maps allocator failure to NoMemory without state publication; deterministic injection remains pending.",
+    "io_crash_concurrency": "No I/O; caller owns Pager synchronization.",
+    "malformed_input": "page_size is a validated nonzero Pager invariant.",
+    "continuation": "Allocation failure is retryable; successful repeated access is stable.",
+    "performance": "One allocation per page-size lifetime and constant-time subsequent access.",
+    "commands": ["zig build test", "zig build pager-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/pager_core.zig Pager workspace owner",
+    "native_call_path": "Pager deinit and setPageSize retire the same optional storage returned by temporarySpace; rollback/header owners may borrow it.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires OOM/resize trace, assurance closure, and independent review."},
+  "known_blockers": ["Add deterministic first-access OOM and resize/reallocation trace against pinned C ownership.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/pager.c Pager pTmpSpace field, allocation/reallocation/free sites, and lines 3868-3885 were reviewed", "src/core/internal/pager_core.zig Pager lifetime, setPageSize, rollback owners, and tests were reviewed"],
+    "callers": ["Rollback journal header/playback workspace users", "B-tree and backup cooperating modules", "Unit stable-access trace"],
+    "callees": ["sqlite3PageMalloc/sqlite3PageFree in the source owner", "Pager allocator alloc/free in Zig"],
+    "assertions_branches_cleanup": ["The generated return block is assigned", "No partial storage is published on OOM", "Page-size changes and Pager destruction free the owned storage"],
+    "upstream_tests": ["Upstream pager rollback, page-size, backup, OOM, and crash tests exercise the workspace", "Project pager core/differential suites exercise rollback and page-size state"]
+  },
+  "evidence_receipts": []
+}

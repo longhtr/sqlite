@@ -98,6 +98,7 @@ pub const Pager = struct {
     journal: std.ArrayList(u8) = .empty,
     subjournal: std.ArrayList(u8) = .empty,
     database: std.ArrayList(u8) = .empty,
+    temporary_space: ?[]u8 = null,
     savepoints: std.ArrayList(Savepoint) = .empty,
     journaled_pages: ?[]bool = null,
     cache: std.ArrayList(*CachedPage) = .empty,
@@ -110,6 +111,7 @@ pub const Pager = struct {
         self.journal.deinit(self.allocator);
         self.subjournal.deinit(self.allocator);
         self.database.deinit(self.allocator);
+        if (self.temporary_space) |space| self.allocator.free(space);
         if (self.journaled_pages) |pages| self.allocator.free(pages);
         for (self.cache.items) |cached| {
             self.allocator.free(cached.data);
@@ -503,10 +505,22 @@ pub fn pageReferenceCount(page: *const CachedPage) usize {
     return page.references;
 }
 
+/// Source `sqlite3PagerTempSpace()`.
+pub fn temporarySpace(pager: *Pager) Error![]u8 {
+    if (pager.temporary_space == null) {
+        pager.temporary_space = pager.allocator.alloc(u8, pager.page_size) catch return error.NoMemory;
+    }
+    return pager.temporary_space.?;
+}
+
 /// Source `sqlite3PagerSetPagesize()`.
 pub fn setPageSize(pager: *Pager, requested: u32, reserve: i32, references: usize) Error!u32 {
     if (requested != 0 and (requested < 512 or requested > 65_536 or !std.math.isPowerOfTwo(requested))) return error.Range;
     if (requested != 0 and requested != pager.page_size and references == 0 and (pager.database_pages == 0 or !pager.temporary)) {
+        if (pager.temporary_space) |space| {
+            pager.allocator.free(space);
+            pager.temporary_space = null;
+        }
         pager.page_size = requested;
         pager.database_pages = @intCast((pager.database.items.len + requested - 1) / requested);
     }
@@ -1204,6 +1218,9 @@ test "pager source savepoint journal locking and sector primitives" {
     pager.read_only = true;
     pager.journal_mode = .truncate;
     try std.testing.expectEqual(@as(u32, 2), dataVersion(&pager));
+    const scratch = try temporarySpace(&pager);
+    try std.testing.expectEqual(@as(usize, 4096), scratch.len);
+    try std.testing.expectEqual(scratch.ptr, (try temporarySpace(&pager)).ptr);
     try std.testing.expect(isReadOnly(&pager));
     try std.testing.expectEqual(JournalMode.truncate, getJournalMode(&pager));
     try std.testing.expect(journalModeMayChange(&pager));
