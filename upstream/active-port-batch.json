@@ -951,6 +951,15 @@
       "atomic_unit_id": "pager-database-movement-check",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pagerSyncHotJournal::line-4094",
+      "source_sha256": "dccb072f493b5789eb2c614e51a060cd8c9206e591d6042d0da4ec532dfec0e8",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.syncHotJournal",
+      "zig_declaration_sha256": "5a4e6501e200173061b1c5957dd4b02f46076060f14ba33e1e46066dd1833198",
+      "atomic_unit_id": "pager-hot-journal-sync-boundary",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

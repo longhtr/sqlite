@@ -151,6 +151,7 @@ pub const Pager = struct {
     journal_spill_threshold: i64 = 0,
     journaled_pages: ?[]bool = null,
     journal_offset: u64 = 0,
+    journal_header: u64 = 0,
     journal_records: u32 = 0,
     journal_checksum_seed: u32 = 0,
     journal_sector_size: u32 = 4096,
@@ -488,6 +489,7 @@ pub const Pager = struct {
         if (self.journaled_pages) |pages| self.allocator.free(pages);
         self.journaled_pages = null;
         self.journal_offset = 0;
+        self.journal_header = 0;
         self.journal_records = 0;
         self.journal_checksum_seed = 0;
         self.original_database_pages = 0;
@@ -608,12 +610,27 @@ pub const Pager = struct {
         return .ok;
     }
 
+    /// Source `pagerSyncHotJournal()`: make the rollback journal durable and
+    /// publish its complete synchronized byte boundary before playback.
+    fn syncHotJournal(self: *Pager) ResultCode {
+        const journal = if (self.journal) |*value| value else return .misuse;
+        var rc = ResultCode.fromC(journal.sync(0));
+        if (rc != .ok) return rc;
+        var size: i64 = 0;
+        rc = ResultCode.fromC(journal.fileSize(&size));
+        if (rc != .ok) return rc;
+        if (size < 0) return ioerr_fstat;
+        self.journal_header = @intCast(size);
+        return .ok;
+    }
+
     fn recoverHotJournal(self: *Pager) ResultCode {
         const methods = self.ioMethods() orelse return .io_error;
         const lock_fn = methods.xLock orelse return .io_error;
         var rc = ResultCode.fromC(lock_fn(self.file, vfs.LOCK_EXCLUSIVE));
         if (rc != .ok) return rc;
         rc = self.openJournalFile(false);
+        if (rc == .ok) rc = self.syncHotJournal();
         if (rc == .ok) rc = self.playbackJournal(&self.journal.?, true);
         const close_rc = self.closeJournalFile(rc == .ok);
         if (rc == .ok) rc = close_rc;
@@ -1795,6 +1812,32 @@ test "every modeled DELETE FULL crash point recovers old or committed content" {
         try std.testing.expectEqual(ResultCode.ok, recovered.commit());
         try std.testing.expectEqual(ResultCode.ok, recovered.close());
     }
+}
+
+test "hot journal sync publishes the durable playback boundary after successful sync" {
+    const fixture = try readFixture("valid-empty-4096.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "hot-sync.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-hot-sync", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "hot-sync.db", .{ .writable = true }).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+
+    try std.testing.expectEqual(ResultCode.ok, pager.openJournalFile(true));
+    const bytes = [_]u8{0x5a} ** 31;
+    try std.testing.expectEqual(vfs.OK, pager.journal.?.write(&bytes, 0));
+    try std.testing.expectEqual(ResultCode.ok, pager.syncHotJournal());
+    try std.testing.expectEqual(@as(u64, bytes.len), pager.journal_header);
+
+    var rules = [_]vfs.FaultRule{.{ .method = .sync, .code = vfs.IOERR_FSYNC }};
+    var faults = vfs.FaultController{ .rules = &rules };
+    memory.faults = &faults;
+    pager.journal_header = 7;
+    try std.testing.expectEqual(ResultCode.fromC(vfs.IOERR_FSYNC), pager.syncHotJournal());
+    try std.testing.expectEqual(@as(u64, 7), pager.journal_header);
+    memory.faults = null;
+    try std.testing.expectEqual(ResultCode.ok, pager.closeJournalFile(false));
 }
 
 fn createHotJournal(memory: *vfs.MemoryVfs, adapter: *vfs.AbiAdapter, name: []const u8, fixture: []const u8) !void {

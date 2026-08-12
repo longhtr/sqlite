@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "id": "pager-hot-journal-sync-boundary",
+  "title": "Pager hot-journal synchronization boundary",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "pagerSyncHotJournal makes the entire hot rollback journal durable before playback and publishes the resulting file size as the synchronized journal-header boundary. This ensures a crash during rollback leaves the next recovery process with the same journal content.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::pagerSyncHotJournal::line-4094"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::pagerSyncHotJournal::behavior::if::line-4096-column-3::ordinal-0",
+      "src/pager.c::function::pagerSyncHotJournal::behavior::if::line-4099-column-3::ordinal-0",
+      "src/pager.c::function::pagerSyncHotJournal::behavior::return::line-4102-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Hot-journal detection and exclusive locking",
+      "Journal record checksum and playback",
+      "Rollback-journal deletion after successful recovery"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "The hot-journal owner has opened the complete rollback journal for recovery"
+    ],
+    "caller_closure": "The complete sync/size/publication body and all active behavior blocks are assigned. Production hot recovery invokes it after journal open and before any playback read or database write."
+  },
+  "contracts": {
+    "inputs": [
+      "Pager with an open rollback journal selected for hot recovery"
+    ],
+    "outputs": [
+      "Exact journal sync or size result and, on success, the synchronized byte boundary"
+    ],
+    "ownership": "Pager retains journal ownership. The file-size output is stack-owned and journal_header is Pager scalar state.",
+    "state_and_results": "Sync occurs before size. A sync error prevents size publication. A size error prevents boundary publication. Success replaces journal_header with the exact nonnegative journal size.",
+    "locks_callbacks_io": "Caller holds the recovery lock. Journal xSync and xFileSize are dispatched synchronously; no callback is invoked.",
+    "failure_and_continuation": "Failure leaves the prior boundary unchanged and prevents playback. The journal remains for a later retry; successful sync allows recovery to continue."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::pagerSyncHotJournal::line-4094",
+      "relation": "source-sync-then-publish-complete-hot-journal-size",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.syncHotJournal"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The active production Pager always synchronizes rollback journals; it has no separately configurable noSync field at this boundary, so the source noSync branch is represented by the always-sync production profile.",
+    "The source stores journalHdr as i64. Zig validates the VFS size as nonnegative and stores a u64 boundary."
+  ],
+  "oracle": {
+    "protocol": "Open a real rollback journal, write a bounded payload, sync and verify published size; inject sync and file-size failures and verify exact result, unchanged boundary, retained journal, and successful retry before playback.",
+    "internal_observations": [
+      "journal sync call",
+      "journal file-size call",
+      "result code",
+      "published journal_header",
+      "playback start suppression",
+      "retained journal state"
+    ],
+    "normalization": "Call order, result codes, and byte sizes compare exactly."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation in the sync helper; preexisting journal ownership is retained.",
+    "io_crash_concurrency": "Sync precedes boundary publication and playback under the recovery lock; injected failures preserve the hot journal for retry.",
+    "malformed_input": "A negative VFS file size maps to IOERR_FSTAT and is not published.",
+    "continuation": "Sync/size failure blocks playback; a later recovery can reopen and retry the same journal.",
+    "performance": "One journal sync and one file-size query per hot recovery."
+    ,"commands": [
+      "zig build test",
+      "zig build pager-differential",
+      "zig build rollback-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig hot recovery and memory_journal.Journal VFS transport",
+    "native_call_path": "Pager.beginRead -> recoverHotJournal -> openJournalFile -> syncHotJournal -> playbackJournal -> close/delete journal.",
+    "bounded_owner_retired": "Hot recovery no longer begins playback without first synchronizing and publishing the complete journal boundary."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires scoped durable recovery-fault receipt and independent review."
+  },
+  "known_blockers": [
+    "Capture a scoped durable sync/size/playback-order receipt before internal-trace promotion.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:4081-4103 complete sync/size body and crash rationale were reviewed",
+      "upstream/sqlite/src/pager.c hot-recovery and close call sites were reviewed",
+      "src/core/pager.zig recoverHotJournal/playback sequencing, journal state, fault tests, and src/core/memory_journal.zig sync/fileSize transport were reviewed",
+      "src/core/internal/pager_core.zig historical disconnected sync model was reviewed and not credited"
+    ],
+    "callers": [
+      "Hot-journal recovery before playback",
+      "Pager sync-boundary unit trace"
+    ],
+    "callees": [
+      "memory_journal.Journal.sync",
+      "memory_journal.Journal.fileSize"
+    ],
+    "assertions_branches_cleanup": [
+      "Source sync branch, successful-size branch, and return are assigned",
+      "Boundary is not updated after sync or size failure",
+      "Recovery close/delete owns journal cleanup only after this helper returns"
+    ],
+    "upstream_tests": [
+      "Upstream pager, hot-journal, crash, sync-fault, file-size-fault, and recovery tests exercise this boundary",
+      "Project hot recovery fault matrix and rollback differential exercise retry and crash continuation"
+    ]
+  },
+  "evidence_receipts": []
+}
