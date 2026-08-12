@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "id": "pager-truncate-image-state",
+  "title": "Pager truncate-image state",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerTruncateImage records a smaller logical database size immediately before commit without touching the file. Commit phase one later applies that size physically, while rollback restores the transaction's original size.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::sqlite3PagerTruncateImage::line-4063"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::sqlite3PagerTruncateImage::behavior::assert::line-4064-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerTruncateImage::behavior::assert::line-4065-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "B-tree determination of the target page count",
+      "Commit-phase physical file truncation and sync",
+      "Savepoint rollback after a final truncate-image request"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Caller invokes this only immediately before commit from a modified write transaction"
+    ],
+    "caller_closure": "The complete state mutation and both source precondition assertions are assigned. Production commit phase one multiplies database_pages by page_size and truncates the file; rollback restores original_database_pages."
+  },
+  "contracts": {
+    "inputs": [
+      "Writable Pager in writer-cache-modified or writer-database-modified state and a page count no greater than the current logical image"
+    ],
+    "outputs": [
+      "Updated logical database page count"
+    ],
+    "ownership": "Scalar Pager transaction state only; cached pages and file storage retain their existing owners.",
+    "state_and_results": "Valid calls replace database_pages exactly without truncating cache or file. Read-only, growth, or invalid-state requests are rejected by the Zig API instead of relying only on source assertions.",
+    "locks_callbacks_io": "Caller owns Pager synchronization. No callback or I/O occurs in this function.",
+    "failure_and_continuation": "A rejected request preserves state. After success the transaction must commit or roll back; commit applies the size and rollback restores the original."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerTruncateImage::line-4063",
+      "relation": "source-record-smaller-logical-image-before-commit",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.truncateImage"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The C function is void and enforces preconditions with assertions. Zig returns READONLY or MISUSE for invalid public/internal calls while performing the same scalar mutation on valid input.",
+    "Neither implementation truncates the cache at this boundary; obsolete pages remain available for rollback and are reconciled by commit/rollback owners."
+  ],
+  "oracle": {
+    "protocol": "Open a writable Pager, begin and modify a transaction, reject growth, record a smaller image, observe unchanged file size before commit, then separately commit and roll back to compare physical and logical continuation.",
+    "internal_observations": [
+      "Pager writer state",
+      "logical page count before and after request",
+      "file size before phase one",
+      "committed file size",
+      "rollback-restored page count"
+    ],
+    "normalization": "Page counts, file sizes, states, and result codes compare exactly."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No direct I/O. Existing commit crash ordering owns the later truncate/sync boundary; caller owns Pager synchronization.",
+    "malformed_input": "Growth and invalid transaction states are rejected without mutation.",
+    "continuation": "Rollback restores original_database_pages; commit phase one applies the selected size before sync.",
+    "performance": "Constant-time scalar validation and update.",
+    "commands": [
+      "zig build test",
+      "zig build rollback-differential",
+      "zig build pager-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig Pager transaction, commit, rollback, and file-size state",
+    "native_call_path": "B-tree/backup final-size owner -> Pager.truncateImage -> database_pages -> commitPhaseOne truncateFile, or rollback original_database_pages restoration.",
+    "bounded_owner_retired": "The production Pager no longer returns a read-only placeholder for writable truncate-image requests."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires B-tree/backup caller integration, scoped commit/rollback receipt, and independent review."
+  },
+  "known_blockers": [
+    "Route production B-tree and backup final-size operations through Pager.truncateImage.",
+    "Capture a scoped durable commit/rollback/crash receipt before internal-trace promotion.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:4012-4077 truncate constraints, complete body, and final-write contract were reviewed",
+      "upstream/sqlite/src/btree.c and backup.c call sites were located to establish final-size ownership",
+      "src/core/pager.zig writer states, original size snapshot, commit physical truncation, rollback restoration, placeholder replacement, and tests were reviewed",
+      "src/core/internal/pager_core.zig historical disconnected truncate model was reviewed and not credited"
+    ],
+    "callers": [
+      "B-tree final page-count commit path",
+      "Backup destination final-size path",
+      "Pager transaction test"
+    ],
+    "callees": [
+      "None in the setter; commitPhaseOne later calls truncateFile"
+    ],
+    "assertions_branches_cleanup": [
+      "Target-not-greater-than-current and modified-writer assertions are assigned",
+      "No cache or file cleanup belongs to the setter",
+      "Commit and rollback own divergent continuation cleanup"
+    ],
+    "upstream_tests": [
+      "Upstream pager, backup, dbpage, B-tree truncate, savepoint, crash, and OOM tests exercise this state boundary",
+      "Project rollback and Pager suites exercise original-size restoration and commit truncate ordering"
+    ]
+  },
+  "evidence_receipts": []
+}

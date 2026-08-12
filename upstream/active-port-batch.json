@@ -933,6 +933,15 @@
       "atomic_unit_id": "pager-maximum-page-count",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerTruncateImage::line-4063",
+      "source_sha256": "8d39272f25f6898881fea7dbcee57b36e4d1b835d3a3ceba507aed7317944259",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.truncateImage",
+      "zig_declaration_sha256": "9388c4df9da36048cadd5723297f16719f1cba7d0af68f52c07704f5d4a1f733",
+      "atomic_unit_id": "pager-truncate-image-state",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

@@ -1374,10 +1374,18 @@ pub const Pager = struct {
         return .read_only;
     }
 
+    /// Source `sqlite3PagerTruncateImage()`: record the smaller in-memory
+    /// database image immediately before commit; phase one performs the
+    /// physical file truncation after dirty-page writes.
     pub fn truncateImage(self: *Pager, pages: u32) ResultCode {
-        _ = self;
-        _ = pages;
-        return .read_only;
+        if (self.read_only) return .read_only;
+        if (pages > self.database_pages or
+            (self.state != .writer_cache_modified and self.state != .writer_database_modified))
+        {
+            return .misuse;
+        }
+        self.database_pages = pages;
+        return .ok;
     }
 
     /// Diagnostic process-death teardown. It never rolls back or deletes the
@@ -1986,6 +1994,28 @@ fn probeBusyFileControl(file: *vfs.sqlite3_file, operation: c_int, argument: ?*a
     probe.seen_argument = argument;
     const control = probe.delegate.xFileControl orelse return vfs.NOTFOUND;
     return control(file, operation, argument);
+}
+
+test "truncate image records the commit size and rollback restores the original" {
+    const fixture = try readFixture("valid-empty-4096.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "truncate-image.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-truncate-image", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "truncate-image.db", .{ .writable = true }).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+
+    try std.testing.expectEqual(ResultCode.ok, pager.beginRead());
+    try std.testing.expectEqual(ResultCode.ok, pager.beginWrite());
+    const page = pager.getPage(1, false).page.?;
+    try std.testing.expectEqual(ResultCode.ok, pager.makeWritable(page));
+    try std.testing.expectEqual(ResultCode.ok, pager.release(page));
+    try std.testing.expectEqual(ResultCode.misuse, pager.truncateImage(2));
+    try std.testing.expectEqual(ResultCode.ok, pager.truncateImage(0));
+    try std.testing.expectEqual(@as(u32, 0), pager.pageCount());
+    try std.testing.expectEqual(ResultCode.ok, pager.rollback());
+    try std.testing.expectEqual(@as(u32, 1), pager.pageCount());
 }
 
 test "maximum page count updates positive requests and preserves zero queries" {
