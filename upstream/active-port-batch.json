@@ -429,6 +429,15 @@
       "atomic_unit_id": "btree-cursor-payload-file-offset",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeClearTableOfCursor::line-10304",
+      "source_sha256": "a712c6881dbfca4c54025b851e8b8c8f0494520c0e6581d674e72a28848ec1ed",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::clearTableOfCursor",
+      "zig_declaration_sha256": "6756d4de2b5c919e7dc291e21f544bf0abc86bb5ac7b124da43c0133c5378a6b",
+      "atomic_unit_id": "btree-clear-table-through-cursor",
+      "class": "short",
+      "complete": true
     }
   ]
 }

@@ -393,6 +393,11 @@
       "id": "btree-cursor-payload-file-offset",
       "path": "upstream/atomic-units/btree-cursor-payload-file-offset.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-clear-table-through-cursor",
+      "path": "upstream/atomic-units/btree-clear-table-through-cursor.json",
+      "status": "source-translated"
     }
   ]
 }

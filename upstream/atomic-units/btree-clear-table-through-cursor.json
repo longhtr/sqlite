@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "btree-clear-table-through-cursor",
+  "title": "B-tree clear table through cursor",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeClearTableOfCursor forwards an ephemeral cursor's owning Btree and root page to the table-clear owner while deliberately discarding the deleted-row count.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreeClearTableOfCursor::line-10304"],
+    "behavioral_block_ids": ["src/btree.c::function::sqlite3BtreeClearTableOfCursor::behavior::return::line-10305-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Table-clear recursion", "Deleted-row counting", "Ephemeral-cursor creation"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["sqlite3BtreeClearTable / clearTable behavior and ephemeral cursor precondition"], "caller_closure": "The complete forwarding wrapper is assigned; full clearTable source translation remains independently open."},
+  "contracts": {
+    "inputs": ["Cursor open on an ephemeral table"],
+    "outputs": ["Exact clearTable success/error with deleted-row count discarded"],
+    "ownership": "Borrowed Cursor/Btree; table contents mutate through clearTable.",
+    "state_and_results": "Forwards cursor.tree and cursor.root. Source passes null count output; Zig discards the returned count.",
+    "locks_callbacks_io": "clearTable owns B-tree/pager mutation; no additional callbacks.",
+    "failure_and_continuation": "Any clearTable error passes through; success leaves the table empty."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3BtreeClearTableOfCursor::line-10304", "relation": "source-cursor-owner-root-clear-forwarder", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::clearTableOfCursor"]}],
+  "representation_differences": ["Zig clearTable returns the deleted-row count directly, which this wrapper explicitly discards instead of passing a null output pointer."],
+  "oracle": {"protocol": "Compile and exercise the typed wrapper through an ephemeral cursor fixture; direct runtime fixture remains pending because current clearTable test paths call the underlying owner.", "internal_observations": ["cursor.tree identity", "cursor.root", "clearTable result propagation"], "normalization": "Deleted-row count is intentionally unobserved, matching null source output."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "Wrapper allocates nothing; clearTable allocation behavior external.", "io_crash_concurrency": "Mutation I/O/locking belongs to clearTable.", "malformed_input": "Non-ephemeral cursor violates documented source precondition.", "continuation": "Success preserves cursor owner/root while emptying table.", "performance": "Constant-time forwarding plus clearTable cost.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig cursor/table owner", "native_call_path": "Typed wrapper compiles against production clearTable; direct caller integration remains pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires ephemeral caller integration, direct trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect ephemeral-table cursor caller.", "Add pinned-C success/error trace.", "Promote clearTable source closure independently.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:10292-10306 was reviewed completely for table-clear and wrapper context", "src/core/internal/btree_core.zig clearTable and Cursor ownership were reviewed"],
+    "callers": ["Ephemeral table cleanup paths", "Compile graph references production wrapper"],
+    "callees": ["sqlite3BtreeClearTable represented by clearTable"],
+    "assertions_branches_cleanup": ["The sole active return block is assigned", "Returned deleted count is deliberately discarded", "No wrapper allocation or cleanup"],
+    "upstream_tests": ["Upstream ephemeral table and clear-table tests cover this wrapper", "Project clearTable tests cover the underlying mutation owner; direct wrapper trace pending"]
+  },
+  "evidence_receipts": []
+}

@@ -136,6 +136,11 @@ pub const Cursor = struct {
     }
 };
 
+/// Source `sqlite3BtreeClearTableOfCursor()`.
+pub fn clearTableOfCursor(cursor: *Cursor) Error!void {
+    _ = try clearTable(cursor.tree, cursor.root);
+}
+
 /// Source `sqlite3BtreeClearCursor()`.
 pub fn clearCursor(cursor: *Cursor) void {
     if (cursor.saved_key) |key| {
