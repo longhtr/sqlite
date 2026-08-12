@@ -478,6 +478,11 @@ pub const Pager = struct {
         self.cache.clear();
     }
 
+    /// Source `sqlite3PagerDataVersion()` on the production Pager owner.
+    pub fn dataVersion(self: *const Pager) u32 {
+        return self.data_version;
+    }
+
     /// Source `pager_cksum()`: seed the rollback-record checksum and add each
     /// page byte selected by the source's reverse 200-byte stride.
     fn journalChecksum(self: *const Pager, data: []const u8) u32 {

@@ -3204,14 +3204,34 @@ const Backup = struct {
     source_name: [:0]u8,
     source_attached: ?*AttachedDatabase,
     source_page_size: u32,
+    source_data_version: u32 = 0,
     source_writes: u64 = 0,
+    restart_pending: bool = false,
     image: ?[*]u8 = null,
     image_size: i64 = 0,
     image_capacity: i64 = 0,
     remaining: c_int = 0,
     pages: c_int = 0,
     result: ResultCode = .ok,
+
+    /// Source `sqlite3BackupRestart()`: mark the next source page as page one
+    /// without changing the most recently published progress observations.
+    fn restart(self: *Backup) void {
+        self.restart_pending = true;
+    }
+
+    fn discardSourceImage(self: *Backup) void {
+        if (self.image) |image| public_api.sqlite3_free(image);
+        self.image = null;
+        self.image_size = 0;
+        self.image_capacity = 0;
+    }
 };
+
+fn backupRestartOwner(backup: ?*Backup) void {
+    if (backup) |value| value.restart();
+}
+
 pub export fn sqlite3_backup_init(destination_pointer: ?*sqlite3, destination_name: ?[*:0]const u8, source_pointer: ?*sqlite3, source_name: ?[*:0]const u8) callconv(.c) ?*sqlite3_backup {
     const destination = asConnection(destination_pointer) orelse return null;
     const source = asConnection(source_pointer) orelse return null;
@@ -3259,11 +3279,19 @@ pub export fn sqlite3_backup_init(destination_pointer: ?*sqlite3, destination_na
 pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callconv(.c) c_int {
     const backup: *Backup = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
     if (backup.result != .ok) return backup.result.toC();
-    if (backup.image != null and backup.source_database.pager.stats.database_writes != backup.source_writes) {
-        public_api.sqlite3_free(backup.image.?);
-        backup.image = null;
-        backup.remaining = 0;
-        backup.pages = 0;
+    if (backup.image != null) {
+        if (backup.source_database.pager.dataVersion() != backup.source_data_version) {
+            backupRestartOwner(backup);
+        } else if (backup.source_database.pager.stats.database_writes != backup.source_writes) {
+            // Source `sqlite3BackupUpdate()` updates pages already copied. This
+            // image-backed owner has not published partial destination pages,
+            // so refreshing the complete retained source image is equivalent.
+            backup.discardSourceImage();
+        }
+    }
+    if (backup.restart_pending) {
+        backup.discardSourceImage();
+        backup.restart_pending = false;
     }
     if (backup.image == null) {
         var size: i64 = 0;
@@ -3272,6 +3300,7 @@ pub export fn sqlite3_backup_step(pointer: ?*sqlite3_backup, pages: c_int) callc
             return backup.result.toC();
         };
         backup.image = bytes;
+        backup.source_data_version = backup.source_database.pager.dataVersion();
         backup.source_writes = backup.source_database.pager.stats.database_writes;
         backup.image_size = size;
         backup.image_capacity = @intCast(public_api.sqlite3_msize(bytes));
@@ -12761,6 +12790,35 @@ test "named memory URI cache is shared until the final connection closes" {
     try std.testing.expect(memdb.access("shared-cache"));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_close(second));
     try std.testing.expect(!memdb.access("shared-cache"));
+}
+
+test "backup restart owner marks page-one restart and preserves progress observations" {
+    var source: ?*sqlite3 = null;
+    var destination: ?*sqlite3 = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &source));
+    defer _ = sqlite3_close(source);
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &destination));
+    defer _ = sqlite3_close(destination);
+    const source_connection = asConnection(source).?;
+    const destination_connection = asConnection(destination).?;
+    var backup = Backup{
+        .destination = destination_connection,
+        .source = source_connection,
+        .source_database = source_connection.database.?,
+        .destination_name = try std.testing.allocator.dupeZ(u8, "main"),
+        .source_name = try std.testing.allocator.dupeZ(u8, "main"),
+        .source_attached = null,
+        .source_page_size = source_connection.database.?.pager.pageSize(),
+        .remaining = 3,
+        .pages = 4,
+    };
+    defer std.testing.allocator.free(backup.destination_name);
+    defer std.testing.allocator.free(backup.source_name);
+    backupRestartOwner(null);
+    backupRestartOwner(&backup);
+    try std.testing.expect(backup.restart_pending);
+    try std.testing.expectEqual(@as(c_int, 3), backup.remaining);
+    try std.testing.expectEqual(@as(c_int, 4), backup.pages);
 }
 
 test "ordinary database serialization copies the live pager image page by page" {

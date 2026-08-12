@@ -105,6 +105,15 @@
       "atomic_unit_id": "json-hex-decode-and-prefix-validation",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::sqlite3BackupRestart::line-728",
+      "source_sha256": "a31d7595c54ef88779d878c8e61719b74a688dc481651980cd01d2f85dc92ec9",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::backupRestartOwner",
+      "zig_declaration_sha256": "e6eb3fa05f2a0d333914f6a7cb3ec3ef4de0e01eb6ec69b3eeb3c4a5efff4476",
+      "atomic_unit_id": "backup-restart-on-pager-data-version",
+      "class": "short",
+      "complete": true
     }
   ]
 }

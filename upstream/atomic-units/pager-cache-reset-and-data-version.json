@@ -86,7 +86,7 @@
   },
   "integration": {
     "production_owner": "src/core/pager.zig cache invalidation paths",
-    "native_call_path": "recoverHotJournal and beginRead WAL/external-change handling call resetCache; transaction-local checkpoint and rollback invalidation remain separate cache operations.",
+    "native_call_path": "recoverHotJournal and beginRead WAL/external-change handling call resetCache; Backup polls Pager.dataVersion and restarts a retained partial image after changes; transaction-local checkpoint and rollback invalidation remain separate cache operations.",
     "bounded_owner_retired": "Direct cache.clear calls at source reset-equivalent recovery and external-change boundaries are retired."
   },
   "independent_review": {
@@ -96,7 +96,6 @@
     "notes": "Requires public data-version/backup restart integration trace, pinned-C reset trace, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Move public backup restart polling from database-write stats to Pager data_version.",
     "Connect public PRAGMA/file-control data-version consumers.",
     "Add pinned-C reset and backup restart trace.",
     "Independent fidelity review remains open."

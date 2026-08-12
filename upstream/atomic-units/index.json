@@ -628,6 +628,11 @@
       "id": "json-hex-decode-and-prefix-validation",
       "path": "upstream/atomic-units/json-hex-decode-and-prefix-validation.json",
       "status": "source-translated"
+    },
+    {
+      "id": "backup-restart-on-pager-data-version",
+      "path": "upstream/atomic-units/backup-restart-on-pager-data-version.json",
+      "status": "source-translated"
     }
   ]
 }

@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "id": "backup-restart-on-pager-data-version",
+  "title": "Incremental backup restart on Pager data-version change",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BackupRestart invalidates all prior copy progress after a Pager detects an external or otherwise unclassifiable source-image change. The production backup owner represents iNext=1 with a restart-pending flag, preserving the most recently published remaining/page-count observations until the next step discards and rebuilds its retained serialized source image.",
+    "source_files": [
+      {
+        "path": "src/backup.c",
+        "sha256": "2304c4f820c977aa009ceb464d9b774942cd7b4686156a5ed28d50a3e50f861e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/backup.c::function::sqlite3BackupRestart::line-728"
+    ],
+    "behavioral_block_ids": [
+      "src/backup.c::function::sqlite3BackupRestart::behavior::for::line-730-column-3::ordinal-0",
+      "src/backup.c::function::sqlite3BackupRestart::behavior::assert::line-731-column-5::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Per-page backupUpdate propagation for source writes",
+      "Incremental source-page copying and destination transactions",
+      "Backup attachment list registration and teardown"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "pager-cache-reset-and-data-version",
+      "pager-data-version-observation"
+    ],
+    "external_source_responsibilities": [
+      "Pager reset publishes a wrapping data-version change",
+      "Backup step frees the owned stale serialized image before restarting",
+      "Connection backup lifecycle retains source and destination database owners"
+    ],
+    "caller_closure": "The complete source restart wrapper is assigned. Production backup_step detects a changed Pager data version, releases its stale owned image, invokes backupRestartOwner, and serializes again from page one semantics."
+  },
+  "contracts": {
+    "inputs": [
+      "Optional mutable backup owner"
+    ],
+    "outputs": [
+      "No-op for null; otherwise restart-pending set while the most recently published progress observations remain unchanged"
+    ],
+    "ownership": "The restart primitive mutates backup-owned progress only. Its production caller frees any public-allocator serialized image before clearing the pointer, preserving allocator ownership boundaries.",
+    "state_and_results": "Every attached owner is conceptually reset to source page one. The current production connection permits one public backup endpoint per object and represents iNext=1 with restart_pending; the next step regenerates the complete source image without prematurely changing nRemaining/nPagecount.",
+    "locks_callbacks_io": "No direct I/O or callback. Public backup_step owns connection synchronization; the source Pager data-version observation is read under that operation.",
+    "failure_and_continuation": "Infallible. A restarted object remains valid and the next step may continue by reserializing; null is a no-op."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/backup.c::function::sqlite3BackupRestart::line-728",
+      "relation": "source-backup-progress-restart",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::backupRestartOwner"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Source iNext=1 is represented by restart_pending; the next backup_step clears the retained serialized image and starts serialization from the source beginning while preserving prior remaining/page-count observations until that step.",
+    "The source linked list is represented by independently owned public Backup objects that each poll the shared Pager data-version counter when stepped.",
+    "Serialized image deallocation occurs when backup_step consumes restart_pending, so restart itself remains infallible and preserves the source observation timing."
+  ],
+  "oracle": {
+    "protocol": "Construct a native backup owner with nonzero progress, invoke the null owner boundary and then restart the live owner, and require restart-pending with unchanged remaining/page-count observations. Existing attached-backup differential replaces and mutates the source between partial and final steps and requires the destination to contain the replacement schema/data.",
+    "internal_observations": [
+      "restart-pending state",
+      "remaining pages and total page count before the next step",
+      "source Pager data-version snapshot"
+    ],
+    "normalization": "Compare exact restart flag, unchanged progress observations, and final destination SQL behavior."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Restart allocates nothing; later reserialization reports existing backup allocation failures.",
+    "io_crash_concurrency": "No direct I/O. Connection/Pager synchronization and public backup thread-safety remain owned by surrounding APIs.",
+    "malformed_input": "Null is accepted. Non-null Backup is a typed live owner.",
+    "continuation": "Cleared progress is reusable on the next backup_step.",
+    "performance": "Constant-time restart after stale-image deallocation; next step recopies the source as required.",
+    "commands": [
+      "zig build test",
+      "zig build memdb-api-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/sql_frontend.zig Backup and src/core/pager.zig Pager",
+    "native_call_path": "Pager reset increments dataVersion; sqlite3_backup_step compares it with source_data_version, calls backupRestartOwner, consumes restart_pending by freeing the stale image, and serializes a fresh image.",
+    "bounded_owner_retired": "database_writes polling is retired because it missed reset/external-change events and conflated known local writes with source-wide restart."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires pinned-C restart trace, per-page update integration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Port source backupUpdate per-page propagation instead of always recopying the retained serialized image on detected source changes.",
+    "Add pinned-C partial-copy restart trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/backup.c structure/thread-safety notes and sqlite3BackupUpdate/sqlite3BackupRestart bodies were reviewed",
+      "upstream/sqlite/src/pager.c pager_reset and backup callback sites were reviewed",
+      "src/core/sql_frontend.zig complete Backup lifecycle and attached backup differential path were reviewed",
+      "src/core/pager.zig reset/data-version production paths were reviewed"
+    ],
+    "callers": [
+      "Source Pager external-change and rollback/reset paths",
+      "Production sqlite3_backup_step data-version comparison",
+      "Attached partial-backup source replacement differential"
+    ],
+    "callees": [
+      "Source linked-list iNext reset",
+      "Production Backup.restart progress clear",
+      "Pager.dataVersion observation and public image deallocation"
+    ],
+    "assertions_branches_cleanup": [
+      "Source list iteration is represented by each independently stepped owner polling the shared version",
+      "Source mutex assertion is represented by the surrounding public operation owner",
+      "Restart preserves published progress until the next step and stale image is then freed exactly once before pointer clear"
+    ],
+    "upstream_tests": [
+      "Upstream backup, data-version, concurrent source-write, restart, OOM, and attached-schema tests exercise restart",
+      "Project direct owner trace and attached-backup differential exercise restart and continuation"
+    ]
+  },
+  "evidence_receipts": []
+}
