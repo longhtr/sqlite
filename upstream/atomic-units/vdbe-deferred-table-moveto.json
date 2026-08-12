@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-deferred-table-moveto",
+  "title": "Deferred VDBE table-cursor moveto completion",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3VdbeFinishMoveto completes an exact deferred table-rowid seek, passes through B-tree failures without clearing deferred state, reports corruption when the target row is absent, and only on exact success clears deferredMoveto and invalidates the row cache.",
+    "source_files": [{"path": "src/vdbeaux.c", "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"}],
+    "source_entity_ids": ["src/vdbeaux.c::function::sqlite3VdbeFinishMoveto::line-3801"],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeFinishMoveto::behavior::assert::line-3806-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeFinishMoveto::behavior::assert::line-3807-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeFinishMoveto::behavior::assert::line-3808-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeFinishMoveto::behavior::if::line-3810-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeFinishMoveto::behavior::return::line-3810-column-12::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeFinishMoveto::behavior::if::line-3811-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeFinishMoveto::behavior::return::line-3811-column-16::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeFinishMoveto::behavior::return::line-3817-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["B-tree table-moveto internals", "Deferred-seek scheduling", "SQLITE_TEST search counter"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["sqlite3BtreeTableMoveto exact-rowid seek and required B-tree locking"], "caller_closure": "The complete active non-test body is assigned behind a typed table-moveto seam; native opcode dispatch remains open."},
+  "contracts": {
+    "inputs": ["Deferred native table VdbeCursor with B-tree implementation and movetoTarget", "Typed exact table-moveto operation"],
+    "outputs": ["Exact B-tree error, SQLITE_CORRUPT for missing target, or SQLITE_OK with deferred state cleared and stale cache"],
+    "ownership": "Cursor pointers are borrowed; no allocation.",
+    "state_and_results": "B-tree failure and nonzero seek comparison preserve deferredMoveto and cacheStatus. Exact success clears deferredMoveto and sets CACHE_STALE.",
+    "locks_callbacks_io": "Table-moveto seam owns B-tree locking and pager reads.",
+    "failure_and_continuation": "Errors leave the deferred seek pending; exact success permits cursor consumers to continue."
+  },
+  "mappings": [{"source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeFinishMoveto::line-3801", "relation": "source-exact-deferred-table-rowid-seek", "zig_declaration_ids": ["src/core/internal/vdbe_aux.zig::function::finishMovedCursor"]}],
+  "representation_differences": ["A typed table-moveto seam represents sqlite3BtreeTableMoveto until native BtCursor execution is connected.", "The inactive SQLITE_TEST search counter is excluded by the pinned production profile; the existing Cursor-union runtime helper remains a separate owner."],
+  "oracle": {"protocol": "Drive deterministic B-tree error, missing-target, and exact-success outcomes against a native VdbeCursor and compare result, deferredMoveto, and cacheStatus.", "internal_observations": ["returned result", "deferredMoveto", "cacheStatus", "movetoTarget and seek comparison"], "normalization": "Opaque BtCursor address is identity-only; result codes and scalar fields are exact. Pinned-C trace remains pending."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "B-tree seam owns I/O and locking.", "malformed_input": "Non-deferred, non-table, non-B-tree, or null implementation inputs violate source assertions.", "continuation": "Only exact success consumes the deferred seek.", "performance": "One B-tree table seek and constant-time state publication.",
+    "commands": ["zig build vdbe-mem-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/vdbe_aux.zig native-layout VDBE state layer", "native_call_path": "Native-layout owner is compile- and unit-traced; runtime opcode path remains on src/core/vdbe.zig Cursor union.", "bounded_owner_retired": "No; simplified runtime owner remains active."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires native B-tree dispatch, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect native sqlite3BtreeTableMoveto.", "Dispatch native cursor consumers through this owner.", "Add pinned-C error/corrupt/success trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/vdbeaux.c:3794-3818 was reviewed completely", "src/core/internal/vdbe_types.zig native VdbeCursor fields/constants were reviewed", "src/core/vdbe.zig existing deferred Cursor-union owner was reviewed and distinguished"],
+    "callers": ["VDBE cursor consumers encountering deferredMoveto", "Native-layout unit trace invokes the owner directly"],
+    "callees": ["sqlite3BtreeTableMoveto via typed seam"],
+    "assertions_branches_cleanup": ["All eight active behavior blocks are assigned", "B-tree error precedes missing-target corruption", "Deferred/cache state changes only on exact success"],
+    "upstream_tests": ["Upstream deferred seek, missing row, corruption, and pager I/O tests cover this owner", "Project native-layout unit trace covers all three result classes"]
+  },
+  "evidence_receipts": []
+}

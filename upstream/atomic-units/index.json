@@ -318,6 +318,11 @@
       "id": "vdbe-moved-btree-cursor-restoration",
       "path": "upstream/atomic-units/vdbe-moved-btree-cursor-restoration.json",
       "status": "source-translated"
+    },
+    {
+      "id": "vdbe-deferred-table-moveto",
+      "path": "upstream/atomic-units/vdbe-deferred-table-moveto.json",
+      "status": "source-translated"
     }
   ]
 }

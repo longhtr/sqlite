@@ -10,6 +10,7 @@ const global_memory = @import("../memory.zig");
 const compiler_ownership = @import("compiler_ownership.zig");
 
 const limit_vdbe_op: usize = 5;
+const result_corrupt: c_int = 11;
 
 fn parseDatabase(parse: *types.Parse) *types.Sqlite3 {
     return @ptrCast(@alignCast(parse.db.?));
@@ -1053,6 +1054,59 @@ pub fn rewind(machine: *types.Vdbe) void {
 
 pub fn resetStepResult(machine: *types.Vdbe) void {
     machine.rc = types.result_ok;
+}
+
+pub const TableMovetoFunction = *const fn (*types.BtCursor, i64, c_int, *c_int) c_int;
+
+/// Source `sqlite3VdbeFinishMoveto()`: resolve a deferred exact table-rowid
+/// seek, reject a missing target as corruption, and invalidate the row cache.
+pub fn finishMovedCursor(cursor: *types.VdbeCursor, table_moveto: TableMovetoFunction) c_int {
+    std.debug.assert(cursor.deferredMoveto != 0);
+    std.debug.assert(cursor.isTable != 0);
+    std.debug.assert(cursor.eCurType == types.cursor_type.btree);
+    var seek_result: c_int = 0;
+    const result = table_moveto(cursor.uc.pCursor.?, cursor.movetoTarget, 0, &seek_result);
+    if (result != 0) {
+        return result;
+    }
+    if (seek_result != 0) {
+        return result_corrupt;
+    }
+    cursor.deferredMoveto = 0;
+    cursor.cacheStatus = types.cache_stale;
+    return types.result_ok;
+}
+
+fn testTableMoveto(_: *types.BtCursor, target: i64, _: c_int, seek_result: *c_int) c_int {
+    if (target < 0) {
+        return 10;
+    }
+    seek_result.* = if (target == 0) 1 else 0;
+    return 0;
+}
+
+test "source deferred table moveto preserves errors corruption and success state" {
+    var opaque_cursor: usize = 0;
+    var cursor = std.mem.zeroes(types.VdbeCursor);
+    cursor.eCurType = types.cursor_type.btree;
+    cursor.isTable = 1;
+    cursor.deferredMoveto = 1;
+    cursor.uc.pCursor = @ptrCast(&opaque_cursor);
+    cursor.cacheStatus = 42;
+
+    cursor.movetoTarget = -1;
+    try std.testing.expectEqual(@as(c_int, 10), finishMovedCursor(&cursor, testTableMoveto));
+    try std.testing.expectEqual(@as(u8, 1), cursor.deferredMoveto);
+    try std.testing.expectEqual(@as(u32, 42), cursor.cacheStatus);
+
+    cursor.movetoTarget = 0;
+    try std.testing.expectEqual(result_corrupt, finishMovedCursor(&cursor, testTableMoveto));
+    try std.testing.expectEqual(@as(u8, 1), cursor.deferredMoveto);
+
+    cursor.movetoTarget = 7;
+    try std.testing.expectEqual(types.result_ok, finishMovedCursor(&cursor, testTableMoveto));
+    try std.testing.expectEqual(@as(u8, 0), cursor.deferredMoveto);
+    try std.testing.expectEqual(types.cache_stale, cursor.cacheStatus);
 }
 
 pub const CursorRestoreFunction = *const fn (*types.BtCursor, *c_int) c_int;

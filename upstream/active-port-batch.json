@@ -213,6 +213,15 @@
       "atomic_unit_id": "vdbe-moved-btree-cursor-restoration",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeFinishMoveto::line-3801",
+      "source_sha256": "ed843cdc436a18650c3b8e47ab8743848b310e2af0d9454e1b8f9416859684ed",
+      "zig_declaration_id": "src/core/internal/vdbe_aux.zig::function::finishMovedCursor",
+      "zig_declaration_sha256": "393eefa26fee9f8a3cedab43fc6339bc266566b6cf3ec1d6b6da861358afa3bf",
+      "atomic_unit_id": "vdbe-deferred-table-moveto",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }
