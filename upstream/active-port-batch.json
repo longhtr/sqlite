@@ -33,6 +33,15 @@
       "atomic_unit_id": "pager-big-endian-file-u32-io",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pager_reset::line-1783",
+      "source_sha256": "fca632a63d4416812cb4a08c45b332c88de44b236ae04c142721718574a57a93",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.resetCache",
+      "zig_declaration_sha256": "930af1c689c5f35b0744ba15609534d6bc1f794f0e9ac7c5449f460bc4a41947",
+      "atomic_unit_id": "pager-cache-reset-and-data-version",
+      "class": "short",
+      "complete": true
     }
   ]
 }

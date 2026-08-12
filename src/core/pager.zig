@@ -156,6 +156,7 @@ pub const Pager = struct {
     cache: *page_cache.Cache,
     state: State = .open,
     error_code: ResultCode = .ok,
+    data_version: u32 = 0,
     page_size: u32 = default_page_size,
     reserved_bytes: u8 = 0,
     database_pages: u32 = 0,
@@ -470,6 +471,13 @@ pub const Pager = struct {
         ));
     }
 
+    /// Source `pager_reset()`: publish one data-version change and discard the
+    /// complete page cache so backup/data-version consumers restart.
+    fn resetCache(self: *Pager) void {
+        self.data_version +%= 1;
+        self.cache.clear();
+    }
+
     /// Source `pager_cksum()`: seed the rollback-record checksum and add each
     /// page byte selected by the source's reverse 200-byte stride.
     fn journalChecksum(self: *const Pager, data: []const u8) u32 {
@@ -713,7 +721,7 @@ pub const Pager = struct {
         const close_rc = self.closeJournalFile(rc == .ok);
         if (rc == .ok) rc = close_rc;
         if (rc == .ok) rc = self.unlockDatabase(vfs.LOCK_SHARED);
-        if (rc == .ok) self.cache.clear();
+        if (rc == .ok) self.resetCache();
         return rc;
     }
 
@@ -867,14 +875,14 @@ pub const Pager = struct {
             self.wal_state = opened.wal.?;
             self.wal_mode = true;
         }
-        if (self.wal_state != null) self.cache.clear();
+        if (self.wal_state != null) self.resetCache();
 
         if (self.has_held_shared_lock) {
             var version: [16]u8 = .{0} ** 16;
             rc = self.readAt(&version, 24);
             if (rc.toC() == vfs.IOERR_SHORT_READ) rc = .ok;
             if (rc != .ok) return self.failedBeginRead(rc);
-            if (!std.mem.eql(u8, &version, &self.file_version)) self.cache.clear();
+            if (!std.mem.eql(u8, &version, &self.file_version)) self.resetCache();
         }
 
         var size: u64 = 0;
@@ -2057,6 +2065,25 @@ fn createHotJournal(memory: *vfs.MemoryVfs, adapter: *vfs.AbiAdapter, name: []co
     try std.testing.expectEqual(ResultCode.ok, writer.commitPhaseOne());
     memory.crash();
     writer.crashClose();
+}
+
+test "pager reset wraps data version and clears the complete cache" {
+    const fixture = try readFixture("valid-empty-512.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "reset-cache.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-reset-cache", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "reset-cache.db", .{}).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+    try std.testing.expectEqual(ResultCode.ok, pager.beginRead());
+    const page = pager.getPage(1, false).page.?;
+    try std.testing.expectEqual(ResultCode.ok, pager.release(page));
+    try std.testing.expectEqual(@as(usize, 1), pager.cachePages());
+    pager.data_version = std.math.maxInt(u32);
+    pager.resetCache();
+    try std.testing.expectEqual(@as(u32, 0), pager.data_version);
+    try std.testing.expectEqual(@as(usize, 0), pager.cachePages());
 }
 
 test "journal 32-bit file helpers preserve big-endian values and failed-read output" {

@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "id": "pager-cache-reset-and-data-version",
+  "title": "Pager cache reset and data-version publication",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "pager_reset publishes one wrapping data-version change, restarts attached backup observations, and discards the complete page cache as one invariant-preserving operation.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::pager_reset::line-1783"
+    ],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": [
+      "Reading the data-version counter",
+      "Incremental backup page copying",
+      "Deciding when external database or WAL changes require reset"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "pager-data-version-observation",
+      "pcache-pgroup-cross-cache-lru-and-limits"
+    ],
+    "external_source_responsibilities": [
+      "Page cache clear releases all unreferenced cached pages",
+      "Backup owner observes data-version changes when retaining a serialized source image"
+    ],
+    "caller_closure": "The complete straight-line source body is assigned; hot recovery, WAL read/change, and external file-version invalidation paths consume resetCache. Other cache.clear sites represent transaction-local invalidation rather than source pager_reset."
+  },
+  "contracts": {
+    "inputs": [
+      "Mutable Pager with no live cache references at reset boundaries"
+    ],
+    "outputs": [
+      "Wrapping u32 data_version increment and empty Pager cache"
+    ],
+    "ownership": "Cache.clear consumes cache-owned page allocations. Pager and VFS ownership are retained.",
+    "state_and_results": "Increment data_version exactly once using source-width wrapping arithmetic, then discard all cached pages. Connection backup logic treats a changed version as a restart boundary.",
+    "locks_callbacks_io": "No direct locks or I/O; callers own synchronization. Backup restart is represented by the shared version boundary rather than a callback list inside Pager.",
+    "failure_and_continuation": "Infallible. Cache clear is non-allocating and leaves a reusable empty cache."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::pager_reset::line-1783",
+      "relation": "source-data-version-publication-and-complete-cache-reset",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.resetCache"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Production Pager stores the source-width u32 data_version directly; the older internal model used a u64 with truncating accessor.",
+    "The connection backup owner polls Pager data version instead of Pager storing the source intrusive pBackup list; this preserves restart detection without cross-module pointer ownership."
+  ],
+  "oracle": {
+    "protocol": "Open and release one 512-byte cached page, seed data_version to max-u32, call resetCache, and require wrapped zero plus zero cache pages. Existing hot-journal, WAL recovery, checkpoint, rollback, and external-version tests exercise production callers.",
+    "internal_observations": [
+      "data_version before and after reset",
+      "cache page count before and after reset",
+      "cache invariants after reuse"
+    ],
+    "normalization": "Compare exact u32 modular value and exact cache page count."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation; cache deallocation only.",
+    "io_crash_concurrency": "No I/O; caller lock and reference-count preconditions external.",
+    "malformed_input": "Typed Pager and cache invariants constrain input.",
+    "continuation": "The empty cache remains reusable after reset.",
+    "performance": "Linear in cached page count due to complete release.",
+    "commands": [
+      "zig build test",
+      "zig build pager-differential",
+      "zig build wal-differential",
+      "zig build rollback-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig cache invalidation paths",
+    "native_call_path": "recoverHotJournal and beginRead WAL/external-change handling call resetCache; transaction-local checkpoint and rollback invalidation remain separate cache operations.",
+    "bounded_owner_retired": "Direct cache.clear calls at source reset-equivalent recovery and external-change boundaries are retired."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires public data-version/backup restart integration trace, pinned-C reset trace, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Move public backup restart polling from database-write stats to Pager data_version.",
+    "Connect public PRAGMA/file-control data-version consumers.",
+    "Add pinned-C reset and backup restart trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:1778-1794 and every pager_reset caller were reviewed",
+      "upstream/sqlite/src/backup.c sqlite3BackupRestart and backup ownership were reviewed",
+      "src/core/pager.zig cache invalidation callers and src/core/sql_frontend.zig backup restart detection were reviewed"
+    ],
+    "callers": [
+      "Pager error cleanup, journal playback, WAL read changes, page-size changes, close, external file-version changes, and clear-cache API",
+      "Production hot recovery, WAL begin-read, and external version paths"
+    ],
+    "callees": [
+      "sqlite3BackupRestart and sqlite3PcacheClear",
+      "Page Cache.clear and connection-level data-version observation"
+    ],
+    "assertions_branches_cleanup": [
+      "The source body is straight-line and generated no behavioral blocks",
+      "Exactly one version increment precedes complete cache clear",
+      "Cache clear owns page cleanup"
+    ],
+    "upstream_tests": [
+      "Upstream data_version, backup restart, external modification, WAL, pager, and cache tests exercise reset",
+      "Project direct wrap/clear test plus rollback/WAL/external-change paths exercise resetCache"
+    ]
+  },
+  "evidence_receipts": []
+}

@@ -440,6 +440,11 @@
       "status": "source-translated"
     },
     {
+      "id": "pager-cache-reset-and-data-version",
+      "path": "upstream/atomic-units/pager-cache-reset-and-data-version.json",
+      "status": "source-translated"
+    },
+    {
       "id": "pager-readonly-and-journal-mode-observations",
       "path": "upstream/atomic-units/pager-readonly-and-journal-mode-observations.json",
       "status": "source-translated"
