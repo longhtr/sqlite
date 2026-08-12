@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "btree-record-size-upper-bound",
+  "title": "B-tree record-size upper bound",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeMaxRecordSize bounds any record by the physical database-file size, multiplying current page size by current page count to avoid pathological allocations on corrupt input.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreeMaxRecordSize::line-4982"],
+    "behavioral_block_ids": [
+      "src/btree.c::function::sqlite3BtreeMaxRecordSize::behavior::assert::line-4983-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeMaxRecordSize::behavior::assert::line-4984-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeMaxRecordSize::behavior::return::line-4985-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Record decoding", "Pager file-size synchronization", "Corrupt-record rejection"]
+  },
+  "dependencies": {"atomic_unit_ids": ["btree-live-page-size-observation", "btree-page-count-and-last-page"], "external_source_responsibilities": ["Caller-held cursor/B-tree mutex and valid cursor positioning"], "caller_closure": "The complete upper-bound body is assigned using the typed page-size/count dependencies; decoder callers remain open."},
+  "contracts": {
+    "inputs": ["Valid Cursor under its B-tree mutex"],
+    "outputs": ["Physical page size multiplied by current database page count"],
+    "ownership": "Borrowed Cursor/Btree/Shared state; no allocation or mutation.",
+    "state_and_results": "The result is an upper bound and may exceed every actual record. Uses 64-bit arithmetic matching sqlite3_int64 intent.",
+    "locks_callbacks_io": "Caller holds cursor/B-tree mutex; no callbacks or direct I/O.",
+    "failure_and_continuation": "Invalid cursor violates source assertions; valid state has a total bound."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3BtreeMaxRecordSize::line-4982", "relation": "source-page-size-times-page-count-bound", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::maxRecordSize"]}],
+  "representation_differences": ["The Zig owner calls typed pageSize/pageCount helpers rather than reading BtShared.pageSize/nPage fields directly."],
+  "oracle": {"protocol": "Observe a valid cursor over an empty Shared owner and compare the exact zero file-size bound; nonempty native trace remains pending.", "internal_observations": ["cursor valid state", "page size", "page count", "u64 bound"], "normalization": "Byte bound is exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation; this bound exists to prevent excessive downstream allocations.", "io_crash_concurrency": "No direct I/O; lock and pager/count synchronization remain external.", "malformed_input": "Invalid cursor state violates source assertions.", "continuation": "Pure observation leaves cursor state unchanged.", "performance": "Constant time.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig cursor/page owner", "native_call_path": "Typed bound and empty-state unit trace exist; record decoder allocation guards remain pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires decoder integration, nonempty pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect native record-decoder allocation guard.", "Synchronize live pager count.", "Add nonempty pinned-C trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:4941-4986 was reviewed completely for payload offset and record-bound context", "src/core/internal/btree_core.zig cursor state and page-size/count dependencies were reviewed"],
+    "callers": ["Record decode/allocation paths guarding corrupt database payloads", "Unit trace invokes the owner directly"],
+    "callees": ["Typed pageSize and pageCount owners corresponding to direct source fields"],
+    "assertions_branches_cleanup": ["Both source assertions and return block are assigned", "No allocation, mutation, or cleanup"],
+    "upstream_tests": ["Upstream malformed-record, large-record, overflow, and corruption tests cover this bound", "Project unit trace covers valid empty-file bound"]
+  },
+  "evidence_receipts": []
+}

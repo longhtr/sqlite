@@ -348,6 +348,15 @@
       "atomic_unit_id": "btree-active-backup-observation",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeMaxRecordSize::line-4982",
+      "source_sha256": "838b5d6fdfd4155b209ea1e20fd286c2c5a19981e7d3a7e7d9f5717f0ad977d3",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::maxRecordSize",
+      "zig_declaration_sha256": "ea19bdfbdaf207e2efe28e80c5749b466f47bd58cb9e1ef40b3764c4b208b008",
+      "atomic_unit_id": "btree-record-size-upper-bound",
+      "class": "short",
+      "complete": true
     }
   ]
 }

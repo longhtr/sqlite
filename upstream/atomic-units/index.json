@@ -368,6 +368,11 @@
       "id": "btree-active-backup-observation",
       "path": "upstream/atomic-units/btree-active-backup-observation.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-record-size-upper-bound",
+      "path": "upstream/atomic-units/btree-record-size-upper-bound.json",
+      "status": "source-translated"
     }
   ]
 }

@@ -198,6 +198,7 @@ test "source cursor last-page check requires every rightmost ancestor" {
     try cursor.ancestors.append(std.testing.allocator, &second_page);
     try cursor.ancestor_indices.append(std.testing.allocator, 2);
     try std.testing.expect(cursorOnLastPage(&cursor));
+    try std.testing.expectEqual(@as(u64, 0), maxRecordSize(&cursor));
     cursor.ancestor_indices.items[0] = 0;
     try std.testing.expect(!cursorOnLastPage(&cursor));
     cursor.ancestors.clearRetainingCapacity();
@@ -1026,6 +1027,12 @@ pub fn transactionState(tree: ?*const Btree) Transaction {
 /// Source `sqlite3BtreeIsReadonly()`.
 pub fn isReadOnly(tree: *const Btree) bool {
     return tree.read_only;
+}
+
+/// Source `sqlite3BtreeMaxRecordSize()`.
+pub fn maxRecordSize(cursor: *const Cursor) u64 {
+    std.debug.assert(cursor.state == .valid);
+    return @as(u64, pageSize(cursor.tree)) * pageCount(cursor.tree.shared);
 }
 
 /// Source `sqlite3BtreeConnectionCount()`.
