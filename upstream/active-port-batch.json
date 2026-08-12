@@ -735,6 +735,15 @@
       "atomic_unit_id": "wal-shared-memory-barrier",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::walIndexWriteHdr::line-942",
+      "source_sha256": "395107070bff3bc3a46707e9cb3ad17f1b5b82a76eef44b83021fe38f1543df0",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::indexWriteHeader",
+      "zig_declaration_sha256": "1b230f227f575501baabda9adb78ee2f4e4d2f8974466507ba89ca3e27da0f7e",
+      "atomic_unit_id": "wal-shared-memory-barrier",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

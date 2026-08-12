@@ -1054,7 +1054,14 @@ test "WAL index append cleanup and savepoint undo" {
     try indexAppend(&wal, 1, 7);
     try indexAppend(&wal, 2, 3);
     wal.header.max_frame = 2;
+    wal.header.version = 0;
+    wal.header.initialized = false;
     indexWriteHeader(&wal);
+    try std.testing.expect(wal.header.initialized);
+    try std.testing.expectEqual(@as(u32, 3_007_000), wal.header.version);
+    try std.testing.expectEqual(headerChecksum(&wal.header), wal.header.checksum);
+    try std.testing.expectEqual(wal.header, wal.published_headers[1]);
+    try std.testing.expectEqual(wal.header, wal.published_headers[0]);
     try std.testing.expectEqual(@as(u32, 2), wal.published_headers[0].max_frame);
     wal.header.frame_checksum = .{ 11, 12 };
     wal.checkpoint_sequence = 4;
