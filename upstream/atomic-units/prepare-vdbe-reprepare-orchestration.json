@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "prepare-vdbe-reprepare-orchestration",
+  "title": "Saved-SQL VDBE reprepare orchestration",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3Reprepare recompiles a prepare-v2 statement from its saved SQL and preparation flags, preserves exact failure codes with OOM publication, then swaps the fresh bytecode into the stable statement handle, transfers bindings, resets the retired program result, and finalizes it.",
+    "source_files": [{"path": "src/prepare.c", "sha256": "bf077b16c691e81824700915c1e85a512d85b05c623b2d0ae1136937e0e3dad7"}],
+    "source_entity_ids": ["src/prepare.c::function::sqlite3Reprepare::line-886"],
+    "behavioral_block_ids": [
+      "src/prepare.c::function::sqlite3Reprepare::behavior::assert::line-893-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3Reprepare::behavior::assert::line-895-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3Reprepare::behavior::assert::line-897-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3Reprepare::behavior::if::line-900-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3Reprepare::behavior::if::line-901-column-5::ordinal-0",
+      "src/prepare.c::function::sqlite3Reprepare::behavior::assert::line-904-column-5::ordinal-0",
+      "src/prepare.c::function::sqlite3Reprepare::behavior::return::line-905-column-5::ordinal-0",
+      "src/prepare.c::function::sqlite3Reprepare::behavior::assert::line-907-column-5::ordinal-0",
+      "src/prepare.c::function::sqlite3Reprepare::behavior::return::line-913-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Lock-and-prepare parser implementation", "VDBE swap internals", "Binding transfer internals", "VDBE finalizer internals"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": ["vdbe-saved-sql-and-reprepare-bytecode-swap", "vdbe-statement-metadata-columns-bindings-and-vlist"],
+    "external_source_responsibilities": ["Connection mutex ownership, lock-and-prepare implementation, reset-step-result, and finalization"],
+    "caller_closure": "The complete reprepare orchestration body is assigned behind typed prepare/finalize seams; execution-loop dispatch remains open."
+  },
+  "contracts": {
+    "inputs": ["Connection-owned VDBE with saved SQL and preparation flags", "Typed lock-and-prepare and finalize operations"],
+    "outputs": ["Stable statement handle containing fresh bytecode and preserved bindings, or exact preparation failure"],
+    "ownership": "Fresh VDBE ownership transfers through swap; the temporary VDBE then owns and finalizes the retired program.",
+    "state_and_results": "NOMEM publishes connection OOM. Other prepare failures pass through unchanged. Successful swap preserves stable handle identity and returns OK.",
+    "locks_callbacks_io": "Caller owns the connection mutex. Prepare/finalize seams may lock schema objects and perform pager/schema I/O.",
+    "failure_and_continuation": "Preparation failure leaves the old VDBE untouched and requires a null fresh output; success retires the old program after binding transfer."
+  },
+  "mappings": [{"source_entity_id": "src/prepare.c::function::sqlite3Reprepare::line-886", "relation": "source-saved-sql-recompile-swap-transfer-finalize", "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::reprepareStatement"]}],
+  "representation_differences": ["Typed prepare/finalize function seams represent sqlite3LockAndPrepare and sqlite3VdbeFinalize until the native prepare dispatcher is integrated.", "The prepare seam receives the source-significant saved SQL, flags, old VDBE, and output but internalizes the fixed -1 length and null tail arguments."],
+  "oracle": {
+    "protocol": "Prepare a replacement VDBE through a deterministic seam, observe fresh result installation, retired-program reset/finalize, flag transport, and exact NOMEM/non-NOMEM failure continuation.",
+    "internal_observations": ["prepare flags", "stable-machine result after swap", "retired-machine finalized result", "connection mallocFailed", "exact returned code"],
+    "normalization": "Pointer addresses are compared only by owner identity; result codes and VDBE scalar state are exact. Pinned-C execution-loop trace remains pending."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "NOMEM prepare failure publishes sqlite3OomFault; successful transfer allocation behavior is owned by the dependency.",
+    "io_crash_concurrency": "No direct I/O in orchestration; prepare/finalize and caller mutex behavior remain external.",
+    "malformed_input": "Missing saved SQL, connection, successful fresh output, or null failed output violates source invariants.",
+    "continuation": "Failures preserve the old program; success leaves the stable handle ready with fresh bytecode.",
+    "performance": "One compilation plus constant-time swap and linear binding transfer.",
+    "commands": ["zig build vdbe-builder-differential", "zig build test"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_api.zig prepared-statement API layer",
+    "native_call_path": "Typed orchestration is compile- and unit-traced; VDBE execution schema-expiry dispatch remains pending.",
+    "bounded_owner_retired": "query_compiler.reprepare remains a separate simplified PreparedText planner owner."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires execution-loop integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect the typed prepare seam to source-shaped lock-and-prepare.", "Dispatch from expired VDBE execution.", "Add pinned-C reprepare failure/success trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/prepare.c:879-914 was reviewed completely", "src/core/internal/vdbe_aux.zig swap/reset owners were reviewed", "src/core/internal/vdbe_api.zig binding transfer and execution metadata were reviewed", "src/core/internal/query_compiler.zig simplified PreparedText owner was distinguished"],
+    "callers": ["sqlite3_step schema-expiry continuation", "sqlite3_stmt_explain shape-changing continuation", "Native source-layout unit trace invokes the orchestration directly"],
+    "callees": ["sqlite3LockAndPrepare via typed seam", "sqlite3OomFault", "sqlite3VdbeSwap", "sqlite3TransferBindings", "sqlite3VdbeResetStepResult", "sqlite3VdbeFinalize via typed seam"],
+    "assertions_branches_cleanup": ["All nine active behavior blocks are assigned", "Failed prepare requires null fresh output", "Successful prepare requires non-null fresh output", "Old program finalization follows swap, binding transfer, and reset"],
+    "upstream_tests": ["Upstream schema-change, automatic-reprepare, binding, OOM, and lock tests cover this owner", "Project source-layout unit trace covers success, NOMEM, and non-NOMEM errors"]
+  },
+  "evidence_receipts": []
+}

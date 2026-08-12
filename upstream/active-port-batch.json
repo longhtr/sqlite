@@ -186,6 +186,15 @@
       "atomic_unit_id": "prepare-parse-object-reset",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/prepare.c::function::sqlite3Reprepare::line-886",
+      "source_sha256": "423cb6e29830c60f180e366bc9ecba48fc5e4f371e9f06541c8616035a08635e",
+      "zig_declaration_id": "src/core/internal/vdbe_api.zig::function::reprepareStatement",
+      "zig_declaration_sha256": "93ceaab331270a058a8f710ac33a6623a677534dfa3a937a019efd107298414f",
+      "atomic_unit_id": "prepare-vdbe-reprepare-orchestration",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

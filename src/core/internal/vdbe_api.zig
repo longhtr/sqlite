@@ -809,6 +809,71 @@ pub fn transferBindingsDeprecated(from: *types.Vdbe, to: *types.Vdbe) c_int {
     return transferBindings(from, to);
 }
 
+pub const RepreparePrepareFunction = *const fn (*types.Sqlite3, [*:0]const u8, u8, *types.Vdbe, *?*types.Vdbe) c_int;
+pub const ReprepareFinalizeFunction = *const fn (*types.Vdbe) c_int;
+
+/// Source `sqlite3Reprepare()`: compile saved SQL against the old statement,
+/// install the replacement program, preserve bindings, and retire the old
+/// program now held by the temporary statement.
+pub fn reprepareStatement(machine: *types.Vdbe, prepare: RepreparePrepareFunction, finalize: ReprepareFinalizeFunction) c_int {
+    const db = machine.db.?;
+    const sql = machine.zSql.?;
+    var fresh_optional: ?*types.Vdbe = null;
+    const result = prepare(db, sql, machine.prepFlags, machine, &fresh_optional);
+    if (result != 0) {
+        if (result == result_no_memory) _ = db_allocator.oomFault(db);
+        std.debug.assert(fresh_optional == null);
+        return result;
+    }
+    const fresh = fresh_optional.?;
+    vdbe_aux.swap(fresh, machine);
+    _ = transferBindings(fresh, machine);
+    vdbe_aux.resetStepResult(fresh);
+    _ = finalize(fresh);
+    return 0;
+}
+
+fn testRepreparePrepare(db: *types.Sqlite3, _: [*:0]const u8, flags: u8, _: *types.Vdbe, output: *?*types.Vdbe) c_int {
+    db.nChange = flags;
+    output.* = if (db.errCode == 0) db.pVdbe else null;
+    return db.errCode;
+}
+
+fn testReprepareFinalize(machine: *types.Vdbe) c_int {
+    machine.rc = result_done;
+    return 0;
+}
+
+test "source reprepare swaps programs transfers bindings and preserves errors" {
+    var db = std.mem.zeroes(types.Sqlite3);
+    var machine = std.mem.zeroes(types.Vdbe);
+    var replacement = std.mem.zeroes(types.Vdbe);
+    machine.db = &db;
+    replacement.db = &db;
+    machine.zSql = @constCast("SELECT 1");
+    machine.prepFlags = 37;
+    machine.rc = 11;
+    replacement.rc = 29;
+    db.pVdbe = &replacement;
+
+    try std.testing.expectEqual(@as(c_int, 0), reprepareStatement(&machine, testRepreparePrepare, testReprepareFinalize));
+    try std.testing.expectEqual(@as(i64, 37), db.nChange);
+    try std.testing.expectEqual(@as(c_int, 29), machine.rc);
+    try std.testing.expectEqual(result_done, replacement.rc);
+
+    db.errCode = result_no_memory;
+    db.mallocFailed = 0;
+    db.lookaside.bDisable = 0;
+    db.lookaside.szTrue = 1200;
+    try std.testing.expectEqual(result_no_memory, reprepareStatement(&machine, testRepreparePrepare, testReprepareFinalize));
+    try std.testing.expectEqual(@as(u8, 1), db.mallocFailed);
+
+    db.errCode = 6;
+    db.mallocFailed = 0;
+    try std.testing.expectEqual(@as(c_int, 6), reprepareStatement(&machine, testRepreparePrepare, testReprepareFinalize));
+    try std.testing.expectEqual(@as(u8, 0), db.mallocFailed);
+}
+
 pub fn databaseHandle(machine_optional: ?*types.Vdbe) ?*types.Sqlite3 {
     return if (machine_optional) |machine| machine.db else null;
 }

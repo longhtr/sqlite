@@ -303,6 +303,11 @@
       "id": "prepare-parse-object-reset",
       "path": "upstream/atomic-units/prepare-parse-object-reset.json",
       "status": "source-translated"
+    },
+    {
+      "id": "prepare-vdbe-reprepare-orchestration",
+      "path": "upstream/atomic-units/prepare-vdbe-reprepare-orchestration.json",
+      "status": "source-translated"
     }
   ]
 }
