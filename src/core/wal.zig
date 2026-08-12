@@ -104,6 +104,18 @@ pub const Wal = struct {
         return .{ .result = .ok, .wal = wal };
     }
 
+    /// Source `sqlite3WalHeapMemory()`: identify connection-private WAL-index
+    /// state and safely treat a missing WAL owner as shared-memory mode.
+    pub fn usesHeapIndex(wal: ?*const Wal) bool {
+        const value = wal orelse return false;
+        return !value.publish_native_index;
+    }
+
+    /// Source `sqlite3WalFile()`: expose the open WAL file handle.
+    pub fn walFile(self: *Wal) ?*vfs.sqlite3_file {
+        return self.file;
+    }
+
     fn methods(file: *vfs.sqlite3_file) ?*const vfs.sqlite3_io_methods {
         return file.pMethods;
     }

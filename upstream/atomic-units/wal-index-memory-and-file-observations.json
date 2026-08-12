@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "id": "wal-index-memory-and-file-observations",
+  "title": "WAL index-memory mode and file observations",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3WalHeapMemory identifies a non-null WAL using a connection-private heap index, while sqlite3WalFile returns the WAL file handle.",
+    "source_files": [
+      {
+        "path": "src/wal.c",
+        "sha256": "0c0467f7c4de773512b3327b0d3973fc31d50cf74603d6aec0e3b3e1c787e217"
+      }
+    ],
+    "source_entity_ids": [
+      "src/wal.c::function::sqlite3WalHeapMemory::line-4516",
+      "src/wal.c::function::sqlite3WalFile::line-4641"
+    ],
+    "behavioral_block_ids": [
+      "src/wal.c::function::sqlite3WalHeapMemory::behavior::return::line-4517-column-3::ordinal-0",
+      "src/wal.c::function::sqlite3WalFile::behavior::return::line-4642-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Opening or closing the WAL file",
+      "WAL-index shared-memory publication",
+      "Pager journal/WAL selection policy"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Wal.open selects native shared-index publication or private index mode",
+      "Wal.openFile owns lazy WAL file allocation and close"
+    ],
+    "caller_closure": "Both complete observations are assigned; Pager journal-file selection consumes walFile and runtime trace covers null/shared-index and lazy-file transitions."
+  },
+  "contracts": {
+    "inputs": [
+      "Nullable borrowed Wal for index-mode query",
+      "Mutable borrowed Wal for file query"
+    ],
+    "outputs": [
+      "Heap-index boolean or nullable borrowed sqlite3_file handle"
+    ],
+    "ownership": "Pure borrowed observations; no ownership transfer.",
+    "state_and_results": "Missing WAL is not heap-memory. A Wal that does not publish the native shared index uses a connection-private index. walFile returns the exact currently open WAL handle and null before lazy open.",
+    "locks_callbacks_io": "No locks, callbacks, or I/O; callers own synchronization.",
+    "failure_and_continuation": "Infallible observations."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/wal.c::function::sqlite3WalHeapMemory::line-4516",
+      "relation": "source-nullable-wal-heap-index-observation",
+      "zig_declaration_ids": [
+        "src/core/wal.zig::function::Wal.usesHeapIndex"
+      ]
+    },
+    {
+      "source_entity_id": "src/wal.c::function::sqlite3WalFile::line-4641",
+      "relation": "source-wal-file-handle-observation",
+      "zig_declaration_ids": [
+        "src/core/wal.zig::function::Wal.walFile"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Runtime Wal names the inverse source state publish_native_index; false corresponds to connection-private heap index mode.",
+    "Zig walFile returns an optional typed pointer because the runtime WAL file opens lazily."
+  ],
+  "oracle": {
+    "protocol": "Require null WAL to report no heap index, require a normal shared-index Wal to report false, observe null file before first append, append a committed frame, then require Pager journal-file selection to equal Wal.walFile.",
+    "internal_observations": [
+      "nullable Wal owner",
+      "publish_native_index",
+      "file pointer before and after lazy open",
+      "Pager-selected handle"
+    ],
+    "normalization": "Boolean and within-process file-pointer identity compare exactly."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation in observers; lazy open allocation belongs to append.",
+    "io_crash_concurrency": "Observers perform no I/O; caller synchronization external.",
+    "malformed_input": "Nullable heap query is safe; walFile requires a typed live owner.",
+    "continuation": "Pure observations preserve WAL ownership and state.",
+    "performance": "Constant time.",
+    "commands": [
+      "zig build test",
+      "zig build wal-differential",
+      "zig build pager-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/wal.zig Wal and src/core/pager.zig journal-file selection",
+    "native_call_path": "Pager.journalFile calls Wal.walFile before falling back to rollback journal; locking-mode policy can consume usesHeapIndex as it is ported.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires heap-index runtime path, pinned-C trace, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Connect a production private heap-index WAL configuration path.",
+    "Add pinned-C heap/shared mode and lazy-file trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/wal.c:4500-4520 and 4628-4645 plus pager.c locking/journal-file callers were reviewed",
+      "src/core/wal.zig open/index/file state and src/core/pager.zig journalFile/tests were reviewed"
+    ],
+    "callers": [
+      "sqlite3PagerJrnlFile consumes sqlite3WalFile",
+      "Pager locking-mode checks sqlite3WalHeapMemory in the source",
+      "Runtime Pager trace observes both values"
+    ],
+    "callees": [
+      "Direct Wal exclusiveMode/pWalFd fields in the source",
+      "Direct publish_native_index/file fields in Zig"
+    ],
+    "assertions_branches_cleanup": [
+      "Both generated return blocks are assigned",
+      "Null heap query returns false",
+      "No allocation or cleanup"
+    ],
+    "upstream_tests": [
+      "Upstream WAL locking-mode and journal-file tests exercise these observations",
+      "Project WAL/Pager tests exercise shared-index mode and lazy file identity"
+    ]
+  },
+  "evidence_receipts": []
+}

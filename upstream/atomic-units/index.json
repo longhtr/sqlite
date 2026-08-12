@@ -475,6 +475,11 @@
       "status": "source-translated"
     },
     {
+      "id": "wal-index-memory-and-file-observations",
+      "path": "upstream/atomic-units/wal-index-memory-and-file-observations.json",
+      "status": "source-translated"
+    },
+    {
       "id": "wal-shared-memory-barrier",
       "path": "upstream/atomic-units/wal-shared-memory-barrier.json",
       "status": "source-translated"
