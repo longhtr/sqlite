@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "btree-pager-cache-spill-and-mmap-limits",
+  "title": "B-tree pager cache, spill, and mmap limits",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Three adjacent B-tree wrappers serialize pager cache-size, spill-size, and mmap-limit configuration. Cache size replaces the suggested page count, spill zero queries without mutation and returns at least cache size, and mmap updates the requested mapping byte limit.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}, {"path": "src/pager.c", "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"}, {"path": "src/pcache.c", "sha256": "084c50d96fcb880ff5513ec1f203ef1eaa15b29fe75c1ca4e572315f5c141ecc"}],
+    "source_entity_ids": [
+      "src/btree.c::function::sqlite3BtreeSetCacheSize::line-2987",
+      "src/btree.c::function::sqlite3BtreeSetSpillSize::line-3006",
+      "src/btree.c::function::sqlite3BtreeSetMmapLimit::line-3021"
+    ],
+    "behavioral_block_ids": [
+      "src/btree.c::function::sqlite3BtreeSetCacheSize::behavior::assert::line-2989-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeSetCacheSize::behavior::return::line-2993-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeSetSpillSize::behavior::assert::line-3009-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeSetSpillSize::behavior::return::line-3013-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeSetMmapLimit::behavior::assert::line-3023-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeSetMmapLimit::behavior::return::line-3027-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["PCache eviction mechanics", "Negative KiB-to-pages conversion", "VFS MMAP_SIZE file control", "B-tree mutex implementation"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Pager/PCache application of limits and VFS mmap file-control transport"], "caller_closure": "All three B-tree configuration bodies and source-significant spill query semantics are assigned; pager/PCache/VFS effects remain integration boundaries."},
+  "contracts": {
+    "inputs": ["Live Btree under owning connection mutex and signed cache/spill page values or mmap byte limit"],
+    "outputs": ["Updated configuration state; spill returns max effective cache/spill size"],
+    "ownership": "Borrowed Btree; no allocation.",
+    "state_and_results": "Cache always replaces configured cache size. Spill zero leaves spill unchanged; nonzero replaces it; return is max(cache,spill). Mmap always replaces byte limit.",
+    "locks_callbacks_io": "Source enters/leaves B-tree mutex and mmap may invoke VFS file control; model stores configuration while transport remains external.",
+    "failure_and_continuation": "These wrappers return OK/no-error in source; model updates are infallible."
+  },
+  "mappings": [
+    {"source_entity_id": "src/btree.c::function::sqlite3BtreeSetCacheSize::line-2987", "relation": "source-pager-cache-size-forwarding", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::setCacheSize"]},
+    {"source_entity_id": "src/btree.c::function::sqlite3BtreeSetSpillSize::line-3006", "relation": "source-pager-spill-size-update-query", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::setSpillSize"]},
+    {"source_entity_id": "src/btree.c::function::sqlite3BtreeSetMmapLimit::line-3021", "relation": "source-pager-mmap-limit-forwarding", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::setMmapLimit"]}
+  ],
+  "representation_differences": ["The Zig Shared owner records signed source configuration before integration with page_cache.Cache and VFS mmap control.", "Negative spill byte conversion belongs to the existing page_cache.setConfiguredSpillSize owner and is not duplicated here."],
+  "oracle": {"protocol": "Set cache 200, spill 300, query spill with zero, and set mmap 4096; compare persisted values and both spill results.", "internal_observations": ["cache_size", "spill_size", "zero-query nonmutation", "effective spill result", "mmap_limit"], "normalization": "Signed configuration values and return are exact before pager transport."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No wrapper allocation; PCache effects external.", "io_crash_concurrency": "VFS mmap file-control and B-tree mutex integration remain external.", "malformed_input": "Signed values are retained for downstream source conversion.", "continuation": "Configuration remains queryable and replaceable.", "performance": "Constant-time state updates before downstream cache enforcement.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig shared pager configuration", "native_call_path": "Typed wrappers and source-significant state/query semantics are tested; page_cache/VFS transport remains pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pager/PCache/VFS integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect cache/spill state to page_cache.Cache.", "Connect mmap limit to Pager/VFS file control.", "Add pinned-C signed/zero-query trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:2977-3028, src/pager.c:3557-3598, and src/pcache.c:857-886 were reviewed completely", "src/core/page_cache.zig signed cache/spill conversion and enforcement were reviewed", "src/core/internal/btree_core.zig shared state and tests were reviewed"],
+    "callers": ["PRAGMA cache_size/cache_spill and mmap configuration", "Extended B-tree source-surface test invokes all three owners"],
+    "callees": ["sqlite3PagerSetCachesize/Spillsize/MmapLimit represented by external transport", "sqlite3PcacheSetCachesize/Spillsize existing page_cache owner"],
+    "assertions_branches_cleanup": ["All six active B-tree blocks are assigned", "Spill zero-query does not mutate", "No wrapper allocation or cleanup"],
+    "upstream_tests": ["Upstream pragma, pcache, spill, mmap, VFS file-control, and mutex tests cover these wrappers", "Project extended B-tree test covers cache, spill update/query, and mmap state"]
+  },
+  "evidence_receipts": []
+}

@@ -357,6 +357,33 @@
       "atomic_unit_id": "btree-record-size-upper-bound",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeSetCacheSize::line-2987",
+      "source_sha256": "1b683a4f6fa7eb82d2529e608c23d42ea83ace93183c3ef9f49b50333a9b1395",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::setCacheSize",
+      "zig_declaration_sha256": "602f7b625e98fb043c81c852ac04a46f7a4ac77f315863da58fe723a21e5d486",
+      "atomic_unit_id": "btree-pager-cache-spill-and-mmap-limits",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeSetSpillSize::line-3006",
+      "source_sha256": "7ced07d52e17098f7328e0f79922cee1e9d92e2c0176d6d4849186395ebe9c48",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::setSpillSize",
+      "zig_declaration_sha256": "a93364be98232e9eb4d160ddaba733f9643e7d7015bbbc5a4f9d636b6aaa0b33",
+      "atomic_unit_id": "btree-pager-cache-spill-and-mmap-limits",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeSetMmapLimit::line-3021",
+      "source_sha256": "360b4b152ebe9d0c3bef7b6c1a6fd8253e85da681b34e152a7eb15cdee46ad92",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::setMmapLimit",
+      "zig_declaration_sha256": "d6caa722c43eba821b5e061afd34f90c0501743bc5741a307960ea0929bdd4ec",
+      "atomic_unit_id": "btree-pager-cache-spill-and-mmap-limits",
+      "class": "short",
+      "complete": true
     }
   ]
 }

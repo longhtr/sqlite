@@ -373,6 +373,11 @@
       "id": "btree-record-size-upper-bound",
       "path": "upstream/atomic-units/btree-record-size-upper-bound.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-pager-cache-spill-and-mmap-limits",
+      "path": "upstream/atomic-units/btree-pager-cache-spill-and-mmap-limits.json",
+      "status": "source-translated"
     }
   ]
 }

@@ -70,6 +70,9 @@ pub const Shared = struct {
     incremental_vacuum: bool = false,
     secure_delete: u2 = 0,
     pager_flags: u32 = 0,
+    cache_size: i64 = 0,
+    spill_size: i64 = 0,
+    mmap_limit: i64 = 0,
     default_sync_level: u8 = 0,
     maximum_root: u32 = 1,
     pending_byte_page: u32 = 0x40000000 / 4096 + 1,
@@ -423,6 +426,24 @@ pub fn reinitializePage(page: *Page) Error!void {
     if (!page.initialized) return;
     page.initialized = false;
     if (page.ref_count > 1) try initializePage(page);
+}
+
+/// Source `sqlite3BtreeSetCacheSize()`.
+pub fn setCacheSize(tree: *Btree, maximum_pages: i64) void {
+    tree.shared.cache_size = maximum_pages;
+}
+
+/// Source `sqlite3BtreeSetSpillSize()`.
+pub fn setSpillSize(tree: *Btree, maximum_pages: i64) i64 {
+    if (maximum_pages != 0) {
+        tree.shared.spill_size = maximum_pages;
+    }
+    return @max(tree.shared.cache_size, tree.shared.spill_size);
+}
+
+/// Source `sqlite3BtreeSetMmapLimit()`.
+pub fn setMmapLimit(tree: *Btree, byte_limit: i64) void {
+    tree.shared.mmap_limit = byte_limit;
 }
 
 /// Source `sqlite3BtreeSetPagerFlags()`.
@@ -2120,7 +2141,13 @@ test "btree core page cursor lock and integrity primitives" {
     try heapInsert(&heap, 2);
     try std.testing.expectEqual(@as(?u32, 2), heapPull(&heap));
 
+    setCacheSize(&tree, 200);
+    try std.testing.expectEqual(@as(i64, 300), setSpillSize(&tree, 300));
+    try std.testing.expectEqual(@as(i64, 300), setSpillSize(&tree, 0));
+    setMmapLimit(&tree, 4096);
     setPagerFlags(&tree, 7);
+    try std.testing.expectEqual(@as(i64, 200), shared.cache_size);
+    try std.testing.expectEqual(@as(i64, 4096), shared.mmap_limit);
     try std.testing.expectEqual(@as(u2, 1), secureDelete(&tree, 1));
     try setAutoVacuum(&tree, 2);
     try std.testing.expectEqual(@as(u2, 2), getAutoVacuum(&tree));
