@@ -132,6 +132,23 @@ pub const Cursor = struct {
     }
 };
 
+/// Source `sqlite3BtreeCursorHasMoved()`.
+pub fn cursorHasMoved(cursor: *const Cursor) bool {
+    return cursor.state != .valid;
+}
+
+/// Source `sqlite3BtreeCursorPin()`.
+pub fn pinCursor(cursor: *Cursor) void {
+    std.debug.assert(!cursor.pinned);
+    cursor.pinned = true;
+}
+
+/// Source `sqlite3BtreeCursorUnpin()`.
+pub fn unpinCursor(cursor: *Cursor) void {
+    std.debug.assert(cursor.pinned);
+    cursor.pinned = false;
+}
+
 /// Source `cursorOnLastPage()`: every ancestor descent must have selected the
 /// rightmost child, represented by an index at or beyond the ancestor's cell
 /// count.
@@ -143,6 +160,21 @@ pub fn cursorOnLastPage(cursor: *const Cursor) bool {
         }
     }
     return true;
+}
+
+test "source cursor moved and pin state transitions preserve exact flags" {
+    var shared = Shared.init(std.testing.allocator);
+    defer shared.deinit();
+    var tree = Btree{ .shared = &shared };
+    var cursor = Cursor{ .allocator = std.testing.allocator, .tree = &tree, .root = 1, .writable = false };
+    defer cursor.deinit();
+    try std.testing.expect(cursorHasMoved(&cursor));
+    cursor.state = .valid;
+    try std.testing.expect(!cursorHasMoved(&cursor));
+    pinCursor(&cursor);
+    try std.testing.expect(cursor.pinned);
+    unpinCursor(&cursor);
+    try std.testing.expect(!cursor.pinned);
 }
 
 test "source cursor last-page check requires every rightmost ancestor" {

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "btree-cursor-moved-and-pin-state",
+  "title": "B-tree cursor moved and pin-state primitives",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeCursorHasMoved tests whether a cursor is outside VALID state, while sqlite3BtreeCursorPin and sqlite3BtreeCursorUnpin enforce and toggle the cursor pin bit. These three direct cursor-state primitives form one dependency-free boundary.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": [
+      "src/btree.c::function::sqlite3BtreeCursorHasMoved::line-939",
+      "src/btree.c::function::sqlite3BtreeCursorPin::line-4932",
+      "src/btree.c::function::sqlite3BtreeCursorUnpin::line-4936"
+    ],
+    "behavioral_block_ids": [
+      "src/btree.c::function::sqlite3BtreeCursorHasMoved::behavior::assert::line-940-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeCursorHasMoved::behavior::assert::line-942-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeCursorHasMoved::behavior::assert::line-943-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeCursorHasMoved::behavior::return::line-944-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeCursorPin::behavior::assert::line-4933-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeCursorUnpin::behavior::assert::line-4937-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Fake-valid cursor ABI trick", "Cursor restoration", "Pinned-cursor movement restrictions"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Cursor lifetime and state-transition owners"], "caller_closure": "All three direct state bodies are assigned; restore and movement callers remain open."},
+  "contracts": {
+    "inputs": ["Live Cursor for moved observation; unpinned Cursor for pin; pinned Cursor for unpin"],
+    "outputs": ["Moved boolean and exact pin-state transitions"],
+    "ownership": "Cursor is borrowed; no allocation or ownership transfer.",
+    "state_and_results": "Only VALID returns not moved. Pin requires false then sets true; unpin requires true then sets false.",
+    "locks_callbacks_io": "Caller owns B-tree serialization; no callbacks or I/O.",
+    "failure_and_continuation": "Invalid pin transitions violate source assertions; moved observation is total for a valid cursor object."
+  },
+  "mappings": [
+    {"source_entity_id": "src/btree.c::function::sqlite3BtreeCursorHasMoved::line-939", "relation": "source-cursor-valid-state-negation", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::cursorHasMoved"]},
+    {"source_entity_id": "src/btree.c::function::sqlite3BtreeCursorPin::line-4932", "relation": "source-cursor-pin-bit-set", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::pinCursor"]},
+    {"source_entity_id": "src/btree.c::function::sqlite3BtreeCursorUnpin::line-4936", "relation": "source-cursor-pin-bit-clear", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::unpinCursor"]}
+  ],
+  "representation_differences": ["The Zig CursorState enum and pinned boolean replace source byte-state layout and BTCF_Pinned bit operations.", "The fake-valid-cursor byte-layout optimization is unnecessary for typed non-null Zig callers and remains excluded."],
+  "oracle": {"protocol": "Observe a default invalid cursor as moved, switch it to VALID and observe not moved, then pin and unpin while comparing the exact boolean state.", "internal_observations": ["cursor.state", "moved boolean", "cursor.pinned"], "normalization": "Enum/boolean states are semantically exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; caller serialization remains external.", "malformed_input": "Null/dangling cursor or repeated pin/unpin violates source/model invariants.", "continuation": "Valid transitions leave cursor ready for the corresponding movement restrictions.", "performance": "Constant time.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig cursor state owner", "native_call_path": "Typed state owners and all scalar transitions are unit-traced; native restore/movement dispatch remains pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires caller integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect native cursor restore/movement callers.", "Add pinned-C moved/pin/unpin trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:923-976 and 4919-4939 were reviewed completely for moved/restore and pin context", "src/core/internal/btree_core.zig cursor state, saved-position, movement, and pin fields were reviewed"],
+    "callers": ["VDBE moved-cursor detection/restoration", "Cursor movement paths requiring temporary pinning", "Unit trace invokes all owners directly"],
+    "callees": ["No callees; direct state reads/stores"],
+    "assertions_branches_cleanup": ["All six active blocks are assigned", "Moved result is state!=VALID", "Pin assertions enforce alternating transitions", "No allocation or cleanup"],
+    "upstream_tests": ["Upstream rebalance/delete cursor restoration and cursor pin tests cover these primitives", "Project unit trace covers invalid/valid and pin/unpin transitions"]
+  },
+  "evidence_receipts": []
+}

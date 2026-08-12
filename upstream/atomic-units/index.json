@@ -353,6 +353,11 @@
       "id": "btree-shared-connection-count",
       "path": "upstream/atomic-units/btree-shared-connection-count.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-cursor-moved-and-pin-state",
+      "path": "upstream/atomic-units/btree-cursor-moved-and-pin-state.json",
+      "status": "source-translated"
     }
   ]
 }
