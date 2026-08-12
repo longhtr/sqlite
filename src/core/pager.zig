@@ -145,6 +145,7 @@ pub const Pager = struct {
     stats: Stats = .{},
     busy_handler: ?BusyHandler = null,
     busy_context: ?*anyopaque = null,
+    busy_handler_hint: [2]?*anyopaque = .{ null, null },
     journal: ?memory_journal.Journal = null,
     journal_spill_threshold: i64 = 0,
     journaled_pages: ?[]bool = null,
@@ -664,9 +665,17 @@ pub const Pager = struct {
         return self.wal_mode;
     }
 
+    /// Source `sqlite3PagerSetBusyHandler()`: install the callback and its
+    /// adjacent context, then expose that pair to custom VFS implementations
+    /// through the best-effort SQLITE_FCNTL_BUSYHANDLER hint.
     pub fn setBusyHandler(self: *Pager, handler: ?BusyHandler, context: ?*anyopaque) void {
         self.busy_handler = handler;
         self.busy_context = context;
+        self.busy_handler_hint = .{
+            if (handler) |callback| @ptrCast(@constCast(callback)) else null,
+            context,
+        };
+        _ = vfs.osFileControl(self.file, vfs.FCNTL_BUSYHANDLER, @ptrCast(&self.busy_handler_hint));
     }
 
     fn lockShared(self: *Pager) ResultCode {
@@ -1955,6 +1964,49 @@ fn stopAfterOneBusy(context: ?*anyopaque) bool {
     const calls: *usize = @ptrCast(@alignCast(context.?));
     calls.* += 1;
     return false;
+}
+
+const BusyHintProbe = struct {
+    delegate: *const vfs.sqlite3_io_methods,
+    seen_operation: c_int = -1,
+    seen_argument: ?*anyopaque = null,
+};
+var busy_hint_probe: ?*BusyHintProbe = null;
+
+fn probeBusyFileControl(file: *vfs.sqlite3_file, operation: c_int, argument: ?*anyopaque) callconv(.c) c_int {
+    const probe = busy_hint_probe orelse return vfs.NOTFOUND;
+    probe.seen_operation = operation;
+    probe.seen_argument = argument;
+    const control = probe.delegate.xFileControl orelse return vfs.NOTFOUND;
+    return control(file, operation, argument);
+}
+
+test "busy handler installation forwards callback and context as a VFS hint" {
+    const fixture = try readFixture("valid-empty-4096.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "busy-hint.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-busy-hint", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "busy-hint.db", .{}).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+
+    const original_methods = pager.file.pMethods.?;
+    var probe = BusyHintProbe{ .delegate = original_methods };
+    var probing_methods = original_methods.*;
+    probing_methods.xFileControl = probeBusyFileControl;
+    busy_hint_probe = &probe;
+    defer busy_hint_probe = null;
+    pager.file.pMethods = &probing_methods;
+
+    var calls: usize = 0;
+    pager.setBusyHandler(stopAfterOneBusy, &calls);
+    try std.testing.expectEqual(vfs.FCNTL_BUSYHANDLER, probe.seen_operation);
+    try std.testing.expectEqual(@as(?*anyopaque, @ptrCast(&pager.busy_handler_hint)), probe.seen_argument);
+    try std.testing.expectEqual(@as(?*anyopaque, @ptrCast(@constCast(&stopAfterOneBusy))), pager.busy_handler_hint[0]);
+    try std.testing.expectEqual(@as(?*anyopaque, @ptrCast(&calls)), pager.busy_handler_hint[1]);
+    try std.testing.expect(!pager.busy_handler.?(pager.busy_context));
+    try std.testing.expectEqual(@as(usize, 1), calls);
 }
 
 test "writer reserved and exclusive contention preserve busy-callback policy" {

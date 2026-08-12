@@ -133,6 +133,7 @@ pub const FCNTL_CHUNK_SIZE: c_int = 6;
 pub const FCNTL_PERSIST_WAL: c_int = 10;
 pub const FCNTL_VFSNAME: c_int = 12;
 pub const FCNTL_POWERSAFE_OVERWRITE: c_int = 13;
+pub const FCNTL_BUSYHANDLER: c_int = 15;
 pub const FCNTL_TEMPFILENAME: c_int = 16;
 pub const FCNTL_MMAP_SIZE: c_int = 18;
 pub const FCNTL_HAS_MOVED: c_int = 20;

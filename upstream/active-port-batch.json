@@ -915,6 +915,15 @@
       "atomic_unit_id": "pager-cache-configuration-and-shrink-forwarding",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerSetBusyHandler::line-3769",
+      "source_sha256": "a8df4908be4ffc20688228949526c17e74d8a0d8a998bbe70305f37525b29ec4",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.setBusyHandler",
+      "zig_declaration_sha256": "f46176b3da41aa66ae042bed73c78d825c5fe412155f677aaa69dc992c318269",
+      "atomic_unit_id": "pager-busy-handler-installation-and-vfs-hint",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

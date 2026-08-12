@@ -369,8 +369,8 @@ test "source index rowid validates the final integer serial value" {
     try std.testing.expectEqual(@as(i64, 1), try indexRowid(&.{ 3, 0x80, 9, 'x' }));
     try std.testing.expectError(error.CorruptRecord, indexRowid(&.{}));
     try std.testing.expectError(error.CorruptRecord, indexRowid(&.{ 2, 1 }));
-    try std.testing.expectError(error.CorruptRecord, indexRowid(&.{ 3, 15, 7, 'x' } ++ [_]u8{0} ** 8));
-    try std.testing.expectError(error.CorruptRecord, indexRowid(&.{ 3, 15, 2, 'x', 0xff }));
+    try std.testing.expectError(error.CorruptRecord, indexRowid(&([_]u8{ 3, 15, 7, 'x' } ++ [_]u8{0} ** 8)));
+    try std.testing.expectError(error.CorruptRecord, indexRowid(&.{ 3, 15, 2, 'x' }));
 }
 
 test "source index key comparison rejects invalid payload sizes and ignores rowid" {

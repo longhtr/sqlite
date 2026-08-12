@@ -505,6 +505,11 @@
       "status": "source-translated"
     },
     {
+      "id": "pager-busy-handler-installation-and-vfs-hint",
+      "path": "upstream/atomic-units/pager-busy-handler-installation-and-vfs-hint.json",
+      "status": "source-translated"
+    },
+    {
       "id": "pager-journal-mode-change-readiness",
       "path": "upstream/atomic-units/pager-journal-mode-change-readiness.json",
       "status": "source-translated"

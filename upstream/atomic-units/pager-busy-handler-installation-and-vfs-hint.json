@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "id": "pager-busy-handler-installation-and-vfs-hint",
+  "title": "Pager busy-handler installation and VFS hint",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerSetBusyHandler is the atomic Pager boundary that stores the callback/context pair adjacently for retry sites and exposes the same pair to custom VFS implementations through the best-effort SQLITE_FCNTL_BUSYHANDLER file-control hint.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::sqlite3PagerSetBusyHandler::line-3769"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::sqlite3PagerSetBusyHandler::behavior::assert::line-3778-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerSetBusyHandler::behavior::assert::line-3779-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Connection-level busy callback policy and timeout sleeping",
+      "The lock-transition retry loop",
+      "Custom VFS interpretation of SQLITE_FCNTL_BUSYHANDLER"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Pager owns an open database sqlite3_file",
+      "Connection callback adapter supplies source-compatible one-argument retry semantics"
+    ],
+    "caller_closure": "The complete setter body and both adjacency assertions are assigned. Connection busy-handler and timeout APIs install Pager.pagerBusy; Pager lock paths consume the stored callback/context."
+  },
+  "contracts": {
+    "inputs": [
+      "Live Pager, optional one-argument busy callback, and borrowed callback context"
+    ],
+    "outputs": [
+      "Installed callback/context pair and one best-effort SQLITE_FCNTL_BUSYHANDLER hint"
+    ],
+    "ownership": "Pager borrows callback and context for its lifetime or until replacement. The VFS receives a borrowed pointer to Pager-owned adjacent hint storage.",
+    "state_and_results": "Every call replaces both fields, including null callback removal. The hint contains callback in slot zero and context in slot one and its result is intentionally ignored.",
+    "locks_callbacks_io": "No callback is invoked during installation. xFileControl may inspect the pair synchronously and must not own it.",
+    "failure_and_continuation": "Unsupported or failing file-control hints do not fail installation; subsequent Pager lock retries use the newly installed fields."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerSetBusyHandler::line-3769",
+      "relation": "source-store-adjacent-pair-and-best-effort-vfs-hint",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.setBusyHandler"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Zig keeps runtime callback/context fields and a separate Pager-owned two-slot anyopaque hint array because optional function pointers cannot be reinterpreted as an adjacent object-pointer array directly.",
+    "The existing osFileControl wrapper returns the ignored result; this call site provides sqlite3OsFileControlHint semantics by discarding it."
+  ],
+  "oracle": {
+    "protocol": "Open a Pager through a native ABI VFS wrapper, intercept xFileControl, install callback/context, verify operation 15 and both argument slots, then invoke the stored callback and verify continuation state.",
+    "internal_observations": [
+      "installed callback identity",
+      "installed context identity",
+      "xFileControl operation and argument identity",
+      "callback result and call count"
+    ],
+    "normalization": "Pointer values are compared only for identity within one process; operation, callback result, and count are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "The VFS hint is best-effort and does not alter Pager state on failure; connection serialization owns concurrent replacement.",
+    "malformed_input": "Null callback and null context are valid and forwarded exactly.",
+    "continuation": "After an unsupported hint, Pager lock retry paths still consume the installed callback/context.",
+    "performance": "Constant-time field replacement and one optional VFS dispatch.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig Pager and src/core/sql_frontend.zig Connection busy adapter",
+    "native_call_path": "sqlite3_busy_handler/sqlite3_busy_timeout -> Connection.pagerBusy -> Pager.setBusyHandler -> sqlite3_file.xFileControl; lockShared and lockForWrite invoke the installed pair on source-approved transitions.",
+    "bounded_owner_retired": "The live Pager setter now includes the omitted custom-VFS hint rather than storing only native fields."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires scoped durable trace promotion and independent review."
+  },
+  "known_blockers": [
+    "Capture a scoped durable busy-handler/VFS-hint receipt before internal-trace promotion.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:3748-3781 busy-transition contract and complete setter body were reviewed",
+      "upstream/sqlite/src/pager.c:3992-4009 retry consumer and upstream/sqlite/src/os.c:121-159 hint semantics were reviewed",
+      "src/core/pager.zig callback fields, lock consumers, setter, tests, and src/core/sql_frontend.zig connection adapters were reviewed"
+    ],
+    "callers": [
+      "sqlite3_busy_handler",
+      "sqlite3_busy_timeout"
+    ],
+    "callees": [
+      "sqlite3_file.xFileControl through vfs.osFileControl"
+    ],
+    "assertions_branches_cleanup": [
+      "Both source assertions establish callback/context adjacency and are assigned",
+      "Null callback and unsupported hint retain valid installed state",
+      "No cleanup is required because all pointers are borrowed"
+    ],
+    "upstream_tests": [
+      "Upstream busy, lock, pager, and custom-VFS tests cover callback replacement and retry policy",
+      "Project Pager tests cover no-lock-to-shared and reserved-to-exclusive callback policy plus exact VFS hint forwarding"
+    ]
+  },
+  "evidence_receipts": []
+}
