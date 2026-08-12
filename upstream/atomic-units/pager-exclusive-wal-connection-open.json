@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "id": "pager-exclusive-wal-connection-open",
+  "title": "Pager exclusive WAL connection opening",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "pagerExclusiveLock and pagerOpenWal form the dependency-closed connection-opening boundary for exclusive-locking WAL mode. The Pager now restores SHARED after a failed exclusive acquisition, acquires EXCLUSIVE before opening the WAL, and selects a connection-private in-memory index that avoids VFS shared-memory methods.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::pagerExclusiveLock::line-7605",
+      "src/pager.c::function::pagerOpenWal::line-7627"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::pagerExclusiveLock::behavior::assert::line-7609-column-3::ordinal-0",
+      "src/pager.c::function::pagerExclusiveLock::behavior::if::line-7612-column-3::ordinal-0",
+      "src/pager.c::function::pagerExclusiveLock::behavior::return::line-7618-column-3::ordinal-0",
+      "src/pager.c::function::pagerOpenWal::behavior::assert::line-7630-column-3::ordinal-0",
+      "src/pager.c::function::pagerOpenWal::behavior::assert::line-7631-column-3::ordinal-0",
+      "src/pager.c::function::pagerOpenWal::behavior::if::line-7638-column-3::ordinal-0",
+      "src/pager.c::function::pagerOpenWal::behavior::if::line-7645-column-3::ordinal-0",
+      "src/pager.c::function::pagerOpenWal::behavior::return::line-7658-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Public sqlite3PagerOpenWal mode transition and rollback-journal close",
+      "Mapped-page limit recalculation because the native Pager does not expose mapped database pages",
+      "WAL discovery and malformed WAL recovery policy",
+      "Independent assurance and pinned-C trace"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "pager-database-lock-transitions",
+      "pager-wal-transport-support",
+      "wal-index-memory-and-file-observations"
+    ],
+    "external_source_responsibilities": [
+      "Wal.open owns WAL-file allocation, recovery, read-lock state, and cleanup",
+      "Pager caller owns SHARED or EXCLUSIVE database-file lock",
+      "sqlite3PagerOpenWal caller publishes WAL journal mode"
+    ],
+    "caller_closure": "Both complete source bodies are assigned. beginRead requested-WAL and existing-WAL discovery paths invoke the same connection owner, and the private-index Wal transport now avoids shared-memory map, lock, barrier, and publication calls."
+  },
+  "contracts": {
+    "inputs": [
+      "Mutable non-memory Pager with no WAL owner and SHARED or EXCLUSIVE database lock",
+      "Boolean identifying whether the WAL file already exists"
+    ],
+    "outputs": [
+      "Exact lock, VFS, allocation, recovery, or success ResultCode and a Pager-owned Wal only on success"
+    ],
+    "ownership": "Wal.open transfers a complete Wal value to Pager only after successful initialization. Failure cleanup remains inside Wal.open; database-file and VFS owners remain borrowed.",
+    "state_and_results": "Exclusive locking saves the original lock, attempts EXCLUSIVE, and restores the original SHARED lock after failure. Successful exclusive mode opens with a private index; ordinary mode retains shared-memory index transport.",
+    "locks_callbacks_io": "Database xLock/xUnlock precede exclusive WAL opening. Private-index Wal operations skip xShmMap/xShmLock/xShmBarrier while retaining WAL-file I/O; ordinary mode keeps native shared-memory calls.",
+    "failure_and_continuation": "Failed EXCLUSIVE leaves the original SHARED lock. Failed WAL open publishes no owner. beginRead cleanup deinitializes any completed owner and returns Pager to open state."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::pagerExclusiveLock::line-7605",
+      "relation": "source-exclusive-wal-lock-with-failure-restore",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.lockExclusiveForWal"
+      ]
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pagerOpenWal::line-7627",
+      "relation": "source-wal-connection-open-and-private-index-selection",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.openWalConnection"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Pager.exclusive_locking replaces source exclusiveMode and is selected at native Pager construction.",
+    "Wal.publish_native_index false retains recovered frame/index metadata in Wal-owned Zig maps and makes shared-memory transport a no-op instead of passing an exclusiveMode flag through sqlite3WalOpen.",
+    "pagerFixMaplimit has no production counterpart because this Pager does not expose database mmap pages; WAL file transport and Pager cache limits remain independent.",
+    "The retired no-credit internal pager_core exclusiveLockRecovering claim remains historical evidence only; the new production Pager declaration has a distinct declaration identity and hash and owns the post-retirement integrated path."
+  ],
+  "oracle": {
+    "protocol": "Open a writable Pager in exclusive-locking mode, request WAL during beginRead, require EXCLUSIVE database lock, require a live Wal using the private index, and close the read transaction safely. Existing WAL and Pager differential suites retain ordinary shared-memory transport coverage.",
+    "internal_observations": [
+      "Pager lock level before and after open",
+      "Pager.wal_state presence",
+      "Wal heap-index classification",
+      "beginRead and endRead ResultCode"
+    ],
+    "normalization": "Compare exact ResultCode, lock level, owner presence, and private-index boolean."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Wal allocation/open failure returns no_memory and publishes no Pager owner.",
+    "io_crash_concurrency": "EXCLUSIVE database lock is acquired before private-index WAL file access. Ordinary WAL mode keeps VFS shared-memory locking.",
+    "malformed_input": "Existing malformed WAL recovery errors before owner publication; typed state assertions constrain lock and owner inputs.",
+    "continuation": "Failed lock restores SHARED; failed beginRead returns open; successful read can end and close safely.",
+    "performance": "Constant lock setup plus WAL open/recovery; private mode eliminates shared-memory calls while EXCLUSIVE serializes connections.",
+    "commands": [
+      "zig build test",
+      "zig build wal-differential",
+      "zig build pager-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig native Pager and src/core/wal.zig private index transport",
+    "native_call_path": "Pager.beginRead invokes openWalConnection for requested WAL; openWalIfPresent invokes it for an existing WAL. Exclusive mode acquires EXCLUSIVE and Wal.open bypasses shared-memory transport.",
+    "bounded_owner_retired": "Duplicated beginRead/openWalIfPresent Wal.open calls and the nonfunctional external-index shared-map branch are retired."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires pinned-C lock/open trace, fault trace, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Add maintained pinned-C exclusive-lock failure restoration and private-index open trace.",
+    "Connect public locking_mode configuration to Pager.exclusive_locking.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c sqlite3PagerWalSupported, complete pagerExclusiveLock, complete pagerOpenWal, sqlite3PagerOpenWal, close-WAL, and discovery callers were reviewed",
+      "upstream sqlite3WalOpen exclusiveMode and private wal-index ownership were reviewed through Pager contracts",
+      "src/core/pager.zig lock transitions, beginRead cleanup, discovery, requested WAL, close, and contention tests were reviewed",
+      "src/core/wal.zig complete open, lock, publish, recover, write, checkpoint, and deinit paths were reviewed"
+    ],
+    "callers": [
+      "sqlite3PagerOpenWal",
+      "pagerOpenWalIfPresent through sqlite3PagerSharedLock",
+      "Native Pager.beginRead and openWalIfPresent"
+    ],
+    "callees": [
+      "pagerLockDb and pagerUnlockDb",
+      "sqlite3WalOpen and pagerFixMaplimit",
+      "Pager lockDatabase/unlockDatabase and Wal.open"
+    ],
+    "assertions_branches_cleanup": [
+      "No-Wal, non-temp, SHARED-or-EXCLUSIVE preconditions are explicit",
+      "Exclusive and ordinary branches are assigned",
+      "Failed lock restores SHARED and failed Wal.open publishes no owner",
+      "Private and shared index lock/publication/deinit branches were audited"
+    ],
+    "upstream_tests": [
+      "Upstream WAL exclusive locking, locking_mode, open failure, recovery, and shared-memory tests exercise these paths",
+      "Project exclusive WAL owner test plus WAL/Pager differential and fault suites exercise native integration"
+    ]
+  },
+  "evidence_receipts": []
+}

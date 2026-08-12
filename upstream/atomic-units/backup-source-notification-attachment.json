@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "id": "backup-source-notification-attachment",
+  "title": "Backup attachment for source Pager notifications",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "attachBackupObject publishes a partially completed backup for source-page update and Pager-reset notifications. The bounded typed owner models list membership explicitly and attaches only after a step leaves pages remaining.",
+    "source_files": [
+      {
+        "path": "src/backup.c",
+        "sha256": "2304c4f820c977aa009ceb464d9b774942cd7b4686156a5ed28d50a3e50f861e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/backup.c::function::attachBackupObject::line-311"
+    ],
+    "behavioral_block_ids": [
+      "src/backup.c::function::attachBackupObject::behavior::assert::line-313-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Backup-list unlink during finish",
+      "Per-page source update and complete restart bodies",
+      "Public Pager backup-list storage"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "backup-fatal-error-classification",
+      "backup-restart-on-pager-data-version"
+    ],
+    "external_source_responsibilities": [
+      "Backup step determines that copy progress is partial",
+      "Source update/restart owners consume attached backup state",
+      "Finish unlinks an attached source owner"
+    ],
+    "caller_closure": "The complete source attachment body is assigned. The typed step owner invokes it only after publishing remaining progress."
+  },
+  "contracts": {
+    "inputs": [
+      "Mutable live Backup not already attached, under source owner synchronization"
+    ],
+    "outputs": [
+      "Backup marked attached for source notification ownership"
+    ],
+    "ownership": "Borrowed Backup; source owns notification-list membership after publication.",
+    "state_and_results": "Precondition requires detached state. Successful publication sets attached exactly once; the source linked-list pointer topology is abstracted by typed membership.",
+    "locks_callbacks_io": "No direct I/O or callback. Source Btree synchronization is a caller precondition.",
+    "failure_and_continuation": "Infallible for valid detached owner. Attached state remains active until finish."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/backup.c::function::attachBackupObject::line-311",
+      "relation": "source-backup-notification-list-attachment",
+      "zig_declaration_ids": [
+        "src/core/internal/backup_core.zig::function::attachBackupObject"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Source pNext/Pager head insertion is represented by Backup.attached because the bounded owner currently permits one typed callback target rather than exposing intrusive pointers.",
+    "The source Btree mutex assertion is represented by the caller-owned typed state-machine boundary plus a detached-state assertion."
+  ],
+  "oracle": {
+    "protocol": "Initialize a backup, require detached state, attach it, require attached state, restore the synthetic trace to detached, and execute complete step ownership. Partial-step production callers invoke the same helper.",
+    "internal_observations": [
+      "attached before and after publication",
+      "remaining/page-count condition at production call",
+      "step continuation"
+    ],
+    "normalization": "Compare exact boolean membership and typed step behavior."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; source synchronization external.",
+    "malformed_input": "Typed non-null owner; duplicate attachment violates assertion/precondition.",
+    "continuation": "Attached partial backup remains reusable for subsequent step/update/restart.",
+    "performance": "Constant-time membership publication.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/backup_core.zig online backup state machine",
+    "native_call_path": "step invokes attachBackupObject when next_page remains within the source page count.",
+    "bounded_owner_retired": "Direct Backup.attached assignment in step is retired."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires typed list/unlink ownership or public Backup integration, pinned-C attachment trace, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Represent or connect source notification-list unlink in finish.",
+    "Connect the internal source-shaped backup state machine to the public Backup owner.",
+    "Add pinned-C partial-step attachment trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/backup.c structure/thread-safety notes, attachBackupObject, partial-step call, finish unlink, update, and restart were reviewed",
+      "upstream/sqlite/src/pager.c Pager backup pointer ownership was reviewed",
+      "src/core/internal/backup_core.zig initialize, step, finish, update, and owner trace were reviewed"
+    ],
+    "callers": [
+      "sqlite3_backup_step after partial copy",
+      "Native step after remaining progress is computed"
+    ],
+    "callees": [
+      "sqlite3PagerBackupPtr and intrusive head insertion in source",
+      "Typed attached-state publication"
+    ],
+    "assertions_branches_cleanup": [
+      "Source Btree mutex assertion is assigned as synchronization contract",
+      "Detached precondition prevents duplicate typed publication",
+      "No allocation or cleanup in attach; unlink belongs to finish"
+    ],
+    "upstream_tests": [
+      "Upstream partial backup, source update/restart, finish, mutex, and multiple-backup tests exercise attachment",
+      "Project owner trace and complete backup state-machine tests exercise publication boundary"
+    ]
+  },
+  "evidence_receipts": []
+}

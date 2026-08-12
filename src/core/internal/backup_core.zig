@@ -129,6 +129,13 @@ pub fn initialize(destination_connection: *Connection, destination_name: []const
     return backup;
 }
 
+/// Source `attachBackupObject()`: publish one partially copied owner for
+/// source-page update and restart notifications.
+pub fn attachBackupObject(backup: *Backup) void {
+    std.debug.assert(!backup.attached);
+    backup.attached = true;
+}
+
 /// Source `sqlite3_backup_step()`.
 pub fn step(backup: *Backup, requested_pages: isize) Error!void {
     if (isFatalError(backup.result)) return backup.result.?;
@@ -180,7 +187,7 @@ pub fn step(backup: *Backup, requested_pages: isize) Error!void {
     backup.page_count = source_count;
     backup.remaining = source_count + 1 - backup.next_page;
     if (backup.next_page <= source_count) {
-        backup.attached = true;
+        attachBackupObject(backup);
         backup.result = null;
         return;
     }
@@ -262,6 +269,10 @@ test "checkpoint batch backup step copies pages and commits a changed schema coo
     try std.testing.expectEqual(@as(usize, 512), resized.page_size);
     try std.testing.expectEqual(@as(u8, 7), resized.reserve_bytes);
     const handle = try initialize(&destination_connection, "main", &source_connection, "main");
+    try std.testing.expect(!handle.attached);
+    attachBackupObject(handle);
+    try std.testing.expect(handle.attached);
+    handle.attached = false;
     try std.testing.expect(!isFatalError(null));
     try std.testing.expect(!isFatalError(error.Busy));
     try std.testing.expect(isFatalError(error.Io));

@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "id": "json-string-output-and-abbreviated-path",
+  "title": "JSON output state, result publication, and extraction execution",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Post-retirement jsonStringGrow, jsonReturnString, and jsonReturnParse implementations plus JsonString error/reset, append, trim, termination, and separator routines form one dependency-closed output and result state machine. jsonAllAlphanum and the post-retirement jsonExtractFunc implementation consume it to execute ordinary and abbreviated paths, multi-path arrays, JSON/SQL result modes, JSONB output, result caching, and registered -> and ->> operators.",
+    "source_files": [
+      {
+        "path": "src/json.c",
+        "sha256": "25a742ea7382fd21bc3f10fc22f4cbfc97335122ba9593822d0d7eb93bb637d9"
+      }
+    ],
+    "source_entity_ids": [
+      "src/json.c::function::jsonStringReset::line-552",
+      "src/json.c::function::jsonStringOom::line-559",
+      "src/json.c::function::jsonStringTooDeep::line-567",
+      "src/json.c::function::jsonStringGrow::line-577",
+      "src/json.c::function::jsonAppendRaw::line-614",
+      "src/json.c::function::jsonAppendRawNZ::line-623",
+      "src/json.c::function::jsonAppendCharExpand::line-646",
+      "src/json.c::function::jsonAppendChar::line-650",
+      "src/json.c::function::jsonStringTrimOneChar::line-660",
+      "src/json.c::function::jsonStringTerminate::line-673",
+      "src/json.c::function::jsonAppendSeparator::line-682",
+      "src/json.c::function::jsonReturnString::line-856",
+      "src/json.c::function::jsonReturnParse::line-3777",
+      "src/json.c::function::jsonAllAlphanum::line-4046",
+      "src/json.c::function::jsonExtractFunc::line-4072"
+    ],
+    "behavioral_block_ids": [
+      "src/json.c::function::jsonAllAlphanum::behavior::for::line-4048-column-3::ordinal-0",
+      "src/json.c::function::jsonAllAlphanum::behavior::return::line-4049-column-3::ordinal-0",
+      "src/json.c::function::jsonAppendChar::behavior::if::line-651-column-3::ordinal-0",
+      "src/json.c::function::jsonAppendCharExpand::behavior::if::line-647-column-3::ordinal-0",
+      "src/json.c::function::jsonAppendCharExpand::behavior::return::line-647-column-29::ordinal-0",
+      "src/json.c::function::jsonAppendRaw::behavior::if::line-615-column-3::ordinal-0",
+      "src/json.c::function::jsonAppendRaw::behavior::if::line-616-column-3::ordinal-0",
+      "src/json.c::function::jsonAppendRaw::behavior::return::line-615-column-14::ordinal-0",
+      "src/json.c::function::jsonAppendRawNZ::behavior::assert::line-624-column-3::ordinal-0",
+      "src/json.c::function::jsonAppendRawNZ::behavior::if::line-625-column-3::ordinal-0",
+      "src/json.c::function::jsonAppendSeparator::behavior::if::line-684-column-3::ordinal-0",
+      "src/json.c::function::jsonAppendSeparator::behavior::if::line-686-column-3::ordinal-0",
+      "src/json.c::function::jsonAppendSeparator::behavior::return::line-684-column-21::ordinal-0",
+      "src/json.c::function::jsonAppendSeparator::behavior::return::line-686-column-26::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::assert::line-4143-column-11::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::for::line-4090-column-3::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::goto::line-4095-column-20::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::goto::line-4134-column-7::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::goto::line-4159-column-9::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::goto::line-4166-column-7::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4082-column-3::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4084-column-3::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4087-column-3::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4095-column-5::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4097-column-5::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4099-column-11::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4114-column-7::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4116-column-9::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4119-column-13::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4122-column-13::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4136-column-5::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4137-column-7::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4138-column-9::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4147-column-11::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4157-column-11::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4158-column-7::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4169-column-3::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::if::line-4172-column-5::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::label::line-4176-column-1::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::return::line-4082-column-16::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::return::line-4084-column-14::ordinal-0",
+      "src/json.c::function::jsonExtractFunc::behavior::return::line-4179-column-3::ordinal-0",
+      "src/json.c::function::jsonReturnParse::behavior::if::line-3782-column-3::ordinal-0",
+      "src/json.c::function::jsonReturnParse::behavior::if::line-3787-column-3::ordinal-0",
+      "src/json.c::function::jsonReturnParse::behavior::if::line-3788-column-5::ordinal-0",
+      "src/json.c::function::jsonReturnParse::behavior::return::line-3784-column-5::ordinal-0",
+      "src/json.c::function::jsonReturnString::behavior::assert::line-861-column-3::ordinal-0",
+      "src/json.c::function::jsonReturnString::behavior::assert::line-862-column-3::ordinal-0",
+      "src/json.c::function::jsonReturnString::behavior::if::line-864-column-3::ordinal-0",
+      "src/json.c::function::jsonReturnString::behavior::if::line-866-column-5::ordinal-0",
+      "src/json.c::function::jsonReturnString::behavior::if::line-868-column-11::ordinal-0",
+      "src/json.c::function::jsonReturnString::behavior::if::line-872-column-7::ordinal-0",
+      "src/json.c::function::jsonReturnString::behavior::if::line-878-column-9::ordinal-0",
+      "src/json.c::function::jsonReturnString::behavior::if::line-888-column-9::ordinal-0",
+      "src/json.c::function::jsonReturnString::behavior::if::line-890-column-9::ordinal-0",
+      "src/json.c::function::jsonReturnString::behavior::if::line-892-column-9::ordinal-0",
+      "src/json.c::function::jsonReturnString::behavior::return::line-881-column-11::ordinal-0",
+      "src/json.c::function::jsonStringGrow::behavior::conditional::line-578-column-16::ordinal-0",
+      "src/json.c::function::jsonStringGrow::behavior::if::line-580-column-3::ordinal-0",
+      "src/json.c::function::jsonStringGrow::behavior::if::line-581-column-5::ordinal-0",
+      "src/json.c::function::jsonStringGrow::behavior::if::line-583-column-5::ordinal-0",
+      "src/json.c::function::jsonStringGrow::behavior::if::line-592-column-5::ordinal-0",
+      "src/json.c::function::jsonStringGrow::behavior::return::line-581-column-19::ordinal-0",
+      "src/json.c::function::jsonStringGrow::behavior::return::line-585-column-7::ordinal-0",
+      "src/json.c::function::jsonStringGrow::behavior::return::line-595-column-7::ordinal-0",
+      "src/json.c::function::jsonStringGrow::behavior::return::line-599-column-3::ordinal-0",
+      "src/json.c::function::jsonStringOom::behavior::if::line-561-column-3::ordinal-0",
+      "src/json.c::function::jsonStringReset::behavior::if::line-553-column-3::ordinal-0",
+      "src/json.c::function::jsonStringTerminate::behavior::return::line-676-column-3::ordinal-0",
+      "src/json.c::function::jsonStringTooDeep::behavior::assert::line-569-column-3::ordinal-0",
+      "src/json.c::function::jsonStringTrimOneChar::behavior::assert::line-662-column-5::ordinal-0",
+      "src/json.c::function::jsonStringTrimOneChar::behavior::if::line-661-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "JsonString inline storage and reference-counted string allocation",
+      "Formatted jsonPrintf rendering",
+      "Independent assurance and pinned-C trace"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "JsonString construction and capacity growth",
+      "JSONB-to-text translation",
+      "jsonLookupStep path interpretation",
+      "SQL result and error publication"
+    ],
+    "caller_closure": "All fifteen assigned source bodies are complete. String growth owns sticky OOM/reset state; result publication selects text/JSONB, cache, subtype, and error branches; JSON text, aggregate, table-valued path, and extraction owners consume the state machine; registered json_extract, jsonb_extract, ->, and ->> execute the extraction dispatcher."
+  },
+  "contracts": {
+    "inputs": [
+      "Mutable allocator-owned JsonString output",
+      "Borrowed bytes or one byte for append operations",
+      "Borrowed abbreviated extraction label for ASCII alphanumeric classification"
+    ],
+    "outputs": [
+      "Exact appended output, conditional comma, hidden zero terminator, or sticky output error",
+      "ASCII alphanumeric-or-underscore classification"
+    ],
+    "ownership": "JsonString owns its dynamic buffer. Reset releases that allocation while preserving sticky error state; input slices remain borrowed.",
+    "state_and_results": "OOM and too-deep publication clear output and remain sticky. Trim mutates only an error-free nonempty output. Termination appends a hidden zero then restores the logical length. Separator is a no-op for empty output or immediately after an opening container.",
+    "locks_callbacks_io": "No locks or I/O. SQL result callbacks remain in the calling JSON function owner.",
+    "failure_and_continuation": "Allocation failure records OOM and resets storage. Further growth fails while an error is sticky. Registered callers convert false/error state into SQLite result errors and remain safely destructible."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/json.c::function::jsonStringReset::line-552",
+      "relation": "source-json-string-owned-buffer-reset",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::JsonString.reset"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringOom::line-559",
+      "relation": "source-json-string-sticky-oom-publication",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::JsonString.reportOom"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringTooDeep::line-567",
+      "relation": "source-json-string-sticky-depth-publication",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::JsonString.reportTooDeep"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonAppendRaw::line-614",
+      "relation": "source-zero-permitted-raw-append",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::appendRaw"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonAppendRawNZ::line-623",
+      "relation": "source-nonempty-raw-append",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::appendRawNonEmpty"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonAppendCharExpand::line-646",
+      "relation": "source-capacity-expanding-character-append",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::appendCharacterExpanded"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonAppendChar::line-650",
+      "relation": "source-fast-character-append",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::appendCharacter"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringTrimOneChar::line-660",
+      "relation": "source-error-gated-last-character-trim",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::trimOneCharacter"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringTerminate::line-673",
+      "relation": "source-hidden-zero-termination",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::terminateString"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonAppendSeparator::line-682",
+      "relation": "source-container-aware-comma-append",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::appendSeparator"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonAllAlphanum::line-4046",
+      "relation": "source-abbreviated-label-ascii-classification",
+      "zig_declaration_ids": [
+        "src/core/internal/json_functions.zig::function::allAlphanumeric"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonExtractFunc::line-4072",
+      "relation": "source-json-extraction-path-mode-and-result-dispatch",
+      "zig_declaration_ids": [
+        "src/core/internal/json_functions.zig::function::extractFunction"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringGrow::line-577",
+      "relation": "source-sticky-error-aware-json-string-growth",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::growString"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonReturnString::line-856",
+      "relation": "source-json-string-result-error-cache-and-format-publication",
+      "zig_declaration_ids": [
+        "src/core/internal/json_functions.zig::function::returnString"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonReturnParse::line-3777",
+      "relation": "source-json-parse-text-or-jsonb-result-dispatch",
+      "zig_declaration_ids": [
+        "src/core/internal/json_functions.zig::function::returnParse"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "std.ArrayList replaces source inline zSpace plus reference-counted dynamic storage; reset releases the dynamic list and restores an empty list.",
+    "Three explicit booleans represent source eErr bits. Append functions return success booleans so typed callers publish SQLite errors without a context pointer in the core owner.",
+    "The hidden terminator occupies initialized capacity just beyond ArrayList.items after logical trim rather than being included in the slice length.",
+    "A bounded slice replaces source pointer-plus-length alphanumeric input.",
+    "The jsonExtractFunc declaration was rewritten after retirement of its no-credit path/name claim: its current declaration hash adds abbreviated integer/label/bracket paths, ->/->> mode dispatch, multi-path separation, and registered public operator execution and differs from the retired claimed hash.",
+    "The jsonStringGrow declaration was rewritten after retirement of its no-credit path/name claim: allocator failure now records sticky OOM, releases output storage, and prevents subsequent growth; its current declaration hash differs from the retired claimed hash.",
+    "The jsonReturnString and jsonReturnParse declarations were rewritten after retirement of their no-credit path/name claims: current code performs termination, sticky error ordering, cache insertion, reset, JSONB user-data dispatch, parse delta reset, and shared string publication and both declaration hashes differ from every retired claimed hash."
+  ],
+  "oracle": {
+    "protocol": "Construct output, exercise opening-container separator suppression, append two values with exactly one comma, terminate without changing logical bytes, reset and verify released storage, then publish too-deep and require sticky failure. Through prepared SQL, execute -> and ->> with alphanumeric labels and negative integer abbreviated paths.",
+    "internal_observations": [
+      "output bytes and logical length",
+      "capacity after reset",
+      "sticky too-deep state",
+      "operator result text and scalar quoting mode",
+      "negative array index result"
+    ],
+    "normalization": "Compare exact bytes, booleans, and prepared SQL result text."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Allocator failure clears owned bytes, marks OOM, and is published by registered JSON callers.",
+    "io_crash_concurrency": "Connection-local output only; no I/O or shared state.",
+    "malformed_input": "Raw append accepts arbitrary bytes. Abbreviated labels preserve source ASCII classifier and quoted fallback; malformed expanded paths remain lookup errors.",
+    "continuation": "Error-free output remains appendable; sticky-error output rejects growth and remains safely reset/deinitialized.",
+    "performance": "Capacity-aware raw and character paths preserve amortized linear construction and avoid per-byte allocation.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/json_core.zig output owner and src/core/internal/json_functions.zig registered SQL JSON owner",
+    "native_call_path": "JSON writers use shared append/growth; returnParse routes every JSON/JSONB edit result through user-data format selection and returnString cache/error/reset publication; registered extract functions execute ordinary and abbreviated path/result branches.",
+    "bounded_owner_retired": "Private append-byte growth and duplicated comma conditions no longer bypass the source-shaped core owner."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires pinned-C differential trace, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Add maintained pinned-C output/error/cache/result-format and complete extraction-path differential trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/json.c JsonString utilities from jsonStringZero through jsonAppendSeparator were reviewed completely",
+      "upstream jsonAppendString, jsonAppendSqlValue, jsonReturnString, JSONB translation depth, jsonAllAlphanum, and complete jsonExtractFunc callers were reviewed",
+      "project JSON core, text translation, vtable paths, aggregate functions, registry flags, and public prepared SQL owner were reviewed"
+    ],
+    "callers": [
+      "JSON text and pretty translators",
+      "JSON extract multi-result and abbreviated operator paths",
+      "JSON array/object aggregates",
+      "JSON table-valued path rendering",
+      "JSON SQL result publication",
+      "Registered json_extract, jsonb_extract, ->, and ->> prepared SQL callbacks"
+    ],
+    "callees": [
+      "JsonString capacity growth and allocator",
+      "jsonLookupStep",
+      "JSONB-to-text translation",
+      "SQLite result publication"
+    ],
+    "assertions_branches_cleanup": [
+      "Nonempty append retains the source precondition",
+      "Trim requires error-free nonempty output",
+      "Separator covers empty, opening-container, and ordinary-tail branches",
+      "Reset frees owned storage and all caller exits retain safe deinitialization"
+    ],
+    "upstream_tests": [
+      "Upstream JSON scalar, aggregate, JSON5, deep nesting, ->/->>, abbreviated label, bracket, and negative-index tests exercise these paths",
+      "Project core owner test and registered prepared SQL cases exercise integrated paths"
+    ]
+  },
+  "evidence_receipts": []
+}

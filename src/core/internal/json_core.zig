@@ -23,10 +23,31 @@ pub const JsonString = struct {
     bytes: std.ArrayList(u8),
     malformed: bool = false,
     too_deep: bool = false,
+    oom: bool = false,
 
+    /// Construct the Zig-owned growable JSON output buffer.
     pub fn init(allocator: std.mem.Allocator) JsonString {
         return .{ .allocator = allocator, .bytes = .empty };
     }
+
+    /// Source `jsonStringReset()`.
+    pub fn reset(self: *JsonString) void {
+        self.bytes.deinit(self.allocator);
+        self.bytes = .empty;
+    }
+
+    /// Source `jsonStringOom()`.
+    pub fn reportOom(self: *JsonString) void {
+        self.oom = true;
+        self.reset();
+    }
+
+    /// Source `jsonStringTooDeep()`.
+    pub fn reportTooDeep(self: *JsonString) void {
+        self.too_deep = true;
+        self.reset();
+    }
+
     pub fn deinit(self: *JsonString) void {
         self.bytes.deinit(self.allocator);
     }
@@ -117,15 +138,66 @@ pub fn json5Whitespace(input: [*:0]const u8) usize {
 
 /// Source `jsonStringGrow()`.
 pub fn growString(output: *JsonString, additional: usize) bool {
-    output.bytes.ensureUnusedCapacity(output.allocator, additional) catch return false;
+    if (output.oom or output.too_deep or output.malformed) return false;
+    output.bytes.ensureUnusedCapacity(output.allocator, additional) catch {
+        output.reportOom();
+        return false;
+    };
     return true;
+}
+
+/// Source `jsonAppendRawNZ()`.
+pub fn appendRawNonEmpty(output: *JsonString, input: []const u8) bool {
+    std.debug.assert(input.len > 0);
+    if (!growString(output, input.len)) return false;
+    output.bytes.appendSliceAssumeCapacity(input);
+    return true;
+}
+
+/// Source `jsonAppendRaw()`.
+pub fn appendRaw(output: *JsonString, input: []const u8) bool {
+    if (input.len == 0) return true;
+    return appendRawNonEmpty(output, input);
 }
 
 /// Source `jsonStringExpandAndAppend()`.
 pub fn expandAndAppendString(output: *JsonString, input: []const u8) bool {
-    if (input.len == 0 or !growString(output, input.len)) return input.len == 0;
-    output.bytes.appendSliceAssumeCapacity(input);
+    return appendRaw(output, input);
+}
+
+/// Source `jsonAppendCharExpand()`.
+pub fn appendCharacterExpanded(output: *JsonString, byte: u8) bool {
+    if (!growString(output, 1)) return false;
+    output.bytes.appendAssumeCapacity(byte);
     return true;
+}
+
+/// Source `jsonAppendChar()`.
+pub fn appendCharacter(output: *JsonString, byte: u8) bool {
+    if (output.bytes.items.len >= output.bytes.capacity) return appendCharacterExpanded(output, byte);
+    output.bytes.appendAssumeCapacity(byte);
+    return true;
+}
+
+/// Source `jsonStringTrimOneChar()`.
+pub fn trimOneCharacter(output: *JsonString) void {
+    if (output.oom or output.too_deep or output.malformed) return;
+    std.debug.assert(output.bytes.items.len > 0);
+    output.bytes.items.len -= 1;
+}
+
+/// Source `jsonStringTerminate()`.
+pub fn terminateString(output: *JsonString) bool {
+    if (!appendCharacter(output, 0)) return false;
+    trimOneCharacter(output);
+    return !(output.oom or output.too_deep or output.malformed);
+}
+
+/// Source `jsonAppendSeparator()`.
+pub fn appendSeparator(output: *JsonString) bool {
+    const last = if (output.bytes.items.len == 0) return true else output.bytes.items[output.bytes.items.len - 1];
+    if (last == '[' or last == '{') return true;
+    return appendCharacter(output, ',');
 }
 
 /// Source `jsonAppendControlChar()`.
@@ -510,4 +582,26 @@ test "JSON hex accessors decode validated ASCII digits and classify prefixes" {
     try std.testing.expectEqual(kind.text5, operation);
     try std.testing.expect(is4HexEscape("u0041", &operation));
     try std.testing.expectEqual(kind.text_json, operation);
+}
+
+test "JSON string owner appends, separates, terminates, resets, and preserves errors" {
+    var output = JsonString.init(std.testing.allocator);
+    defer output.deinit();
+
+    try std.testing.expect(appendCharacter(&output, '['));
+    try std.testing.expect(appendSeparator(&output));
+    try std.testing.expect(appendRawNonEmpty(&output, "1"));
+    try std.testing.expect(appendSeparator(&output));
+    try std.testing.expect(appendRaw(&output, "2"));
+    try std.testing.expect(appendCharacter(&output, ']'));
+    try std.testing.expect(terminateString(&output));
+    try std.testing.expectEqualStrings("[1,2]", output.bytes.items);
+
+    output.reset();
+    try std.testing.expectEqual(@as(usize, 0), output.bytes.capacity);
+    try std.testing.expect(appendRaw(&output, "nested"));
+    output.reportTooDeep();
+    try std.testing.expect(output.too_deep);
+    try std.testing.expectEqual(@as(usize, 0), output.bytes.items.len);
+    try std.testing.expect(!terminateString(&output));
 }

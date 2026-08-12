@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "id": "vtab-constraint-collation-in-and-rhs",
+  "title": "Virtual-table constraint collation, IN, and RHS inspection",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These three xBestIndex-only APIs inspect one planner constraint. PlanningContext now preserves resolved collations, IN classification and handling flags, and lazy cached RHS values instead of returning unconditional stubs.",
+    "source_files": [{"path": "src/where.c", "sha256": "e96a8fea366c785acbdc19ef4bd31f1d4cbe5a2aa7661a1286a1f4e491ae547c"}],
+    "source_entity_ids": [
+      "src/where.c::function::sqlite3_vtab_collation::line-4554",
+      "src/where.c::function::sqlite3_vtab_in::line-4574",
+      "src/where.c::function::sqlite3_vtab_rhs_value::line-4594"
+    ],
+    "behavioral_block_ids": [
+      "src/where.c::function::sqlite3_vtab_collation::behavior::if::line-4557-column-3::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_collation::behavior::if::line-4561-column-5::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_collation::behavior::conditional::line-4564-column-13::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_collation::behavior::return::line-4566-column-3::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_in::behavior::conditional::line-4576-column-11::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_in::behavior::if::line-4577-column-3::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_in::behavior::if::line-4578-column-5::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_in::behavior::if::line-4580-column-11::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_in::behavior::return::line-4583-column-5::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_in::behavior::return::line-4585-column-3::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_rhs_value::behavior::if::line-4602-column-3::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_rhs_value::behavior::if::line-4605-column-5::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_rhs_value::behavior::if::line-4619-column-3::ordinal-0",
+      "src/where.c::function::sqlite3_vtab_rhs_value::behavior::return::line-4623-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["General WHERE-term analysis", "IN iteration", "Nonzero-constraint SELECT compiler integration", "Independent assurance"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Planner populates resolved constraint metadata", "Typed resolver folds one RHS expression", "xBestIndex receives embedded IndexInfo"],
+    "caller_closure": "All three source API bodies are assigned; exported APIs recover PlanningContext and invoke these helpers during xBestIndex."
+  },
+  "contracts": {
+    "inputs": ["Live PlanningContext, constraint ordinal, IN handling mode, and RHS output"],
+    "outputs": ["Collation, IN status/mask update, or RHS value and SQLite result"],
+    "ownership": "Planner retains collation and RHS ownership.",
+    "state_and_results": "Valid absent collation becomes BINARY. IN query/set/clear follows negative/positive/zero handle. Invalid RHS ordinal is MISUSE; absent/null RHS is NOTFOUND; resolver errors propagate; success is cached.",
+    "locks_callbacks_io": "No I/O or locks; RHS may invoke one typed resolver.",
+    "failure_and_continuation": "RHS output is null on failure; invalid inputs do not mutate masks."
+  },
+  "mappings": [
+    {"source_entity_id": "src/where.c::function::sqlite3_vtab_collation::line-4554", "relation": "source-vtab-constraint-collation", "zig_declaration_ids": ["src/core/sql_frontend.zig::function::planningConstraintCollation"]},
+    {"source_entity_id": "src/where.c::function::sqlite3_vtab_in::line-4574", "relation": "source-vtab-in-handling", "zig_declaration_ids": ["src/core/sql_frontend.zig::function::planningIn"]},
+    {"source_entity_id": "src/where.c::function::sqlite3_vtab_rhs_value::line-4594", "relation": "source-vtab-lazy-rhs-cache", "zig_declaration_ids": ["src/core/sql_frontend.zig::function::planningRhsValue"]}
+  ],
+  "representation_differences": ["Explicit PlanningContext fields replace private HiddenIndexInfo adjacency.", "A typed resolver abstracts sqlite3ValueFromExpr while preserving lazy cache and result behavior."],
+  "oracle": {
+    "protocol": "Use two constraints to exercise explicit/default/invalid collation, IN query/set/clear, and cached/lazy/null/invalid RHS.",
+    "internal_observations": ["collation bytes", "IN mask", "RHS cache/output/result"],
+    "normalization": "Compare exact strings, masks, pointers, and primary result codes."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Resolver failures propagate with null output.",
+    "io_crash_concurrency": "Planner-local; no I/O.",
+    "malformed_input": "Context and ordinal validation preserve output/state.",
+    "continuation": "RHS cache avoids repeated folding; IN mask remains mutable during callback.",
+    "performance": "Constant-time lookup plus at most one lazy fold per slot.",
+    "commands": ["zig build test"]
+  },
+  "integration": {
+    "production_owner": "src/core/sql_frontend.zig PlanningContext and exported vtab APIs",
+    "native_call_path": "compileVirtualScan invokes xBestIndex with embedded IndexInfo; module callbacks invoke exports.",
+    "bounded_owner_retired": "Unconditional BINARY, false-IN, and NOTFOUND-RHS stubs are retired."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Needs nonzero-constraint compiler integration, pinned-C trace, assurance, and review."},
+  "known_blockers": ["Populate metadata from bounded SELECT constraint compilation.", "Add pinned-C xBestIndex trace.", "Independent review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream where.c complete three API bodies and surrounding HiddenIndexInfo/planner use", "native PlanningContext, xBestIndex invocation, and exports"],
+    "callers": ["Virtual-table xBestIndex callbacks"],
+    "callees": ["Resolved planner metadata and lazy RHS resolver"],
+    "assertions_branches_cleanup": ["Ordinal bounds, IN bit updates, null output, lazy cache, and result propagation assigned"],
+    "upstream_tests": ["Upstream virtual-table best-index tests", "Native focused PlanningContext API test"]
+  },
+  "evidence_receipts": []
+}

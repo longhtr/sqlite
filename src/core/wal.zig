@@ -77,12 +77,17 @@ pub const Wal = struct {
                 wal.frames.deinit();
                 return .{ .result = rc };
             }
-            var mapped: ?*volatile anyopaque = null;
-            var recover_rc = ResultCode.fromC(vfs.osShmMap(database_file, 0, vfs.SHM_REGION_SIZE, 1, &mapped));
-            if (recover_rc == .ok) recover_rc = wal.lock(recover_lock, vfs.SHM_LOCK | vfs.SHM_EXCLUSIVE);
+            var recover_rc: ResultCode = .ok;
+            if (publish_native_index) {
+                var mapped: ?*volatile anyopaque = null;
+                recover_rc = ResultCode.fromC(vfs.osShmMap(database_file, 0, vfs.SHM_REGION_SIZE, 1, &mapped));
+                if (recover_rc == .ok) recover_rc = wal.lock(recover_lock, vfs.SHM_LOCK | vfs.SHM_EXCLUSIVE);
+            }
             if (recover_rc == .ok) recover_rc = wal.recover();
-            const unlock_rc = wal.lock(recover_lock, vfs.SHM_UNLOCK | vfs.SHM_EXCLUSIVE);
-            if (recover_rc == .ok) recover_rc = unlock_rc;
+            if (publish_native_index) {
+                const unlock_rc = wal.lock(recover_lock, vfs.SHM_UNLOCK | vfs.SHM_EXCLUSIVE);
+                if (recover_rc == .ok) recover_rc = unlock_rc;
+            }
             if (recover_rc != .ok) {
                 wal.deinit();
                 return .{ .result = recover_rc };
@@ -166,12 +171,14 @@ pub const Wal = struct {
     }
 
     fn lock(self: *Wal, offset: c_int, flags: c_int) ResultCode {
+        if (!self.publish_native_index) return .ok;
         const function = (methods(self.database_file) orelse return .io_error).xShmLock orelse return .io_error;
         return ResultCode.fromC(function(self.database_file, offset, 1, flags));
     }
 
     /// Source `walLockShared()`: acquire one shared WAL-index lock slot.
     fn lockShared(self: *Wal, offset: c_int) ResultCode {
+        if (!self.publish_native_index) return .ok;
         const io = methods(self.database_file) orelse return .io_error;
         const function = io.xShmLock orelse return .io_error;
         const flags = vfs.SHM_LOCK | vfs.SHM_SHARED;
@@ -182,6 +189,7 @@ pub const Wal = struct {
     /// exclusive WAL-index lock slots.
     fn lockExclusive(self: *Wal, offset: c_int, count: c_int) ResultCode {
         if (count <= 0) return .misuse;
+        if (!self.publish_native_index) return .ok;
         const io = methods(self.database_file) orelse return .io_error;
         const function = io.xShmLock orelse return .io_error;
         const flags = vfs.SHM_LOCK | vfs.SHM_EXCLUSIVE;
@@ -191,13 +199,14 @@ pub const Wal = struct {
     /// Source `walUnlockExclusive()`: release a contiguous exclusive lock
     /// range without replacing a prior checkpoint result.
     fn unlockExclusive(self: *Wal, offset: c_int, count: c_int) void {
-        if (count <= 0) return;
+        if (count <= 0 or !self.publish_native_index) return;
         const io = methods(self.database_file) orelse return;
         const function = io.xShmLock orelse return;
         _ = function(self.database_file, offset, count, vfs.SHM_UNLOCK | vfs.SHM_EXCLUSIVE);
     }
 
     fn barrier(self: *Wal) void {
+        if (!self.publish_native_index) return;
         if (methods(self.database_file)) |io| if (io.xShmBarrier) |function| function(self.database_file);
     }
 
@@ -309,13 +318,7 @@ pub const Wal = struct {
     }
 
     fn publishIndex(self: *Wal) ResultCode {
-        if (!self.publish_native_index) {
-            var external_pointer: ?*volatile anyopaque = null;
-            const external_rc = ResultCode.fromC(vfs.osShmMap(self.database_file, 0, vfs.SHM_REGION_SIZE, 1, &external_pointer));
-            if (external_rc != .ok) return external_rc;
-            self.barrier();
-            return self.emit(.index_publish);
-        }
+        if (!self.publish_native_index) return self.emit(.index_publish);
         var pointer: ?*volatile anyopaque = null;
         const rc = ResultCode.fromC(vfs.osShmMap(self.database_file, 0, vfs.SHM_REGION_SIZE, 1, &pointer));
         if (rc != .ok) return rc;

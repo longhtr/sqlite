@@ -7,6 +7,7 @@ const numeric = @import("../numeric.zig");
 const sqlite_float = @import("../float.zig");
 const sqlite_string = @import("../string.zig");
 const db_allocator = @import("db_allocator.zig");
+const parse_error = @import("parse_error.zig");
 const function_registry = @import("function_registry.zig");
 const collation_registry = @import("collation_registry.zig");
 const collation = @import("collation.zig");
@@ -1131,11 +1132,7 @@ pub fn rowidAlias(table: *const schema.Table) ?[*:0]const u8 {
 }
 
 fn setExpressionError(parse: *parse_types.Parse, message: []const u8) void {
-    const db: *types.Sqlite3 = @ptrCast(@alignCast(parse.db.?));
-    db_allocator.free(db, if (parse.zErrMsg) |old| @ptrCast(old) else null);
-    parse.zErrMsg = db_allocator.stringNDuplicate(db, message.ptr, message.len);
-    parse.nErr += 1;
-    parse.rc = 1;
+    parse_error.report(parse, message);
 }
 
 /// Source `exprINAffinity()`.

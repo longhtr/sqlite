@@ -375,37 +375,35 @@ pub fn returnFromBlob(parse: *core.JsonParse, index: usize, context: *types.Cont
             mem.resultText(context, output.items.ptr, @intCast(output.items.len), .transient);
         },
         core.kind.array, core.kind.object => if (mode == 2) mem.resultBlob(context, parse.blob.items[index..][0 .. header + size].ptr, @intCast(header + size), .transient) else {
-            var output = core.JsonString.init(allocator());
-            defer output.deinit();
-            _ = text.translateBlobToText(parse, index, &output) catch |err| {
+            const output = text.returnTextFromBlob(allocator(), parse.blob.items[index..][0 .. header + size]) catch |err| {
                 operationError(context, err);
                 return;
             };
-            mem.resultText(context, output.bytes.items.ptr, @intCast(output.bytes.items.len), .transient);
-            mem.resultSubtype(context, json_subtype);
+            resultOwnedText(context, output, mode == 0);
         },
         else => resultError(context, "malformed JSON"),
     }
 }
 
 /// Source `jsonReturnParse()`.
-pub fn returnParse(context: *types.Context, parse: *core.JsonParse, as_blob: bool) void {
+pub fn returnParse(context: *types.Context, parse: *core.JsonParse) void {
     if (parse.oom) {
         mem.resultErrorNoMem(context);
         return;
     }
-    if (as_blob) {
+    const flags: usize = if (mem.userData(context)) |data| @intFromPtr(data) else 0;
+    if (flags & 0x10 != 0) {
         mem.resultBlob(context, parse.blob.items.ptr, @intCast(parse.blob.items.len), .transient);
         return;
     }
     var output = core.JsonString.init(allocator());
     defer output.deinit();
+    parse.delta = 0;
     _ = text.translateBlobToText(parse, 0, &output) catch |err| {
         operationError(context, err);
         return;
     };
-    mem.resultText(context, output.bytes.items.ptr, @intCast(output.bytes.items.len), .transient);
-    mem.resultSubtype(context, json_subtype);
+    returnString(context, &output, parse);
 }
 
 /// Source `jsonInsertIntoBlob()`.
@@ -444,7 +442,7 @@ pub fn insertIntoBlob(context: *types.Context, count: c_int, arguments: Argument
             }
         }
     }
-    returnParse(context, &parsed, false);
+    returnParse(context, &parsed);
 }
 
 /// Source `jsonQuoteFunc()`.
@@ -455,7 +453,7 @@ pub fn quoteFunction(context_optional: Context, _: c_int, arguments: Arguments) 
         return;
     };
     defer parse.blob.deinit(parse.allocator);
-    returnParse(context, &parse, false);
+    returnParse(context, &parse);
 }
 
 /// Source `jsonArrayFunc()`.
@@ -477,7 +475,7 @@ pub fn arrayFunction(context_optional: Context, count: c_int, arguments: Argumen
         };
     }
     _ = core.changePayloadSize(&parse, 0, @intCast(parse.blob.items.len - start));
-    returnParse(context, &parse, false);
+    returnParse(context, &parse);
 }
 
 /// Source `jsonObjectFunc()`.
@@ -513,7 +511,7 @@ pub fn objectFunction(context_optional: Context, count: c_int, arguments: Argume
         };
     }
     _ = core.changePayloadSize(&parse, 0, @intCast(parse.blob.items.len - start));
-    returnParse(context, &parse, false);
+    returnParse(context, &parse);
 }
 
 /// Source `jsonArrayLengthFunc()`.
@@ -544,6 +542,14 @@ pub fn arrayLengthFunction(context_optional: Context, count: c_int, arguments: A
     mem.resultInt64(context, if ((parsed.blob.items[index] & 15) == core.kind.array) core.arrayCount(&parsed, index) else 0);
 }
 
+/// Source `jsonAllAlphanum()`.
+pub fn allAlphanumeric(value: []const u8) bool {
+    for (value) |byte| {
+        if (!std.ascii.isAlphanumeric(byte) and byte != '_') return false;
+    }
+    return true;
+}
+
 /// Source `jsonExtractFunc()`.
 pub fn extractFunction(context_optional: Context, count: c_int, arguments: Arguments) callconv(.c) void {
     const context = context_optional.?;
@@ -553,56 +559,78 @@ pub fn extractFunction(context_optional: Context, count: c_int, arguments: Argum
         return;
     } orelse return;
     defer parsed.blob.deinit(parsed.allocator);
-    if (count == 2) {
-        const path = valueSlice(argument(arguments, 1)) orelse return;
-        if (path.len == 0 or path[0] != '$') {
-            resultError(context, "bad JSON path");
-            return;
-        }
-        const index = lookupStep(&parsed, 0, path[1..], 0);
-        if (index == lookup_not_found) return;
-        if (index >= lookup_path_error) {
-            resultError(context, "bad JSON path");
-            return;
-        }
-        returnFromBlob(&parsed, index, context, 0);
-        return;
-    }
+    const flags: usize = if (mem.userData(context)) |data| @intFromPtr(data) else 0;
     var output = core.JsonString.init(allocator());
     defer output.deinit();
-    appendByteCompat(&output, '[') catch {
+    if (count > 2 and !core.appendCharacter(&output, '[')) {
         mem.resultErrorNoMem(context);
         return;
-    };
+    }
     for (1..@intCast(count)) |argument_index| {
-        if (argument_index > 1) appendByteCompat(&output, ',') catch {
-            mem.resultErrorNoMem(context);
-            return;
+        const path_value = argument(arguments, argument_index);
+        const path = valueSlice(path_value) orelse return;
+        const index: usize = find: {
+            if (path.len > 0 and path[0] == '$') break :find lookupStep(&parsed, 0, path[1..], 0);
+            if (flags & 0x03 == 0) break :find lookup_path_error;
+
+            var expanded = core.JsonString.init(allocator());
+            defer expanded.deinit();
+            const appended = if (mem.valueType(path_value) == 1)
+                core.appendCharacter(&expanded, '[') and
+                    (path.len == 0 or path[0] != '-' or core.appendCharacter(&expanded, '#')) and
+                    core.appendRaw(&expanded, path) and core.appendCharacter(&expanded, ']')
+            else if (allAlphanumeric(path))
+                core.appendCharacter(&expanded, '.') and core.appendRaw(&expanded, path)
+            else if (path.len >= 3 and path[0] == '[' and path[path.len - 1] == ']')
+                core.appendRawNonEmpty(&expanded, path)
+            else
+                core.appendRawNonEmpty(&expanded, ".\"") and core.appendRaw(&expanded, path) and core.appendCharacter(&expanded, '"');
+            if (!appended) {
+                mem.resultErrorNoMem(context);
+                return;
+            }
+            break :find lookupStep(&parsed, 0, expanded.bytes.items, 0);
         };
-        const path = valueSlice(argument(arguments, argument_index)) orelse return;
-        const index = if (path.len > 0 and path[0] == '$') lookupStep(&parsed, 0, path[1..], 0) else lookup_path_error;
         if (index == lookup_not_found) {
-            if (!core.expandAndAppendString(&output, "null")) {
+            if (count == 2) return;
+            if (!core.appendSeparator(&output) or !core.appendRawNonEmpty(&output, "null")) {
                 mem.resultErrorNoMem(context);
                 return;
             }
         } else if (index >= lookup_path_error) {
             resultError(context, "bad JSON path");
             return;
-        } else _ = text.translateBlobToText(&parsed, index, &output) catch |err| {
-            operationError(context, err);
+        } else if (count == 2) {
+            if (flags & 0x01 != 0) {
+                _ = text.translateBlobToText(&parsed, index, &output) catch |err| {
+                    operationError(context, err);
+                    return;
+                };
+                returnString(context, &output, null);
+            } else {
+                const mode: u8 = if (flags & 0x10 != 0) 2 else if (flags & 0x02 != 0) 1 else 0;
+                returnFromBlob(&parsed, index, context, mode);
+            }
             return;
-        };
+        } else {
+            if (!core.appendSeparator(&output)) {
+                mem.resultErrorNoMem(context);
+                return;
+            }
+            _ = text.translateBlobToText(&parsed, index, &output) catch |err| {
+                operationError(context, err);
+                return;
+            };
+        }
     }
-    appendByteCompat(&output, ']') catch {
+    if (!core.appendCharacter(&output, ']')) {
         mem.resultErrorNoMem(context);
         return;
-    };
+    }
     returnString(context, &output, null);
 }
 fn appendByteCompat(output: *core.JsonString, byte: u8) !void {
-    if (!core.growString(output, 1)) return error.OutOfMemory;
-    output.bytes.appendAssumeCapacity(byte);
+    if (!core.appendCharacter(output, byte)) return error.OutOfMemory;
 }
 
 /// Source `jsonAppendSqlValue()`.
@@ -617,26 +645,32 @@ pub fn appendSqlValue(context: *types.Context, output: *core.JsonString, value: 
 
 /// Source `jsonReturnString()`.
 pub fn returnString(context: *types.Context, output: *core.JsonString, parse_optional: ?*const core.JsonParse) void {
-    if (output.malformed) {
-        resultError(context, "malformed JSON");
-        output.bytes.clearRetainingCapacity();
+    _ = core.terminateString(output);
+    if (output.oom) {
+        mem.resultErrorNoMem(context);
+        output.reset();
         return;
     }
     if (output.too_deep) {
         resultError(context, "JSON nested too deep");
-        output.bytes.clearRetainingCapacity();
+        output.reset();
+        return;
+    }
+    if (output.malformed) {
+        resultError(context, "malformed JSON");
+        output.reset();
         return;
     }
     if (parse_optional) |parse| cacheInsert(context, output.bytes.items, parse) catch {
         mem.resultErrorNoMem(context);
-        output.bytes.clearRetainingCapacity();
+        output.reset();
         return;
     };
     const flags: usize = if (mem.userData(context)) |data| @intFromPtr(data) else 0;
     if (flags & 0x10 != 0) {
         const blob = text.returnStringAsBlob(output.allocator, output.bytes.items) catch |err| {
             operationError(context, err);
-            output.bytes.clearRetainingCapacity();
+            output.reset();
             return;
         };
         resultOwnedBlob(context, blob);
@@ -644,7 +678,7 @@ pub fn returnString(context: *types.Context, output: *core.JsonString, parse_opt
         mem.resultText(context, output.bytes.items.ptr, @intCast(output.bytes.items.len), .transient);
         mem.resultSubtype(context, json_subtype);
     }
-    output.bytes.clearRetainingCapacity();
+    output.reset();
 }
 
 /// Source `jsonTypeFunc()`.
@@ -769,29 +803,44 @@ pub fn removeFunction(context_optional: Context, count: c_int, arguments: Argume
             return;
         }
     }
-    returnParse(context, &parsed, false);
+    returnParse(context, &parsed);
 }
 
-/// SQL callback for JSON replacement after argument validation.
+/// Source `jsonWrongNumArgs()`.
+pub fn reportWrongArgumentCount(context: *types.Context, function_name: []const u8) void {
+    var message: [96]u8 = undefined;
+    const rendered = std.fmt.bufPrint(&message, "json_{s}() needs an odd number of arguments", .{function_name}) catch {
+        mem.resultErrorNoMem(context);
+        return;
+    };
+    resultError(context, rendered);
+}
+
+/// Source `jsonReplaceFunc()`.
 pub fn replaceFunction(context_optional: Context, count: c_int, arguments: Arguments) callconv(.c) void {
     const context = context_optional.?;
     if (count < 1) return;
     if (count & 1 == 0) {
-        resultError(context, "json_replace() needs an odd number of arguments");
+        reportWrongArgumentCount(context, "replace");
         return;
     }
     insertIntoBlob(context, count, arguments, edit_replace);
 }
 
-/// SQL callback for JSON set after argument validation.
+/// Source `jsonSetFunc()`.
 pub fn setFunction(context_optional: Context, count: c_int, arguments: Arguments) callconv(.c) void {
     const context = context_optional.?;
     if (count < 1) return;
+    const flags: usize = if (mem.userData(context)) |data| @intFromPtr(data) else 0;
+    const insertion_type = (flags & 0x0c) >> 2;
+    const names = [_][]const u8{ "insert", "set", "array_insert" };
+    const edits = [_]u8{ edit_insert, edit_set, edit_array_insert };
+    std.debug.assert(insertion_type < names.len);
     if (count & 1 == 0) {
-        resultError(context, "json_set() needs an odd number of arguments");
+        reportWrongArgumentCount(context, names[insertion_type]);
         return;
     }
-    insertIntoBlob(context, count, arguments, edit_set);
+    insertIntoBlob(context, count, arguments, edits[insertion_type]);
 }
 
 /// Source `jsonMergePatch()`.
@@ -868,7 +917,7 @@ pub fn patchFunction(context_optional: Context, _: c_int, arguments: Arguments) 
         operationError(context, err);
         return;
     };
-    returnParse(context, &target, false);
+    returnParse(context, &target);
 }
 
 const JsonArrayAggregate = struct {
@@ -887,10 +936,11 @@ pub fn arrayAggregateStep(context_optional: Context, _: c_int, arguments: Argume
             mem.resultErrorNoMem(context);
             return;
         };
-    } else if (aggregate.output.bytes.items.len > 1) appendByteCompat(&aggregate.output, ',') catch {
+    }
+    if (!core.appendSeparator(&aggregate.output)) {
         mem.resultErrorNoMem(context);
         return;
-    };
+    }
     appendSqlValue(context, &aggregate.output, argument(arguments, 0)) catch return;
 }
 
@@ -974,10 +1024,10 @@ pub fn objectAggregateStep(context_optional: Context, _: c_int, arguments: Argum
         };
     }
     const label = valueSlice(argument(arguments, 0)) orelse return;
-    if (aggregate.output.bytes.items.len > 1) appendByteCompat(&aggregate.output, ',') catch {
+    if (!core.appendSeparator(&aggregate.output)) {
         mem.resultErrorNoMem(context);
         return;
-    };
+    }
     if (!core.appendQuotedString(&aggregate.output, label)) {
         mem.resultErrorNoMem(context);
         return;

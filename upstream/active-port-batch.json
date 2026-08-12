@@ -141,6 +141,204 @@
       "atomic_unit_id": "backup-destination-admission-and-page-size",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::attachBackupObject::line-311",
+      "source_sha256": "a1e024c9eb5546154ee6a61847f53a4e1d3e6ddaa6c93cb6f578f8d298190900",
+      "zig_declaration_id": "src/core/internal/backup_core.zig::function::attachBackupObject",
+      "zig_declaration_sha256": "971808eddcb3e3e5e0ac7558d94a89bd017743cf09181734526713e214f29158",
+      "atomic_unit_id": "backup-source-notification-attachment",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringReset::line-552",
+      "source_sha256": "45e7e2bfbc235d0878de8b1d8b9749dba176131e97a57609f5843af5cbb20185",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::JsonString.reset",
+      "zig_declaration_sha256": "7b1882eb293ec3f0c7acc10edb222818adf9da7c877d0f4175d555f61ff72f2e",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringOom::line-559",
+      "source_sha256": "f3bde570782e28ee6aeb295998b4e85ccb1b6510f8b8cb64bec4a98cac7fd0a7",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::JsonString.reportOom",
+      "zig_declaration_sha256": "9e1743bb54035bcc91b0d61dd7649af6edb212ae833e1af8ca05d5202bbe1e5e",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringTooDeep::line-567",
+      "source_sha256": "dea88c63c79f8b791ad0d3807867e163659f2a13ac728943e1d8a7409bb1b41a",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::JsonString.reportTooDeep",
+      "zig_declaration_sha256": "374bcaf1175a0a3ca42fbd721e8f15cce4fae13e5f29a12a621c72acecdfed19",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringTrimOneChar::line-660",
+      "source_sha256": "1bee85840353aeb056b07ef6550ab1a36b17114ac51a034bc7ca3d7c1e066ebe",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::trimOneCharacter",
+      "zig_declaration_sha256": "86cf7ed993cf14a92bd3eb7ff9c662fa754119034136026addcd2574a8491389",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringTerminate::line-673",
+      "source_sha256": "a0b11d3f0cd424f25facffa7df30ffbcab5be24fd202bbed3eeadc0197f4c75a",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::terminateString",
+      "zig_declaration_sha256": "dcdfa2ae4d682b5d2edef97bec5849dadf378682a49e9dc9a8ba03d486347e20",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonAllAlphanum::line-4046",
+      "source_sha256": "b54f9d29711163b5f9c23c798f1e381ce3d4e5c0c0b864e48de52c97e4995639",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::allAlphanumeric",
+      "zig_declaration_sha256": "4510528936dff788f61720a31ebcffc9e4f11b681105c42f20d45b954372eb71",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pagerExclusiveLock::line-7605",
+      "source_sha256": "adda780089f1c5726a8ad4fb46c92b6bf799b5e87742ffe202be9c1876d4e713",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.lockExclusiveForWal",
+      "zig_declaration_sha256": "ccd0d72cb1c48747fb8e2de00fba811bb8fbf8501c1856c72fb28261a842bd61",
+      "atomic_unit_id": "pager-exclusive-wal-connection-open",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pagerOpenWal::line-7627",
+      "source_sha256": "c690daad8b7e83f97e79d270c87d50ab1ea18f7a8cc0ea5451b327d787de8a83",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.openWalConnection",
+      "zig_declaration_sha256": "8d444e0c8da9375fa640f1bd46d2672d135106876e0d3bc9ef9b19c2b8b4fa66",
+      "atomic_unit_id": "pager-exclusive-wal-connection-open",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonWrongNumArgs::line-1134",
+      "source_sha256": "f338e29dcee62c45bfa0b194590dcbb54b05eccc00686117afd3174932500b8b",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::reportWrongArgumentCount",
+      "zig_declaration_sha256": "4928088afa16781bd8e22e6da1ce22cec9e24dfea3156c77f2f8bbbe2e8e4dd8",
+      "atomic_unit_id": "json-insertion-dispatch-and-argument-errors",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonSetFunc::line-4549",
+      "source_sha256": "01d90e15088f681a40f30d07d98959f79694314ce85f7cd41f6f9c4016f48299",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::setFunction",
+      "zig_declaration_sha256": "cc93df9c10bc1ffd2449e8c3d0aeeae1db7682c6a2f0dd41b01f16d7c782f8bf",
+      "atomic_unit_id": "json-insertion-dispatch-and-argument-errors",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonExtractFunc::line-4072",
+      "source_sha256": "daf4210d5a8f0ff54a4d249f0a4ef0ab84f0193eb9e28f4dcd4bb9a89ce3df19",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::extractFunction",
+      "zig_declaration_sha256": "afba8ed52663de3fbe305671dc439cc61672417e08a1b63b16172b6263ce5172",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringGrow::line-577",
+      "source_sha256": "471ad725887c8ac7daea679f8642d50ff17dd70de3df17ff64924dfadcefeb8a",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::growString",
+      "zig_declaration_sha256": "8afff266bc73151357523e78ee8d055bed9be94ce45d75b6bf30cfccae8daf0e",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonReturnString::line-856",
+      "source_sha256": "d60671dcbffdb108ca232a37a7f2f3d91cdece6f61814ac8a3dfcb1024f8b31c",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::returnString",
+      "zig_declaration_sha256": "7e44995239e0a4ae905e65a7fd8cf9638c0196559703403ebac0e07ba92a6350",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonReturnParse::line-3777",
+      "source_sha256": "856f691909fff7b323018482ab377b8070f3157075fd7504a58b2ec84d0a39ca",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::returnParse",
+      "zig_declaration_sha256": "94c2f87d0f5e34159d83a4d012d86dda7eadc448a951c50b2c9dfa8b7595accb",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonReturnStringAsBlob::line-2100",
+      "source_sha256": "8d8e26ae077760ae0d82321bb06964ec8b82b3989a8a022651907542fae8fd3c",
+      "zig_declaration_id": "src/core/internal/json_text.zig::function::returnStringAsBlob",
+      "zig_declaration_sha256": "13b54a80949a795737da97841c42ebf8d70afe9fa30aea6436ae6c7ea4c7dab0",
+      "atomic_unit_id": "json-text-jsonb-result-conversion",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonReturnTextJsonFromBlob::line-3193",
+      "source_sha256": "88c03cf8dcce535a89bcc3594504d8bb18c5ce0a5b1a4de9e82547fd443de622",
+      "zig_declaration_id": "src/core/internal/json_text.zig::function::returnTextFromBlob",
+      "zig_declaration_sha256": "bac2b0158711f97af82f2bacc508ad450fa4149caa52599d3165c5a807ba0dc2",
+      "atomic_unit_id": "json-text-jsonb-result-conversion",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonReplaceFunc::line-4523",
+      "source_sha256": "898e855c1f0110996dde3998dd8606ea2344d93a090240df58368be60b8bb040",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::replaceFunction",
+      "zig_declaration_sha256": "53176b1c30988457f7dff84e2b0079e00fb889836e97f69f1fa8c41e7b2d8ba5",
+      "atomic_unit_id": "json-insertion-dispatch-and-argument-errors",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/util.c::function::sqlite3ErrorMsg::line-242",
+      "source_sha256": "3bb672d33877e9ea06a144064508c7baf9d43725eb490a8b14bb7870f8bde167",
+      "zig_declaration_id": "src/core/internal/parse_error.zig::function::report",
+      "zig_declaration_sha256": "1a1ea1bc606fe367dd5ee94d86df2d8bdc4437475b59873f2efafcea05ecea97",
+      "atomic_unit_id": "parse-error-message-publication",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/where.c::function::sqlite3_vtab_collation::line-4554",
+      "source_sha256": "52b2788333e6ed88a6524727d688e2dbf4eeeaa047cbebed314de0b1a304c23c",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::planningConstraintCollation",
+      "zig_declaration_sha256": "385f20bacd98c4e8e2bb8a8a0d290579581420181e48dea42411e62c165e7111",
+      "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/where.c::function::sqlite3_vtab_in::line-4574",
+      "source_sha256": "f7b5c4c9245a7b625072bd55f0fe232222eab874b0376cf4d4167564554a9a2b",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::planningIn",
+      "zig_declaration_sha256": "7dff5b572bf7af96706e97166ed92d5cedc1cd752b2ad292993c73019e96a747",
+      "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/where.c::function::sqlite3_vtab_rhs_value::line-4594",
+      "source_sha256": "10d4bae9570d2c7620dfbc120c45f2deb918882409c933ede0d5eba6cd71ad75",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::planningRhsValue",
+      "zig_declaration_sha256": "b204fbd5f5f666baa2f8000a7063ed5dc2dd0d1fc8d6a24af09bfb2bdfe982f7",
+      "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

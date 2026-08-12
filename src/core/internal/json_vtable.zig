@@ -50,7 +50,7 @@ pub const Cursor = struct {
 };
 
 fn appendRaw(output: *core.JsonString, bytes: []const u8) Error!void {
-    if (!core.expandAndAppendString(output, bytes)) return error.OutOfMemory;
+    if (!core.appendRaw(output, bytes)) return error.OutOfMemory;
 }
 
 fn nodeSpan(parse: *const core.JsonParse, index: usize) ?usize {

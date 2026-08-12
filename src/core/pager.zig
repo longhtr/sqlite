@@ -107,6 +107,7 @@ pub const OpenOptions = struct {
     extra_size: usize = 16,
     max_cached_pages: usize = 2_000,
     writable: bool = false,
+    exclusive_locking: bool = false,
     wal_external_index: bool = false,
     journal_spill_threshold: i64 = 0,
 };
@@ -189,6 +190,7 @@ pub const Pager = struct {
     wal_requested: bool = false,
     wal_mode: bool = false,
     wal_state: ?wal.Wal = null,
+    exclusive_locking: bool = false,
     wal_external_index: bool = false,
     savepoints: std.ArrayList(Savepoint) = .empty,
 
@@ -306,6 +308,7 @@ pub const Pager = struct {
             .memory_file = output_flags & vfs.OPEN_MEMORY != 0,
             .no_lock = output_flags & vfs.OPEN_MEMORY != 0,
             .change_count_done = output_flags & vfs.OPEN_MEMORY != 0,
+            .exclusive_locking = options.exclusive_locking,
             .wal_external_index = options.wal_external_index,
             .journal_spill_threshold = options.journal_spill_threshold,
         };
@@ -866,18 +869,8 @@ pub const Pager = struct {
         rc = self.openWalIfPresent();
         if (rc != .ok) return self.failedBeginRead(rc);
         if (self.wal_state == null and self.wal_requested) {
-            const opened = wal.Wal.open(
-                self.allocator,
-                self.abi_vfs,
-                self.file,
-                self.wal_name,
-                self.page_size,
-                !self.read_only,
-                false,
-                !self.wal_external_index,
-            );
-            if (opened.result != .ok) return self.failedBeginRead(opened.result);
-            self.wal_state = opened.wal.?;
+            rc = self.openWalConnection(false);
+            if (rc != .ok) return self.failedBeginRead(rc);
             self.wal_mode = true;
         }
         if (self.wal_state != null) self.resetCache();
@@ -1092,6 +1085,44 @@ pub const Pager = struct {
         return self.cache.shrink();
     }
 
+    /// Source `pagerExclusiveLock()`: acquire EXCLUSIVE for a private WAL
+    /// index and restore the original database lock if acquisition fails.
+    fn lockExclusiveForWal(self: *Pager) ResultCode {
+        std.debug.assert(self.lock_level >= vfs.LOCK_SHARED);
+        const original_lock = self.lock_level;
+        const rc = self.lockDatabase(vfs.LOCK_EXCLUSIVE);
+        if (rc != .ok) {
+            std.debug.assert(original_lock == vfs.LOCK_SHARED);
+            _ = self.unlockDatabase(original_lock);
+        }
+        return rc;
+    }
+
+    /// Source `pagerOpenWal()`: secure exclusive locking before selecting a
+    /// connection-private index, open the WAL owner, and publish it only on
+    /// success. The native Pager does not own mapped-page limit state.
+    fn openWalConnection(self: *Pager, exists: bool) ResultCode {
+        std.debug.assert(self.wal_state == null and !self.memory_file);
+        std.debug.assert(self.lock_level == vfs.LOCK_SHARED or self.lock_level == vfs.LOCK_EXCLUSIVE);
+        if (self.exclusive_locking) {
+            const lock_rc = self.lockExclusiveForWal();
+            if (lock_rc != .ok) return lock_rc;
+        }
+        const opened = wal.Wal.open(
+            self.allocator,
+            self.abi_vfs,
+            self.file,
+            self.wal_name,
+            self.page_size,
+            !self.read_only,
+            exists,
+            !self.exclusive_locking and !self.wal_external_index,
+        );
+        if (opened.result != .ok) return opened.result;
+        self.wal_state = opened.wal.?;
+        return .ok;
+    }
+
     /// Source `pagerOpenWalIfPresent()`: inspect the WAL name while holding a
     /// read lock, discard stale empty-database WAL files, open an existing WAL
     /// for a nonempty database, or leave rollback mode selected.
@@ -1116,18 +1147,8 @@ pub const Pager = struct {
             return rc;
         }
         if (self.wal_state == null) {
-            const opened = wal.Wal.open(
-                self.allocator,
-                self.abi_vfs,
-                self.file,
-                self.wal_name,
-                self.page_size,
-                !self.read_only,
-                true,
-                !self.wal_external_index,
-            );
-            if (opened.result != .ok) return opened.result;
-            self.wal_state = opened.wal.?;
+            rc = self.openWalConnection(true);
+            if (rc != .ok) return rc;
         } else {
             rc = self.wal_state.?.recover();
             if (rc != .ok) return rc;
@@ -2358,6 +2379,24 @@ test "journal file accessor selects rollback journal and open WAL handles" {
     try std.testing.expectEqual(page_cache.Result.ok, pager.cache.release(page));
     pager.wal_state.?.deinit();
     pager.wal_state = null;
+}
+
+test "exclusive WAL opening acquires database lock and uses private index" {
+    const fixture = try readFixture("valid-empty-4096.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "exclusive-wal.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-exclusive-wal", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "exclusive-wal.db", .{ .writable = true, .exclusive_locking = true }).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+
+    pager.wal_requested = true;
+    try std.testing.expectEqual(ResultCode.ok, pager.beginRead());
+    try std.testing.expectEqual(vfs.LOCK_EXCLUSIVE, pager.lock_level);
+    try std.testing.expect(pager.wal_state != null);
+    try std.testing.expect(wal.Wal.usesHeapIndex(&pager.wal_state.?));
+    try std.testing.expectEqual(ResultCode.ok, pager.endRead());
 }
 
 test "pager owner accessors preserve VFS file and journal name identity" {

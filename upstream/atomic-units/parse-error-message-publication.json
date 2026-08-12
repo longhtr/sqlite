@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "id": "parse-error-message-publication",
+  "title": "Parse-time error message publication",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3ErrorMsg is the shared parse-time error state transition. The native owner accepts already formatted typed bytes and centralizes parser identity assertions, byte-offset normalization, connection allocation, suppression, OOM, previous-message replacement, result code, and WITH-state cleanup. Expression analysis now consumes it instead of duplicating partial state updates.",
+    "source_files": [
+      {
+        "path": "src/util.c",
+        "sha256": "f3ad5a891625459352c1b57c053d3b89dcc973206644126a857c0ff82b7ce37f"
+      }
+    ],
+    "source_entity_ids": [
+      "src/util.c::function::sqlite3ErrorMsg::line-242"
+    ],
+    "behavioral_block_ids": [
+      "src/util.c::function::sqlite3ErrorMsg::behavior::assert::line-246-column-3::ordinal-0",
+      "src/util.c::function::sqlite3ErrorMsg::behavior::assert::line-247-column-3::ordinal-0",
+      "src/util.c::function::sqlite3ErrorMsg::behavior::if::line-252-column-3::ordinal-0",
+      "src/util.c::function::sqlite3ErrorMsg::behavior::if::line-253-column-3::ordinal-0",
+      "src/util.c::function::sqlite3ErrorMsg::behavior::if::line-255-column-5::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "C varargs decoding and sqlite3VMPrintf format rendering",
+      "Transfer of the final Parse error into the public connection after prepare",
+      "Migration of every remaining legacy inline Parse error writer",
+      "Independent assurance and pinned-C trace"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Typed callers render any format arguments before publication",
+      "Connection-aware allocator owns OOM fault propagation and lookaside/heap selection",
+      "Prepare completion transfers Parse state to the public connection"
+    ],
+    "caller_closure": "The complete post-formatting source state transition is assigned. Multiple expression-analysis error paths invoke the shared owner; other inline legacy writers remain explicit migration work rather than part of this unit."
+  },
+  "contracts": {
+    "inputs": [
+      "Active Parse owned by db.pParse or its pToplevel and already formatted borrowed message bytes"
+    ],
+    "outputs": [
+      "Updated Parse error count, result, owned message, WITH state, and normalized connection error byte offset"
+    ],
+    "ownership": "The connection allocator duplicates message bytes. An old Parse message is freed on publication; a suppressed new message is freed immediately.",
+    "state_and_results": "Formatting begins with errByteOffset -2 and normalizes it to -1 when no formatter-specific offset is published. Suppressed ordinary errors do not alter Parse. Suppressed OOM increments nErr and sets NOMEM. Unsuppressed errors increment nErr, replace zErrMsg, set ERROR, and clear pWith.",
+    "locks_callbacks_io": "No I/O or callbacks. The caller owns connection/parser synchronization.",
+    "failure_and_continuation": "Allocation failure is recorded by the connection allocator. The function still follows the exact suppression or ordinary publication branch and leaves all message pointers owned or null."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/util.c::function::sqlite3ErrorMsg::line-242",
+      "relation": "source-post-format-parse-error-state-publication",
+      "zig_declaration_ids": [
+        "src/core/internal/parse_error.zig::function::report"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Typed message slices replace C varargs. Formatting responsibility ends at the caller, while all post-format source state and ownership remain in this owner.",
+    "unreachable plus std.debug.assert represent non-null active database/parser invariants.",
+    "Connection allocator stringNDuplicate replaces sqlite3VMPrintf allocation after formatting."
+  ],
+  "oracle": {
+    "protocol": "Publish one message and verify ERROR/count/offset/text, replace it and verify ownership/count, enable suppression and verify the existing message and count remain unchanged, then inject allocation failure and compare suppression/OOM state.",
+    "internal_observations": [
+      "db.errByteOffset and mallocFailed",
+      "Parse.nErr, rc, zErrMsg, and pWith",
+      "old/new allocation ownership",
+      "suppression branch"
+    ],
+    "normalization": "Compare exact scalar state and message bytes after formatting."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Connection-aware allocation records mallocFailed; suppression and ordinary publication branches preserve source error-count/result behavior.",
+    "io_crash_concurrency": "No I/O; Parse is connection-local and caller-synchronized.",
+    "malformed_input": "Typed non-null Parse and bounded message slice; active parser identity is asserted.",
+    "continuation": "Repeated errors replace old owned text safely; suppressed errors preserve the prior visible error.",
+    "performance": "One message allocation and at most one old-message free per unsuppressed error.",
+    "commands": ["zig build test"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/parse_error.zig consumed by src/core/internal/expression_analysis.zig",
+    "native_call_path": "Expression analysis row-value, variable-limit, and expression-shape failures invoke setExpressionError, which delegates to parse_error.report.",
+    "bounded_owner_retired": "The expression-analysis helper's partial free/duplicate/count/result implementation is retired in favor of the complete shared state owner."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires formatter-boundary and OOM differential, broader call-site migration, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Migrate remaining inline Parse error writers to the shared owner where source identity applies.",
+    "Add maintained pinned-C suppression, replacement, offset, and allocation-failure differential trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/util.c complete sqlite3ErrorMsg body, progress caller context, sqlite3ErrorToParser, and prepare-transfer comments were reviewed",
+      "upstream formatter and connection allocator contracts were reviewed at the function boundary",
+      "src/core/internal/db_allocator.zig allocation, OOM propagation, free, and string duplication were reviewed",
+      "src/core/internal/parse_types.zig and vdbe_types.zig exact Parse/Sqlite3 fields were reviewed",
+      "src/core/internal/expression_analysis.zig all setExpressionError callers were reviewed"
+    ],
+    "callers": [
+      "SQLite compiler analysis functions after formatting",
+      "Native expression analysis errors through setExpressionError"
+    ],
+    "callees": [
+      "sqlite3VMPrintf, sqlite3DbFree, and connection OOM state",
+      "db_allocator.stringNDuplicate and free"
+    ],
+    "assertions_branches_cleanup": [
+      "Database and active/toplevel parser assertions are assigned",
+      "offset normalization, suppression, suppressed OOM, and ordinary replacement branches are assigned",
+      "old and suppressed-new messages are released through the connection allocator"
+    ],
+    "upstream_tests": [
+      "Upstream prepare error, suppress-error, OOM, error-offset, nested parse, and WITH cleanup tests exercise this owner",
+      "Project parse-error owner test covers replacement, offset, and suppression; expression tests cover production callers"
+    ]
+  },
+  "evidence_receipts": []
+}

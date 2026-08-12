@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "id": "json-text-jsonb-result-conversion",
+  "title": "JSON text and JSONB result conversion",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "jsonReturnStringAsBlob and jsonReturnTextJsonFromBlob are the two allocation-owning conversion boundaries between generated canonical JSON text and JSONB. The registered result owners now use both helpers for JSONB function output and array/object extraction text output.",
+    "source_files": [
+      {
+        "path": "src/json.c",
+        "sha256": "25a742ea7382fd21bc3f10fc22f4cbfc97335122ba9593822d0d7eb93bb637d9"
+      }
+    ],
+    "source_entity_ids": [
+      "src/json.c::function::jsonReturnStringAsBlob::line-2100",
+      "src/json.c::function::jsonReturnTextJsonFromBlob::line-3193"
+    ],
+    "behavioral_block_ids": [
+      "src/json.c::function::jsonReturnStringAsBlob::behavior::assert::line-2102-column-3::ordinal-0",
+      "src/json.c::function::jsonReturnStringAsBlob::behavior::if::line-2108-column-3::ordinal-0",
+      "src/json.c::function::jsonReturnStringAsBlob::behavior::assert::line-2112-column-5::ordinal-0",
+      "src/json.c::function::jsonReturnStringAsBlob::behavior::assert::line-2113-column-5::ordinal-0",
+      "src/json.c::function::jsonReturnTextJsonFromBlob::behavior::if::line-3201-column-3::ordinal-0",
+      "src/json.c::function::jsonReturnTextJsonFromBlob::behavior::return::line-3201-column-25::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Text parser and JSONB-to-text recursive translation bodies",
+      "SQLite Mem result destructor representation",
+      "Primitive JSONB scalar extraction",
+      "Independent assurance and pinned-C trace"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "json-string-output-and-abbreviated-path"
+    ],
+    "external_source_responsibilities": [
+      "convertTextToBlob validates and appends JSONB nodes",
+      "translateBlobToText validates and renders one JSONB root",
+      "SQL result owners copy then release returned owned slices"
+    ],
+    "caller_closure": "Both complete source functions are assigned. returnString invokes text-to-JSONB conversion for JSON_BLOB output, and returnFromBlob invokes JSONB-to-text conversion for array/object text results."
+  },
+  "contracts": {
+    "inputs": [
+      "Well-formed generated JSON text or one borrowed complete JSONB root",
+      "Allocator used for all intermediate and returned storage"
+    ],
+    "outputs": [
+      "Independently owned JSONB bytes or canonical JSON text"
+    ],
+    "ownership": "The returned slice transfers to the caller. Intermediate JsonParse/JsonString allocations are released on all success and failure paths.",
+    "state_and_results": "Text conversion requires a complete valid JSON document and returns editable owned JSONB. Blob conversion copies the borrowed input into a parse owner, validates its root during translation, and returns owned canonical text.",
+    "locks_callbacks_io": "No locks, callbacks, or I/O; allocator and translation calls only.",
+    "failure_and_continuation": "Malformed, too-deep, and OOM errors propagate without leaked output. Registered result owners translate the error and remain safely reset/finalizable."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/json.c::function::jsonReturnStringAsBlob::line-2100",
+      "relation": "source-generated-json-text-to-owned-jsonb-result",
+      "zig_declaration_ids": [
+        "src/core/internal/json_text.zig::function::returnStringAsBlob"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonReturnTextJsonFromBlob::line-3193",
+      "relation": "source-borrowed-jsonb-to-owned-canonical-text-result",
+      "zig_declaration_ids": [
+        "src/core/internal/json_text.zig::function::returnTextFromBlob"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Owned Zig slices replace SQLITE_DYNAMIC result ownership. Callers publish transient results then free the slices synchronously.",
+    "JsonParse owns a copied JSONB slice in the blob-to-text direction rather than borrowing aBlob directly, preserving one allocator domain and simple cleanup.",
+    "Errors return through a typed local error set rather than writing directly to sqlite3_context."
+  ],
+  "oracle": {
+    "protocol": "Convert generated object/array text to JSONB and back to exact canonical text, exercise malformed and allocation failures, then run jsonb_set and jsonb_array_insert through prepared SQL and inspect blob/text conversions.",
+    "internal_observations": [
+      "owned result bytes",
+      "JSONB root type and payload span",
+      "canonical round-trip text",
+      "error kind and cleanup",
+      "prepared SQL storage type and rendered JSON"
+    ],
+    "normalization": "Compare exact JSONB bytes where stable and exact canonical text/error categories otherwise."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "All intermediate owners use defer/errdefer and return OutOfMemory without publishing partial results.",
+    "io_crash_concurrency": "Pure connection-local conversion; no I/O or shared state.",
+    "malformed_input": "Text parser and JSONB translator reject malformed complete roots; no borrowed input mutation occurs.",
+    "continuation": "Each result is independent and callers can continue or finalize after an error.",
+    "performance": "Linear translation with one returned owned copy; blob-to-text additionally copies the borrowed JSONB into the parse owner.",
+    "commands": ["zig build test"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/json_text.zig conversion owner and src/core/internal/json_functions.zig result publisher",
+    "native_call_path": "returnString uses returnStringAsBlob for JSONB result flags; returnFromBlob uses returnTextFromBlob for array/object text extraction; prepared JSONB functions exercise both directions.",
+    "bounded_owner_retired": "The unused blob-to-text helper is now connected to production array/object extraction, replacing duplicated inline translation there."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires pinned-C round-trip and fault differential, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Add maintained pinned-C JSON text/JSONB conversion and allocation-failure differential trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/json.c complete jsonConvertTextToBlob, jsonReturnStringAsBlob, jsonReturnTextJsonFromBlob, jsonReturnFromBlob container branch, and result callers were reviewed",
+      "src/core/internal/json_text.zig complete parser, JSONB translator, validity, and conversion helper paths were reviewed",
+      "src/core/internal/json_functions.zig returnString, returnParse, returnFromBlob, registered insertion/extraction callers were reviewed",
+      "src/core/sql_frontend.zig JSONB prepared SQL registration and cases were reviewed"
+    ],
+    "callers": [
+      "jsonReturnString JSON_BLOB branch",
+      "jsonReturnFromBlob array/object text branch",
+      "Registered JSONB scalar and edit functions"
+    ],
+    "callees": [
+      "jsonTranslateTextToBlob and jsonTranslateBlobToText",
+      "convertTextToBlob and translateBlobToText",
+      "Allocator ownership and VDBE result publication"
+    ],
+    "assertions_branches_cleanup": [
+      "Well-formed input and editable JSONB success invariants are assigned",
+      "OOM and success branches release all intermediate storage",
+      "Null borrowed input is excluded by typed slice input",
+      "Malformed/depth errors retain typed cleanup"
+    ],
+    "upstream_tests": [
+      "Upstream JSONB round-trip, malformed, deep nesting, edit, extract, and OOM tests exercise these paths",
+      "Project prepared JSONB storage-type and round-trip cases exercise integrated conversion"
+    ]
+  },
+  "evidence_receipts": []
+}

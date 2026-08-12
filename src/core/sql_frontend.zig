@@ -103,7 +103,9 @@ var jsonb_scalar_functions = [_]statement.FunctionDefinition{
     .{ .name = @constCast("jsonb_array"), .argument_count = -1, .callback = jsonScalar(json_functions.arrayFunction), .user_data = @ptrFromInt(0x10), .database = null },
     .{ .name = @constCast("jsonb_object"), .argument_count = -1, .callback = jsonScalar(json_functions.objectFunction), .user_data = @ptrFromInt(0x10), .database = null },
     .{ .name = @constCast("jsonb_extract"), .argument_count = -1, .callback = jsonScalar(json_functions.extractFunction), .user_data = @ptrFromInt(0x10), .database = null },
-    .{ .name = @constCast("jsonb_set"), .argument_count = -1, .callback = jsonScalar(json_functions.setFunction), .user_data = @ptrFromInt(0x10), .database = null },
+    .{ .name = @constCast("jsonb_insert"), .argument_count = -1, .callback = jsonScalar(json_functions.setFunction), .user_data = @ptrFromInt(0x10), .database = null },
+    .{ .name = @constCast("jsonb_set"), .argument_count = -1, .callback = jsonScalar(json_functions.setFunction), .user_data = @ptrFromInt(0x14), .database = null },
+    .{ .name = @constCast("jsonb_array_insert"), .argument_count = -1, .callback = jsonScalar(json_functions.setFunction), .user_data = @ptrFromInt(0x18), .database = null },
     .{ .name = @constCast("jsonb_replace"), .argument_count = -1, .callback = jsonScalar(json_functions.replaceFunction), .user_data = @ptrFromInt(0x10), .database = null },
     .{ .name = @constCast("jsonb_remove"), .argument_count = -1, .callback = jsonScalar(json_functions.removeFunction), .user_data = @ptrFromInt(0x10), .database = null },
     .{ .name = @constCast("jsonb_patch"), .argument_count = 2, .callback = jsonScalar(json_functions.patchFunction), .user_data = @ptrFromInt(0x10), .database = null },
@@ -116,6 +118,8 @@ var json_scalar_functions = [_]statement.FunctionDefinition{
     .{ .name = @constCast("json_array_length"), .argument_count = 2, .callback = jsonScalar(json_functions.arrayLengthFunction), .user_data = null, .database = null },
     .{ .name = @constCast("json_error_position"), .argument_count = 1, .callback = jsonScalar(json_functions.errorPositionFunction), .user_data = null, .database = null },
     .{ .name = @constCast("json_extract"), .argument_count = -1, .callback = jsonScalar(json_functions.extractFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("->"), .argument_count = 2, .callback = jsonScalar(json_functions.extractFunction), .user_data = @ptrFromInt(0x01), .database = null },
+    .{ .name = @constCast("->>"), .argument_count = 2, .callback = jsonScalar(json_functions.extractFunction), .user_data = @ptrFromInt(0x02), .database = null },
     .{ .name = @constCast("json_object"), .argument_count = -1, .callback = jsonScalar(json_functions.objectFunction), .user_data = null, .database = null },
     .{ .name = @constCast("json_patch"), .argument_count = 2, .callback = jsonScalar(json_functions.patchFunction), .user_data = null, .database = null },
     .{ .name = @constCast("json_pretty"), .argument_count = 1, .callback = jsonScalar(json_functions.prettyFunction), .user_data = null, .database = null },
@@ -123,7 +127,9 @@ var json_scalar_functions = [_]statement.FunctionDefinition{
     .{ .name = @constCast("json_quote"), .argument_count = 1, .callback = jsonScalar(json_functions.quoteFunction), .user_data = null, .database = null },
     .{ .name = @constCast("json_remove"), .argument_count = -1, .callback = jsonScalar(json_functions.removeFunction), .user_data = null, .database = null },
     .{ .name = @constCast("json_replace"), .argument_count = -1, .callback = jsonScalar(json_functions.replaceFunction), .user_data = null, .database = null },
-    .{ .name = @constCast("json_set"), .argument_count = -1, .callback = jsonScalar(json_functions.setFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_insert"), .argument_count = -1, .callback = jsonScalar(json_functions.setFunction), .user_data = null, .database = null },
+    .{ .name = @constCast("json_set"), .argument_count = -1, .callback = jsonScalar(json_functions.setFunction), .user_data = @ptrFromInt(0x04), .database = null },
+    .{ .name = @constCast("json_array_insert"), .argument_count = -1, .callback = jsonScalar(json_functions.setFunction), .user_data = @ptrFromInt(0x08), .database = null },
     .{ .name = @constCast("json_type"), .argument_count = 1, .callback = jsonScalar(json_functions.typeFunction), .user_data = null, .database = null },
     .{ .name = @constCast("json_type"), .argument_count = 2, .callback = jsonScalar(json_functions.typeFunction), .user_data = null, .database = null },
     .{ .name = @constCast("json_valid"), .argument_count = 1, .callback = jsonScalar(json_functions.validFunction), .user_data = null, .database = null },
@@ -177,7 +183,17 @@ const IndexOrderBy = extern struct { iColumn: c_int, desc: u8 };
 const IndexUsage = extern struct { argvIndex: c_int, omit: u8 };
 const IndexInfo = extern struct { nConstraint: c_int, aConstraint: ?[*]IndexConstraint, nOrderBy: c_int, aOrderBy: ?[*]IndexOrderBy, aConstraintUsage: ?[*]IndexUsage, idxNum: c_int, idxStr: ?[*:0]u8, needToFreeIdxStr: c_int, orderByConsumed: c_int, estimatedCost: f64, estimatedRows: i64, idxFlags: c_int, colUsed: u64 };
 const planning_magic: u64 = 0x5a56544142504c4e;
-const PlanningContext = extern struct { public: IndexInfo, magic: u64 = planning_magic, distinct: c_int = 0 };
+const PlanningContext = extern struct {
+    public: IndexInfo,
+    magic: u64 = planning_magic,
+    distinct: c_int = 0,
+    in_mask: u32 = 0,
+    handle_in_mask: u32 = 0,
+    collations: ?[*]const ?[*:0]const u8 = null,
+    rhs_values: ?[*]?*statement.sqlite3_value = null,
+    rhs_resolver: ?*const fn (?*anyopaque, c_int, *?*statement.sqlite3_value) callconv(.c) c_int = null,
+    rhs_context: ?*anyopaque = null,
+};
 const connection_magic: u64 = 0x5a_53_51_4c_43_4f_4e_4e;
 
 const PendingForeignKeyParent = struct {
@@ -1812,22 +1828,58 @@ fn planningContext(pointer: ?*IndexInfo) ?*PlanningContext {
 pub export fn sqlite3_vtab_distinct(pointer: ?*IndexInfo) callconv(.c) c_int {
     return if (planningContext(pointer)) |context| context.distinct else 0;
 }
-pub export fn sqlite3_vtab_collation(pointer: ?*IndexInfo, constraint: c_int) callconv(.c) [*:0]const u8 {
-    const context = planningContext(pointer) orelse return "BINARY";
-    if (constraint < 0 or constraint >= context.public.nConstraint) return "BINARY";
-    return "BINARY";
+/// Source `sqlite3_vtab_collation()` after the planner has resolved each
+/// constraint's explicit, column-default, or BINARY collation.
+fn planningConstraintCollation(context: *const PlanningContext, constraint: c_int) ?[*:0]const u8 {
+    if (constraint < 0 or constraint >= context.public.nConstraint) return null;
+    const collations = context.collations orelse return "BINARY";
+    return collations[@intCast(constraint)] orelse "BINARY";
 }
+
+pub export fn sqlite3_vtab_collation(pointer: ?*IndexInfo, constraint: c_int) callconv(.c) ?[*:0]const u8 {
+    const context = planningContext(pointer) orelse return null;
+    return planningConstraintCollation(context, constraint);
+}
+
+/// Source `sqlite3_vtab_in()`.
+fn planningIn(context: *PlanningContext, constraint: c_int, handle: c_int) c_int {
+    if (constraint < 0 or constraint >= context.public.nConstraint or constraint > 31) return 0;
+    const mask = @as(u32, 1) << @intCast(constraint);
+    if (context.in_mask & mask == 0) return 0;
+    if (handle == 0) {
+        context.handle_in_mask &= ~mask;
+    } else if (handle > 0) {
+        context.handle_in_mask |= mask;
+    }
+    return 1;
+}
+
 pub export fn sqlite3_vtab_in(pointer: ?*IndexInfo, constraint: c_int, handle: c_int) callconv(.c) c_int {
-    const context = planningContext(pointer) orelse return -1;
-    if (constraint < 0 or constraint >= context.public.nConstraint) return -1;
-    _ = handle;
-    return 0;
+    const context = planningContext(pointer) orelse return 0;
+    return planningIn(context, constraint, handle);
 }
+
+/// Source `sqlite3_vtab_rhs_value()` after expression constant-folding has
+/// populated the planner-owned RHS cache.
+fn planningRhsValue(context: *PlanningContext, constraint: c_int, output: *?*statement.sqlite3_value) c_int {
+    output.* = null;
+    if (constraint < 0 or constraint >= context.public.nConstraint) return ResultCode.misuse.toC();
+    const values = context.rhs_values orelse return ResultCode.not_found.toC();
+    const index: usize = @intCast(constraint);
+    if (values[index] == null) {
+        const resolver = context.rhs_resolver orelse return ResultCode.not_found.toC();
+        const rc = resolver(context.rhs_context, constraint, &values[index]);
+        if (rc != ResultCode.ok.toC()) return rc;
+    }
+    output.* = values[index];
+    return if (output.* == null) ResultCode.not_found.toC() else ResultCode.ok.toC();
+}
+
 pub export fn sqlite3_vtab_rhs_value(pointer: ?*IndexInfo, constraint: c_int, output: ?*?*statement.sqlite3_value) callconv(.c) c_int {
-    if (output) |value| value.* = null;
-    const context = planningContext(pointer) orelse return ResultCode.not_found.toC();
-    if (constraint < 0 or constraint >= context.public.nConstraint) return ResultCode.not_found.toC();
-    return ResultCode.not_found.toC();
+    const value = output orelse return ResultCode.misuse.toC();
+    value.* = null;
+    const context = planningContext(pointer) orelse return ResultCode.misuse.toC();
+    return planningRhsValue(context, constraint, value);
 }
 pub export fn sqlite3_vtab_in_first(input: ?*statement.sqlite3_value, output: ?*?*statement.sqlite3_value) callconv(.c) c_int {
     if (output) |value| value.* = null;
@@ -4358,7 +4410,7 @@ const Parser = struct {
             => 3,
             tokens.tk_plus, tokens.tk_minus => 6,
             tokens.tk_star, tokens.tk_slash, tokens.tk_rem => 7,
-            tokens.tk_concat => 8,
+            tokens.tk_concat, tokens.tk_ptr => 8,
             else => 0,
         };
     }
@@ -4377,6 +4429,21 @@ const Parser = struct {
             self.position += if (negated_in) 2 else 1;
             if (operator_type == tokens.tk_and or operator_type == tokens.tk_or) {
                 left = try self.expressionCodeTargetAndOr(left, operator_type, level + 1);
+                continue;
+            }
+            if (operator_type == tokens.tk_ptr) {
+                const right = try self.expression(level + 1);
+                const connection = self.connection orelse return error.Syntax;
+                const definition = connection.findScalar(operator.text, 2) orelse return error.Syntax;
+                const first = try self.allocateRegister();
+                try self.emit(.{ .opcode = .copy, .p1 = left, .p2 = first });
+                const second = try self.allocateRegister();
+                try self.emit(.{ .opcode = .copy, .p1 = right, .p2 = second });
+                const output = try self.allocateRegister();
+                const function_index = self.functions.items.len;
+                try self.functions.append(self.allocator, .{ .callback = statement.invokeScalar, .context = definition });
+                try self.emit(.{ .opcode = .function, .p1 = 2, .p2 = first, .p3 = output, .p4 = .{ .index = @intCast(function_index) } });
+                left = output;
                 continue;
             }
             if (operator_type == tokens.tk_between) {
@@ -11946,8 +12013,16 @@ test "registered JSON functions execute through prepared SQL" {
         .{ .sql = "SELECT json('{a:\"x\",b:[1,2,]/*c*/}')", .expected = "{\"a\":\"x\",\"b\":[1,2]}" },
         .{ .sql = "SELECT json_array(1,'x',null)", .expected = "[1,\"x\",null]" },
         .{ .sql = "SELECT json_extract('{\"a\":[10,20]}','$.a[1]')", .expected = "20" },
+        .{ .sql = "SELECT '{\"a\":\"x\"}' -> 'a'", .expected = "\"x\"" },
+        .{ .sql = "SELECT '{\"a\":\"x\"}' ->> 'a'", .expected = "x" },
+        .{ .sql = "SELECT '[10,20]' -> -1", .expected = "20" },
         .{ .sql = "SELECT json_remove('{\"a\":1,\"b\":2}','$.a')", .expected = "{\"b\":2}" },
+        .{ .sql = "SELECT json_replace('{\"a\":1}','$.a',2,'$.b',3)", .expected = "{\"a\":2}" },
+        .{ .sql = "SELECT json_insert('{\"a\":1}','$.a',2,'$.b',3)", .expected = "{\"a\":1,\"b\":3}" },
         .{ .sql = "SELECT json_set('{}','$.a',json_array(1,2))", .expected = "{\"a\":[1,2]}" },
+        .{ .sql = "SELECT json_array_insert('[1,3]','$[1]',2)", .expected = "[1,2,3]" },
+        .{ .sql = "SELECT typeof(jsonb_set('{}','$.a',1))", .expected = "blob" },
+        .{ .sql = "SELECT json(jsonb_array_insert(jsonb('[1,3]'),'$[1]',2))", .expected = "[1,2,3]" },
         .{ .sql = "SELECT json_patch('{\"a\":{\"x\":1,\"y\":2}}','{\"a\":{\"x\":null,\"z\":3}}')", .expected = "{\"a\":{\"y\":2,\"z\":3}}" },
         .{ .sql = "SELECT json_group_array(7)", .expected = "[7]" },
         .{ .sql = "SELECT json_group_object('a',7)", .expected = "{\"a\":7}" },
@@ -11959,6 +12034,62 @@ test "registered JSON functions execute through prepared SQL" {
         try std.testing.expectEqualStrings(case.expected, std.mem.span(statement.sqlite3_column_text(prepared, 0).?));
         try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_finalize(prepared));
     }
+}
+
+fn testPlanningRhsResolver(context: ?*anyopaque, _: c_int, output: *?*statement.sqlite3_value) callconv(.c) c_int {
+    output.* = @ptrCast(context orelse return ResultCode.not_found.toC());
+    return ResultCode.ok.toC();
+}
+
+test "virtual planning APIs expose collation IN handling and cached RHS values" {
+    var constraints = [_]IndexConstraint{
+        .{ .iColumn = 0, .op = 2, .usable = 1, .iTermOffset = 0 },
+        .{ .iColumn = 1, .op = 2, .usable = 1, .iTermOffset = 1 },
+    };
+    var usage = [_]IndexUsage{ .{ .argvIndex = 0, .omit = 0 }, .{ .argvIndex = 0, .omit = 0 } };
+    const collations = [_]?[*:0]const u8{ "NOCASE", null };
+    var rhs = [_]?*statement.sqlite3_value{ @ptrFromInt(16), null };
+    var planning: PlanningContext = .{
+        .public = .{
+            .nConstraint = constraints.len,
+            .aConstraint = &constraints,
+            .nOrderBy = 0,
+            .aOrderBy = null,
+            .aConstraintUsage = &usage,
+            .idxNum = 0,
+            .idxStr = null,
+            .needToFreeIdxStr = 0,
+            .orderByConsumed = 0,
+            .estimatedCost = 1.0e99,
+            .estimatedRows = 25,
+            .idxFlags = 0,
+            .colUsed = 3,
+        },
+        .in_mask = 2,
+        .collations = &collations,
+        .rhs_values = &rhs,
+    };
+
+    try std.testing.expectEqualStrings("NOCASE", std.mem.span(sqlite3_vtab_collation(&planning.public, 0).?));
+    try std.testing.expectEqualStrings("BINARY", std.mem.span(sqlite3_vtab_collation(&planning.public, 1).?));
+    try std.testing.expect(sqlite3_vtab_collation(&planning.public, 2) == null);
+    try std.testing.expectEqual(@as(c_int, 1), sqlite3_vtab_in(&planning.public, 1, -1));
+    try std.testing.expectEqual(@as(c_int, 1), sqlite3_vtab_in(&planning.public, 1, 1));
+    try std.testing.expectEqual(@as(u32, 2), planning.handle_in_mask);
+    try std.testing.expectEqual(@as(c_int, 1), sqlite3_vtab_in(&planning.public, 1, 0));
+    try std.testing.expectEqual(@as(u32, 0), planning.handle_in_mask);
+    try std.testing.expectEqual(@as(c_int, 0), sqlite3_vtab_in(&planning.public, 0, 1));
+    var value: ?*statement.sqlite3_value = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_vtab_rhs_value(&planning.public, 0, &value));
+    try std.testing.expect(value == rhs[0]);
+    try std.testing.expectEqual(ResultCode.not_found.toC(), sqlite3_vtab_rhs_value(&planning.public, 1, &value));
+    try std.testing.expect(value == null);
+    planning.rhs_resolver = testPlanningRhsResolver;
+    planning.rhs_context = @ptrFromInt(32);
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_vtab_rhs_value(&planning.public, 1, &value));
+    try std.testing.expect(value == @as(?*statement.sqlite3_value, @ptrFromInt(32)));
+    try std.testing.expect(rhs[1] == value);
+    try std.testing.expectEqual(ResultCode.misuse.toC(), sqlite3_vtab_rhs_value(&planning.public, 2, &value));
 }
 
 test "registered core scalar functions execute through prepared SQL" {

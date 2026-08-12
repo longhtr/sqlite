@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "id": "json-insertion-dispatch-and-argument-errors",
+  "title": "JSON insertion and replacement dispatch with argument errors",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "jsonWrongNumArgs, jsonReplaceFunc, and jsonSetFunc form the registered JSON edit dispatch boundary. Replacement and user-data-selected insert, set, or array-insert behaviors share exact odd-argument validation across JSON and JSONB public prepared SQL paths.",
+    "source_files": [
+      {
+        "path": "src/json.c",
+        "sha256": "25a742ea7382fd21bc3f10fc22f4cbfc97335122ba9593822d0d7eb93bb637d9"
+      }
+    ],
+    "source_entity_ids": [
+      "src/json.c::function::jsonWrongNumArgs::line-1134",
+      "src/json.c::function::jsonReplaceFunc::line-4523",
+      "src/json.c::function::jsonSetFunc::line-4549"
+    ],
+    "behavioral_block_ids": [
+      "src/json.c::function::jsonReplaceFunc::behavior::if::line-4528-column-3::ordinal-0",
+      "src/json.c::function::jsonReplaceFunc::behavior::if::line-4529-column-3::ordinal-0",
+      "src/json.c::function::jsonReplaceFunc::behavior::return::line-4528-column-16::ordinal-0",
+      "src/json.c::function::jsonReplaceFunc::behavior::return::line-4531-column-5::ordinal-0",
+      "src/json.c::function::jsonSetFunc::behavior::assert::line-4560-column-3::ordinal-0",
+      "src/json.c::function::jsonSetFunc::behavior::if::line-4559-column-3::ordinal-0",
+      "src/json.c::function::jsonSetFunc::behavior::if::line-4561-column-3::ordinal-0",
+      "src/json.c::function::jsonSetFunc::behavior::return::line-4559-column-16::ordinal-0",
+      "src/json.c::function::jsonSetFunc::behavior::return::line-4563-column-5::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "jsonInsertIntoBlob parsing and edit execution body",
+      "Allocator-backed sqlite3_mprintf message representation",
+      "Independent assurance and pinned-C trace"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "jsonInsertIntoBlob owns parse/edit/result behavior for the selected edit type",
+      "Function registry supplies exact source user-data flag topology",
+      "VDBE Mem result owner publishes copied error text"
+    ],
+    "caller_closure": "All three assigned source bodies are complete. Public and internal registries invoke replacement and insertion-family callbacks; reportWrongArgumentCount serves every even-argument validation branch."
+  },
+  "contracts": {
+    "inputs": [
+      "SQLite function context, argument count, argument vector, and JSON insertion user-data flags",
+      "Borrowed insertion operation name for argument error rendering"
+    ],
+    "outputs": [
+      "No result for fewer than one argument, exact odd-argument error, or dispatch to the selected insertion edit type"
+    ],
+    "ownership": "Arguments and context are borrowed. Error text is rendered into bounded stack storage and copied by the VDBE result owner before return.",
+    "state_and_results": "User-data bits 2-3 select insert, set, or array_insert. Even counts publish the matching json_NAME() message. Odd counts call the shared insertion owner with JEDIT_INS, JEDIT_SET, or JEDIT_AINS.",
+    "locks_callbacks_io": "No locks or I/O. One internal function callback dispatch occurs after validation.",
+    "failure_and_continuation": "Message rendering has a bounded fallback to no-memory publication. Invalid insertion flag values violate the source registry invariant and assertion. Insertion failures are owned by jsonInsertIntoBlob."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/json.c::function::jsonWrongNumArgs::line-1134",
+      "relation": "source-json-odd-argument-error-rendering",
+      "zig_declaration_ids": [
+        "src/core/internal/json_functions.zig::function::reportWrongArgumentCount"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonSetFunc::line-4549",
+      "relation": "source-json-insertion-user-data-dispatch",
+      "zig_declaration_ids": [
+        "src/core/internal/json_functions.zig::function::setFunction"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonReplaceFunc::line-4523",
+      "relation": "source-json-replacement-validation-and-dispatch",
+      "zig_declaration_ids": [
+        "src/core/internal/json_functions.zig::function::replaceFunction"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "A bounded stack buffer plus std.fmt replaces sqlite3_mprintf allocation; VDBE resultError copies bytes synchronously.",
+    "Typed slices and arrays replace source C string and static pointer/edit arrays.",
+    "The public frontend registry now carries the same insert/set/array-insert bits as the canonical internal registry, with JSONB format bit 0x10 composed independently."
+  ],
+  "oracle": {
+    "protocol": "Execute json_replace over existing and missing paths, json_insert, json_set, and json_array_insert through prepared SQL. Exercise even argument counts for all names and compare exact errors.",
+    "internal_observations": [
+      "registered callback user data",
+      "selected edit type",
+      "result JSON text",
+      "exact wrong-argument message"
+    ],
+    "normalization": "Compare exact JSON output and error text."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Bounded rendering does not allocate; insertion-owner OOM remains published by its existing typed path.",
+    "io_crash_concurrency": "Connection-local function execution; no I/O or shared state.",
+    "malformed_input": "Malformed JSON/path handling remains in the insertion owner. Even count is rejected before dereferencing missing pairs.",
+    "continuation": "Validation errors leave the connection and statement safely finalizable; successful dispatch returns one independent result.",
+    "performance": "Constant dispatch and bounded message rendering before the existing insertion traversal.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/json_functions.zig registered callback and src/core/sql_frontend.zig public function registry",
+    "native_call_path": "Prepared SQL resolves json_replace/jsonb_replace and insertion-family names; callbacks validate counts and dispatch JEDIT_REPL, JEDIT_INS, JEDIT_SET, or JEDIT_AINS to insertIntoBlob.",
+    "bounded_owner_retired": "The public registry's set-only callback configuration is retired in favor of complete insertion-family registration and flag dispatch."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires exact error differential, broader insertion-family differential, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Add maintained pinned-C argument-error and insertion-family differential trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/json.c complete jsonWrongNumArgs, jsonReplaceFunc, jsonSetFunc, JSON_INSERT_TYPE definitions, jsonInsertIntoBlob, and registry definitions were reviewed",
+      "src/core/internal/function_registry.zig canonical insertion-family flag topology was reviewed",
+      "src/core/internal/json_functions.zig complete insertion, replacement, set dispatch, and error publication paths were reviewed",
+      "src/core/sql_frontend.zig public function activation and prepared JSON execution were reviewed"
+    ],
+    "callers": [
+      "jsonReplaceFunc and jsonSetFunc use jsonWrongNumArgs",
+      "JSON and JSONB insert, set, and array-insert registry entries invoke jsonSetFunc",
+      "Prepared SQL VDBE function execution invokes native callbacks"
+    ],
+    "callees": [
+      "sqlite3_mprintf/result_error/free in source",
+      "JSON_INSERT_TYPE and jsonInsertIntoBlob",
+      "std.fmt.bufPrint, resultError, mem.userData, and insertIntoBlob"
+    ],
+    "assertions_branches_cleanup": [
+      "argc less than one, even, and odd branches assigned",
+      "all three insertion-type indices are bounded by source assertion",
+      "error rendering retains no allocation and insertion cleanup remains in the existing owner"
+    ],
+    "upstream_tests": [
+      "Upstream JSON insert/set/array-insert, JSONB, path, wrong-argument, and OOM tests exercise these paths",
+      "Project prepared SQL JSON cases exercise each selected edit behavior"
+    ]
+  },
+  "evidence_receipts": []
+}

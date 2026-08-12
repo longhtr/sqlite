@@ -44,6 +44,7 @@ pub const internal_vdbe_types = @import("core/internal/vdbe_types.zig");
 pub const internal_parse_types = @import("core/internal/parse_types.zig");
 pub const internal_schema_types = @import("core/internal/schema_types.zig");
 pub const internal_db_allocator = @import("core/internal/db_allocator.zig");
+pub const internal_parse_error = @import("core/internal/parse_error.zig");
 pub const internal_btree_api = @import("core/internal/btree_api.zig");
 pub const internal_vdbe_mem = @import("core/internal/vdbe_mem.zig");
 pub const internal_vdbe_api = @import("core/internal/vdbe_api.zig");

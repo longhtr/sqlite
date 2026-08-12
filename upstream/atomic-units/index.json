@@ -5,6 +5,11 @@
   "warning": "Only independently-fidelity-reviewed units count as final fidelity closure; implementers may promote no further than assurance-passed.",
   "units": [
     {
+      "id": "vtab-constraint-collation-in-and-rhs",
+      "path": "upstream/atomic-units/vtab-constraint-collation-in-and-rhs.json",
+      "status": "source-translated"
+    },
+    {
       "id": "btree-interface-flags-and-payload",
       "path": "upstream/atomic-units/btree-interface-flags-and-payload.json",
       "status": "internal-trace-equivalent"
@@ -620,6 +625,11 @@
       "status": "source-translated"
     },
     {
+      "id": "pager-exclusive-wal-connection-open",
+      "path": "upstream/atomic-units/pager-exclusive-wal-connection-open.json",
+      "status": "source-translated"
+    },
+    {
       "id": "date-pure-keyword-guard-and-value-parse",
       "path": "upstream/atomic-units/date-pure-keyword-guard-and-value-parse.json",
       "status": "source-translated"
@@ -627,6 +637,26 @@
     {
       "id": "json-hex-decode-and-prefix-validation",
       "path": "upstream/atomic-units/json-hex-decode-and-prefix-validation.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "json-string-output-and-abbreviated-path",
+      "path": "upstream/atomic-units/json-string-output-and-abbreviated-path.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "json-insertion-dispatch-and-argument-errors",
+      "path": "upstream/atomic-units/json-insertion-dispatch-and-argument-errors.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "json-text-jsonb-result-conversion",
+      "path": "upstream/atomic-units/json-text-jsonb-result-conversion.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "parse-error-message-publication",
+      "path": "upstream/atomic-units/parse-error-message-publication.json",
       "status": "source-translated"
     },
     {
@@ -642,6 +672,11 @@
     {
       "id": "backup-destination-admission-and-page-size",
       "path": "upstream/atomic-units/backup-destination-admission-and-page-size.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "backup-source-notification-attachment",
+      "path": "upstream/atomic-units/backup-source-notification-attachment.json",
       "status": "source-translated"
     }
   ]

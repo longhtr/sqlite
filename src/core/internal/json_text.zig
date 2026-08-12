@@ -7,12 +7,11 @@ pub const Error = error{ Malformed, OutOfMemory, TooDeep };
 const invalid_character: u32 = 0x99999;
 
 fn appendRaw(output: *core.JsonString, bytes: []const u8) Error!void {
-    if (!core.expandAndAppendString(output, bytes)) return error.OutOfMemory;
+    if (!core.appendRaw(output, bytes)) return error.OutOfMemory;
 }
 
 fn appendByte(output: *core.JsonString, byte: u8) Error!void {
-    if (!core.growString(output, 1)) return error.OutOfMemory;
-    output.bytes.appendAssumeCapacity(byte);
+    if (!core.appendCharacter(output, byte)) return error.OutOfMemory;
 }
 
 fn isIdentifierStart(byte: u8) bool {
@@ -356,7 +355,10 @@ pub fn translateBlobToText(parse: *core.JsonParse, root: usize, output: *core.Js
         core.kind.text, core.kind.text_json, core.kind.text5 => try appendCanonicalText(output, payload, node_type),
         core.kind.text_raw => if (!core.appendQuotedString(output, payload)) return error.OutOfMemory,
         core.kind.array, core.kind.object => {
-            if (parse.depth >= 1000) return error.TooDeep;
+            if (parse.depth >= 1000) {
+                output.reportTooDeep();
+                return error.TooDeep;
+            }
             parse.depth += 1;
             defer parse.depth -= 1;
             try appendByte(output, if (node_type == core.kind.array) '[' else '{');
@@ -383,7 +385,10 @@ pub fn translateBlobToPrettyText(parse: *core.JsonParse, root: usize, output: *c
     if (header == 0) return error.Malformed;
     const node_type = parse.blob.items[root] & 15;
     if (node_type != core.kind.array and node_type != core.kind.object) return translateBlobToText(parse, root, output);
-    if (level >= 1000) return error.TooDeep;
+    if (level >= 1000) {
+        output.reportTooDeep();
+        return error.TooDeep;
+    }
     try appendByte(output, if (node_type == core.kind.array) '[' else '{');
     var index = root + header;
     const end = index + size;
@@ -491,7 +496,8 @@ pub fn argumentIsJsonb(parse: *core.JsonParse, bytes: []const u8) bool {
     return size > 7 or ((bytes[0] != '{' and bytes[0] != '[' and !std.ascii.isDigit(bytes[0])) or validityCheck(parse, 0, bytes.len, 1) == 0);
 }
 
-/// Convert generated JSON text to an owned JSONB value.
+/// Source `jsonReturnStringAsBlob()`: translate well-formed generated text to
+/// an independently owned editable JSONB image.
 pub fn returnStringAsBlob(allocator: std.mem.Allocator, text: []const u8) Error![]u8 {
     var parse = core.JsonParse.init(allocator);
     defer parse.blob.deinit(allocator);
@@ -499,7 +505,8 @@ pub fn returnStringAsBlob(allocator: std.mem.Allocator, text: []const u8) Error!
     return allocator.dupe(u8, parse.blob.items) catch error.OutOfMemory;
 }
 
-/// Convert JSONB to owned canonical JSON text.
+/// Source `jsonReturnTextJsonFromBlob()`: translate one borrowed JSONB image
+/// to independently owned canonical JSON text.
 pub fn returnTextFromBlob(allocator: std.mem.Allocator, blob: []const u8) Error![]u8 {
     var parse = core.JsonParse.init(allocator);
     defer parse.blob.deinit(allocator);

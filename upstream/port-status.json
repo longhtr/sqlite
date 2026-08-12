@@ -8,7 +8,7 @@
       "inventoried": 0,
       "scaffolded": 0,
       "source-context-reviewed": 0,
-      "source-translated": 78,
+      "source-translated": 85,
       "subsystem-integrated": 19
     },
     "authoritative_process": "docs/ENGINEERING_PROCESS.md",
@@ -94,7 +94,7 @@
     "utf_active_entities_differentially_checked": 13,
     "vdbe_opcode_coverage_warning": "A mapped case proves name-level runtime presence only, not complete SQLite semantics or fidelity.",
     "vlist_entities_differentially_checked": 0,
-    "zig_source_lines": 91218
+    "zig_source_lines": 91611
   },
   "overall_status": "incomplete-control-revalidation-and-source-port",
   "public_api": {
@@ -133,21 +133,21 @@
   ],
   "schema_version": 3,
   "source": {
-    "active_entities_context_reviewed_or_later": 2258,
+    "active_entities_context_reviewed_or_later": 2285,
     "active_entities_initially_classified": 6752,
     "active_entities_inventoried": 0,
-    "active_entities_unmapped": 3761,
+    "active_entities_unmapped": 3734,
     "active_entities_with_legacy_candidates": 733,
     "active_profile_entities": 6752,
     "active_source_files": 85,
     "ast_resolved_legacy_target_references": 425,
-    "ast_resolved_reviewed_target_references": 2045,
-    "atomic_unit_dossiers_admission_ready": 128,
-    "atomic_unit_dossiers_total": 128,
+    "ast_resolved_reviewed_target_references": 2072,
+    "atomic_unit_dossiers_admission_ready": 135,
+    "atomic_unit_dossiers_total": 135,
     "atomic_units_assurance_passed": 0,
-    "atomic_units_source_translated_or_later": 128,
+    "atomic_units_source_translated_or_later": 135,
     "atomic_units_subsystem_integrated_or_later": 19,
-    "behavioral_blocks_assigned_to_atomic_units": 1490,
+    "behavioral_blocks_assigned_to_atomic_units": 1605,
     "behavioral_blocks_inventoried": 25930,
     "behavioral_functions_inventoried": 2457,
     "by_kind": {
@@ -155,7 +155,7 @@
         "active": 2588,
         "inventoried": 0,
         "legacy_candidates": 551,
-        "reviewed": 646
+        "reviewed": 673
       },
       "macro": {
         "active": 1484,
@@ -199,17 +199,17 @@
     "mapping_status": "working-classification-with-inventoried-unpromoted-atomic-units",
     "mapping_warning": "Inventoried mappings, AST resolution, and legacy candidates are planning facts only, not semantic review, promotion, or fidelity evidence.",
     "reviewed_coverage_is_completion_metric": false,
-    "reviewed_coverage_percent": 33.44,
+    "reviewed_coverage_percent": 33.84,
     "source_dependency_file_units": 85,
     "unresolved_legacy_target_references": 400,
-    "zig_declaration_inventory": 13621
+    "zig_declaration_inventory": 13656
   },
   "translation_tracking": {
-    "active_batch_entries": 15,
+    "active_batch_entries": 37,
     "active_batch_schema": 2,
-    "active_batch_short_functions": 15,
+    "active_batch_short_functions": 23,
     "active_batch_status": "active",
-    "active_batch_substantive_functions": 0,
+    "active_batch_substantive_functions": 14,
     "checkpoint_ledger": "upstream/port-checkpoints.json",
     "completion_credit": 0,
     "durable_checkpoints": 1,
@@ -217,10 +217,10 @@
       "internal-trace-equivalent": 60,
       "legacy-candidate-target-resolved": 199,
       "legacy-candidate-unresolved": 159,
-      "source-translated": 24,
+      "source-translated": 29,
       "subsystem-integrated": 57,
       "targeted-differential-passed": 76,
-      "unmapped": 1163
+      "unmapped": 1158
     },
     "historical_claim_dispositions": {
       "retired-canonical-target-conflict": 269,
@@ -232,10 +232,10 @@
       "ambiguous": 1,
       "unique": 1737
     },
-    "historical_claims_assigned_to_atomic_units": 141,
-    "historical_claims_conflicting_with_canonical_target": 278,
-    "historical_claims_matching_canonical_target": 155,
-    "historical_claims_without_canonical_target": 1305,
+    "historical_claims_assigned_to_atomic_units": 146,
+    "historical_claims_conflicting_with_canonical_target": 279,
+    "historical_claims_matching_canonical_target": 159,
+    "historical_claims_without_canonical_target": 1300,
     "historical_mechanical_claims": 1738,
     "historical_mechanical_short_functions": 172,
     "historical_mechanical_substantive_functions": 1566,
