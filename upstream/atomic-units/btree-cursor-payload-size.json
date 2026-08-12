@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "btree-cursor-payload-size",
+  "title": "B-tree cursor payload-size observation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreePayloadSize returns the populated CellInfo payload byte count for the current valid entry, representing data size for table B-trees and key size for index B-trees.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreePayloadSize::line-4962"],
+    "behavioral_block_ids": [
+      "src/btree.c::function::sqlite3BtreePayloadSize::behavior::assert::line-4963-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreePayloadSize::behavior::assert::line-4964-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreePayloadSize::behavior::return::line-4966-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["CellInfo lazy parsing", "Payload fetching", "Overflow traversal"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Caller-held cursor mutex and populated CellInfo"], "caller_closure": "The complete observation after CellInfo population is assigned; lazy getCellInfo integration remains open."},
+  "contracts": {
+    "inputs": ["Valid Cursor under B-tree mutex with CellInfo populated"],
+    "outputs": ["Current entry payload byte count"],
+    "ownership": "Borrowed Cursor; no allocation or mutation.",
+    "state_and_results": "Returns CellInfo.payload_size exactly for table data or index key payload.",
+    "locks_callbacks_io": "Caller holds cursor mutex; no callbacks or I/O.",
+    "failure_and_continuation": "Invalid/unpopulated cursor violates source/model precondition."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3BtreePayloadSize::line-4962", "relation": "source-current-cell-payload-byte-count", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::cursorPayloadSize"]}],
+  "representation_differences": ["The Zig owner requires CellInfo already populated instead of invoking a lazy getCellInfo macro path; that integration remains explicit."],
+  "oracle": {"protocol": "Populate a valid cursor CellInfo with payload size 23 and compare exact result.", "internal_observations": ["cursor valid state", "CellInfo.payload_size", "returned size"], "normalization": "Payload bytes are exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation; lazy parse allocation is not part of this body.", "io_crash_concurrency": "No I/O; caller mutex external.", "malformed_input": "Invalid or stale CellInfo violates precondition.", "continuation": "Pure observation leaves cursor state unchanged.", "performance": "Constant time after CellInfo population.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig cursor CellInfo owner", "native_call_path": "Typed observation and nonzero trace exist; lazy CellInfo population/callers remain pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires lazy CellInfo/caller integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect source-shaped lazy getCellInfo.", "Connect payload consumers.", "Add table/index pinned-C trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:4953-4967 was reviewed completely", "src/core/internal/btree_core.zig CellInfo parse and cursor state owners were reviewed"],
+    "callers": ["VDBE payload reads, incremental blob, and ValueList paths", "Unit trace invokes the owner directly"],
+    "callees": ["Source getCellInfo is represented by external populated-CellInfo precondition"],
+    "assertions_branches_cleanup": ["Both source assertions and return block are assigned", "No allocation, mutation, or cleanup"],
+    "upstream_tests": ["Upstream table/index payload, overflow, blob, and VDBE tests cover this observation", "Project unit trace covers nonzero payload size"]
+  },
+  "evidence_receipts": []
+}

@@ -403,6 +403,11 @@
       "id": "btree-has-content-query-and-clear",
       "path": "upstream/atomic-units/btree-has-content-query-and-clear.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-cursor-payload-size",
+      "path": "upstream/atomic-units/btree-cursor-payload-size.json",
+      "status": "source-translated"
     }
   ]
 }
