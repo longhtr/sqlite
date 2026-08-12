@@ -205,14 +205,14 @@
     "zig_declaration_inventory": 13602
   },
   "translation_tracking": {
-    "active_batch_entries": 127,
+    "active_batch_entries": 0,
     "active_batch_schema": 2,
-    "active_batch_short_functions": 77,
-    "active_batch_status": "active",
-    "active_batch_substantive_functions": 50,
+    "active_batch_short_functions": 0,
+    "active_batch_status": "idle",
+    "active_batch_substantive_functions": 0,
     "checkpoint_ledger": "upstream/port-checkpoints.json",
     "completion_credit": 0,
-    "durable_checkpoints": 0,
+    "durable_checkpoints": 1,
     "historical_claim_classifications": {
       "internal-trace-equivalent": 60,
       "legacy-candidate-target-resolved": 199,

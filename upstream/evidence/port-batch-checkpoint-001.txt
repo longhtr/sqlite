@@ -1,0 +1,5 @@
+port-batch-checkpoint-001: PASS
+command: TMPDIR="$PWD/tmp" ZIG_GLOBAL_CACHE_DIR="$PWD/tmp/zig-global-cache" zig build port-batch-checkpoint -j1
+validated implementation commit: 55c6b8a47d666e0c1a83ca1db5c8d361e96a916c
+batch: 127 net-new source functions (77 short, 50 substantive)
+result: threshold, exact source/declaration hashes, canonical mappings, promoted atomic-unit ownership, unit tests, differential checks, and mutation-tested promotion controls passed
