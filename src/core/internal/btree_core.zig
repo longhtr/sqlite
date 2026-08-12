@@ -135,6 +135,15 @@ pub const Cursor = struct {
     }
 };
 
+/// Source `sqlite3BtreeClearCursor()`.
+pub fn clearCursor(cursor: *Cursor) void {
+    if (cursor.saved_key) |key| {
+        cursor.allocator.free(key);
+        cursor.saved_key = null;
+    }
+    cursor.state = .invalid;
+}
+
 /// Source `sqlite3BtreeCursorHasMoved()`.
 pub fn cursorHasMoved(cursor: *const Cursor) bool {
     return cursor.state != .valid;
@@ -178,6 +187,8 @@ test "source cursor moved and pin state transitions preserve exact flags" {
     try std.testing.expect(cursor.pinned);
     unpinCursor(&cursor);
     try std.testing.expect(!cursor.pinned);
+    clearCursor(&cursor);
+    try std.testing.expectEqual(CursorState.invalid, cursor.state);
 }
 
 test "source cursor last-page check requires every rightmost ancestor" {
@@ -1056,6 +1067,11 @@ pub fn maxRecordSize(cursor: *const Cursor) u64 {
     return @as(u64, pageSize(cursor.tree)) * pageCount(cursor.tree.shared);
 }
 
+/// Source `sqlite3HeaderSizeBtree()` rounded to the active pointer alignment.
+pub fn headerSizeBtree() usize {
+    return std.mem.alignForward(usize, @sizeOf(Page), 8);
+}
+
 /// Source `sqlite3BtreeConnectionCount()`.
 pub fn connectionCount(tree: *const Btree) usize {
     return tree.shared.references;
@@ -1107,6 +1123,7 @@ test "source page size and requested reserve reflect live page format" {
     try std.testing.expect(!isReadOnly(&tree));
     try std.testing.expectEqual(@as(usize, 1), connectionCount(&tree));
     try std.testing.expect(!isInBackup(&tree));
+    try std.testing.expect(headerSizeBtree() >= @sizeOf(Page));
     try std.testing.expectEqual(@as(usize, 0), pageCount(&shared));
     try std.testing.expectEqual(@as(usize, 0), lastPage(&tree));
     shared.requested_reserved_bytes = 8;

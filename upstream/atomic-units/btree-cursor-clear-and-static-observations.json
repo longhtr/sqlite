@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "id": "btree-cursor-clear-and-static-observations",
+  "title": "B-tree cursor clear and header-size primitives",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeClearCursor releases a saved cursor key and invalidates position; sqlite3HeaderSizeBtree reports the rounded per-page B-tree header size. These small dependency-free B-tree primitives share direct state/layout semantics.",
+    "source_files": [
+      {
+        "path": "src/btree.c",
+        "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"
+      }
+    ],
+    "source_entity_ids": [
+      "src/btree.c::function::sqlite3BtreeClearCursor::line-848",
+      "src/btree.c::function::sqlite3HeaderSizeBtree::line-11559"
+    ],
+    "behavioral_block_ids": [
+      "src/btree.c::function::sqlite3BtreeClearCursor::behavior::assert::line-849-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3HeaderSizeBtree::behavior::return::line-11559-column-50::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Cursor page release",
+      "Shared-cache sharability already canonically owned by btree-sharability-and-vdbe-usage-lock-masks",
+      "Cross-ABI MemPage layout verification"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Caller B-tree mutex and target-specific page-header layout"
+    ],
+    "caller_closure": "Both straight-line source bodies are assigned; ABI/pager integration remains open."
+  },
+  "contracts": {
+    "inputs": [
+      "Live locked Cursor for clear; no input for header size"
+    ],
+    "outputs": [
+      "Freed saved key and INVALID cursor, and eight-byte-rounded Page header size"
+    ],
+    "ownership": "clearCursor consumes saved_key storage; header observation owns nothing.",
+    "state_and_results": "Clear sets saved_key null and state invalid without releasing page path. Header size rounds the active Page owner to eight bytes.",
+    "locks_callbacks_io": "Clear requires cursor B-tree mutex; no callbacks or I/O.",
+    "failure_and_continuation": "Invalid lock/lifetime violates source contract; valid operations are infallible."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeClearCursor::line-848",
+      "relation": "source-saved-key-free-and-cursor-invalidate",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_core.zig::function::clearCursor"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3HeaderSizeBtree::line-11559",
+      "relation": "source-rounded-btree-page-header-size",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_core.zig::function::headerSizeBtree"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Zig saved_key slice allocation replaces source pKey allocation.",
+    "Zig Page is the native owner corresponding to source MemPage for the current model; exact cross-language layout assurance remains pending."
+  ],
+  "oracle": {
+    "protocol": "Transition a valid cursor through clear and compare INVALID state; verify header size is at least Page size and eight-byte rounded.",
+    "internal_observations": [
+      "saved_key ownership",
+      "cursor state",
+      "Page size/aligned header size"
+    ],
+    "normalization": "Boolean/state are exact; header size is target-native Zig owner size pending C ABI comparison."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation; clear may free existing key.",
+    "io_crash_concurrency": "No I/O; clear lock precondition external.",
+    "malformed_input": "Dangling cursor/key ownership violates invariants.",
+    "continuation": "Cleared cursor may be repositioned later.",
+    "performance": "Constant time plus saved-key free.",
+    "commands": [
+      "zig build btree-differential",
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/btree_core.zig cursor/page owners",
+    "native_call_path": "Typed primitives and scalar transitions are unit-traced; ABI integration remains pending.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires ABI/shared-cache/caller integration, pinned-C trace, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Connect clear caller lock discipline.",
+    "Compare Page/MemPage header sizes for target ABI.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/btree.c:835-853 and 11555-11559 were reviewed completely",
+      "src/core/internal/btree_core.zig Cursor saved-key/state and Page owner were reviewed"
+    ],
+    "callers": [
+      "Cursor reset/movement and close paths",
+      "Pager/header allocation sizing",
+      "Unit trace invokes both owners"
+    ],
+    "callees": [
+      "Source sqlite3_free represented by cursor allocator free; direct state/layout reads otherwise"
+    ],
+    "assertions_branches_cleanup": [
+      "Both active blocks are assigned",
+      "Saved key is released before invalidation",
+      "No page-path release is introduced"
+    ],
+    "upstream_tests": [
+      "Upstream cursor save/clear and B-tree header-size tests cover these primitives",
+      "Project tests cover clear state and aligned header bound"
+    ]
+  },
+  "evidence_receipts": []
+}

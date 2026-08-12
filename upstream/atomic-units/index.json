@@ -378,6 +378,11 @@
       "id": "btree-pager-cache-spill-and-mmap-limits",
       "path": "upstream/atomic-units/btree-pager-cache-spill-and-mmap-limits.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-cursor-clear-and-static-observations",
+      "path": "upstream/atomic-units/btree-cursor-clear-and-static-observations.json",
+      "status": "source-translated"
     }
   ]
 }

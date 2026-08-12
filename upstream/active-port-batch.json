@@ -384,6 +384,24 @@
       "atomic_unit_id": "btree-pager-cache-spill-and-mmap-limits",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeClearCursor::line-848",
+      "source_sha256": "5cf890a27373ccdee2527ab09fe235d71084773df08ef678ca8754eeb4e829da",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::clearCursor",
+      "zig_declaration_sha256": "3b7681c273c75b69d7f44aec8d4add1bf69e08a442ad649909951fd142686b07",
+      "atomic_unit_id": "btree-cursor-clear-and-static-observations",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3HeaderSizeBtree::line-11559",
+      "source_sha256": "f0ae704a8d31028c869c3f8ece985516cff29f6f3455c998002afb1d0c02062c",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::headerSizeBtree",
+      "zig_declaration_sha256": "6d51737ca7026afb5a1f738477bf5ee55cc36fa66e25b9ae2ddc4ef9497b2edc",
+      "atomic_unit_id": "btree-cursor-clear-and-static-observations",
+      "class": "short",
+      "complete": true
     }
   ]
 }
