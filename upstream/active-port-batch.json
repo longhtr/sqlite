@@ -654,6 +654,15 @@
       "atomic_unit_id": "btree-integrity-reference-bitmap-and-oom",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::freeTempSpace::line-2910",
+      "source_sha256": "0a4c6560e284ff1d536ce4dd90e31c41beda02202e615edc4a29e1d18bb376f6",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::freeTemporarySpace",
+      "zig_declaration_sha256": "f93b19629bdf73b0ff9a9f96dcc75aeac0bdc4151e5f56a6187cfdbe8992fffb",
+      "atomic_unit_id": "btree-temporary-space-release",
+      "class": "short",
+      "complete": true
     }
   ]
 }

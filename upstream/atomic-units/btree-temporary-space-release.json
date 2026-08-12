@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "btree-temporary-space-release",
+  "title": "B-tree temporary cell workspace release",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "freeTempSpace restores the base of the B-tree cell workspace allocation, frees it, and clears the published workspace pointer, while doing nothing when no workspace exists.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::freeTempSpace::line-2910"],
+    "behavioral_block_ids": ["src/btree.c::function::freeTempSpace::behavior::if::line-2911-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Temporary-space allocation", "Page-size selection", "Cell balancing"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["B-tree workspace allocation records its owned base slice"],
+    "caller_closure": "The complete nullable release helper is consumed by page-size reconfiguration and shared-owner teardown."
+  },
+  "contracts": {
+    "inputs": ["Shared B-tree owner with optional temporary workspace"],
+    "outputs": ["No value; workspace becomes null"],
+    "ownership": "Consumes the shared owner's workspace allocation exactly once.",
+    "state_and_results": "Non-null storage is freed and cleared. Null storage is an exact no-op.",
+    "locks_callbacks_io": "Caller owns B-tree synchronization. No callbacks or I/O.",
+    "failure_and_continuation": "Infallible; repeated calls remain safe no-ops."
+  },
+  "mappings": [{
+    "source_entity_id": "src/btree.c::function::freeTempSpace::line-2910",
+    "relation": "source-btree-temporary-space-release",
+    "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::freeTemporarySpace"]
+  }],
+  "representation_differences": ["The source stores an interior pointer four bytes past the allocation base and subtracts four before sqlite3PageFree. Zig stores the owned full slice and returns an interior slice only to callers, so release frees the recorded base directly."],
+  "oracle": {
+    "protocol": "Allocate the workspace, release it, verify null state, call release again, then reallocate.",
+    "internal_observations": ["prior optional storage", "freed allocation identity", "post-release null state", "repeat-call state"],
+    "normalization": "The interior-plus-four source pointer is normalized to the Zig owner/base slice pair."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation; reallocation after release remains covered by allocation owner tests.",
+    "io_crash_concurrency": "No I/O; caller owns B-tree synchronization.",
+    "malformed_input": "Only nullable owned state is accepted.",
+    "continuation": "Repeated release is safe and reallocation remains possible.",
+    "performance": "Constant time.",
+    "commands": ["zig build test", "zig build btree-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/btree_core.zig shared B-tree workspace owner",
+    "native_call_path": "setPageSize releases the workspace before changing page geometry; Shared.deinit also retires remaining storage.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires allocator trace, assurance closure, and independent review."},
+  "known_blockers": ["Add exact allocation/free identity trace across page-size changes.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:2874-2917 and close/page-size callers were reviewed", "src/core/internal/btree_core.zig allocateTemporarySpace, setPageSize, Shared.deinit, cursor ownership, and tests were reviewed"],
+    "callers": ["B-tree page-size reconfiguration", "Shared owner teardown", "Unit trace release and reallocation"],
+    "callees": ["sqlite3PageFree in the source", "Shared allocator free in Zig"],
+    "assertions_branches_cleanup": ["The generated nullable branch is assigned", "Base allocation identity is retained in Zig", "Pointer is cleared after free to prevent double release"],
+    "upstream_tests": ["Upstream B-tree close, page-size, balance, and OOM tests exercise workspace lifetime", "Project B-tree core/differential suites exercise writable cursor workspace ownership"]
+  },
+  "evidence_receipts": []
+}

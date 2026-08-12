@@ -488,6 +488,11 @@
       "id": "btree-integrity-reference-bitmap-and-oom",
       "path": "upstream/atomic-units/btree-integrity-reference-bitmap-and-oom.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-temporary-space-release",
+      "path": "upstream/atomic-units/btree-temporary-space-release.json",
+      "status": "source-translated"
     }
   ]
 }
