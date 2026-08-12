@@ -638,6 +638,11 @@
       "id": "backup-fatal-error-classification",
       "path": "upstream/atomic-units/backup-fatal-error-classification.json",
       "status": "source-translated"
+    },
+    {
+      "id": "backup-destination-admission-and-page-size",
+      "path": "upstream/atomic-units/backup-destination-admission-and-page-size.json",
+      "status": "source-translated"
     }
   ]
 }

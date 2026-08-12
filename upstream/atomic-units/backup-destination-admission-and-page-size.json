@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "id": "backup-destination-admission-and-page-size",
+  "title": "Backup destination admission and source page-size adoption",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "checkReadTransaction and setDestPgsz are the destination admission pair used by backup initialization/first step: reject any destination transaction before backup ownership begins, then attempt to adopt the source page size without changing reserve bytes.",
+    "source_files": [
+      {
+        "path": "src/backup.c",
+        "sha256": "2304c4f820c977aa009ceb464d9b774942cd7b4686156a5ed28d50a3e50f861e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/backup.c::function::setDestPgsz::line-113",
+      "src/backup.c::function::checkReadTransaction::line-123"
+    ],
+    "behavioral_block_ids": [
+      "src/backup.c::function::setDestPgsz::behavior::return::line-114-column-3::ordinal-0",
+      "src/backup.c::function::checkReadTransaction::behavior::if::line-124-column-3::ordinal-0",
+      "src/backup.c::function::checkReadTransaction::behavior::return::line-126-column-5::ordinal-0",
+      "src/backup.c::function::checkReadTransaction::behavior::return::line-128-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Database-name resolution",
+      "Destination write-transaction opening",
+      "WAL/memory page-size mismatch rejection after destination lock"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "backup-fatal-error-classification"
+    ],
+    "external_source_responsibilities": [
+      "B-tree transaction-state observation",
+      "B-tree page-size setter and reserve-byte owner",
+      "Caller records public destination error text"
+    ],
+    "caller_closure": "Both complete source helper bodies are assigned. initialize consumes destination admission and first step consumes source page-size adoption before opening copy work."
+  },
+  "contracts": {
+    "inputs": [
+      "Borrowed destination Btree; borrowed source Btree for page-size adoption"
+    ],
+    "outputs": [
+      "Success only for transaction-none destination; destination page size equal to nonzero source page size with reserve bytes unchanged"
+    ],
+    "ownership": "Borrowed typed trees; page-size helper mutates only destination.page_size.",
+    "state_and_results": "Any read or write destination transaction yields DestinationBusy. A valid source page size replaces destination page size. Zero source page size maps to typed Io rather than publishing an invalid geometry.",
+    "locks_callbacks_io": "No direct I/O or callbacks. Connection/Btree locking is external.",
+    "failure_and_continuation": "Admission failure does not mutate destination. Invalid source geometry does not mutate destination. Successful adoption leaves the destination ready for backup transaction setup."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/backup.c::function::setDestPgsz::line-113",
+      "relation": "source-backup-destination-page-size-adoption",
+      "zig_declaration_ids": [
+        "src/core/internal/backup_core.zig::function::setDestinationPageSize"
+      ]
+    },
+    {
+      "source_entity_id": "src/backup.c::function::checkReadTransaction::line-123",
+      "relation": "source-backup-destination-transaction-admission",
+      "zig_declaration_ids": [
+        "src/core/internal/backup_core.zig::function::checkReadTransaction"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The source database error-message side effect is owned by the public connection layer; this typed helper returns DestinationBusy.",
+    "sqlite3BtreeSetPageSize reserve argument zero means preserve reserve bytes, represented by mutating page_size only.",
+    "The bounded Btree has no page-size setter I/O failure, so zero source size is the only local typed failure."
+  ],
+  "oracle": {
+    "protocol": "Reject a destination in read transaction, accept a transaction-none destination, adopt source 512-byte pages into a 1024-byte destination while retaining reserve_bytes=7, then run complete backup initialization/step.",
+    "internal_observations": [
+      "destination transaction state",
+      "destination page size before and after adoption",
+      "destination reserve bytes",
+      "complete copy outcome"
+    ],
+    "normalization": "Compare exact typed errors, page sizes, reserve byte, and copy completion."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No direct I/O; synchronization and later write transaction external.",
+    "malformed_input": "Zero source page size returns Io; typed trees preclude null.",
+    "continuation": "Failures preserve destination fields; success feeds first-step setup.",
+    "performance": "Constant-time observations/mutation.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/backup_core.zig online backup state machine",
+    "native_call_path": "initialize calls checkReadTransaction; first step calls setDestinationPageSize for ordinary rollback destinations before setting destination transaction write.",
+    "bounded_owner_retired": "Inline destination transaction and direct page-size mutation are retired."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires public Backup owner integration, pinned-C admission/page-size trace, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Connect the internal source-shaped backup state machine to the public Backup owner.",
+    "Add pinned-C admission and page-size trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/backup.c findBtree, setDestPgsz, checkReadTransaction, backup_init, and first-step destination setup were reviewed",
+      "src/core/internal/backup_core.zig Btree representation, initialize, step, page copy, and owner trace were reviewed"
+    ],
+    "callers": [
+      "sqlite3_backup_init destination validation",
+      "sqlite3_backup_step first destination transaction setup",
+      "Native initialize and step owners"
+    ],
+    "callees": [
+      "sqlite3BtreeTxnState and sqlite3ErrorWithMsg in source",
+      "sqlite3BtreeGetPageSize/sqlite3BtreeSetPageSize in source",
+      "Typed transaction/page-size fields in native owner"
+    ],
+    "assertions_branches_cleanup": [
+      "Non-none transaction branch and both returns are assigned",
+      "Page-size forwarding return is assigned",
+      "No allocation or cleanup path"
+    ],
+    "upstream_tests": [
+      "Upstream backup destination-in-use, page-size, WAL/memory mismatch, and reserve-byte tests exercise these helpers",
+      "Project owner trace covers busy/none admission, page-size adoption, reserve preservation, and complete copy"
+    ]
+  },
+  "evidence_receipts": []
+}

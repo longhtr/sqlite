@@ -75,6 +75,18 @@ fn resizeZero(tree: *Btree, size: usize) Error!void {
     if (size > old) @memset(tree.data.items[old..], 0);
 }
 
+/// Source `setDestPgsz()`: attempt to match the destination's page size and
+/// preserve its reserve-byte configuration.
+pub fn setDestinationPageSize(destination: *Btree, source: *const Btree) Error!void {
+    if (source.page_size == 0) return error.Io;
+    destination.page_size = source.page_size;
+}
+
+/// Source `checkReadTransaction()`.
+pub fn checkReadTransaction(destination: *const Btree) Error!void {
+    if (destination.transaction != .none) return error.DestinationBusy;
+}
+
 /// Source `backupOnePage()`.
 pub fn backupOnePage(backup: *Backup, source_page: usize, source_data: []const u8, is_update: bool) Error!void {
     const destination = backup.destination orelse return error.NotFound;
@@ -102,7 +114,7 @@ pub fn initialize(destination_connection: *Connection, destination_name: []const
     if (destination_connection == source_connection) return error.SameConnection;
     const destination = findBtree(destination_connection, destination_connection, destination_name) orelse return error.NotFound;
     const source = findBtree(destination_connection, source_connection, source_name) orelse return error.NotFound;
-    if (destination.transaction != .none) return error.DestinationBusy;
+    try checkReadTransaction(destination);
     const backup = destination_connection.allocator.create(Backup) catch return error.OutOfMemory;
     errdefer destination_connection.allocator.destroy(backup);
     const owned_name = destination_connection.allocator.dupe(u8, destination_name) catch return error.OutOfMemory;
@@ -135,7 +147,7 @@ pub fn step(backup: *Backup, requested_pages: isize) Error!void {
     const destination = backup.destination orelse findBtree(backup.destination_connection, backup.destination_connection, backup.destination_name) orelse return error.NotFound;
     backup.destination = destination;
     if (!backup.destination_locked) {
-        if (!destination.journal_mode_wal and !destination.memory_database) destination.page_size = backup.source.page_size;
+        if (!destination.journal_mode_wal and !destination.memory_database) try setDestinationPageSize(destination, backup.source);
         destination.transaction = .write;
         backup.destination_schema = destination.schema_cookie;
         backup.destination_locked = true;
@@ -243,6 +255,12 @@ test "checkpoint batch backup step copies pages and commits a changed schema coo
     defer destination_databases[0].deinit();
     var source_connection = Connection{ .allocator = std.testing.allocator, .databases = &source_databases };
     var destination_connection = Connection{ .allocator = std.testing.allocator, .databases = &destination_databases };
+    try std.testing.expectError(error.DestinationBusy, checkReadTransaction(&Btree{ .allocator = std.testing.allocator, .name = "busy", .page_size = 512, .transaction = .read }));
+    try checkReadTransaction(&destination_databases[0]);
+    var resized = Btree{ .allocator = std.testing.allocator, .name = "resized", .page_size = 1024, .reserve_bytes = 7 };
+    try setDestinationPageSize(&resized, &source_databases[0]);
+    try std.testing.expectEqual(@as(usize, 512), resized.page_size);
+    try std.testing.expectEqual(@as(u8, 7), resized.reserve_bytes);
     const handle = try initialize(&destination_connection, "main", &source_connection, "main");
     try std.testing.expect(!isFatalError(null));
     try std.testing.expect(!isFatalError(error.Busy));

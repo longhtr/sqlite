@@ -123,6 +123,24 @@
       "atomic_unit_id": "backup-fatal-error-classification",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::setDestPgsz::line-113",
+      "source_sha256": "5289f7d13628a2c2026cd59e8bfbb5624d68b3cd30a709d889405c5afcc71789",
+      "zig_declaration_id": "src/core/internal/backup_core.zig::function::setDestinationPageSize",
+      "zig_declaration_sha256": "9277636c6e66f4e3bd22a14b803fb1d4d94cf448d3325deb0f89b3b46009ac8b",
+      "atomic_unit_id": "backup-destination-admission-and-page-size",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::checkReadTransaction::line-123",
+      "source_sha256": "55ab28416836c96079c627af004ea967d4417532431d72ac67ce4e4965abcdfa",
+      "zig_declaration_id": "src/core/internal/backup_core.zig::function::checkReadTransaction",
+      "zig_declaration_sha256": "81607c056ffe5b6d278bac57da712ede3e30b580b2b86a5fb1e5e5132dfdba8c",
+      "atomic_unit_id": "backup-destination-admission-and-page-size",
+      "class": "short",
+      "complete": true
     }
   ]
 }
