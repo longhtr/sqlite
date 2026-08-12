@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "id": "pager-owner-accessors",
+  "title": "Pager VFS, database-file, and journal-name accessors",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerVfs, sqlite3PagerFile, and sqlite3PagerJournalname expose three stable borrowed owners held by Pager: the VFS, the open database file handle, and the rollback-journal pathname.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::sqlite3PagerVfs::line-7146",
+      "src/pager.c::function::sqlite3PagerFile::line-7155",
+      "src/pager.c::function::sqlite3PagerJournalname::line-7174"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::sqlite3PagerVfs::behavior::return::line-7147-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerFile::behavior::return::line-7156-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerJournalname::behavior::return::line-7175-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "User-visible filename normalization for memory databases",
+      "Selection between rollback-journal and WAL file handles",
+      "Lifetime management of returned borrowed owners"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Pager.open constructs and Pager.close retires all three owners"
+    ],
+    "caller_closure": "Each complete straight-line accessor and return block is assigned. Production Pager creation, I/O, file-control, journal open/delete, and public control paths consume the same fields."
+  },
+  "contracts": {
+    "inputs": [
+      "Live Pager"
+    ],
+    "outputs": [
+      "Borrowed VFS pointer, borrowed open database sqlite3_file pointer, or borrowed sentinel-terminated rollback-journal pathname"
+    ],
+    "ownership": "Pager retains all ownership. Callers must not free or outlive Pager with any returned value.",
+    "state_and_results": "Accessors return exact field identity without allocation, copying, dispatch, or mutation.",
+    "locks_callbacks_io": "No synchronization, callbacks, or I/O; caller owns any required Pager serialization.",
+    "failure_and_continuation": "Infallible for a live Pager. Returned values remain valid until Pager destruction."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerVfs::line-7146",
+      "relation": "source-return-borrowed-pager-vfs",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.filesystem"
+      ]
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerFile::line-7155",
+      "relation": "source-return-borrowed-database-file",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.databaseFile"
+      ]
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerJournalname::line-7174",
+      "relation": "source-return-borrowed-journal-name",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.journalName"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The source database-file accessor documents a possible null result before file open. Production Zig publishes Pager only after a successful file open, so its live-Pager accessor returns a nonoptional pointer.",
+    "The journal pathname is a sentinel-terminated borrowed slice rather than a bare C pointer, preserving both length and C interoperability."
+  ],
+  "oracle": {
+    "protocol": "Open a Pager through a named ABI VFS, compare VFS and database-file pointer identity, compare the canonical journal pathname, use each owner through its native path, and close the Pager.",
+    "internal_observations": [
+      "VFS pointer identity",
+      "sqlite3_file pointer identity",
+      "journal pathname bytes and sentinel",
+      "owner lifetime through close"
+    ],
+    "normalization": "Pointers compare only for identity within one process; pathname bytes and sentinel are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O or mutation; caller owns synchronization.",
+    "malformed_input": "Only a live Pager is accepted by the typed API.",
+    "continuation": "Access does not alter any Pager or owner state.",
+    "performance": "Constant-time field access.",
+    "commands": [
+      "zig build test",
+      "zig build pager-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig Pager VFS/file/path fields",
+    "native_call_path": "Pager.open initializes abi_vfs, file, and journal_name; typed accessors expose those exact owners to B-tree, frontend, VFS-control, and diagnostic paths.",
+    "bounded_owner_retired": "Callers no longer need direct field reach-through for these source accessor boundaries."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires caller migration, scoped durable trace promotion, and independent review."
+  },
+  "known_blockers": [
+    "Migrate appropriate direct field consumers to the typed Pager accessors.",
+    "Capture a scoped durable owner-identity receipt before internal-trace promotion.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:7142-7176 complete VFS, database-file, journal-file adjacency, and journal-name accessors were reviewed",
+      "src/core/pager.zig Pager open, owner fields, journal transport, close paths, direct consumers, and identity tests were reviewed"
+    ],
+    "callers": [
+      "B-tree and backup Pager owners",
+      "Frontend file-control and journal-file control paths",
+      "Pager identity unit trace"
+    ],
+    "callees": [
+      "None; direct field returns"
+    ],
+    "assertions_branches_cleanup": [
+      "Each generated return block is assigned",
+      "No branches or cleanup belong to these accessors",
+      "Pager.close owns all returned-value retirement"
+    ],
+    "upstream_tests": [
+      "Upstream pager, VFS, backup, filename, file-control, and journal tests exercise these accessors",
+      "Project Pager and VFS suites exercise exact owner identity and lifetime"
+    ]
+  },
+  "evidence_receipts": []
+}

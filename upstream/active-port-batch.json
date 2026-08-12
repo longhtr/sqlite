@@ -960,6 +960,33 @@
       "atomic_unit_id": "pager-hot-journal-sync-boundary",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerVfs::line-7146",
+      "source_sha256": "b0fb120230b2826f1e89dcd5adf18f3fe06581d59ab688437583816fbfadfbce",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.filesystem",
+      "zig_declaration_sha256": "d9543c70fed5daa22bc061e309b9625fa59abdb66cc5b3c52b33b89ce823c3ad",
+      "atomic_unit_id": "pager-owner-accessors",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerFile::line-7155",
+      "source_sha256": "275d02443407a9b5994408d22fa2e9ad7f162906065789bc81da7b4b8c27f6b3",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.databaseFile",
+      "zig_declaration_sha256": "75af82bff0b44bffcb12883e0e1885f9b2e5ceb85dbc12c57e0798136d420bb8",
+      "atomic_unit_id": "pager-owner-accessors",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerJournalname::line-7174",
+      "source_sha256": "11db4e984ae3228f6f890e7a3e88fd9e0c34bfc19a211639b215a019c88471aa",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.journalName",
+      "zig_declaration_sha256": "34a7cd1dcb731a6d542d83b5fd9f52839f5f589481288d1ebef4d8e288e61055",
+      "atomic_unit_id": "pager-owner-accessors",
+      "class": "short",
+      "complete": true
     }
   ]
 }

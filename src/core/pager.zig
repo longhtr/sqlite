@@ -509,6 +509,22 @@ pub const Pager = struct {
         return if (self.journal) |*journal| journal.abiFile() else null;
     }
 
+    /// Source `sqlite3PagerVfs()`: return the borrowed VFS owner.
+    pub fn filesystem(self: *Pager) *vfs.sqlite3_vfs {
+        return self.abi_vfs;
+    }
+
+    /// Source `sqlite3PagerFile()`: return the borrowed database file handle.
+    pub fn databaseFile(self: *Pager) *vfs.sqlite3_file {
+        return self.file;
+    }
+
+    /// Source `sqlite3PagerJournalname()`: return the Pager-owned rollback
+    /// journal pathname.
+    pub fn journalName(self: *const Pager) [:0]const u8 {
+        return self.journal_name;
+    }
+
     /// Source `setSectorSize()`: normalize the VFS device sector size once per
     /// pager before either large-sector journaling or a journal header write.
     fn refreshSectorSize(self: *Pager) ResultCode {
@@ -2056,6 +2072,21 @@ fn probeMovedFileControl(file: *vfs.sqlite3_file, operation: c_int, argument: ?*
     }
     const control = probe.delegate.xFileControl orelse return vfs.NOTFOUND;
     return control(file, operation, argument);
+}
+
+test "pager owner accessors preserve VFS file and journal name identity" {
+    const fixture = try readFixture("valid-empty-4096.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "owner-access.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-owner-access", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "owner-access.db", .{}).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+
+    try std.testing.expect(pager.filesystem() == &adapter.abi);
+    try std.testing.expect(pager.databaseFile() == pager.file);
+    try std.testing.expectEqualStrings("owner-access.db-journal", pager.journalName());
 }
 
 test "database moved detection preserves empty unsupported moved and error results" {
