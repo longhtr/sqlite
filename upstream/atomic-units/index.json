@@ -508,6 +508,11 @@
       "id": "pager-cache-size-spill-and-shrink-delegation",
       "path": "upstream/atomic-units/pager-cache-size-spill-and-shrink-delegation.json",
       "status": "source-translated"
+    },
+    {
+      "id": "pager-journal-mode-change-readiness",
+      "path": "upstream/atomic-units/pager-journal-mode-change-readiness.json",
+      "status": "source-translated"
     }
   ]
 }

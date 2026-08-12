@@ -717,6 +717,15 @@
       "atomic_unit_id": "pager-cache-size-spill-and-shrink-delegation",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerOkToChangeJournalMode::line-7506",
+      "source_sha256": "c63d92dc014df43cee9000dd6810d595909f5bc350e248a61fdb0cd99baa7dff",
+      "zig_declaration_id": "src/core/internal/pager_core.zig::function::journalModeMayChange",
+      "zig_declaration_sha256": "566b11de4792e689950bbf36794eb0e780f8067adb3273fce5542cc7684bc4ec",
+      "atomic_unit_id": "pager-journal-mode-change-readiness",
+      "class": "short",
+      "complete": true
     }
   ]
 }

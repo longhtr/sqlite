@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "pager-journal-mode-change-readiness",
+  "title": "Pager journal-mode change readiness",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerOkToChangeJournalMode permits a journal-mode change only before the writer cache is modified and while no open journal has written content.",
+    "source_files": [{"path": "src/pager.c", "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"}],
+    "source_entity_ids": ["src/pager.c::function::sqlite3PagerOkToChangeJournalMode::line-7506"],
+    "behavioral_block_ids": [
+      "src/pager.c::function::sqlite3PagerOkToChangeJournalMode::behavior::assert::line-7507-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerOkToChangeJournalMode::behavior::if::line-7508-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerOkToChangeJournalMode::behavior::return::line-7508-column-47::ordinal-0",
+      "src/pager.c::function::sqlite3PagerOkToChangeJournalMode::behavior::if::line-7509-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerOkToChangeJournalMode::behavior::return::line-7509-column-60::ordinal-0",
+      "src/pager.c::function::sqlite3PagerOkToChangeJournalMode::behavior::return::line-7510-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Journal-mode transition", "Pager-state validation implementation", "Journal file opening"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Pager state and journal open/offset fields remain internally consistent"],
+    "caller_closure": "The complete readiness predicate is assigned and observes the production Pager state used by journal mutation paths."
+  },
+  "contracts": {
+    "inputs": ["Borrowed Pager"],
+    "outputs": ["Boolean readiness"],
+    "ownership": "Pure observation.",
+    "state_and_results": "False at writer-cache-modified or later. False for an open journal with positive offset. True otherwise.",
+    "locks_callbacks_io": "Caller owns Pager synchronization. No callbacks or I/O.",
+    "failure_and_continuation": "Infallible."
+  },
+  "mappings": [{
+    "source_entity_id": "src/pager.c::function::sqlite3PagerOkToChangeJournalMode::line-7506",
+    "relation": "source-pager-journal-mode-change-readiness",
+    "zig_declaration_ids": ["src/core/internal/pager_core.zig::function::journalModeMayChange"]
+  }],
+  "representation_differences": ["Zig uses the typed PagerState enum and bool result instead of ordered C constants and int."],
+  "oracle": {
+    "protocol": "Observe true in reader state with closed journal, false in writer-cache-modified state, and false in reader state with an open nonempty journal.",
+    "internal_observations": ["Pager state", "journal_open", "journal_offset", "returned readiness"],
+    "normalization": "Boolean maps to source zero/nonzero."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; caller owns Pager synchronization.",
+    "malformed_input": "Typed Pager invariants only.",
+    "continuation": "Pure observation.",
+    "performance": "Constant time.",
+    "commands": ["zig build test", "zig build pager-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/pager_core.zig Pager journal owner",
+    "native_call_path": "The predicate reads the same state and journal fields maintained by begin-write, open-journal, commit, rollback, and end-transaction paths.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pinned-C state matrix, assurance closure, and independent review."},
+  "known_blockers": ["Add pinned-C readiness matrix over every Pager writer state and journal offset boundary.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/pager.c:7490-7512 and journal-mode callers were reviewed", "src/core/internal/pager_core.zig PagerState, journal fields, write/commit/rollback paths, and tests were reviewed"],
+    "callers": ["Journal-mode PRAGMA/configuration owner", "Unit state matrix"],
+    "callees": ["assert_pager_state in the source", "Typed enum/order and field checks in Zig"],
+    "assertions_branches_cleanup": ["All six generated blocks are assigned", "Writer state rejection precedes journal-content rejection", "No allocation or cleanup paths exist"],
+    "upstream_tests": ["Upstream pager and journal-mode tests exercise transition readiness", "Project pager core/differential suites exercise state/journal lifecycle"]
+  },
+  "evidence_receipts": []
+}

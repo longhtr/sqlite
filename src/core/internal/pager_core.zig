@@ -142,6 +142,13 @@ pub fn setMmapLimit(pager: *Pager, byte_limit: u64, file_open: bool, method_vers
     fixMapLimit(pager, file_open, method_version, null);
 }
 
+/// Source `sqlite3PagerOkToChangeJournalMode()`.
+pub fn journalModeMayChange(pager: *const Pager) bool {
+    if (@intFromEnum(pager.state) >= @intFromEnum(PagerState.writer_cache_modified)) return false;
+    if (pager.journal_open and pager.journal_offset > 0) return false;
+    return true;
+}
+
 /// Source `sqlite3PagerJournalSizeLimit()` without an attached WAL owner.
 pub fn setJournalSizeLimit(pager: *Pager, byte_limit: i64) i64 {
     if (byte_limit >= -1) pager.journal_size_limit = byte_limit;
@@ -1199,6 +1206,15 @@ test "pager source savepoint journal locking and sector primitives" {
     try std.testing.expectEqual(@as(u32, 2), dataVersion(&pager));
     try std.testing.expect(isReadOnly(&pager));
     try std.testing.expectEqual(JournalMode.truncate, getJournalMode(&pager));
+    try std.testing.expect(journalModeMayChange(&pager));
+    pager.state = .writer_cache_modified;
+    try std.testing.expect(!journalModeMayChange(&pager));
+    pager.state = .reader;
+    pager.journal_open = true;
+    pager.journal_offset = 1;
+    try std.testing.expect(!journalModeMayChange(&pager));
+    pager.journal_open = false;
+    pager.journal_offset = 513;
     setMmapLimit(&pager, 8192, true, 3);
     try std.testing.expectEqual(@as(u64, 8192), pager.mmap_size);
     try std.testing.expect(pager.use_fetch);
