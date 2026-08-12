@@ -119,6 +119,11 @@ pub const Pager = struct {
     }
 };
 
+/// Source `sqlite3PagerDataVersion()`.
+pub fn dataVersion(pager: *const Pager) u32 {
+    return @truncate(pager.data_version);
+}
+
 fn putU32(output: []u8, value: u32) void {
     std.mem.writeInt(u32, output[0..4], value, .big);
 }
@@ -1148,6 +1153,8 @@ test "checkpoint batch rollback journal playback restores the original database 
 test "pager source savepoint journal locking and sector primitives" {
     var pager = Pager{ .allocator = std.testing.allocator, .database_pages = 4, .original_pages = 4, .journal_offset = 513, .journal_size = 1024 };
     defer pager.deinit();
+    pager.data_version = @as(u64, std.math.maxInt(u32)) + 3;
+    try std.testing.expectEqual(@as(u32, 2), dataVersion(&pager));
     try std.testing.expectEqual(@as(u64, 1024), journalHeaderOffset(&pager));
     try syncHotJournal(&pager, null);
     try openSavepoints(&pager, 2);

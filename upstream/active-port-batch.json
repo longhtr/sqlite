@@ -501,6 +501,15 @@
       "atomic_unit_id": "btree-cursor-initialization",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerDataVersion::line-1792",
+      "source_sha256": "de2bbd4a2d7a0629101f84145c31b4c888e280ca88224d2c121402fe223829f4",
+      "zig_declaration_id": "src/core/internal/pager_core.zig::function::dataVersion",
+      "zig_declaration_sha256": "28a776b679ffea4a7d8bd0e82bf0ca7cbe7933beb954178858fb9ad92e021224",
+      "atomic_unit_id": "pager-data-version-observation",
+      "class": "short",
+      "complete": true
     }
   ]
 }

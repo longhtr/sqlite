@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "pager-data-version-observation",
+  "title": "Pager data-version observation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerDataVersion returns the pager data-version counter used to detect cache resets and externally visible database changes.",
+    "source_files": [{"path": "src/pager.c", "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"}],
+    "source_entity_ids": ["src/pager.c::function::sqlite3PagerDataVersion::line-1792"],
+    "behavioral_block_ids": ["src/pager.c::function::sqlite3PagerDataVersion::behavior::return::line-1793-column-3::ordinal-0"],
+    "excluded_responsibilities": ["pager_reset counter increment", "Backup restart", "Page-cache clearing"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Pager reset/change owners that increment data_version"], "caller_closure": "The complete observation body is assigned; public PRAGMA data_version integration remains open."},
+  "contracts": {
+    "inputs": ["Borrowed Pager"],
+    "outputs": ["Current low 32 bits of the data-version counter"],
+    "ownership": "Pure borrowed observation.",
+    "state_and_results": "Returns the source-width u32 value; the model's wider internal counter wraps at the API boundary.",
+    "locks_callbacks_io": "No callbacks or I/O; caller synchronization external.",
+    "failure_and_continuation": "No failure path and no state mutation."
+  },
+  "mappings": [{"source_entity_id": "src/pager.c::function::sqlite3PagerDataVersion::line-1792", "relation": "source-pager-data-version-counter-observation", "zig_declaration_ids": ["src/core/internal/pager_core.zig::function::dataVersion"]}],
+  "representation_differences": ["The bounded Pager stores data_version as u64; this source-shaped accessor truncates to the source u32 width."],
+  "oracle": {"protocol": "Seed max-u32+3 and observe wrapped source-width value 2.", "internal_observations": ["Pager.data_version", "returned u32"], "normalization": "Comparison uses source u32 modular arithmetic."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; synchronization external.", "malformed_input": "Null pager is unrepresentable.", "continuation": "Pure observation.", "performance": "Constant time.",
+    "commands": ["zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/pager_core.zig Pager state owner", "native_call_path": "Typed accessor and source-width boundary trace exist; public data-version consumers remain pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pager-reset and public consumer integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect every pager reset/change increment.", "Connect PRAGMA data_version consumers.", "Add pinned-C wrap/normal trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/pager.c:1778-1794 was reviewed completely for reset and accessor context", "src/core/internal/pager_core.zig data_version field, reset mutation, and tests were reviewed"],
+    "callers": ["B-tree/pager data-version consumers and PRAGMA integration", "Unit trace invokes accessor directly"],
+    "callees": ["Direct Pager.data_version field observation"],
+    "assertions_branches_cleanup": ["The sole return block is assigned", "No branch, allocation, mutation, or cleanup"],
+    "upstream_tests": ["Upstream data_version and cache-reset tests cover this observation", "Project trace covers source-width wrapping"]
+  },
+  "evidence_receipts": []
+}

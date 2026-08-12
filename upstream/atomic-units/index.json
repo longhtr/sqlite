@@ -428,6 +428,11 @@
       "id": "btree-cursor-initialization",
       "path": "upstream/atomic-units/btree-cursor-initialization.json",
       "status": "source-translated"
+    },
+    {
+      "id": "pager-data-version-observation",
+      "path": "upstream/atomic-units/pager-data-version-observation.json",
+      "status": "source-translated"
     }
   ]
 }
