@@ -313,6 +313,11 @@ pub fn markIncrblobCursor(cursor: *Cursor) void {
     cursor.tree.has_incrblob_cursor = true;
 }
 
+/// Source `invalidateAllOverflowCache()`.
+pub fn invalidateAllOverflowCaches(shared: *Shared) void {
+    for (shared.cursors.items) |cursor| cursor.valid_overflow = false;
+}
+
 /// Source `invalidateIncrblobCursors()`.
 pub fn invalidateIncrblobCursors(tree: *Btree, root: u32, rowid: i64, clear_table: bool) void {
     tree.has_incrblob_cursor = false;
@@ -2039,6 +2044,7 @@ pub fn overwriteContent(page: *Page, destination: []u8, payload: Payload, offset
 pub fn insert(cursor: *Cursor, payload: Payload, integer_key: u64, append: bool) Error!void {
     if (!cursor.writable or cursor.tree.transaction != .write) return error.ReadOnly;
     try saveAllCursors(cursor.tree.shared, cursor.root, cursor);
+    invalidateAllOverflowCaches(cursor.tree.shared);
     if (cursor.page == null) _ = try first(cursor);
     const page = cursor.page orelse return error.NotFound;
     const cell = try fillCell(page, payload, integer_key);
@@ -2068,6 +2074,7 @@ pub fn deleteEntry(cursor: *Cursor, preserve_position: bool) Error!void {
     }
     const page = cursor.page orelse return error.NotFound;
     if (cursor.index >= page.cells.items.len) return error.Corrupt;
+    invalidateAllOverflowCaches(cursor.tree.shared);
     if (preserve_position) try saveCursorKey(cursor);
     try dropCell(page, cursor.index);
     if (page.free_bytes * 3 > page.usable_size * 2) try balance(cursor);
@@ -2309,7 +2316,10 @@ test "btree core page cursor lock and integrity primitives" {
     try copyPayload(right_page, 0, &copied, false);
     try copyPayload(right_page, 5, &copied, true);
 
+    cursor.valid_overflow = true;
     try saveAllCursors(&shared, 2, null);
+    invalidateAllOverflowCaches(&shared);
+    try std.testing.expect(!cursor.valid_overflow);
     var different = false;
     try cursorRestore(cursor, &different);
     try std.testing.expect(!different);

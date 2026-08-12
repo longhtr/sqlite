@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "btree-overflow-cache-invalidation",
+  "title": "B-tree shared cursor overflow-cache invalidation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "invalidateAllOverflowCache clears the valid-overflow-list flag on every cursor attached to a shared B-tree before mutations can stale cached overflow page locations.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::invalidateAllOverflowCache::line-569"],
+    "behavioral_block_ids": ["src/btree.c::function::invalidateAllOverflowCache::behavior::assert::line-571-column-3::ordinal-0", "src/btree.c::function::invalidateAllOverflowCache::behavior::for::line-572-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Overflow page-list construction", "Incremental-blob cursor invalidation", "Cursor position saving"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Caller owns the shared B-tree mutex and cursor registry"],
+    "caller_closure": "The complete cursor loop is integrated into insert/delete mutation paths, with every shared cursor visited."
+  },
+  "contracts": {
+    "inputs": ["Shared B-tree cursor registry"],
+    "outputs": ["No value"],
+    "ownership": "Cursors and registry are borrowed; only valid_overflow flags are cleared.",
+    "state_and_results": "Every cursor in the shared owner becomes overflow-cache-invalid, regardless of its tree handle or current position.",
+    "locks_callbacks_io": "Caller must hold B-tree synchronization. No callbacks or I/O.",
+    "failure_and_continuation": "Infallible, including an empty cursor registry."
+  },
+  "mappings": [{
+    "source_entity_id": "src/btree.c::function::invalidateAllOverflowCache::line-569",
+    "relation": "source-btree-overflow-cache-invalidation",
+    "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::invalidateAllOverflowCaches"]
+  }],
+  "representation_differences": ["Zig stores cursors in an ArrayList rather than the source linked list; traversal and per-cursor flag clearing are equivalent."],
+  "oracle": {
+    "protocol": "Mark one or more shared cursors overflow-valid, invoke invalidation, and observe every flag cleared before mutation continuation.",
+    "internal_observations": ["cursor registry order", "prior valid_overflow flags", "post-call flags"],
+    "normalization": "Linked-list and array traversal normalize to cursor identity and final flag."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; caller owns B-tree synchronization.",
+    "malformed_input": "Cursor registry is an owned invariant.",
+    "continuation": "Idempotent; repeated invalidation preserves false flags.",
+    "performance": "Linear in shared cursor count, matching the source.",
+    "commands": ["zig build test", "zig build btree-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/btree_core.zig shared cursor owner",
+    "native_call_path": "insert and deleteEntry invalidate all shared cursor overflow caches before mutating cell topology.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires multi-cursor mutation trace, assurance closure, and independent review."},
+  "known_blockers": ["Add pinned-C multi-cursor overflow-cache mutation differential.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:550-585 and mutation call sites were reviewed", "src/core/internal/btree_core.zig cursor registry, valid_overflow consumers, insert/delete paths, and tests were reviewed"],
+    "callers": ["B-tree insert before cell mutation", "B-tree delete before cell mutation", "Unit trace over a shared cursor"],
+    "callees": ["Source invalidateOverflowCache macro", "Direct Zig valid_overflow flag clear"],
+    "assertions_branches_cleanup": ["Both generated blocks are assigned", "The full shared cursor registry is traversed", "No allocation or cleanup paths exist"],
+    "upstream_tests": ["Upstream overflow, cursor, balance, insert, delete, and corruption tests exercise cache invalidation", "Project B-tree core/differential suites exercise multi-cursor mutation state"]
+  },
+  "evidence_receipts": []
+}

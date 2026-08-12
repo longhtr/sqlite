@@ -663,6 +663,15 @@
       "atomic_unit_id": "btree-temporary-space-release",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::invalidateAllOverflowCache::line-569",
+      "source_sha256": "a82fd17895dc66414df862d4869d40208af557ab716bd0a8f8b8a27e73a9416c",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::invalidateAllOverflowCaches",
+      "zig_declaration_sha256": "b5df8e191cc04bd71b4b2d317bb96b273589b191442b0806ae79d1500b6fb192",
+      "atomic_unit_id": "btree-overflow-cache-invalidation",
+      "class": "short",
+      "complete": true
     }
   ]
 }
