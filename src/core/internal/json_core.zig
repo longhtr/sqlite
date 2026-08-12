@@ -368,7 +368,8 @@ pub fn hexToInt4(bytes: *const [4]u8) u32 {
 }
 
 /// Source `jsonIs2Hex()`.
-pub fn is2Hex(bytes: *const [2]u8) bool {
+pub fn is2Hex(bytes: []const u8) bool {
+    std.debug.assert(bytes.len >= 2);
     return std.ascii.isHex(bytes[0]) and std.ascii.isHex(bytes[1]);
 }
 

@@ -89,10 +89,9 @@ const TextParser = struct {
                 if (escaped == '"' or escaped == '\\' or escaped == '/' or escaped == 'b' or escaped == 'f' or escaped == 'n' or escaped == 'r' or escaped == 't') {
                     if (node_type == core.kind.text) node_type = core.kind.text_json;
                     self.index += 1;
-                } else if (escaped == 'u' and self.index + 5 < self.text.len and isHex(self.text[self.index + 2]) and isHex(self.text[self.index + 3]) and isHex(self.text[self.index + 4]) and isHex(self.text[self.index + 5])) {
-                    if (node_type == core.kind.text) node_type = core.kind.text_json;
+                } else if (self.index + 5 < self.text.len and core.is4HexEscape(self.text[self.index + 1 .. self.index + 6], &node_type)) {
                     self.index += 5;
-                } else if (escaped == '\'' or escaped == 'v' or escaped == '0' or escaped == '\n' or escaped == '\r' or (escaped == 'x' and self.index + 3 < self.text.len and isHex(self.text[self.index + 2]) and isHex(self.text[self.index + 3]))) {
+                } else if (escaped == '\'' or escaped == 'v' or escaped == '0' or escaped == '\n' or escaped == '\r' or (escaped == 'x' and self.index + 3 < self.text.len and core.is2Hex(self.text[self.index + 2 .. self.index + 4]))) {
                     node_type = core.kind.text5;
                     self.parse.has_nonstandard = true;
                     if (escaped == 'x') self.index += 3 else self.index += 1;

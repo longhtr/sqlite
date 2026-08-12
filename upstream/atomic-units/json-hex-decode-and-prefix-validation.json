@@ -94,7 +94,7 @@
     }
   ],
   "representation_differences": [
-    "Fixed Zig array pointers encode the source requirement that two or four accessible bytes exist.",
+    "The two-byte helper accepts a bounded slice with an explicit length assertion so runtime-index parser slices retain the source two-accessible-byte precondition; four-byte callers use fixed arrays where available.",
     "Boolean results replace source int 0/1 values."
   ],
   "oracle": {
@@ -124,17 +124,16 @@
   },
   "integration": {
     "production_owner": "src/core/internal/json_core.zig JSON escape owner",
-    "native_call_path": "unescapeOne uses hexToInt4 for Unicode escapes and hexToInt for JSON5 x escapes; registered JSON SQL functions consume the JSON parser.",
+    "native_call_path": "unescapeOne uses hexToInt4 for Unicode escapes and hexToInt for JSON5 x escapes; TextParser.parseQuoted uses is4HexEscape and is2Hex for u/x escape validation and operation selection; registered JSON SQL functions consume the JSON parser.",
     "bounded_owner_retired": "The duplicate private hex arithmetic helper is retired."
   },
   "independent_review": {
     "status": "pending",
     "reviewer": null,
     "review_commit": null,
-    "notes": "Requires explicit parser validation routing through is2Hex/is4Hex, pinned-C trace, assurance closure, and independent review."
+    "notes": "Requires pinned-C trace, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Route JSON text escape validation and operation selection through is2Hex/is4Hex/is4HexEscape rather than duplicate classifiers.",
     "Add pinned-C nibble and prefix trace.",
     "Independent fidelity review remains open."
   ],

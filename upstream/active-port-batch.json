@@ -83,7 +83,7 @@
       "source_entity_id": "src/json.c::function::jsonIs2Hex::line-972",
       "source_sha256": "8acf0f04fb7af312e050ae9df2a7a78b4b360443de6366baf58d3d34bafa4c22",
       "zig_declaration_id": "src/core/internal/json_core.zig::function::is2Hex",
-      "zig_declaration_sha256": "7dead6c3ebbe34a1f9acb31f620c0892df6cdcedc5335a61a93f1ba660c3e2c9",
+      "zig_declaration_sha256": "59b65b3b326ca84a72ffe208cbaf58c1c27ca19bee7e9d204caaf91a8481c632",
       "atomic_unit_id": "json-hex-decode-and-prefix-validation",
       "class": "short",
       "complete": true
