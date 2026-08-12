@@ -505,7 +505,12 @@ pub const Pager = struct {
         self.commit_context = context;
     }
 
+    /// Source `sqlite3PagerJrnlFile()`: return an open WAL handle in WAL mode,
+    /// otherwise the open rollback-journal handle.
     pub fn journalFile(self: *Pager) ?*vfs.sqlite3_file {
+        if (self.wal_state) |*state| {
+            if (state.file) |file| return file;
+        }
         return if (self.journal) |*journal| journal.abiFile() else null;
     }
 
@@ -2072,6 +2077,33 @@ fn probeMovedFileControl(file: *vfs.sqlite3_file, operation: c_int, argument: ?*
     }
     const control = probe.delegate.xFileControl orelse return vfs.NOTFOUND;
     return control(file, operation, argument);
+}
+
+test "journal file accessor selects rollback journal and open WAL handles" {
+    const fixture = try readFixture("valid-empty-4096.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "journal-owner.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-journal-owner", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "journal-owner.db", .{ .writable = true }).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+
+    try std.testing.expect(pager.journalFile() == null);
+    try std.testing.expectEqual(ResultCode.ok, pager.openJournalFile(true));
+    try std.testing.expect(pager.journalFile() == pager.journal.?.abiFile());
+    try std.testing.expectEqual(ResultCode.ok, pager.closeJournalFile(false));
+
+    pager.wal_state = wal.Wal.open(std.testing.allocator, &adapter.abi, pager.file, pager.wal_name, pager.page_size, true, false, true).wal.?;
+    try std.testing.expectEqual(ResultCode.ok, pager.wal_state.?.beginWrite());
+    const fetched = pager.cache.fetch(1, .hard_create, null);
+    const page = fetched.page.?;
+    @memset(page.data, 0x5a);
+    try std.testing.expectEqual(ResultCode.ok, pager.wal_state.?.append(page, 1));
+    try std.testing.expect(pager.journalFile() == pager.wal_state.?.file);
+    try std.testing.expectEqual(page_cache.Result.ok, pager.cache.release(page));
+    pager.wal_state.?.deinit();
+    pager.wal_state = null;
 }
 
 test "pager owner accessors preserve VFS file and journal name identity" {

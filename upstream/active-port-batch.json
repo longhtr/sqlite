@@ -987,6 +987,15 @@
       "atomic_unit_id": "pager-owner-accessors",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerJrnlFile::line-7163",
+      "source_sha256": "48afc22c09f78ab6c150cd15af86650982003c76e61ede49f507265646208539",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.journalFile",
+      "zig_declaration_sha256": "65d425a751f4f428eea898facfd8167afd7a1f6e9cc31acb7ae338567afd37ff",
+      "atomic_unit_id": "pager-journal-or-wal-file-accessor",
+      "class": "short",
+      "complete": true
     }
   ]
 }

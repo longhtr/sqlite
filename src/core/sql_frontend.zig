@@ -2667,12 +2667,12 @@ fn fileControl(connection: *Connection, database_name: ?[*:0]const u8, operation
     switch (operation) {
         7 => {
             const output: *?*btree.vfs.sqlite3_file = @ptrCast(@alignCast(raw));
-            output.* = database.pager.file;
+            output.* = database.pager.databaseFile();
             return ResultCode.ok.toC();
         },
         27 => {
             const output: *?*btree.vfs.sqlite3_vfs = @ptrCast(@alignCast(raw));
-            output.* = database.pager.abi_vfs;
+            output.* = database.pager.filesystem();
             return ResultCode.ok.toC();
         },
         28 => {

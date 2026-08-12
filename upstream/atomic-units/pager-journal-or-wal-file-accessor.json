@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "id": "pager-journal-or-wal-file-accessor",
+  "title": "Pager rollback-journal or WAL file accessor",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerJrnlFile exposes the currently open transaction-log file: the WAL file when a WAL owner exists, otherwise the rollback-journal file. This selection is consumed by SQLITE_FCNTL_JOURNAL_POINTER and related VFS integration.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::sqlite3PagerJrnlFile::line-7163"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::sqlite3PagerJrnlFile::behavior::return::line-7167-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerJrnlFile::behavior::conditional::line-7167-column-10::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Opening or closing rollback-journal and WAL files",
+      "Journal pathname access",
+      "VFS file-control dispatch after pointer selection"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Pager journal and WAL owners publish and retire their file handles"
+    ],
+    "caller_closure": "The complete conditional return is assigned. Production sqlite3_file_control operation 28 invokes the accessor rather than reaching through either owner."
+  },
+  "contracts": {
+    "inputs": [
+      "Live Pager"
+    ],
+    "outputs": [
+      "Borrowed open WAL sqlite3_file, borrowed rollback-journal sqlite3_file, or null when neither file is open"
+    ],
+    "ownership": "Pager's WAL or memory-journal owner retains file ownership. The caller must not close, free, or retain it beyond owner lifetime.",
+    "state_and_results": "An open WAL file has priority. Without one, an open rollback journal is returned. Otherwise null is returned. No state changes.",
+    "locks_callbacks_io": "No I/O, callbacks, or locking; caller owns Pager serialization.",
+    "failure_and_continuation": "Infallible. Null accurately reports that no transaction-log file is currently open."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerJrnlFile::line-7163",
+      "relation": "source-select-open-wal-else-rollback-journal-file",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.journalFile"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The C Wal abstraction supplies sqlite3WalFile(). Zig's typed Wal owner stores the same borrowed sqlite3_file as its optional file field.",
+    "The memory-journal owner embeds its source-shaped sqlite3_file and exposes it through abiFile()."
+  ],
+  "oracle": {
+    "protocol": "Open a Pager with neither log, open a rollback journal and compare pointer identity, close it, open/create the WAL file by appending one frame, and compare WAL pointer identity and selection priority.",
+    "internal_observations": [
+      "null state",
+      "rollback-journal pointer identity",
+      "WAL pointer identity",
+      "selection priority",
+      "owner close continuation"
+    ],
+    "normalization": "Pointers compare only for identity within one process; null and owner state are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No accessor allocation; WAL/journal opening OOM belongs to their owners.",
+    "io_crash_concurrency": "No I/O or mutation; caller owns Pager serialization.",
+    "malformed_input": "Only a live typed Pager is accepted.",
+    "continuation": "Accessor calls do not alter either log owner or file position.",
+    "performance": "Constant-time optional owner selection.",
+    "commands": [
+      "zig build test",
+      "zig build memdb-api-differential",
+      "zig build wal-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig Pager, src/core/wal.zig Wal, and src/core/memory_journal.zig Journal",
+    "native_call_path": "sqlite3_file_control SQLITE_FCNTL_JOURNAL_POINTER -> Pager.journalFile -> open Wal.file else Journal.abiFile.",
+    "bounded_owner_retired": "The accessor no longer reports only rollback journals and omit an open WAL file."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires scoped durable public file-control trace promotion and independent review."
+  },
+  "known_blockers": [
+    "Capture a scoped durable SQLITE_FCNTL_JOURNAL_POINTER rollback/WAL receipt before internal-trace promotion.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:7159-7169 complete WAL-versus-journal selection was reviewed",
+      "src/core/pager.zig journalFile and ownership tests, src/core/wal.zig file opening/lifetime, src/core/memory_journal.zig embedded ABI file, and src/core/sql_frontend.zig file-control dispatch were reviewed"
+    ],
+    "callers": [
+      "sqlite3_file_control operation SQLITE_FCNTL_JOURNAL_POINTER",
+      "Pager rollback/WAL owner unit trace"
+    ],
+    "callees": [
+      "Wal.file field access",
+      "memory_journal.Journal.abiFile"
+    ],
+    "assertions_branches_cleanup": [
+      "Conditional WAL selection and return block are assigned",
+      "Null is retained when neither owner has an open file",
+      "Wal.deinit and Journal.close own returned-handle retirement"
+    ],
+    "upstream_tests": [
+      "Upstream file-control, pager, rollback-journal, WAL, VFS, and close tests exercise this accessor",
+      "Project frontend file-control and Pager owner tests exercise null, rollback, and WAL selections"
+    ]
+  },
+  "evidence_receipts": []
+}

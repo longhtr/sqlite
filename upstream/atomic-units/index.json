@@ -535,6 +535,11 @@
       "status": "source-translated"
     },
     {
+      "id": "pager-journal-or-wal-file-accessor",
+      "path": "upstream/atomic-units/pager-journal-or-wal-file-accessor.json",
+      "status": "source-translated"
+    },
+    {
       "id": "pager-journal-mode-change-readiness",
       "path": "upstream/atomic-units/pager-journal-mode-change-readiness.json",
       "status": "source-translated"
