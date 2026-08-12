@@ -1017,6 +1017,20 @@ test "checkpoint batch WAL backfills the latest safe frame" {
 test "WAL index append cleanup and savepoint undo" {
     var wal = Wal{ .allocator = std.testing.allocator, .write_lock = true };
     defer wal.deinit();
+    var changed = false;
+    try std.testing.expect(!indexTryHeader(&wal, &changed));
+    wal.published_headers[0] = .{ .initialized = true };
+    try std.testing.expect(!indexTryHeader(&wal, &changed));
+    wal.published_headers[1] = wal.published_headers[0];
+    try std.testing.expect(!indexTryHeader(&wal, &changed));
+    wal.published_headers[0].checksum = headerChecksum(&wal.published_headers[0]);
+    wal.published_headers[1] = wal.published_headers[0];
+    try std.testing.expect(indexTryHeader(&wal, &changed));
+    try std.testing.expect(changed);
+    changed = false;
+    try std.testing.expect(indexTryHeader(&wal, &changed));
+    try std.testing.expect(!changed);
+
     wal.header.database_pages = 9;
     wal.header.page_size = 65_536;
     try std.testing.expectEqual(@as(u32, 65_536), pageSize(&wal));

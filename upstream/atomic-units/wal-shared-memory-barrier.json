@@ -5,16 +5,27 @@
   "status": "source-translated",
   "admission_ready": true,
   "scope": {
-    "rationale": "walShmBarrier orders duplicated WAL-index header publication and validation plus read-lock snapshot checks, while intentionally doing nothing for a connection-private heap index.",
+    "rationale": "walShmBarrier orders duplicated WAL-index header publication and validation plus read-lock snapshot checks, while walIndexTryHdr rejects mismatched, uninitialized, or checksum-invalid snapshots and adopts only a valid changed header.",
     "source_files": [{"path": "src/wal.c", "sha256": "0c0467f7c4de773512b3327b0d3973fc31d50cf74603d6aec0e3b3e1c787e217"}],
-    "source_entity_ids": ["src/wal.c::function::walShmBarrier::line-918"],
-    "behavioral_block_ids": ["src/wal.c::function::walShmBarrier::behavior::if::line-919-column-3::ordinal-0"],
+    "source_entity_ids": ["src/wal.c::function::walShmBarrier::line-918", "src/wal.c::function::walIndexTryHdr::line-2590"],
+    "behavioral_block_ids": [
+      "src/wal.c::function::walShmBarrier::behavior::if::line-919-column-3::ordinal-0",
+      "src/wal.c::function::walIndexTryHdr::behavior::assert::line-2596-column-3::ordinal-0",
+      "src/wal.c::function::walIndexTryHdr::behavior::if::line-2619-column-3::ordinal-0",
+      "src/wal.c::function::walIndexTryHdr::behavior::return::line-2620-column-5::ordinal-0",
+      "src/wal.c::function::walIndexTryHdr::behavior::if::line-2622-column-3::ordinal-0",
+      "src/wal.c::function::walIndexTryHdr::behavior::return::line-2623-column-5::ordinal-0",
+      "src/wal.c::function::walIndexTryHdr::behavior::if::line-2626-column-3::ordinal-0",
+      "src/wal.c::function::walIndexTryHdr::behavior::return::line-2627-column-5::ordinal-0",
+      "src/wal.c::function::walIndexTryHdr::behavior::if::line-2630-column-3::ordinal-0",
+      "src/wal.c::function::walIndexTryHdr::behavior::return::line-2639-column-3::ordinal-0"
+    ],
     "excluded_responsibilities": ["VFS-specific cross-process shared-memory implementation", "WAL lock acquisition", "WAL-index header checksum"]
   },
   "dependencies": {
     "atomic_unit_ids": [],
     "external_source_responsibilities": ["Process sequentially-consistent memory barrier", "Operating-system WAL shared-memory transport"],
-    "caller_closure": "The helper and its duplicated-header publication/read plus read-lock validation call sites are integrated in the production WAL-index owner."
+    "caller_closure": "The helper, complete duplicated-header read/validation/adoption owner, duplicated-header publication, and read-lock validation call sites are integrated in the production WAL-index owner."
   },
   "contracts": {
     "inputs": ["WAL owner with shared-file or connection-private heap-index mode"],
@@ -28,6 +39,10 @@
     "source_entity_id": "src/wal.c::function::walShmBarrier::line-918",
     "relation": "source-wal-shared-memory-barrier",
     "zig_declaration_ids": ["src/core/internal/wal_core.zig::function::sharedMemoryBarrier"]
+  }, {
+    "source_entity_id": "src/wal.c::function::walIndexTryHdr::line-2590",
+    "relation": "source-duplicated-wal-index-header-validation-and-adoption",
+    "zig_declaration_ids": ["src/core/internal/wal_core.zig::function::indexTryHeader"]
   }],
   "representation_differences": ["The source delegates to sqlite3OsShmBarrier for a file-backed index. The internal Zig WAL owner delegates to its process sequentially-consistent barrier; the Unix production VFS separately implements the exact xShmBarrier mutex round-trip."],
   "oracle": {

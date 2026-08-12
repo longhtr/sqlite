@@ -726,6 +726,15 @@
       "atomic_unit_id": "btree-integrity-reference-bitmap-and-oom",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::walIndexTryHdr::line-2590",
+      "source_sha256": "70d800db62535900b775b342e42ce247dac07d27568dcd5716b6e892a6a261d3",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::indexTryHeader",
+      "zig_declaration_sha256": "c607e5fa747bf2380fc9be77950d52312660a3e2de04bc8059e89f6be6f2809f",
+      "atomic_unit_id": "wal-shared-memory-barrier",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }
