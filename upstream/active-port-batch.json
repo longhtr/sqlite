@@ -699,6 +699,24 @@
       "atomic_unit_id": "pager-wal-transport-support",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/date.c::function::parseDateOrTime::line-420",
+      "source_sha256": "39ef4a861843b88934a4aad5032092c7eae5c06872d5e2c5068a652cc2dc7bf9",
+      "zig_declaration_id": "src/core/internal/date_time.zig::function::parseDateOrTime",
+      "zig_declaration_sha256": "af213e57fe9c4459a0c6413e85ef5dc09f6ac25cf3a5e0dd79a2539797c90d95",
+      "atomic_unit_id": "date-pure-keyword-guard-and-value-parse",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3NotPureFunc::line-5627",
+      "source_sha256": "2412cb4f85bd3a9e38583e3419e62d3745bb5827a893f86ccd98b2af76c01e17",
+      "zig_declaration_id": "src/core/internal/vdbe_lifecycle.zig::function::notPureFunction",
+      "zig_declaration_sha256": "cf38e0843a905221ecbada0e0b64d1c063e94c878a1da0716aaa17377fe8ca87",
+      "atomic_unit_id": "date-pure-keyword-guard-and-value-parse",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

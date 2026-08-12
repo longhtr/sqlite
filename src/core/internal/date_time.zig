@@ -6,6 +6,7 @@ const sqlite_string = @import("../string.zig");
 const vfs = @import("../vfs.zig");
 const mem = @import("vdbe_mem.zig");
 const types = @import("vdbe_types.zig");
+const vdbe_lifecycle = @import("vdbe_lifecycle.zig");
 
 pub const CalendarTime = extern struct {
     second: c_int,
@@ -228,13 +229,13 @@ pub fn setToCurrent(context: *types.Context, value: *DateTime) bool {
 /// Source `parseDateOrTime()`.
 pub fn parseDateOrTime(context: *types.Context, text: [*:0]const u8, value: *DateTime) bool {
     if (!parseCalendar(text, value) or !parseClock(text, value)) return false;
-    if (sqlite_string.compareInternal(text, "now") == 0) return setToCurrent(context, value);
+    if (sqlite_string.compareInternal(text, "now") == 0 and vdbe_lifecycle.notPureFunction(context)) return setToCurrent(context, value);
     const parsed = sqlite_float.parse(text);
     if (parsed.code > 0) {
         setRawDateNumber(value, parsed.value);
         return false;
     }
-    if (sqlite_string.compareInternal(text, "subsec") == 0 or sqlite_string.compareInternal(text, "subsecond") == 0) {
+    if ((sqlite_string.compareInternal(text, "subsec") == 0 or sqlite_string.compareInternal(text, "subsecond") == 0) and vdbe_lifecycle.notPureFunction(context)) {
         value.use_subseconds = true;
         return setToCurrent(context, value);
     }

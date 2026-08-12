@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "id": "date-pure-keyword-guard-and-value-parse",
+  "title": "Date value parsing and pure-expression keyword guard",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Date/time argument parsing and the VDBE non-pure guard form one dependency-closed boundary: numeric and structured date text remains deterministic, while now, subsec, and subsecond must invoke the active operation guard before reading current time.",
+    "source_files": [
+      {"path": "src/date.c", "sha256": "a7f3aaf17c0b644491c6788b5d6e33e722e608a7d96f7b2402d49b294f728e20"},
+      {"path": "src/vdbeaux.c", "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"}
+    ],
+    "source_entity_ids": [
+      "src/date.c::function::parseDateOrTime::line-420",
+      "src/vdbeaux.c::function::sqlite3NotPureFunc::line-5627"
+    ],
+    "behavioral_block_ids": [
+      "src/date.c::function::parseDateOrTime::behavior::if::line-426-column-3::ordinal-0",
+      "src/date.c::function::parseDateOrTime::behavior::return::line-427-column-5::ordinal-0",
+      "src/date.c::function::parseDateOrTime::behavior::if::line-428-column-9::ordinal-0",
+      "src/date.c::function::parseDateOrTime::behavior::return::line-429-column-5::ordinal-0",
+      "src/date.c::function::parseDateOrTime::behavior::if::line-430-column-9::ordinal-0",
+      "src/date.c::function::parseDateOrTime::behavior::return::line-431-column-5::ordinal-0",
+      "src/date.c::function::parseDateOrTime::behavior::if::line-432-column-9::ordinal-0",
+      "src/date.c::function::parseDateOrTime::behavior::return::line-434-column-5::ordinal-0",
+      "src/date.c::function::parseDateOrTime::behavior::if::line-435-column-9::ordinal-0",
+      "src/date.c::function::parseDateOrTime::behavior::return::line-439-column-5::ordinal-0",
+      "src/date.c::function::parseDateOrTime::behavior::return::line-441-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3NotPureFunc::behavior::if::line-5633-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3NotPureFunc::behavior::if::line-5636-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3NotPureFunc::behavior::if::line-5638-column-11::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3NotPureFunc::behavior::return::line-5647-column-5::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3NotPureFunc::behavior::return::line-5649-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Calendar, clock, timezone, and numeric conversion implementations",
+      "VFS current-time transport",
+      "PureFunc opcode generation and expression restrictions outside the runtime guard"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Date and time text subparsers",
+      "Current-time acquisition",
+      "VDBE result error ownership"
+    ],
+    "caller_closure": "The complete parse dispatcher and complete active-profile non-pure operation guard are assigned; date scalar functions call the dispatcher through their production argument parser."
+  },
+  "contracts": {
+    "inputs": [
+      "Borrowed function context, zero-terminated date text, and mutable DateTime output",
+      "For the pure guard, a context whose iOp identifies the active VDBE operation when the program is available"
+    ],
+    "outputs": [
+      "False on accepted date/time text and true on malformed or prohibited text",
+      "True when non-deterministic evaluation is permitted; false with a result error for PureFunc"
+    ],
+    "ownership": "All inputs are borrowed. DateTime is caller-owned. Guard errors use the existing Mem result owner.",
+    "state_and_results": "Calendar and clock forms win before keyword and numeric forms. Numeric forms install raw seconds or Julian milliseconds. now, subsec, and subsecond acquire current time only after the non-pure guard accepts the active operation. PureFunc publishes a context-specific error and blocks the keyword.",
+    "locks_callbacks_io": "Structured and numeric parsing has no I/O. Accepted current-time keywords delegate to the VFS time owner. The guard reads only the active VDBE operation and result context.",
+    "failure_and_continuation": "Malformed input leaves an error return for the caller. A prohibited current-time keyword leaves the function context error set and does not mutate the DateTime into a current-time value. Missing or invalid VDBE operation context is treated as ordinary non-pure evaluation rather than indexing outside the program."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/date.c::function::parseDateOrTime::line-420",
+      "relation": "source-date-text-dispatch-with-non-pure-keyword-gating",
+      "zig_declaration_ids": ["src/core/internal/date_time.zig::function::parseDateOrTime"]
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3NotPureFunc::line-5627",
+      "relation": "source-active-operation-pure-function-rejection",
+      "zig_declaration_ids": ["src/core/internal/vdbe_lifecycle.zig::function::notPureFunction"]
+    }
+  ],
+  "representation_differences": [
+    "The Zig dispatcher returns bool where true denotes the source integer error result.",
+    "The active Zig VDBE guard additionally bounds iOp by nOp so malformed internal context cannot read outside the typed operation array.",
+    "The result message is formatted through a bounded stack buffer and existing Mem transient-copy owner instead of sqlite3_result_error() varargs helpers."
+  ],
+  "oracle": {
+    "protocol": "Exercise structured and numeric date parsing through registered date scalar functions, then place a current-time keyword under a PureFunc operation and verify that the guard sets an error and blocks current-time acquisition; verify ordinary Function permits it.",
+    "internal_observations": [
+      "DateTime validity and raw-seconds flags",
+      "Active VDBE opcode and p5 location bits",
+      "Context isError and output error text",
+      "Whether current-time acquisition is reached"
+    ],
+    "normalization": "Boolean success is normalized against SQLite's zero-success convention; error wording is compared by location category rather than internal storage representation."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No new allocation. Error publication retains existing bounded Mem transient-copy behavior.",
+    "io_crash_concurrency": "Only accepted current-time keywords reach existing VFS time I/O; no durable state. VDBE operation state is caller-serialized.",
+    "malformed_input": "Malformed date text returns error. Missing, negative, or out-of-range operation context cannot index outside aOp.",
+    "continuation": "Rejected pure keywords leave a reusable function context after normal result cleanup; accepted and malformed paths preserve existing scalar continuation behavior.",
+    "performance": "Constant dispatch plus delegated date parser cost; guard is constant time.",
+    "commands": ["zig build test", "zig build vdbe-builder-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/date_time.zig date dispatcher and src/core/internal/vdbe_lifecycle.zig operation guard",
+    "native_call_path": "Registered date scalar callbacks call parseArguments, which calls parseDateOrTime; current-time keyword branches now invoke notPureFunction before setToCurrent.",
+    "bounded_owner_retired": "No. This promotion credits only the post-retirement production change that connects the previously bypassed non-pure guard and hardens its active-operation lookup."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires a pinned-C pure-expression date-keyword trace and independent review."
+  },
+  "known_blockers": [
+    "Add a pinned-C differential for now/subsec under index, generated-column, and CHECK PureFunc contexts.",
+    "Promote after broader date parser and VDBE error integration closure.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/date.c:400-461 was reviewed completely",
+      "upstream/sqlite/src/vdbeaux.c:5620-5651 was reviewed completely",
+      "src/core/internal/date_time.zig dispatcher, current-time owner, and callers were reviewed",
+      "src/core/internal/vdbe_lifecycle.zig guard, VDBE types, and result-error owner were reviewed"
+    ],
+    "callers": [
+      "date_functions.parseArguments and all registered date/time scalar callbacks",
+      "Date parser now/subsec/subsecond branches",
+      "Unit trace invokes both PureFunc rejection and ordinary Function acceptance"
+    ],
+    "callees": [
+      "parseCalendar, parseClock, SQLite float parsing, setRawDateNumber, setToCurrent",
+      "VDBE operation array observation and vdbe_mem.resultError"
+    ],
+    "assertions_branches_cleanup": [
+      "All sixteen active behavioral blocks are assigned",
+      "Calendar, clock, current-time, numeric, subsecond, and malformed branch order matches source",
+      "PureFunc location selection covers CHECK, generated-column, and index categories",
+      "No new owned allocation or cleanup path"
+    ],
+    "upstream_tests": [
+      "Upstream date/time and deterministic-expression tests cover date parsing and prohibited current-time keywords",
+      "Project scalar function paths exercise date parsing; the new unit trace covers guard state and error publication"
+    ]
+  },
+  "evidence_receipts": []
+}

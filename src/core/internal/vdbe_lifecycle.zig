@@ -423,6 +423,7 @@ pub fn finalize(machine: *types.Vdbe) c_int {
 pub fn notPureFunction(context: *types.Context) bool {
     const machine = context.pVdbe orelse return true;
     const operations = machine.aOp orelse return true;
+    if (context.iOp < 0 or context.iOp >= machine.nOp) return true;
     const operation = operations[@intCast(context.iOp)];
     if (operation.opcode != .PureFunc) return true;
     const location = if (operation.p5 & 0x2000 != 0)
@@ -678,6 +679,34 @@ test "source careful Btree lock preserves ascending reacquisition" {
 
 fn testExecuteDone(_: ?*anyopaque, _: *types.Vdbe) c_int {
     return result_done;
+}
+
+test "source non-pure function guard rejects date keywords in pure expressions" {
+    var db = std.mem.zeroes(types.Sqlite3);
+    var output = std.mem.zeroes(types.Mem);
+    output.flags = types.mem_flag.null_;
+    output.db = &db;
+    var operation = std.mem.zeroes(types.Op);
+    operation.opcode = .PureFunc;
+    operation.p5 = 0x1000;
+    var function = std.mem.zeroes(types.FuncDef);
+    function.zName = @constCast("datetime");
+    var machine = std.mem.zeroes(types.Vdbe);
+    machine.aOp = @ptrCast(&operation);
+    machine.nOp = 1;
+    var context = std.mem.zeroes(types.Context);
+    context.pOut = &output;
+    context.pFunc = &function;
+    context.pVdbe = &machine;
+    context.iOp = 0;
+    try std.testing.expect(!notPureFunction(&context));
+    try std.testing.expectEqual(@as(c_int, 1), context.isError);
+    vdbe_mem.release(&output);
+
+    operation.opcode = .Function;
+    context.isError = 0;
+    try std.testing.expect(notPureFunction(&context));
+    try std.testing.expectEqual(@as(c_int, 0), context.isError);
 }
 
 test "checkpoint batch VDBE inner step lifecycle" {
