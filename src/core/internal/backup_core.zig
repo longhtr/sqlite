@@ -215,8 +215,7 @@ pub fn finish(backup: ?*Backup) ?Error {
 pub fn update(backup: ?*Backup, page: usize, data: []const u8) void {
     var current = backup;
     while (current) |value| {
-        const retryable = if (value.result) |failure| failure == error.Busy else true;
-        if (retryable and page < value.next_page) {
+        if (!isFatalError(value.result) and page < value.next_page) {
             backupOnePage(value, page, data, true) catch |failure| {
                 value.result = failure;
             };

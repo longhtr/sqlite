@@ -30,7 +30,7 @@
       "Typed backup Error set",
       "Step and update owners preserve retryable busy state"
     ],
-    "caller_closure": "The complete source predicate is assigned. The typed step owner consumes it; update retains the equivalent retryability condition pending source-shaped routing."
+    "caller_closure": "The complete source predicate is assigned. Both typed step and update owners consume it before continuing copy work."
   },
   "contracts": {
     "inputs": [
@@ -82,17 +82,16 @@
   },
   "integration": {
     "production_owner": "src/core/internal/backup_core.zig online backup state machine",
-    "native_call_path": "step calls isFatalError before retrying or returning stored state; owner trace exercises success, Busy, Io, Done, and complete copy.",
+    "native_call_path": "step and update call isFatalError before retrying, recopying, or returning stored state; owner trace exercises success, Busy, Io, Done, and complete copy.",
     "bounded_owner_retired": "The inline step failure!=Busy condition is retired."
   },
   "independent_review": {
     "status": "pending",
     "reviewer": null,
     "review_commit": null,
-    "notes": "Requires update-path routing, pinned-C result matrix, assurance closure, and independent review."
+    "notes": "Requires pinned-C result matrix, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Route internal backup update through isFatalError.",
     "Connect the internal source-shaped backup state machine to the public Backup owner.",
     "Add pinned-C result-code matrix.",
     "Independent fidelity review remains open."
@@ -105,7 +104,7 @@
     "callers": [
       "sqlite3_backup_step stored-error handling",
       "backupUpdate page recopy guard",
-      "Native step owner"
+      "Native step and update owners"
     ],
     "callees": [
       "Scalar result comparisons only"
