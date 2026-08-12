@@ -924,6 +924,15 @@
       "atomic_unit_id": "pager-busy-handler-installation-and-vfs-hint",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerMaxPageCount::line-3893",
+      "source_sha256": "af12ec66dab546d79d78aa64d0173014b1bfd6c24a92730cb58d2c3d2728e716",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.maxPageCount",
+      "zig_declaration_sha256": "ce51b0d22b05f3c664e4341e751768799552a98a8f4d972e6737c79ced4e0cf2",
+      "atomic_unit_id": "pager-maximum-page-count",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

@@ -891,6 +891,13 @@ pub const Pager = struct {
         return self.page_size;
     }
 
+    /// Source `sqlite3PagerMaxPageCount()`: replace a positive maximum and
+    /// always return the effective Pager page limit.
+    pub fn maxPageCount(self: *Pager, requested: u32) u32 {
+        if (requested != 0) self.maximum_pages = requested;
+        return self.maximum_pages;
+    }
+
     pub fn cacheReferences(self: *const Pager) usize {
         return self.cache.refCount();
     }
@@ -1979,6 +1986,22 @@ fn probeBusyFileControl(file: *vfs.sqlite3_file, operation: c_int, argument: ?*a
     probe.seen_argument = argument;
     const control = probe.delegate.xFileControl orelse return vfs.NOTFOUND;
     return control(file, operation, argument);
+}
+
+test "maximum page count updates positive requests and preserves zero queries" {
+    const fixture = try readFixture("valid-empty-4096.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "max-page-count.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-max-page-count", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "max-page-count.db", .{}).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+
+    try std.testing.expectEqual(maximum_page_count, pager.maxPageCount(0));
+    try std.testing.expectEqual(@as(u32, 1), pager.maxPageCount(1));
+    try std.testing.expectEqual(@as(u32, 1), pager.maxPageCount(0));
+    try std.testing.expectEqual(@as(u32, 7), pager.maxPageCount(7));
 }
 
 test "busy handler installation forwards callback and context as a VFS hint" {

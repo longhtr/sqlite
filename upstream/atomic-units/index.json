@@ -510,6 +510,11 @@
       "status": "source-translated"
     },
     {
+      "id": "pager-maximum-page-count",
+      "path": "upstream/atomic-units/pager-maximum-page-count.json",
+      "status": "source-translated"
+    },
+    {
       "id": "pager-journal-mode-change-readiness",
       "path": "upstream/atomic-units/pager-journal-mode-change-readiness.json",
       "status": "source-translated"

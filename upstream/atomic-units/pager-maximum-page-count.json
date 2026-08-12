@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "id": "pager-maximum-page-count",
+  "title": "Pager maximum page count",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerMaxPageCount is the Pager scalar boundary that replaces a positive maximum database page count, treats zero as a query, and always returns the effective value consumed by page acquisition and growth.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::sqlite3PagerMaxPageCount::line-3893"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::sqlite3PagerMaxPageCount::behavior::if::line-3894-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerMaxPageCount::behavior::assert::line-3897-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerMaxPageCount::behavior::return::line-3902-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "VDBE OP_MaxPgcnt request validation",
+      "B-tree allocation policy",
+      "Physical database truncation"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "The caller validates a nonzero replacement against its operation-specific constraints"
+    ],
+    "caller_closure": "The complete positive-update, query, state assertion, and return body is assigned. The production Pager growth path rejects pages above the stored maximum."
+  },
+  "contracts": {
+    "inputs": [
+      "Live non-open Pager and unsigned requested maximum; zero means query"
+    ],
+    "outputs": [
+      "Effective maximum page count"
+    ],
+    "ownership": "Scalar Pager state only; no allocation or borrowed data.",
+    "state_and_results": "A nonzero request replaces maximum_pages exactly. A zero request preserves it. Both return maximum_pages.",
+    "locks_callbacks_io": "Caller owns Pager synchronization. No callbacks or I/O.",
+    "failure_and_continuation": "Infallible. A later page acquisition above the effective maximum returns FULL while preserving cache ownership."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerMaxPageCount::line-3893",
+      "relation": "source-positive-replace-zero-query-page-limit",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.maxPageCount"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The C API accepts Pgno and documents zero or negative query values, but Pgno is unsigned in the active profile; Zig exposes the exact active unsigned representation so zero is the only query sentinel.",
+    "Caller-side validation remains outside Pager, matching the source OP_MaxPgcnt ownership comment."
+  ],
+  "oracle": {
+    "protocol": "Open a Pager, query the initial maximum, replace it with positive values, interleave zero queries, and attempt page growth on both sides of the limit.",
+    "internal_observations": [
+      "initial maximum",
+      "positive replacement result",
+      "zero-query result",
+      "stored maximum",
+      "growth result above limit"
+    ],
+    "normalization": "All page counts and result codes compare exactly."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; caller owns Pager synchronization.",
+    "malformed_input": "Zero is a valid query; positive values are stored exactly after caller validation.",
+    "continuation": "Repeated updates and queries preserve a usable Pager; rejected later growth does not mutate the limit.",
+    "performance": "Constant-time scalar update/query.",
+    "commands": [
+      "zig build test",
+      "zig build pager-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig Pager maximum_pages field and page acquisition guard",
+    "native_call_path": "Pager.maxPageCount replaces or queries maximum_pages; Pager.getPage returns FULL for new pages above that effective limit.",
+    "bounded_owner_retired": "The source-shaped state boundary now lives on the production Pager rather than only in the disconnected internal pager model."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires public OP_MaxPgcnt/pragma dispatch, scoped trace promotion, and independent review."
+  },
+  "known_blockers": [
+    "Connect the public maximum-page-count operation to Pager.maxPageCount.",
+    "Capture a scoped durable update/query/growth receipt before internal-trace promotion.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:3886-3903 complete update/query body and caller-validation comments were reviewed",
+      "src/core/pager.zig maximum_pages initialization, getPage growth guard, accessor, and tests were reviewed",
+      "src/core/internal/pager_core.zig historical disconnected maxPageCount model was reviewed and not credited"
+    ],
+    "callers": [
+      "VDBE OP_MaxPgcnt after request validation",
+      "Pager unit update/query trace"
+    ],
+    "callees": [
+      "None; direct Pager scalar state update/query"
+    ],
+    "assertions_branches_cleanup": [
+      "Positive replacement branch, non-open assertion, and return block are assigned",
+      "Zero leaves state unchanged",
+      "No cleanup is required for scalar state"
+    ],
+    "upstream_tests": [
+      "Upstream max_page_count, page growth, FULL, VACUUM, and VDBE tests cover this boundary",
+      "Project Pager tests cover positive replacement and zero query; page acquisition already enforces maximum_pages"
+    ]
+  },
+  "evidence_receipts": []
+}
