@@ -771,6 +771,15 @@
       "atomic_unit_id": "memdb-serialize-deserialize-store-replacement",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_expanded_sql::line-2158",
+      "source_sha256": "8b7e34fc0862786357205e17324acc7d161ab6ec68f206aded92a01001fae1d5",
+      "zig_declaration_id": "src/core/statement.zig::function::expandedSql",
+      "zig_declaration_sha256": "4227e7abc012683bf9433c509fa115e289b867c684165036eae9f6e8dce2f0e1",
+      "atomic_unit_id": "vdbe-expanded-sql-host-parameter-scan",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

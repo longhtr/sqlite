@@ -5,22 +5,24 @@
   "status": "source-translated",
   "admission_ready": true,
   "scope": {
-    "rationale": "findNextHostParameter is the tokenizer-backed boundary that finds the next bind parameter without mistaking quoted text, identifiers, or comments for variables, allowing expanded SQL to preserve every non-variable token byte-for-byte.",
-    "source_files": [{"path": "src/vdbetrace.c", "sha256": "96c0faddbbc08021fb3ed4d01620bff649045210791513d406f4c8a4801423a2"}],
-    "source_entity_ids": ["src/vdbetrace.c::function::findNextHostParameter::line-29"],
+    "rationale": "findNextHostParameter is the tokenizer-backed boundary that finds the next bind parameter without mistaking quoted text, identifiers, or comments for variables, and sqlite3_expanded_sql uses that scan to return caller-owned SQL with bound values expanded.",
+    "source_files": [{"path": "src/vdbetrace.c", "sha256": "96c0faddbbc08021fb3ed4d01620bff649045210791513d406f4c8a4801423a2"}, {"path": "src/vdbeapi.c", "sha256": "233846129dc649ec3d1ae321612ee8833c937ee775766eb8e39deda07a6b19a6"}],
+    "source_entity_ids": ["src/vdbetrace.c::function::findNextHostParameter::line-29", "src/vdbeapi.c::function::sqlite3_expanded_sql::line-2158"],
     "behavioral_block_ids": [
       "src/vdbetrace.c::function::findNextHostParameter::behavior::while::line-35-column-3::ordinal-0",
       "src/vdbetrace.c::function::findNextHostParameter::behavior::assert::line-37-column-5::ordinal-0",
       "src/vdbetrace.c::function::findNextHostParameter::behavior::if::line-38-column-5::ordinal-0",
       "src/vdbetrace.c::function::findNextHostParameter::behavior::break::line-40-column-7::ordinal-0",
-      "src/vdbetrace.c::function::findNextHostParameter::behavior::return::line-45-column-3::ordinal-0"
+      "src/vdbetrace.c::function::findNextHostParameter::behavior::return::line-45-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_expanded_sql::behavior::if::line-2164-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_expanded_sql::behavior::return::line-2170-column-3::ordinal-0"
     ],
     "excluded_responsibilities": ["Parameter index resolution", "Bound-value SQL literal rendering", "Nested-execution SQL comment prefixing"]
   },
   "dependencies": {
     "atomic_unit_ids": [],
     "external_source_responsibilities": ["Source-faithful sqlite3GetToken implementation and generated TK_VARIABLE/TK_ILLEGAL codes"],
-    "caller_closure": "The complete private scan body is assigned and integrated into the native sqlite3_expanded_sql path. Expanded value rendering and nested-execution formatting remain separately owned."
+    "caller_closure": "The complete private scan body and public sqlite3_expanded_sql null/saved-SQL allocation owner are assigned and integrated. Nested-execution formatting remains separately owned."
   },
   "contracts": {
     "inputs": ["NUL-terminated UTF-8 SQL at a token boundary and writable token-length output"],
@@ -34,6 +36,10 @@
     "source_entity_id": "src/vdbetrace.c::function::findNextHostParameter::line-29",
     "relation": "source-token-scan-to-native-token-scan",
     "zig_declaration_ids": ["src/core/statement.zig::function::findNextHostParameter"]
+  }, {
+    "source_entity_id": "src/vdbeapi.c::function::sqlite3_expanded_sql::line-2158",
+    "relation": "source-public-expanded-sql-allocation-and-dispatch",
+    "zig_declaration_ids": ["src/core/statement.zig::function::expandedSql"]
   }],
   "representation_differences": ["Source i64 byte counts are represented as usize because the native caller scans an in-memory Zig sentinel slice; the profile cannot construct a slice beyond addressable memory.", "The Zig tokenizer returns a typed Result instead of writing token type through an integer pointer."],
   "oracle": {
@@ -51,7 +57,7 @@
     "malformed_input": "Like source, illegal tokens violate the prepared-SQL precondition and assert in safety builds.",
     "continuation": "Each call starts from caller-provided SQL and resets token length before scanning.",
     "performance": "Linear in bytes before the next variable and performs one tokenizer pass.",
-    "commands": ["zig build test", "zig build public-api-differential"]
+    "commands": ["zig build test", "zig build statement-api-client"]
   },
   "integration": {
     "production_owner": "src/core/statement.zig expanded SQL owner",
@@ -64,7 +70,7 @@
     "implementation_spans": ["upstream/sqlite/src/vdbetrace.c:20-47 was reviewed completely for tokenizer loop, validity assertion, variable stop, output reset, and return", "upstream/sqlite/src/vdbetrace.c:49-191 was reviewed completely for every scanner caller assumption and expanded-SQL continuation", "src/core/tokenizer.zig get/token constants and src/core/statement.zig expanded SQL ownership were reviewed"],
     "callers": ["sqlite3VdbeExpandSql repeatedly scans the remaining raw SQL before parameter index resolution", "Native expandedSql now uses the same tokenizer-backed scan for public sqlite3_expanded_sql"],
     "callees": ["sqlite3GetToken/source tokenizer returns a positive token length and non-illegal token for prepared SQL", "Generated TK_VARIABLE identifies ?, ?N, :, @, $, and supported # forms according to tokenizer grammar"],
-    "assertions_branches_cleanup": ["All five active behavior IDs cover loop, token validity, variable branch, break, and return", "Token output is zeroed even for empty/no-variable input", "No allocation or cleanup is owned by this function"],
+    "assertions_branches_cleanup": ["All seven mapped behavior IDs cover scan validity, variable stop, null/saved-SQL selection, and return", "Token output is zeroed even for empty/no-variable input", "Public expanded SQL returns process-manager memory to the caller and frees every temporary bound-value copy"],
     "upstream_tests": ["Upstream trace, expanded SQL, tokenizer, binding-name, comment, quoted-literal, and Tcl-variable suites cover this boundary", "Project native unit trace covers quoted/comment skipping, named and numbered variables, and no-variable termination"]
   },
   "evidence_receipts": []

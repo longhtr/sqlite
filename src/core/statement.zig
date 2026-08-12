@@ -1199,6 +1199,7 @@ test "statement bind step columns reset clear finalize and destructors" {
     test_destructor_calls = 0;
     const statement = try Statement.create(std.testing.allocator, &test_statement_program, &test_parameters, &test_columns);
     const handle = toOpaque(statement);
+    try std.testing.expect(sqlite3_expanded_sql(null) == null);
     try std.testing.expectEqual(@as(c_int, 4), sqlite3_bind_parameter_count(handle));
     try std.testing.expectEqual(@as(c_int, 2), sqlite3_bind_parameter_index(handle, "@text"));
     try std.testing.expectEqualStrings("$blob", std.mem.span(sqlite3_bind_parameter_name(handle, 3).?));
@@ -1209,6 +1210,10 @@ test "statement bind step columns reset clear finalize and destructors" {
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_bind_blob(handle, 3, &blob, blob.len, transientDestructor()));
     const utf16 = [_:0]u16{ 'h', 0x00e9, 0 };
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_bind_text16(handle, 4, &utf16, -1, null));
+    statement.setSql("SELECT :integer, @text, $blob, ?4") catch return error.OutOfMemory;
+    const expanded = sqlite3_expanded_sql(handle) orelse return error.TestUnexpectedResult;
+    defer public_api.sqlite3_free(expanded);
+    try std.testing.expectEqualStrings("SELECT 9007199254740993, 'hello', x'000102ff', 'hé'", std.mem.span(expanded));
     try std.testing.expectEqual(ResultCode.row.toC(), sqlite3_step(handle));
     try std.testing.expectEqual(@as(c_int, 4), sqlite3_data_count(handle));
     try std.testing.expectEqual(@as(c_int, 4), sqlite3_column_count(handle));
