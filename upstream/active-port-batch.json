@@ -1023,6 +1023,24 @@
       "atomic_unit_id": "pager-cache-statistics-consumption",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerGetData::line-7351",
+      "source_sha256": "892f9c1d9184813297bfe889c62a9182284f16924b27651c8c2a2782c25228cf",
+      "zig_declaration_id": "src/core/pager.zig::function::pageData",
+      "zig_declaration_sha256": "fdaa7c98627c8239947bdb10958d2e8c2144053d77c283b1eb134f4407c01fd1",
+      "atomic_unit_id": "pager-page-data-and-extra-accessors",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerGetExtra::line-7360",
+      "source_sha256": "2ba49613651df3380510410527e721a8bb7036c6f9f0320971bed2e8d38193cb",
+      "zig_declaration_id": "src/core/pager.zig::function::pageExtra",
+      "zig_declaration_sha256": "ee53d723bd987d87fd2b36bd8239b7aaca49e26ec529a524283b0d6a2a49d723",
+      "atomic_unit_id": "pager-page-data-and-extra-accessors",
+      "class": "short",
+      "complete": true
     }
   ]
 }

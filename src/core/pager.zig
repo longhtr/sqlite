@@ -90,6 +90,18 @@ pub const CacheStatistic = enum {
     spill,
 };
 
+/// Source `sqlite3PagerGetData()`: expose the mutable page image after the
+/// caller has acquired a live page reference.
+pub fn pageData(page: *page_cache.Page) []u8 {
+    std.debug.assert(page.ref_count > 0);
+    return page.data;
+}
+
+/// Source `sqlite3PagerGetExtra()`: expose the cache-owned per-page payload.
+pub fn pageExtra(page: *page_cache.Page) []u8 {
+    return page.extra;
+}
+
 pub const OpenOptions = struct {
     extra_size: usize = 16,
     max_cached_pages: usize = 2_000,
@@ -1654,7 +1666,8 @@ test "page acquisition fills cache normalizes short reads and tracks hits" {
 
     const page1 = pager.getPage(1, false);
     try std.testing.expectEqual(ResultCode.ok, page1.result);
-    try std.testing.expectEqualStrings("SQLite format 3\x00", page1.page.?.data[0..16]);
+    try std.testing.expectEqualStrings("SQLite format 3\x00", pageData(page1.page.?)[0..16]);
+    try std.testing.expect(pageExtra(page1.page.?).ptr == page1.page.?.extra.ptr);
     try std.testing.expectEqual(ResultCode.ok, pager.release(page1.page.?));
 
     const page2 = pager.getPage(2, false);

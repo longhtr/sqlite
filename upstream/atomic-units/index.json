@@ -540,6 +540,11 @@
       "status": "source-translated"
     },
     {
+      "id": "pager-page-data-and-extra-accessors",
+      "path": "upstream/atomic-units/pager-page-data-and-extra-accessors.json",
+      "status": "source-translated"
+    },
+    {
       "id": "pager-journal-or-wal-file-accessor",
       "path": "upstream/atomic-units/pager-journal-or-wal-file-accessor.json",
       "status": "source-translated"

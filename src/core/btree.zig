@@ -1398,7 +1398,7 @@ pub const Database = struct {
             _ = pager.close();
             return .{ .result = first.result };
         }
-        const bytes = first.page.?.data;
+        const bytes = pager_module.pageData(first.page.?);
         if (bytes.len < 100) {
             _ = pager.release(first.page.?);
             _ = pager.close();

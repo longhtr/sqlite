@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "id": "pager-page-data-and-extra-accessors",
+  "title": "Pager page data and extra payload accessors",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerGetData exposes the mutable page image for a referenced page, while sqlite3PagerGetExtra exposes the cache-owned per-page extra payload.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::sqlite3PagerGetData::line-7351",
+      "src/pager.c::function::sqlite3PagerGetExtra::line-7360"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::sqlite3PagerGetData::behavior::assert::line-7352-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerGetData::behavior::return::line-7353-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerGetExtra::behavior::return::line-7361-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Page acquisition and reference mutation",
+      "Page-cache allocation layout",
+      "B-tree decoding of page bytes"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Pager/page-cache acquisition establishes a live reference before data access",
+      "Page cache allocates data and extra slices with Pager-selected widths"
+    ],
+    "caller_closure": "Both complete accessors are assigned; B-tree opening consumes pageData on a live page-1 reference and Pager trace observes both exact slice identities."
+  },
+  "contracts": {
+    "inputs": [
+      "Mutable cache Page; pageData requires a positive live reference"
+    ],
+    "outputs": [
+      "Borrowed mutable page data slice or borrowed mutable extra slice"
+    ],
+    "ownership": "Returned slices alias cache-owned storage and never transfer ownership.",
+    "state_and_results": "pageData asserts positive reference count and returns the exact Page.data slice. pageExtra returns the exact Page.extra slice without mutation.",
+    "locks_callbacks_io": "Caller owns Pager/cache synchronization; no callbacks or I/O.",
+    "failure_and_continuation": "Typed non-null pages only; debug assertion rejects unreferenced pageData use."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerGetData::line-7351",
+      "relation": "source-borrowed-page-image-accessor",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::pageData"
+      ]
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerGetExtra::line-7360",
+      "relation": "source-borrowed-page-extra-accessor",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::pageExtra"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Zig returns length-carrying mutable slices rather than untyped void pointers.",
+    "The source permits memDb data access without a positive reference; the runtime cache owner always uses live references at production call sites."
+  ],
+  "oracle": {
+    "protocol": "Acquire page 1 through a live Pager, require pageData to preserve the SQLite header bytes and require pageExtra pointer identity with the page-cache extra slice before release.",
+    "internal_observations": [
+      "page reference count",
+      "data pointer and length",
+      "extra pointer and length",
+      "header bytes"
+    ],
+    "normalization": "Within-process slice pointer identity and bytes compare exactly; absolute addresses are not cross-engine observations."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; caller synchronization and page lifetime external.",
+    "malformed_input": "Typed non-null page and debug reference assertion.",
+    "continuation": "Pure borrowed observations leave page ownership unchanged.",
+    "performance": "Constant time.",
+    "commands": [
+      "zig build test",
+      "zig build pager-differential",
+      "zig build btree-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig page accessors and src/core/btree.zig database opening",
+    "native_call_path": "B-tree database opening acquires page 1 and reads its header through pageData; Pager/cache owners expose extra payload through pageExtra.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires broader caller conversion, pinned-C trace, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Convert remaining direct B-tree page data and extra uses where source ownership boundaries require it.",
+    "Add pinned-C page data/extra identity and lifetime differential.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:7328-7365 and page-reference ownership comments at 5818-5855 were reviewed",
+      "src/core/pager.zig getPage/reference/release and page accessors plus src/core/btree.zig opening were reviewed"
+    ],
+    "callers": [
+      "B-tree page-1 header initialization and page parsers",
+      "Pager trace observes data and extra slice identity"
+    ],
+    "callees": [
+      "Direct Page.data and Page.extra cache-owned slices"
+    ],
+    "assertions_branches_cleanup": [
+      "All three generated assertion/return blocks are assigned",
+      "pageData asserts the live-reference precondition",
+      "No allocation, mutation, or cleanup"
+    ],
+    "upstream_tests": [
+      "Upstream pager and B-tree suites exercise data and extra access across page lifetimes",
+      "Project Pager/B-tree tests exercise page-1 parsing and exact cache slice identity"
+    ]
+  },
+  "evidence_receipts": []
+}
