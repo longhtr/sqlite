@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "id": "btree-pager-and-filename-observations",
+  "title": "B-tree Pager and stable filename observations",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreePager, sqlite3BtreeGetFilename, and sqlite3BtreeGetJournalname expose the B-tree's Pager owner and its stable database and rollback-journal names.",
+    "source_files": [
+      {
+        "path": "src/btree.c",
+        "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"
+      }
+    ],
+    "source_entity_ids": [
+      "src/btree.c::function::sqlite3BtreePager::line-10573",
+      "src/btree.c::function::sqlite3BtreeGetFilename::line-11305",
+      "src/btree.c::function::sqlite3BtreeGetJournalname::line-11318"
+    ],
+    "behavioral_block_ids": [
+      "src/btree.c::function::sqlite3BtreePager::behavior::return::line-10574-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeGetFilename::behavior::assert::line-11306-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeGetFilename::behavior::return::line-11307-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeGetJournalname::behavior::assert::line-11319-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeGetJournalname::behavior::return::line-11320-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Pager opening, closing, and filename allocation",
+      "B-tree transaction and cursor behavior",
+      "Connection-level schema-name and attached-database resolution"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "pager-database-filename-observation"
+    ],
+    "external_source_responsibilities": [
+      "Database.open owns a valid embedded Pager",
+      "Pager owns stable database and rollback-journal filename allocations"
+    ],
+    "caller_closure": "All three complete accessors and their generated blocks are assigned; native B-tree traversal tests observe exact Pager and filename identity."
+  },
+  "contracts": {
+    "inputs": [
+      "Borrowed initialized Database owner"
+    ],
+    "outputs": [
+      "Borrowed Pager pointer or borrowed sentinel-terminated filename"
+    ],
+    "ownership": "Pure borrowed observations; no allocation or ownership transfer.",
+    "state_and_results": "pagerOwner returns the exact embedded Pager. filename delegates to Pager.databaseName(true), which returns an empty string for memory-backed databases. journalFilename returns the allocated rollback-journal name independently of file-open state.",
+    "locks_callbacks_io": "No locks, callbacks, or I/O because Pager and names remain invariant while Database is open.",
+    "failure_and_continuation": "Infallible for an initialized live Database."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreePager::line-10573",
+      "relation": "source-btree-pager-owner-observation",
+      "zig_declaration_ids": [
+        "src/core/btree.zig::function::Database.pagerOwner"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeGetFilename::line-11305",
+      "relation": "source-btree-user-visible-filename-observation",
+      "zig_declaration_ids": [
+        "src/core/btree.zig::function::Database.filename"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeGetJournalname::line-11318",
+      "relation": "source-btree-journal-filename-observation",
+      "zig_declaration_ids": [
+        "src/core/btree.zig::function::Database.journalFilename"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The production B-tree owner is Database with an embedded Pager rather than source Btree/BtShared pointer layers.",
+    "Zig returns sentinel slices whose lifetime is tied to Database instead of raw const char pointers."
+  ],
+  "oracle": {
+    "protocol": "Open a named database through the native B-tree owner, require pagerOwner pointer identity with the embedded Pager, and compare the database and journal names before opening a rollback journal.",
+    "internal_observations": [
+      "Database.pager address",
+      "Pager filename and journal-name allocations",
+      "memory-file classification"
+    ],
+    "normalization": "Compare owner pointer identity and exact filename bytes."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Observers allocate nothing; Database/Pager construction owns allocation failures.",
+    "io_crash_concurrency": "Observers perform no I/O and rely on open-owner lifetime invariants.",
+    "malformed_input": "Typed live Database input prevents absent Pager state.",
+    "continuation": "Pure observations preserve B-tree and Pager state.",
+    "performance": "Constant time.",
+    "commands": [
+      "zig build test",
+      "zig build btree-differential",
+      "zig build pager-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/btree.zig Database with embedded src/core/pager.zig Pager",
+    "native_call_path": "Database construction embeds Pager; filename observers delegate to Pager-owned stable names used by B-tree and connection-facing storage paths.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires memory-backed B-tree trace, pinned-C comparison, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Add a direct native B-tree memory-backed filename trace.",
+    "Add pinned-C exact owner/name trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/btree.c:10563-10576 and 11294-11322 were reviewed",
+      "upstream/sqlite/src/pager.c:7121-7139 and 7168-7176 were reviewed",
+      "src/core/btree.zig Database ownership/open/test path and src/core/pager.zig filename accessors were reviewed"
+    ],
+    "callers": [
+      "Source pragma, main, vacuum, backup, status, VDBE, and extension paths consume sqlite3BtreePager",
+      "Source vacuum, pragma, main, and VDBE paths consume the filename observations",
+      "Native B-tree accessor test consumes all three Zig declarations"
+    ],
+    "callees": [
+      "Direct source Btree.pBt.pPager ownership",
+      "sqlite3PagerFilename with nullIfMemDb=1 and sqlite3PagerJournalname",
+      "Pager.databaseName(true) and Pager.journalName in Zig"
+    ],
+    "assertions_branches_cleanup": [
+      "Both source filename functions assert a valid Pager owner",
+      "Memory-backed filename is the only output branch",
+      "No allocation or cleanup"
+    ],
+    "upstream_tests": [
+      "Upstream pragma, vacuum, and filename APIs exercise these observations",
+      "Project B-tree and Pager tests exercise named owner/name identity"
+    ]
+  },
+  "evidence_receipts": []
+}

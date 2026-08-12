@@ -380,6 +380,11 @@
       "status": "source-translated"
     },
     {
+      "id": "btree-pager-and-filename-observations",
+      "path": "upstream/atomic-units/btree-pager-and-filename-observations.json",
+      "status": "source-translated"
+    },
+    {
       "id": "btree-cursor-clear-and-static-observations",
       "path": "upstream/atomic-units/btree-cursor-clear-and-static-observations.json",
       "status": "source-translated"

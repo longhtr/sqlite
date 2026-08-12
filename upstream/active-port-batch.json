@@ -1077,6 +1077,33 @@
       "atomic_unit_id": "wal-index-memory-and-file-observations",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreePager::line-10573",
+      "source_sha256": "0e10511643431f0b7e726ab7b8ca57a77b40126be1415ad92377a0d93be75368",
+      "zig_declaration_id": "src/core/btree.zig::function::Database.pagerOwner",
+      "zig_declaration_sha256": "5e456a1b39df11cf5bc735b6fe46718f81c9e5608598d7e7b80b84acffeb84db",
+      "atomic_unit_id": "btree-pager-and-filename-observations",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeGetFilename::line-11305",
+      "source_sha256": "a3ff7f09336b299e49de71a937b4acefe17daed67203e052713fb758699466e8",
+      "zig_declaration_id": "src/core/btree.zig::function::Database.filename",
+      "zig_declaration_sha256": "510b8a41a11c42c9e467c3dbce0ad04822ba28081ffc5b629dc407e1099690de",
+      "atomic_unit_id": "btree-pager-and-filename-observations",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeGetJournalname::line-11318",
+      "source_sha256": "d7934fc0f6fe6f0d91c01046dd8814abdf4b7c271907786b9b0658fa7de7bb4a",
+      "zig_declaration_id": "src/core/btree.zig::function::Database.journalFilename",
+      "zig_declaration_sha256": "44b202bb16e1f33a32603b53f83dc4eb677527f22ffd85f6e1268ea9e5476933",
+      "atomic_unit_id": "btree-pager-and-filename-observations",
+      "class": "short",
+      "complete": true
     }
   ]
 }

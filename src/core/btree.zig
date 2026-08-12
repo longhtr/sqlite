@@ -1439,6 +1439,23 @@ pub const Database = struct {
         };
     }
 
+    /// Source `sqlite3BtreePager()`: return the Pager owned by this B-tree.
+    pub fn pagerOwner(self: *Database) *Pager {
+        return &self.pager;
+    }
+
+    /// Source `sqlite3BtreeGetFilename()`: expose the stable database filename
+    /// and hide memory-backed and temporary database names.
+    pub fn filename(self: *const Database) [:0]const u8 {
+        return self.pager.databaseName(true);
+    }
+
+    /// Source `sqlite3BtreeGetJournalname()`: expose the stable rollback-
+    /// journal filename whether or not the journal file is currently open.
+    pub fn journalFilename(self: *const Database) [:0]const u8 {
+        return self.pager.journalName();
+    }
+
     pub fn close(self: *Database) ResultCode {
         if (self.mutation_batch_depth != 0) {
             const rc = self.rollbackMutationBatch();
@@ -3480,6 +3497,9 @@ test "table traversal seek record and overflow read through native pager" {
     try std.testing.expectEqual(ResultCode.ok, opened.result);
     var database = opened.database.?;
     defer _ = database.close();
+    try std.testing.expect(database.pagerOwner() == &database.pager);
+    try std.testing.expectEqualStrings("core.db", database.filename());
+    try std.testing.expectEqualStrings("core.db-journal", database.journalFilename());
     const cursor_outcome = database.openCursor(2, .table);
     try std.testing.expectEqual(ResultCode.ok, cursor_outcome.result);
     var cursor = cursor_outcome.cursor.?;
