@@ -438,6 +438,24 @@
       "atomic_unit_id": "btree-clear-table-through-cursor",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::btreeGetHasContent::line-673",
+      "source_sha256": "9e9a2071a6f36574a47c3b77bec2db5dc0b35a209355d8f6c5bba7d84ace35e6",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::getHasContent",
+      "zig_declaration_sha256": "0cf088991aa78e936ff5fb45f1372349f2f85fd7d9fbe3c2ccf4f761cc880a36",
+      "atomic_unit_id": "btree-has-content-query-and-clear",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::btreeClearHasContent::line-682",
+      "source_sha256": "65718c307098e2a8d69b54a539949cc0f349f65cebf4d8dc2b7d18b34f57ee54",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::clearHasContent",
+      "zig_declaration_sha256": "38d3236af091b67fc3ba0423bfe3ca0cdb7833c001db3a89d499903992635aad",
+      "atomic_unit_id": "btree-has-content-query-and-clear",
+      "class": "short",
+      "complete": true
     }
   ]
 }

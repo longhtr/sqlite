@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "id": "btree-has-content-query-and-clear",
+  "title": "B-tree free-page has-content query and clear",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "btreeGetHasContent decides whether a reused freelist page must be read with content by treating out-of-range pages as content-bearing and testing tracked pages; btreeClearHasContent destroys the write-transaction bit vector at transaction conclusion.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::btreeGetHasContent::line-673", "src/btree.c::function::btreeClearHasContent::line-682"],
+    "behavioral_block_ids": ["src/btree.c::function::btreeGetHasContent::behavior::return::line-675-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Has-content bit allocation/set", "Freelist page reuse", "Transaction commit orchestration"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["btreeSetHasContent and write-transaction lifetime"], "caller_closure": "The complete query and clear bodies are assigned; freelist caller integration remains open."},
+  "contracts": {
+    "inputs": ["Shared B-tree state and one-based page number for query; mutable Shared for clear"],
+    "outputs": ["False with no vector, true for out-of-range page, tracked bit otherwise; clear releases vector and sets null"],
+    "ownership": "Query borrows vector; clear consumes its allocation.",
+    "state_and_results": "Out-of-range is conservatively true. In-range uses exact tracked bit. Clear is idempotent.",
+    "locks_callbacks_io": "Caller owns shared B-tree mutex; no callbacks or I/O.",
+    "failure_and_continuation": "No allocation or error path. Clear leaves future queries false until tracking is recreated."
+  },
+  "mappings": [
+    {"source_entity_id": "src/btree.c::function::btreeGetHasContent::line-673", "relation": "source-conservative-has-content-bit-query", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::getHasContent"]},
+    {"source_entity_id": "src/btree.c::function::btreeClearHasContent::line-682", "relation": "source-has-content-vector-destroy", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::clearHasContent"]}
+  ],
+  "representation_differences": ["A nullable bool slice replaces source Bitvec; its length includes the unused zero index and represents sqlite3BitvecSize+1.", "Allocator free replaces sqlite3BitvecDestroy."],
+  "oracle": {"protocol": "Track page 2, then observe tracked true, out-of-range true, untracked in-range false, clear ownership, and null vector.", "internal_observations": ["nullable has_content", "slice length", "tracked bit", "query branches", "post-clear null"], "normalization": "One-based page semantics are exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "Query/clear allocate nothing; set owner handles OOM.", "io_crash_concurrency": "No I/O; caller shared mutex external.", "malformed_input": "Page zero is outside intended one-based caller contract but safely reads index zero when in range.", "continuation": "Clear permits lazy recreation in a later write transaction.", "performance": "Constant time.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig freelist/write-transaction state", "native_call_path": "Typed query/clear and all source-significant branches are unit-traced; freelist reuse caller remains pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires freelist/transaction integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect freelist no-content selection.", "Call clear at exact write-transaction conclusion.", "Add pinned-C tracked/out-of-range trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:645-686 was reviewed completely for set/query/clear context", "src/core/internal/btree_core.zig setHasContent, Shared lifetime, freelist, and tests were reviewed"],
+    "callers": ["Freelist leaf reuse no-content decision", "Write-transaction conclusion", "Unit trace invokes query/clear directly"],
+    "callees": ["sqlite3BitvecSize/TestNotNull/Destroy represented by slice length/index/free"],
+    "assertions_branches_cleanup": ["The sole query control-flow block is assigned; clear is straight-line", "Out-of-range conservative branch preserved", "Clear releases and nulls ownership"],
+    "upstream_tests": ["Upstream freelist reuse, no-content pager, rollback, and transaction tests cover these owners", "Project unit trace covers every query branch and clear"]
+  },
+  "evidence_receipts": []
+}

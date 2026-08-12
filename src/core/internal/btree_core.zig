@@ -308,6 +308,20 @@ pub fn invalidateIncrblobCursors(tree: *Btree, root: u32, rowid: i64, clear_tabl
     }
 }
 
+/// Source `btreeGetHasContent()`.
+pub fn getHasContent(shared: *const Shared, page_number: u32) bool {
+    const content = shared.has_content orelse return false;
+    return page_number >= content.len or content[page_number];
+}
+
+/// Source `btreeClearHasContent()`.
+pub fn clearHasContent(shared: *Shared) void {
+    if (shared.has_content) |content| {
+        shared.allocator.free(content);
+        shared.has_content = null;
+    }
+}
+
 /// Source `btreeSetHasContent()`.
 pub fn setHasContent(shared: *Shared, page_number: u32) Error!void {
     if (page_number == 0 or page_number > shared.pages.items.len) return error.Range;
@@ -2159,6 +2173,11 @@ test "btree core page cursor lock and integrity primitives" {
 
     try setHasContent(&shared, 2);
     try std.testing.expect(shared.has_content.?[2]);
+    try std.testing.expect(getHasContent(&shared, 2));
+    try std.testing.expect(getHasContent(&shared, 99));
+    try std.testing.expect(!getHasContent(&shared, 1));
+    clearHasContent(&shared);
+    try std.testing.expect(shared.has_content == null);
     try std.testing.expectEqual(@as(u32, 2), pointerMapPageNumber(&shared, 3));
     const overflow_cell = [_]u8{ 0, 0, 0, 0, 0, 0, 0, 4 };
     try pointerMapPutOverflow(root, root, &overflow_cell, .{ .size = 8, .payload_size = 10, .local_size = 2 });

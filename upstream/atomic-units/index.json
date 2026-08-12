@@ -398,6 +398,11 @@
       "id": "btree-clear-table-through-cursor",
       "path": "upstream/atomic-units/btree-clear-table-through-cursor.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-has-content-query-and-clear",
+      "path": "upstream/atomic-units/btree-has-content-query-and-clear.json",
+      "status": "source-translated"
     }
   ]
 }
