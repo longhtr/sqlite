@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "prepare-parse-object-reset",
+  "title": "Prepare Parse-object ownership reset and connection unlink",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3ParseObjectReset releases every allocation owned by a native Parse object in source order, executes uncommon cleanup callbacks, restores the connection lookaside-disable count and size, and unlinks the Parse from the connection head.",
+    "source_files": [{"path": "src/prepare.c", "sha256": "bf077b16c691e81824700915c1e85a512d85b05c623b2d0ae1136937e0e3dad7"}],
+    "source_entity_ids": ["src/prepare.c::function::sqlite3ParseObjectReset::line-572"],
+    "behavioral_block_ids": [
+      "src/prepare.c::function::sqlite3ParseObjectReset::behavior::assert::line-574-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3ParseObjectReset::behavior::assert::line-575-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3ParseObjectReset::behavior::assert::line-576-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3ParseObjectReset::behavior::if::line-578-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3ParseObjectReset::behavior::while::line-580-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3ParseObjectReset::behavior::if::line-586-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3ParseObjectReset::behavior::if::line-587-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3ParseObjectReset::behavior::assert::line-590-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3ParseObjectReset::behavior::conditional::line-592-column-22::ordinal-0",
+      "src/prepare.c::function::sqlite3ParseObjectReset::behavior::assert::line-593-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Parse initialization", "Lemon parser destruction", "Prepare entry dispatch"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": ["prepare-parse-object-initialization"],
+    "external_source_responsibilities": ["Connection allocator, ExprList ownership, and ParseCleanup callback contracts"],
+    "caller_closure": "The complete reset body is assigned. Source-shaped prepare entry dispatch remains open."
+  },
+  "contracts": {
+    "inputs": ["Connection-head, non-nested native Parse object initialized against a non-null connection"],
+    "outputs": ["Released table locks, cleanup records, labels, and constant expressions; restored lookaside state; restored outer Parse head"],
+    "ownership": "Consumes all Parse-owned cleanup records and selected allocation fields; callback payload ownership is delegated to each cleanup callback.",
+    "state_and_results": "Cleanup callbacks execute LIFO. Lookaside bDisable decreases by disableLookaside and sz is restored only when the resulting count is zero.",
+    "locks_callbacks_io": "Caller owns connection serialization. Cleanup callbacks may release arbitrary parser-owned objects; no direct I/O.",
+    "failure_and_continuation": "Reset has no result code and performs no allocation; the connection is left linked to pOuterParse."
+  },
+  "mappings": [{"source_entity_id": "src/prepare.c::function::sqlite3ParseObjectReset::line-572", "relation": "source-native-parse-owned-release-and-unlink", "zig_declaration_ids": ["src/core/internal/vdbe_aux.zig::function::resetParseObject"]}],
+  "representation_differences": ["Typed allocator and ownership helpers replace sqlite3DbNNFreeNN and sqlite3ExprListDelete macros without changing release order.", "The active non-debug profile has no earlyCleanup field responsibility."],
+  "oracle": {
+    "protocol": "Seed a native Parse as the connection head with an outer Parse and lookaside-disable counts, reset it, and observe owner linkage and both remaining-disabled and fully-enabled lookaside states; allocation/callback branches remain compile-traced pending a pinned-C probe.",
+    "internal_observations": ["db.pParse outer restoration", "lookaside bDisable", "lookaside sz"],
+    "normalization": "Pointer addresses are compared only by identity; source scalar state is exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Reset allocates nothing; previously-owned allocations remain subject to their owner contracts.",
+    "io_crash_concurrency": "No direct I/O; connection serialization remains external.",
+    "malformed_input": "Non-head, nested, or database-less Parse inputs violate source assertions.",
+    "continuation": "The outer Parse becomes the live connection parse owner after reset.",
+    "performance": "Linear only in the uncommon cleanup stack; all other releases are constant-time.",
+    "commands": ["zig build vdbe-mem-differential", "zig build test"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_aux.zig source-layout Parse/VDBE helper layer",
+    "native_call_path": "The owner is compile- and unit-traced; source-shaped prepare entry dispatch remains pending.",
+    "bounded_owner_retired": "The simplified schema_initialization ParseObject reset remains a distinct non-native planning owner."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires prepare integration, pinned-C cleanup trace, assurance closure, and independent review."},
+  "known_blockers": ["Integrate native Parse initialization/reset with source-shaped prepare entry.", "Add pinned-C cleanup-order and callback trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/prepare.c:572-595 was reviewed completely", "src/core/internal/parse_types.zig Parse and ParseCleanup layouts were reviewed", "src/core/internal/db_allocator.zig and compiler_ownership.zig release owners were reviewed", "src/core/internal/schema_initialization.zig simplified ParseObject owner was distinguished from the native layout owner"],
+    "callers": ["sqlite3Prepare resets stack/bulk Parse storage after parser compilation", "Native source-layout unit trace invokes the owner directly"],
+    "callees": ["sqlite3DbNNFreeNN via db_allocator.freeNN", "ParseCleanup.xCleanup", "sqlite3ExprListDelete via compiler_ownership.deleteExpressionList"],
+    "assertions_branches_cleanup": ["All ten active behavioral blocks are assigned", "Table locks precede cleanup records, labels, and constant expressions", "Lookaside restoration precedes connection-head unlink"],
+    "upstream_tests": ["Upstream prepare, recursive parse, schema, cleanup, and OOM suites cover this owner", "Project unit trace covers linkage and lookaside restoration"]
+  },
+  "evidence_receipts": []
+}

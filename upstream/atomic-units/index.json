@@ -298,6 +298,11 @@
       "id": "prepare-parse-object-initialization",
       "path": "upstream/atomic-units/prepare-parse-object-initialization.json",
       "status": "source-translated"
+    },
+    {
+      "id": "prepare-parse-object-reset",
+      "path": "upstream/atomic-units/prepare-parse-object-reset.json",
+      "status": "source-translated"
     }
   ]
 }

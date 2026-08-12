@@ -177,6 +177,15 @@
       "atomic_unit_id": "prepare-parse-object-initialization",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/prepare.c::function::sqlite3ParseObjectReset::line-572",
+      "source_sha256": "c0281174b7e83f88b951984ee703488908b6ab7dd8a7cafe9b3f7eef4dd162a9",
+      "zig_declaration_id": "src/core/internal/vdbe_aux.zig::function::resetParseObject",
+      "zig_declaration_sha256": "55936f8191a8ce33c9b9bc5c84d6bf7c227e99591dbc980bd0180315b361e89d",
+      "atomic_unit_id": "prepare-parse-object-reset",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

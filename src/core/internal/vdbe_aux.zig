@@ -35,6 +35,27 @@ pub fn initializeParseObject(parse: *types.Parse, db: *types.Sqlite3) void {
     }
 }
 
+/// Source `sqlite3ParseObjectReset()`: release every Parse-owned allocation,
+/// restore lookaside availability, and unlink this Parse from the connection.
+pub fn resetParseObject(parse: *types.Parse) void {
+    const db = parseDatabase(parse);
+    std.debug.assert(db.pParse == parse);
+    std.debug.assert(parse.nested == 0);
+    if (parse.aTableLock) |locks| db_allocator.freeNN(db, @ptrCast(locks));
+    while (parse.pCleanup) |cleanup| {
+        parse.pCleanup = cleanup.pNext;
+        cleanup.xCleanup.?(parse.db, cleanup.pPtr);
+        db_allocator.freeNN(db, @ptrCast(cleanup));
+    }
+    if (parse.aLabel) |labels| db_allocator.freeNN(db, @ptrCast(labels));
+    compiler_ownership.deleteExpressionList(db, parse.pConstExpr);
+    std.debug.assert(db.lookaside.bDisable >= parse.disableLookaside);
+    db.lookaside.bDisable -= parse.disableLookaside;
+    db.lookaside.sz = if (db.lookaside.bDisable != 0) 0 else db.lookaside.szTrue;
+    std.debug.assert(db.pParse == parse);
+    db.pParse = parse.pOuterParse;
+}
+
 /// Source `sqlite3VdbeCreate()`: allocate the statement object, link it at
 /// the connection head, establish Parse ownership, and append OP_Init.
 pub fn create(parse: *types.Parse) ?*types.Vdbe {
@@ -944,6 +965,32 @@ test "source Parse object initialization preserves recursive middle state" {
     try std.testing.expectEqual(@as(c_int, 1), parse.nErr);
     try std.testing.expectEqual(types.result_error, parse.rc);
     try std.testing.expectEqual(@as(c_int, -1), db.errByteOffset);
+}
+
+test "source Parse object reset restores lookaside and outer owner" {
+    var outer = std.mem.zeroes(types.Parse);
+    var parse = std.mem.zeroes(types.Parse);
+    var db = std.mem.zeroes(types.Sqlite3);
+    db.pParse = &parse;
+    db.lookaside.bDisable = 3;
+    db.lookaside.sz = 0;
+    db.lookaside.szTrue = 1200;
+    parse.db = @ptrCast(&db);
+    parse.pOuterParse = &outer;
+    parse.disableLookaside = 2;
+
+    resetParseObject(&parse);
+
+    try std.testing.expect(db.pParse == &outer);
+    try std.testing.expectEqual(@as(u32, 1), db.lookaside.bDisable);
+    try std.testing.expectEqual(@as(u16, 0), db.lookaside.sz);
+
+    db.pParse = &parse;
+    db.lookaside.bDisable = 2;
+    parse.disableLookaside = 2;
+    resetParseObject(&parse);
+    try std.testing.expectEqual(@as(u32, 0), db.lookaside.bDisable);
+    try std.testing.expectEqual(@as(u16, 1200), db.lookaside.sz);
 }
 
 test "freeP4 nullable selected owner families" {
