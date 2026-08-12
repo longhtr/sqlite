@@ -449,7 +449,10 @@ pub const Pager = struct {
         ));
     }
 
+    /// Source `pager_cksum()`: seed the rollback-record checksum and add each
+    /// page byte selected by the source's reverse 200-byte stride.
     fn journalChecksum(self: *const Pager, data: []const u8) u32 {
+        std.debug.assert(data.len >= self.page_size);
         var checksum = self.journal_checksum_seed;
         var index: isize = @as(isize, @intCast(self.page_size)) - 200;
         while (index > 0) : (index -= 200) checksum +%= data[@intCast(index)];
@@ -2038,6 +2041,23 @@ fn createHotJournal(memory: *vfs.MemoryVfs, adapter: *vfs.AbiAdapter, name: []co
     try std.testing.expectEqual(ResultCode.ok, writer.commitPhaseOne());
     memory.crash();
     writer.crashClose();
+}
+
+test "rollback journal checksum follows the source reverse stride and wraps" {
+    const fixture = try readFixture("valid-empty-512.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "checksum.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-checksum", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "checksum.db", .{}).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+    pager.journal_checksum_seed = std.math.maxInt(u32) - 3;
+    var data: [512]u8 = .{0} ** 512;
+    data[312] = 5;
+    data[112] = 7;
+    data[0] = 11;
+    try std.testing.expectEqual(@as(u32, 8), pager.journalChecksum(&data));
 }
 
 test "malformed hot-journal checksum is rejected without database mutation" {

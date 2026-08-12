@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "id": "pager-rollback-journal-checksum",
+  "title": "Pager rollback-journal page checksum",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "pager_cksum computes the rollback-journal record checksum from cksumInit and every reverse-stride 200th byte selected from one page.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::pager_cksum::line-2251"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::pager_cksum::behavior::while::line-2254-column-3::ordinal-0",
+      "src/pager.c::function::pager_cksum::behavior::return::line-2258-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Journal checksum-seed generation and header storage",
+      "Journal record serialization and playback",
+      "Journal corruption recovery policy"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "memory-journal-chunks-spill-and-lifecycle"
+    ],
+    "external_source_responsibilities": [
+      "Pager journal-header construction initializes journal_checksum_seed",
+      "Journal append and playback provide a complete page-sized image"
+    ],
+    "caller_closure": "The complete checksum helper and both generated blocks are assigned; production journal append and playback consume the exact helper."
+  },
+  "contracts": {
+    "inputs": [
+      "Borrowed Pager checksum seed and page size",
+      "Borrowed page image at least page-size bytes long"
+    ],
+    "outputs": [
+      "Wrapping u32 rollback-journal checksum"
+    ],
+    "ownership": "Pure borrowed observation; no allocation or transfer.",
+    "state_and_results": "Initialize from the current seed, start at page_size-200, add the selected unsigned byte while the signed index is positive, and decrement by 200. Byte zero is deliberately excluded.",
+    "locks_callbacks_io": "No locks, callbacks, or I/O.",
+    "failure_and_continuation": "Infallible for a complete page image; debug assertion rejects undersized internal input."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::pager_cksum::line-2251",
+      "relation": "source-rollback-journal-reverse-stride-checksum",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.journalChecksum"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Zig accepts a bounded slice and asserts its minimum page-size length instead of a raw page pointer.",
+    "The source int loop index is represented as isize while preserving the positive-index stop condition."
+  ],
+  "oracle": {
+    "protocol": "Use a 512-byte page, seed max-u32-3, set selected offsets 312 and 112 plus excluded offset 0, and require wrapping result 8. Production malformed-journal and append/playback tests exercise both consumers.",
+    "internal_observations": [
+      "journal_checksum_seed",
+      "page_size",
+      "selected offsets",
+      "wrapping u32 result"
+    ],
+    "normalization": "Compare exact unsigned 32-bit value."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; journal owners synchronize externally.",
+    "malformed_input": "Internal slice length assertion prevents out-of-bounds access.",
+    "continuation": "Pure computation preserves Pager and page state.",
+    "performance": "Linear in page_size/200 with no allocation.",
+    "commands": [
+      "zig build test",
+      "zig build rollback-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig rollback journal append and playback",
+    "native_call_path": "appendJournalRecord serializes journalChecksum; playbackJournal recomputes it before restoring a page.",
+    "bounded_owner_retired": "The checksum is no longer folded into append-only ownership; both writer and reader share the source-shaped helper."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires pinned-C isolated trace, broader page-size matrix, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Add pinned-C isolated checksum vectors across supported page sizes.",
+    "Promote complete append/playback journal unit evidence.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:2232-2260 and adjacent playback context were reviewed",
+      "src/core/pager.zig journal header, append, playback, malformed checksum, and wrap/stride test paths were reviewed"
+    ],
+    "callers": [
+      "pager_playback_one_page validates main-journal records",
+      "writeJournalHdr/record paths serialize the checksum",
+      "Production appendJournalRecord and playbackJournal consume journalChecksum"
+    ],
+    "callees": [
+      "Direct Pager cksumInit/pageSize and page bytes in source",
+      "Direct Pager journal_checksum_seed/page_size and bounded slice in Zig"
+    ],
+    "assertions_branches_cleanup": [
+      "Generated while and return blocks are assigned",
+      "Positive-index stop excludes byte zero",
+      "Wrapping addition is explicit",
+      "No cleanup"
+    ],
+    "upstream_tests": [
+      "Upstream journal and corruption suites exercise checksum production and validation",
+      "Project rollback, crash, malformed-hot-journal, and direct wrap/stride tests exercise the native helper"
+    ]
+  },
+  "evidence_receipts": []
+}

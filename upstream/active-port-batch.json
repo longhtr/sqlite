@@ -1,10 +1,20 @@
 {
   "schema_version": 2,
-  "status": "idle",
+  "status": "active",
   "completion_claim": false,
   "base_checkpoint_id": "port-batch-001",
   "historical_claim_ledger": "upstream/historical-port-claims.json",
   "minimum_short_functions": 200,
   "minimum_substantive_functions": 50,
-  "entries": []
+  "entries": [
+    {
+      "source_entity_id": "src/pager.c::function::pager_cksum::line-2251",
+      "source_sha256": "61ee037a7cf7e262fd1b4282edf473ea02344af9201ed1de2fbfd3bb522edd1f",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.journalChecksum",
+      "zig_declaration_sha256": "611ea30db1f5236771fd097ecbf62d00c3ea50fcbfbf24fdd6f053a85e52d9f0",
+      "atomic_unit_id": "pager-rollback-journal-checksum",
+      "class": "short",
+      "complete": true
+    }
+  ]
 }

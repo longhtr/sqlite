@@ -555,6 +555,11 @@
       "status": "source-translated"
     },
     {
+      "id": "pager-rollback-journal-checksum",
+      "path": "upstream/atomic-units/pager-rollback-journal-checksum.json",
+      "status": "source-translated"
+    },
+    {
       "id": "pager-owner-accessors",
       "path": "upstream/atomic-units/pager-owner-accessors.json",
       "status": "source-translated"
