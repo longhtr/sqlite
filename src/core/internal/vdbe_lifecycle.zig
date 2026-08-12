@@ -675,6 +675,29 @@ test "source careful Btree lock preserves ascending reacquisition" {
     first.sharable = 0;
     btreeEnterAll(&db, &operations);
     try std.testing.expectEqual(@as(u8, 1), db.noSharedCache);
+
+    first.sharable = 1;
+    first.locked = 0;
+    first.wantToLock = 0;
+    second.sharable = 1;
+    second.locked = 0;
+    second.wantToLock = 0;
+    var temporary = std.mem.zeroes(types.Btree);
+    temporary.sharable = 1;
+    databases[1].pBt = &temporary;
+    var machine = std.mem.zeroes(types.Vdbe);
+    machine.db = &db;
+    enterBtrees(&machine);
+    try std.testing.expectEqual(@as(c_int, 0), first.wantToLock);
+    try std.testing.expectEqual(@as(c_int, 0), second.wantToLock);
+    machine.lockMask = (@as(types.DbMask, 1) << 0) | (@as(types.DbMask, 1) << 1) | (@as(types.DbMask, 1) << 2);
+    enterBtrees(&machine);
+    try std.testing.expectEqual(@as(c_int, 1), first.wantToLock);
+    try std.testing.expectEqual(@as(c_int, 0), temporary.wantToLock);
+    try std.testing.expectEqual(@as(c_int, 1), second.wantToLock);
+    leaveBtrees(&machine);
+    try std.testing.expectEqual(@as(c_int, 0), first.wantToLock);
+    try std.testing.expectEqual(@as(c_int, 0), second.wantToLock);
 }
 
 fn testExecuteDone(_: ?*anyopaque, _: *types.Vdbe) c_int {

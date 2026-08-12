@@ -780,6 +780,24 @@
       "atomic_unit_id": "vdbe-expanded-sql-host-parameter-scan",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeEnter::line-2066",
+      "source_sha256": "cd8ec173bf1ec4356af688bd52b6546182e38ef2223fdc138ca7a83291e00b59",
+      "zig_declaration_id": "src/core/internal/vdbe_lifecycle.zig::function::enterBtrees",
+      "zig_declaration_sha256": "5608cbf5bc3182a5c90829789a1ade8a8d41a51e063f7f83b0a5604009e27f4a",
+      "atomic_unit_id": "btree-careful-shared-cache-mutex-ordering",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::vdbeLeave::line-2087",
+      "source_sha256": "e95d51e1c85b3c81ed64beee6323058655e55a121dc703648f64c6a2a58fd183",
+      "zig_declaration_id": "src/core/internal/vdbe_lifecycle.zig::function::leaveBtrees",
+      "zig_declaration_sha256": "d4c12a1a34714b9e24c78fec01ca8fb2c1ade484d9eb4dc62f8d27484c833f18",
+      "atomic_unit_id": "btree-careful-shared-cache-mutex-ordering",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }
