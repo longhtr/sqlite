@@ -13,6 +13,7 @@ const logging = @import("logging.zig");
 const function_registry = @import("internal/function_registry.zig");
 const pattern_match = @import("internal/pattern.zig");
 const numeric = @import("numeric.zig");
+const config_types = @import("internal/config_types.zig");
 pub const sqlite3_str = opaque {};
 const LogCallback = logging.Callback;
 
@@ -172,8 +173,15 @@ pub export fn sqlite3_soft_heap_limit(n: c_int) callconv(.c) void {
 pub export fn sqlite3_release_memory(n: c_int) callconv(.c) c_int {
     return memory.releaseMemory(n);
 }
-pub export fn sqlite3_enable_shared_cache(_: c_int) callconv(.c) c_int {
+pub export fn sqlite3_enable_shared_cache(enable: c_int) callconv(.c) c_int {
+    config_types.global_config.sharedCacheEnabled = enable;
     return 0;
+}
+test "shared-cache enable stores the exact process setting" {
+    const original = config_types.global_config.sharedCacheEnabled;
+    defer config_types.global_config.sharedCacheEnabled = original;
+    try std.testing.expectEqual(@as(c_int, 0), sqlite3_enable_shared_cache(7));
+    try std.testing.expectEqual(@as(c_int, 7), config_types.global_config.sharedCacheEnabled);
 }
 pub export fn sqlite3_global_recover() callconv(.c) c_int {
     return 0;

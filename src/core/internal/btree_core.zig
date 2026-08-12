@@ -243,7 +243,7 @@ test "source cursor last-page check requires every rightmost ancestor" {
     cursor.info.payload_offset = 7;
     cursor.info.payload_size = 23;
     cursor.info.key = 41;
-    root.integer_key = true;
+    second_page.integer_key = true;
     try std.testing.expectEqual(@as(u64, 41), cursorIntegerKey(&cursor));
     try std.testing.expectEqual(@as(usize, 23), cursorPayloadSize(&cursor));
     try std.testing.expectEqual(@as(u64, 4103), cursorPayloadOffset(&cursor));

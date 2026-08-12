@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "global-shared-cache-setting",
+  "title": "Global shared-cache setting",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3_enable_shared_cache stores its exact integer argument in the process-global sharedCacheEnabled configuration and returns SQLITE_OK, affecting only future connection opens.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3_enable_shared_cache::line-89"],
+    "behavioral_block_ids": ["src/btree.c::function::sqlite3_enable_shared_cache::behavior::return::line-91-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Connection-open consumption of sharedCacheEnabled", "Shared B-tree registry", "Table-lock behavior"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Process configuration owner and future connection open"], "caller_closure": "The complete setter body is assigned; connection-open consumption remains independently open."},
+  "contracts": {
+    "inputs": ["Integer enable setting"],
+    "outputs": ["SQLITE_OK/zero"],
+    "ownership": "Mutates process-global configuration; no allocation.",
+    "state_and_results": "Stores enable exactly, not boolean-normalized, and does not modify existing connections.",
+    "locks_callbacks_io": "Source performs a direct global store without callback or I/O.",
+    "failure_and_continuation": "No failure path; subsequent future opens may consume the new setting."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3_enable_shared_cache::line-89", "relation": "source-exact-global-shared-cache-setting-store", "zig_declaration_ids": ["src/core/public_api.zig::function::sqlite3_enable_shared_cache"]}],
+  "representation_differences": ["None beyond Zig access to the ABI-exact global configuration owner."],
+  "oracle": {"protocol": "Save the global field, invoke with 7, observe zero return and exact stored 7, then restore the field.", "internal_observations": ["input integer", "global_config.sharedCacheEnabled", "return code"], "normalization": "SQLITE_OK is integer zero."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; source global-store synchronization semantics are unchanged.", "malformed_input": "All c_int values are stored exactly.", "continuation": "Existing connections are unaffected; future-open integration remains open.", "performance": "Constant-time store.",
+    "commands": ["zig build test"]
+  },
+  "integration": {"production_owner": "src/core/public_api.zig process utility export and internal/config_types.zig global configuration", "native_call_path": "Public ABI export mutates the canonical configuration field; connection-open consumption remains pending.", "bounded_owner_retired": "The former no-op public export is retired by the source-shaped store."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires future-open integration, ABI trace, assurance closure, and independent review."},
+  "known_blockers": ["Consume sharedCacheEnabled in future connection-open B-tree selection.", "Add pinned-C exact non-boolean setting trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:70-93 was reviewed completely for configuration/global context", "src/core/public_api.zig prior no-op export and internal/config_types.zig ABI-exact global owner were reviewed"],
+    "callers": ["Public sqlite3_enable_shared_cache API", "Future sqlite3_open family configuration consumption", "Unit trace invokes public export"] ,
+    "callees": ["sqlite3GlobalConfig.sharedCacheEnabled represented by config_types.global_config.sharedCacheEnabled"],
+    "assertions_branches_cleanup": ["The sole return block and preceding exact store are assigned", "No branch, allocation, or cleanup"],
+    "upstream_tests": ["Upstream shared-cache API/open tests cover setting consumption", "Project unit trace covers exact store and zero return"]
+  },
+  "evidence_receipts": []
+}

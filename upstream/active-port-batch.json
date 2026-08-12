@@ -483,6 +483,15 @@
       "atomic_unit_id": "btree-cursor-integer-key",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3_enable_shared_cache::line-89",
+      "source_sha256": "b2c22b1637a6cb46a7d8e670b34394e6d0692529d7e69bcac6f2aa273fbf9314",
+      "zig_declaration_id": "src/core/public_api.zig::function::sqlite3_enable_shared_cache",
+      "zig_declaration_sha256": "50f22bf873477d62e5525c0e98d1f430622d4e2891929e55133f60cfcacb6c47",
+      "atomic_unit_id": "global-shared-cache-setting",
+      "class": "short",
+      "complete": true
     }
   ]
 }
