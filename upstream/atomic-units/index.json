@@ -503,6 +503,11 @@
       "id": "pager-memory-classification-and-page-refcount",
       "path": "upstream/atomic-units/pager-memory-classification-and-page-refcount.json",
       "status": "source-translated"
+    },
+    {
+      "id": "pager-cache-size-spill-and-shrink-delegation",
+      "path": "upstream/atomic-units/pager-cache-size-spill-and-shrink-delegation.json",
+      "status": "source-translated"
     }
   ]
 }

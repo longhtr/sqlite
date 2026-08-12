@@ -1186,6 +1186,11 @@ pub const Cache = struct {
         self.setConfiguredCacheSize(@intCast(@min(pages, @as(usize, std.math.maxInt(i64)))));
     }
 
+    /// Source `sqlite3PagerSetCachesize()`.
+    pub fn setPagerCacheSize(self: *Cache, pages: i64) void {
+        self.setConfiguredCacheSize(pages);
+    }
+
     /// Source `sqlite3PcacheSetSpillsize()`.
     pub fn setConfiguredSpillSize(self: *Cache, pages: i64) usize {
         if (pages != 0) {
@@ -1204,6 +1209,17 @@ pub const Cache = struct {
     pub fn setSpillSize(self: *Cache, pages: usize) void {
         _ = self.setConfiguredSpillSize(@intCast(@min(pages, @as(usize, std.math.maxInt(i64)))));
     }
+
+    /// Source `sqlite3PagerSetSpillsize()`.
+    pub fn setPagerSpillSize(self: *Cache, pages: i64) usize {
+        return self.setConfiguredSpillSize(pages);
+    }
+
+    /// Source `sqlite3PagerShrink()`.
+    pub fn shrinkPagerCache(self: *Cache) usize {
+        return self.shrink();
+    }
+
     pub fn setPageSize(self: *Cache, page_size: usize) Result {
         self.enterGroup();
         defer self.leaveGroup();
@@ -1516,7 +1532,9 @@ test "per-cache bulk pages precede PCache slots and release as one Manager alloc
     try std.testing.expect(cache.bulk_pointer != null);
     try std.testing.expectEqual(@as(i64, 0), manager.status(.pagecache_overflow, false).current);
     try std.testing.expect(manager.status(.memory_used, false).current > 0);
-    _ = cache.shrink();
+    cache.setPagerCacheSize(5);
+    try std.testing.expectEqual(@as(usize, 5), cache.setPagerSpillSize(5));
+    _ = cache.shrinkPagerCache();
     try std.testing.expect(cache.bulk_pointer == null);
     try std.testing.expectEqual(@as(i64, 0), manager.status(.memory_used, false).current);
     cache.deinit();

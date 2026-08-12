@@ -690,6 +690,33 @@
       "atomic_unit_id": "pager-memory-classification-and-page-refcount",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerSetCachesize::line-3564",
+      "source_sha256": "bec608fc4d5419532efe6e49a1dbf24186779dfe8908942fbc16db44b2c3da34",
+      "zig_declaration_id": "src/core/page_cache.zig::function::Cache.setPagerCacheSize",
+      "zig_declaration_sha256": "d50f9598303aa35562e93c86186213a40d807217c9d4eba5946e3d8b33d6f434",
+      "atomic_unit_id": "pager-cache-size-spill-and-shrink-delegation",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerSetSpillsize::line-3572",
+      "source_sha256": "1891ea61f1aad36e63014561b66f6ee1a4484d1998536023596ba3d8f0a36c78",
+      "zig_declaration_id": "src/core/page_cache.zig::function::Cache.setPagerSpillSize",
+      "zig_declaration_sha256": "d7e954752b6b6bee4fb4f68e5266af81795b4a4e90d181d67cc69842543cc750",
+      "atomic_unit_id": "pager-cache-size-spill-and-shrink-delegation",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerShrink::line-3603",
+      "source_sha256": "4a3a60d5e324bcdb77bb529bfb77cee5f67f00dda1939f914d285d61daac657c",
+      "zig_declaration_id": "src/core/page_cache.zig::function::Cache.shrinkPagerCache",
+      "zig_declaration_sha256": "46c135384cf7c981367a6477254886feb2e988335f85da3e0c1d36f213d7364d",
+      "atomic_unit_id": "pager-cache-size-spill-and-shrink-delegation",
+      "class": "short",
+      "complete": true
     }
   ]
 }

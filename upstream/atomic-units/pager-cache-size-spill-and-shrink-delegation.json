@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "pager-cache-size-spill-and-shrink-delegation",
+  "title": "Pager cache-size, spill-size, and shrink delegation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The Pager forwards signed cache-size and spill-size configuration to PCache and delegates memory shrinking to the same cache owner, returning PCache's effective spill threshold.",
+    "source_files": [{"path": "src/pager.c", "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"}],
+    "source_entity_ids": ["src/pager.c::function::sqlite3PagerSetCachesize::line-3564", "src/pager.c::function::sqlite3PagerSetSpillsize::line-3572", "src/pager.c::function::sqlite3PagerShrink::line-3603"],
+    "behavioral_block_ids": ["src/pager.c::function::sqlite3PagerSetSpillsize::behavior::return::line-3573-column-3::ordinal-0"],
+    "excluded_responsibilities": ["PCache size conversion arithmetic", "PGroup eviction policy", "Pager construction"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["PCache implements signed page/byte conversion, effective spill threshold, and shrink policy"],
+    "caller_closure": "All three complete Pager delegation helpers are assigned on the production PCache owner and consume the source-faithful middleware methods."
+  },
+  "contracts": {
+    "inputs": ["Pager-owned Cache and signed cache/spill request"],
+    "outputs": ["No value for cache size/shrink; effective spill threshold for spill configuration"],
+    "ownership": "Cache is borrowed and retains all pages and configuration.",
+    "state_and_results": "Cache request is forwarded exactly. Nonzero spill request updates the threshold; zero queries it. Shrink frees all currently unpinned purgeable pages possible.",
+    "locks_callbacks_io": "PCache acquires its PGroup synchronization. No Pager I/O.",
+    "failure_and_continuation": "Infallible at the Pager boundary; cache pressure may leave pinned/dirty pages resident."
+  },
+  "mappings": [
+    {"source_entity_id": "src/pager.c::function::sqlite3PagerSetCachesize::line-3564", "relation": "source-pager-cache-size-delegation", "zig_declaration_ids": ["src/core/page_cache.zig::function::Cache.setPagerCacheSize"]},
+    {"source_entity_id": "src/pager.c::function::sqlite3PagerSetSpillsize::line-3572", "relation": "source-pager-spill-size-delegation", "zig_declaration_ids": ["src/core/page_cache.zig::function::Cache.setPagerSpillSize"]},
+    {"source_entity_id": "src/pager.c::function::sqlite3PagerShrink::line-3603", "relation": "source-pager-cache-shrink-delegation", "zig_declaration_ids": ["src/core/page_cache.zig::function::Cache.shrinkPagerCache"]}
+  ],
+  "representation_differences": ["Zig methods live on the Pager-owned Cache rather than accepting a separate Pager wrapper pointer. shrinkPagerCache returns the removed-page count for internal observation although the C Pager API discards it."],
+  "oracle": {
+    "protocol": "Set a signed cache size, set/query the spill size, populate unpinned pages, shrink, and compare resulting limits/page ownership.",
+    "internal_observations": ["signed request", "configured pages", "effective spill threshold", "PGroup page count", "removed pages"],
+    "normalization": "The extra Zig shrink count is ignored when comparing the void source boundary."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation at delegation boundary; PCache allocation behavior is separately covered.",
+    "io_crash_concurrency": "No I/O; PCache PGroup synchronization is retained.",
+    "malformed_input": "Signed negative byte-mode and zero query semantics are delegated to PCache.",
+    "continuation": "Configuration and shrink leave the cache usable.",
+    "performance": "Configuration is bounded by cache enforcement; shrink is linear in removable pages.",
+    "commands": ["zig build test", "zig build pcache-differential", "zig build pager-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/page_cache.zig Pager-owned PCache middleware",
+    "native_call_path": "Pager/B-tree configuration owners use the same Cache state that production page fetch, spill, and release paths consume.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires Pager-boundary differential, assurance closure, and independent review."},
+  "known_blockers": ["Add pinned-C Pager forwarding trace over signed and zero requests.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/pager.c:3555-3606 and upstream/sqlite/src/pcache.c:850-900 were reviewed", "src/core/page_cache.zig Cache configuration, spill, shrink, PGroup ownership, and tests were reviewed"],
+    "callers": ["B-tree/Pager cache-size PRAGMA configuration", "Pager memory release/shrink owner", "PCache unit and differential workloads"],
+    "callees": ["sqlite3PcacheSetCachesize", "sqlite3PcacheSetSpillsize", "sqlite3PcacheShrink", "Zig source-shaped Cache middleware equivalents"],
+    "assertions_branches_cleanup": ["The generated spill return block is assigned; the void one-line wrappers generate no branch blocks", "Signed requests are preserved", "Shrink does not retire pinned or dirty ownership"],
+    "upstream_tests": ["Upstream pager, pcache, cache-size, cache-spill, release-memory, and OOM tests cover these delegations", "Project PCache and pager differentials cover limits, stress, and purge state"]
+  },
+  "evidence_receipts": []
+}
