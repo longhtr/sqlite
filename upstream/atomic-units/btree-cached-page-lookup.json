@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "btree-cached-page-lookup",
+  "title": "B-tree cached page lookup",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "btreePageLookup returns the B-tree page wrapper only when the requested page is already present in the Pager cache, otherwise null, and initializes wrapper ownership through the shared registry.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::btreePageLookup::line-2354"],
+    "behavioral_block_ids": ["src/btree.c::function::btreePageLookup::behavior::assert::line-2356-column-3::ordinal-0", "src/btree.c::function::btreePageLookup::behavior::if::line-2358-column-3::ordinal-0", "src/btree.c::function::btreePageLookup::behavior::return::line-2359-column-5::ordinal-0", "src/btree.c::function::btreePageLookup::behavior::return::line-2361-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Pager cache materialization", "B-tree page allocation", "Page reference-count mutation"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Shared pages registry mirrors cached Pager pages and caller owns B-tree synchronization"],
+    "caller_closure": "The complete hit/miss lookup is assigned and all internal cached-page consumers route through the helper."
+  },
+  "contracts": {
+    "inputs": ["Shared B-tree and page number"],
+    "outputs": ["Cached Page pointer or null"],
+    "ownership": "Returned page remains owned by Shared; no new reference or allocation is created in the bounded representation.",
+    "state_and_results": "First matching page number is returned. Missing number returns null. No fields are mutated.",
+    "locks_callbacks_io": "Caller owns B-tree synchronization. No callback or I/O.",
+    "failure_and_continuation": "Infallible and state-preserving."
+  },
+  "mappings": [{
+    "source_entity_id": "src/btree.c::function::btreePageLookup::line-2354",
+    "relation": "source-btree-cached-page-lookup",
+    "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::lookupCachedPage"]
+  }],
+  "representation_differences": ["The source first calls sqlite3PagerLookup and then btreePageFromDbPage. Zig's shared pages registry already stores initialized Page wrappers for cached pages, so the bounded helper searches that registry directly without incrementing references."],
+  "oracle": {
+    "protocol": "Insert cached page 2, look up 2 and compare identity, then look up missing page 99 and observe null.",
+    "internal_observations": ["requested page number", "registry page identities", "returned identity/null", "unchanged ownership"],
+    "normalization": "Pager DbPage-to-MemPage adaptation is normalized to the existing Zig Page wrapper identity."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; caller owns B-tree synchronization.",
+    "malformed_input": "Arbitrary page number safely returns null when absent.",
+    "continuation": "Pure lookup.",
+    "performance": "Zig bounded registry lookup is linear rather than the source PCache hash lookup; performance integration remains open.",
+    "commands": ["zig build test", "zig build btree-differential", "zig build pager-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/btree_core.zig shared cached-page registry",
+    "native_call_path": "findPage delegates to lookupCachedPage, so cursor, balance, integrity, and mutation owners consume it.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires Pager reference semantics/performance trace, assurance closure, and independent review."},
+  "known_blockers": ["Integrate or differentially normalize Pager lookup reference semantics and replace linear lookup if needed.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:2338-2363 plus btreePageFromDbPage and Pager lookup ownership were reviewed", "src/core/internal/btree_core.zig pageFromData, shared pages registry, all findPage callers, and tests were reviewed"],
+    "callers": ["Cursor movement and restoration", "Balance/relocation and mutation", "Integrity traversal", "Unit hit/miss trace"],
+    "callees": ["sqlite3PagerLookup and btreePageFromDbPage in the source", "Shared pages registry traversal in Zig"],
+    "assertions_branches_cleanup": ["All four generated blocks are assigned", "Hit and miss paths are explicit", "No allocation or cleanup paths exist"],
+    "upstream_tests": ["Upstream B-tree cache, cursor, balance, and Pager tests exercise lookup", "Project B-tree/Pager differentials exercise cached page ownership"]
+  },
+  "evidence_receipts": []
+}

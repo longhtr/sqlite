@@ -258,11 +258,17 @@ test "source cursor last-page check requires every rightmost ancestor" {
     cursor.ancestor_indices.clearRetainingCapacity();
 }
 
-fn findPage(shared: *Shared, number: u32) ?*Page {
+/// Source `btreePageLookup()` after the Pager cache lookup has produced the
+/// shared owner's cached-page registry.
+pub fn lookupCachedPage(shared: *Shared, number: u32) ?*Page {
     for (shared.pages.items) |page| {
         if (page.number == number) return page;
     }
     return null;
+}
+
+fn findPage(shared: *Shared, number: u32) ?*Page {
+    return lookupCachedPage(shared, number);
 }
 fn readU32(bytes: []const u8) u32 {
     return std.mem.readInt(u32, bytes[0..4], .big);
@@ -2242,6 +2248,8 @@ fn allocationExercise(allocator: std.mem.Allocator) !void {
     defer shared.deinit();
     shared.usable_size = 512;
     const root = try testPage(&shared, 2, true);
+    try std.testing.expectEqual(root, lookupCachedPage(&shared, 2).?);
+    try std.testing.expect(lookupCachedPage(&shared, 99) == null);
     try appendTestCell(root, "row");
     var tree = Btree{ .shared = &shared, .transaction = .write };
     shared.transaction = .write;
