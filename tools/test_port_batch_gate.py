@@ -103,8 +103,19 @@ def main() -> None:
 
             checkpoints_path.write_text(json.dumps(checkpoints))
             manifest_path.write_text(json.dumps(manifest))
-            expected = "checkpoint threshold not reached" if manifest["status"] == "active" else "checkpoint promotion requires an active batch"
-            expect_failure(expected, gate.require_checkpoint_ready)
+            short_count = sum(entry["class"] == "short" for entry in manifest["entries"])
+            substantive_count = sum(entry["class"] == "substantive" for entry in manifest["entries"])
+            threshold_reached = (
+                short_count >= manifest["minimum_short_functions"]
+                or substantive_count >= manifest["minimum_substantive_functions"]
+            )
+            if manifest["status"] == "active" and threshold_reached:
+                result = gate.require_checkpoint_ready()
+                if result["active_entries"] != len(manifest["entries"]):
+                    raise SystemExit("checkpoint-ready validation returned stale counts")
+            else:
+                expected = "checkpoint threshold not reached" if manifest["status"] == "active" else "checkpoint promotion requires an active batch"
+                expect_failure(expected, gate.require_checkpoint_ready)
         finally:
             gate.MANIFEST = original_manifest
             gate.HISTORICAL_CLAIMS = original_historical

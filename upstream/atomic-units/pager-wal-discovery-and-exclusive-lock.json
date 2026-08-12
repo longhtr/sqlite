@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "id": "pager-wal-discovery-and-exclusive-lock",
+  "title": "Pager WAL discovery and rollback exclusive locking",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "pagerOpenWalIfPresent reconciles the filesystem WAL with database size and mode, while sqlite3PagerExclusiveLock preserves sticky errors, treats WAL mode as a no-op, and acquires EXCLUSIVE for rollback writers through the busy policy.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::pagerOpenWalIfPresent::line-3385",
+      "src/pager.c::function::sqlite3PagerExclusiveLock::line-6469"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::pagerOpenWalIfPresent::behavior::assert::line-3387-column-3::ordinal-0",
+      "src/pager.c::function::pagerOpenWalIfPresent::behavior::assert::line-3388-column-3::ordinal-0",
+      "src/pager.c::function::pagerOpenWalIfPresent::behavior::if::line-3390-column-3::ordinal-0",
+      "src/pager.c::function::pagerOpenWalIfPresent::behavior::if::line-3395-column-5::ordinal-0",
+      "src/pager.c::function::pagerOpenWalIfPresent::behavior::if::line-3396-column-7::ordinal-0",
+      "src/pager.c::function::pagerOpenWalIfPresent::behavior::if::line-3400-column-9::ordinal-0",
+      "src/pager.c::function::pagerOpenWalIfPresent::behavior::return::line-3400-column-18::ordinal-0",
+      "src/pager.c::function::pagerOpenWalIfPresent::behavior::if::line-3401-column-9::ordinal-0",
+      "src/pager.c::function::pagerOpenWalIfPresent::behavior::if::line-3407-column-13::ordinal-0",
+      "src/pager.c::function::pagerOpenWalIfPresent::behavior::return::line-3412-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerExclusiveLock::behavior::assert::line-6471-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerExclusiveLock::behavior::if::line-6472-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerExclusiveLock::behavior::assert::line-6473-column-5::ordinal-0",
+      "src/pager.c::function::sqlite3PagerExclusiveLock::behavior::assert::line-6477-column-5::ordinal-0",
+      "src/pager.c::function::sqlite3PagerExclusiveLock::behavior::if::line-6478-column-5::ordinal-0",
+      "src/pager.c::function::sqlite3PagerExclusiveLock::behavior::return::line-6482-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "WAL frame parsing, shared-index recovery, and checkpointing",
+      "Database-file page count implementation",
+      "Rollback journal synchronization after EXCLUSIVE acquisition"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "pager-database-lock-transitions",
+      "wal-index-memory-and-file-observations"
+    ],
+    "external_source_responsibilities": [
+      "VFS access/delete report and remove filesystem WAL names",
+      "Wal.open and Wal.recover own WAL parsing and shared-index state",
+      "Pager callers hold a read lock for discovery and an active write transaction for exclusiveLock"
+    ],
+    "caller_closure": "Both complete functions and generated blocks are assigned; beginRead consumes WAL discovery and rollback commit synchronization consumes exclusiveLock."
+  },
+  "contracts": {
+    "inputs": [
+      "Mutable Pager with read lock for WAL discovery",
+      "Mutable rollback writer Pager for exclusive locking"
+    ],
+    "outputs": [
+      "Exact VFS, WAL, sticky-error, busy, or success ResultCode"
+    ],
+    "ownership": "WAL discovery may initialize or deinitialize the Pager-owned Wal; exclusive locking transfers no ownership.",
+    "state_and_results": "Memory-backed discovery is a no-op. Missing WAL clears any stale owner and selects rollback mode. Existing WAL with a zero-byte database is deleted and rollback mode selected. Existing WAL with nonempty database opens or recovers the Wal and selects WAL mode. exclusiveLock returns a sticky Pager error first, returns success without database-file locking in WAL mode, and otherwise waits for EXCLUSIVE.",
+    "locks_callbacks_io": "Discovery performs VFS access and possibly file-size, delete, WAL open/recovery, and shared-memory I/O while a read lock is held. exclusiveLock uses the Pager busy callback only through waitOnLock.",
+    "failure_and_continuation": "Discovery publishes mode only after successful branch completion. Failed WAL open/recovery leaves beginRead cleanup responsible for owner teardown and unlock. Failed exclusive acquisition preserves writer state and prior lock level for retry."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::pagerOpenWalIfPresent::line-3385",
+      "relation": "source-filesystem-wal-discovery-and-mode-selection",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.openWalIfPresent"
+      ]
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerExclusiveLock::line-6469",
+      "relation": "source-writer-exclusive-lock-gate",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.exclusiveLock"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Production Pager uses one wal_mode boolean for the currently selected mode rather than a separate source journalMode enum.",
+    "Pager.error_code is an exact ResultCode value rather than the source integer errCode.",
+    "Memory-backed detection uses the VFS-open result flag; temp-file opening remains outside the current Pager public constructor."
+  ],
+  "oracle": {
+    "protocol": "Exercise absent WAL rollback selection, zero-byte database stale-WAL deletion, nonempty committed-WAL open/recovery, WAL-mode exclusive no-op, sticky-error forwarding, rollback EXCLUSIVE busy callback stop, and successful retry after the competing reader closes.",
+    "internal_observations": [
+      "WAL file existence",
+      "database byte size",
+      "Pager.wal_mode and wal_state",
+      "Pager.error_code and lock_level",
+      "busy callback count"
+    ],
+    "normalization": "Compare exact ResultCode, boolean mode, owner presence, file existence, lock level, and callback count."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Wal.open allocation failure propagates and beginRead cleanup owns teardown; exclusiveLock allocates nothing.",
+    "io_crash_concurrency": "Read lock excludes the source WAL deletion race; VFS/Wal owners preserve exact I/O failures.",
+    "malformed_input": "Malformed existing WAL errors through Wal.recover; typed Pager state and assertions constrain exclusiveLock.",
+    "continuation": "Failed beginRead returns to open; failed EXCLUSIVE retains writer state and lock for retry.",
+    "performance": "Constant metadata work plus bounded WAL recovery; busy retry is caller-controlled.",
+    "commands": [
+      "zig build test",
+      "zig build wal-differential",
+      "zig build pager-differential",
+      "zig build rollback-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig beginRead and rollback journal synchronization",
+    "native_call_path": "beginRead invokes openWalIfPresent after shared-lock and external-version checks; syncJournalForCommit invokes exclusiveLock before journal durability work.",
+    "bounded_owner_retired": "Inline beginRead access/open logic and direct commit waitOnLock call are retired in favor of these helpers."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires temp/no-lock and pinned-C branch traces, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Connect explicit temporary Pager construction and locking-mode configuration.",
+    "Add pinned-C branch trace for missing, stale-empty, and nonempty WAL cases.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:3368-3414, 4318-4344, 6455-6484, and 5440-5505 were reviewed",
+      "upstream sqlite3PagerOpenWal and WAL owner paths were reviewed",
+      "src/core/pager.zig beginRead, failedBeginRead, synchronization, contention, empty-WAL, WAL recovery, fault, and malformed tests were reviewed",
+      "src/core/wal.zig open and recover ownership paths were reviewed"
+    ],
+    "callers": [
+      "sqlite3PagerSharedLock invokes pagerOpenWalIfPresent",
+      "syncJournal and VDBE auxiliary paths invoke sqlite3PagerExclusiveLock",
+      "Production Pager.beginRead and syncJournalForCommit invoke the Zig helpers"
+    ],
+    "callees": [
+      "sqlite3OsAccess, pagerPagecount, sqlite3OsDelete, and sqlite3PagerOpenWal",
+      "pager_wait_on_lock",
+      "Pager access/fileSize, VFS xDelete, Wal.open/recover, and waitOnLock"
+    ],
+    "assertions_branches_cleanup": [
+      "Read-lock and open-state source preconditions reviewed",
+      "memory, absent, empty, nonempty, open, recover, sticky-error, WAL no-op, busy, and success branches covered",
+      "beginRead cleanup deinitializes failed WAL owners and releases the read lock"
+    ],
+    "upstream_tests": [
+      "Upstream WAL open/delete, pager locking, and busy suites exercise these paths",
+      "Project Pager empty-WAL, committed-WAL, malformed-WAL, fault, and writer-contention tests exercise native paths"
+    ]
+  },
+  "evidence_receipts": []
+}

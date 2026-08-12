@@ -1131,6 +1131,24 @@
       "atomic_unit_id": "pager-database-lock-transitions",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pagerOpenWalIfPresent::line-3385",
+      "source_sha256": "03a7da504bb28a5e8f8e907a88424543f9b93f11cb26bfe5eee4cbf75adf9175",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.openWalIfPresent",
+      "zig_declaration_sha256": "771c3fe56415e41cce4d460394f7d1397e3bbdb1760d10b7cf5949e00302ee33",
+      "atomic_unit_id": "pager-wal-discovery-and-exclusive-lock",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerExclusiveLock::line-6469",
+      "source_sha256": "16df04f8a050296b865a3a70de7f56791cd2aa1b8a83eeba1a039083acb32c57",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.exclusiveLock",
+      "zig_declaration_sha256": "fb647f46d470a4d50b56d9d4ac086eb980613c9c39595a576276c7ba206b6dc2",
+      "atomic_unit_id": "pager-wal-discovery-and-exclusive-lock",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

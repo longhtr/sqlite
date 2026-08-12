@@ -530,6 +530,11 @@
       "status": "source-translated"
     },
     {
+      "id": "pager-wal-discovery-and-exclusive-lock",
+      "path": "upstream/atomic-units/pager-wal-discovery-and-exclusive-lock.json",
+      "status": "source-translated"
+    },
+    {
       "id": "pager-maximum-page-count",
       "path": "upstream/atomic-units/pager-maximum-page-count.json",
       "status": "source-translated"

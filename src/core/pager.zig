@@ -155,6 +155,7 @@ pub const Pager = struct {
     wal_name: [:0]u8,
     cache: *page_cache.Cache,
     state: State = .open,
+    error_code: ResultCode = .ok,
     page_size: u32 = default_page_size,
     reserved_bytes: u8 = 0,
     database_pages: u32 = 0,
@@ -184,6 +185,7 @@ pub const Pager = struct {
     commit_hook: ?CommitHook = null,
     commit_context: ?*anyopaque = null,
     temp_page: []u8 = &.{},
+    wal_requested: bool = false,
     wal_mode: bool = false,
     wal_state: ?wal.Wal = null,
     wal_external_index: bool = false,
@@ -432,7 +434,7 @@ pub const Pager = struct {
         if (cache_rc != .ok) return cacheResult(cache_rc);
         self.page_size = header.page_size;
         self.reserved_bytes = header.reserved_bytes;
-        self.wal_mode = header.read_version == 2 or header.write_version == 2;
+        self.wal_requested = header.read_version == 2 or header.write_version == 2;
         self.configured = true;
         return .ok;
     }
@@ -825,29 +827,24 @@ pub const Pager = struct {
             if (rc != .ok) return self.failedBeginRead(rc);
         }
 
-        var wal_exists: c_int = 0;
-        rc = self.access(self.wal_name, &wal_exists);
+        rc = self.openWalIfPresent();
         if (rc != .ok) return self.failedBeginRead(rc);
-        if (wal_exists != 0 or self.wal_mode) {
-            if (self.wal_state == null) {
-                const opened = wal.Wal.open(
-                    self.allocator,
-                    self.abi_vfs,
-                    self.file,
-                    self.wal_name,
-                    self.page_size,
-                    !self.read_only,
-                    wal_exists != 0,
-                    !self.wal_external_index,
-                );
-                if (opened.result != .ok) return self.failedBeginRead(opened.result);
-                self.wal_state = opened.wal.?;
-            } else {
-                rc = self.wal_state.?.recover();
-                if (rc != .ok) return self.failedBeginRead(rc);
-            }
-            self.cache.clear();
+        if (self.wal_state == null and self.wal_requested) {
+            const opened = wal.Wal.open(
+                self.allocator,
+                self.abi_vfs,
+                self.file,
+                self.wal_name,
+                self.page_size,
+                !self.read_only,
+                false,
+                !self.wal_external_index,
+            );
+            if (opened.result != .ok) return self.failedBeginRead(opened.result);
+            self.wal_state = opened.wal.?;
+            self.wal_mode = true;
         }
+        if (self.wal_state != null) self.cache.clear();
 
         if (self.has_held_shared_lock) {
             var version: [16]u8 = .{0} ** 16;
@@ -1059,6 +1056,59 @@ pub const Pager = struct {
         return self.cache.shrink();
     }
 
+    /// Source `pagerOpenWalIfPresent()`: inspect the WAL name while holding a
+    /// read lock, discard stale empty-database WAL files, open an existing WAL
+    /// for a nonempty database, or leave rollback mode selected.
+    fn openWalIfPresent(self: *Pager) ResultCode {
+        if (self.memory_file) return .ok;
+        var exists: c_int = 0;
+        var rc = self.access(self.wal_name, &exists);
+        if (rc != .ok) return rc;
+        if (exists == 0) {
+            if (self.wal_state) |*state| state.deinit();
+            self.wal_state = null;
+            self.wal_mode = false;
+            return .ok;
+        }
+        var database_size: u64 = 0;
+        rc = self.fileSize(&database_size);
+        if (rc != .ok) return rc;
+        if (database_size == 0) {
+            const delete_fn = self.abi_vfs.xDelete orelse return .io_error;
+            rc = ResultCode.fromC(delete_fn(self.abi_vfs, self.wal_name.ptr, 0));
+            if (rc == .ok) self.wal_mode = false;
+            return rc;
+        }
+        if (self.wal_state == null) {
+            const opened = wal.Wal.open(
+                self.allocator,
+                self.abi_vfs,
+                self.file,
+                self.wal_name,
+                self.page_size,
+                !self.read_only,
+                true,
+                !self.wal_external_index,
+            );
+            if (opened.result != .ok) return opened.result;
+            self.wal_state = opened.wal.?;
+        } else {
+            rc = self.wal_state.?.recover();
+            if (rc != .ok) return rc;
+        }
+        self.wal_mode = true;
+        return .ok;
+    }
+
+    /// Source `sqlite3PagerExclusiveLock()`: preserve the sticky Pager error,
+    /// bypass rollback-file locking in WAL mode, or busy-retry EXCLUSIVE.
+    fn exclusiveLock(self: *Pager) ResultCode {
+        if (self.error_code != .ok) return self.error_code;
+        if (self.wal_mode) return .ok;
+        std.debug.assert(self.state == .writer_locked or self.state == .writer_cache_modified or self.state == .writer_database_modified);
+        return self.waitOnLock(vfs.LOCK_EXCLUSIVE);
+    }
+
     pub fn beginWrite(self: *Pager) ResultCode {
         if (self.read_only) return .read_only;
         if (self.state != .reader) return if (self.state == .writer_locked or
@@ -1242,7 +1292,7 @@ pub const Pager = struct {
 
     fn syncJournalForCommit(self: *Pager) ResultCode {
         const journal = if (self.journal) |*value| value else return .misuse;
-        var rc = self.waitOnLock(vfs.LOCK_EXCLUSIVE);
+        var rc = self.exclusiveLock();
         if (rc != .ok) return rc;
         rc = ResultCode.fromC(journal.sync(2));
         if (rc != .ok) return rc;
@@ -2481,6 +2531,10 @@ test "writer reserved and exclusive contention preserve busy-callback policy" {
     try std.testing.expectEqual(ResultCode.ok, first.lockDatabase(vfs.LOCK_SHARED));
     try std.testing.expectEqual(ResultCode.ok, first.beginWrite());
     try std.testing.expectEqual(vfs.LOCK_RESERVED, first.lock_level);
+    first.error_code = ResultCode.fromC(vfs.IOERR_WRITE);
+    try std.testing.expectEqual(ResultCode.fromC(vfs.IOERR_WRITE), first.exclusiveLock());
+    try std.testing.expectEqual(vfs.LOCK_RESERVED, first.lock_level);
+    first.error_code = .ok;
     var reserved_busy_calls: usize = 0;
     second.setBusyHandler(stopAfterOneBusy, &reserved_busy_calls);
     try std.testing.expectEqual(ResultCode.busy, second.beginWrite());
@@ -2606,6 +2660,24 @@ test "VFS faults preserve exact codes state and cache ownership" {
     try std.testing.expectEqual(ResultCode.io_error, close_pager.close());
     try std.testing.expectEqual(State.closed, close_pager.state);
     memory.faults = null;
+}
+
+test "WAL discovery deletes an empty database WAL and leaves rollback mode" {
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    var adapter = vfs.AbiAdapter.init("pager-empty-wal", &memory);
+    const opened = memory.open("empty-wal.db", vfs.OPEN_READWRITE | vfs.OPEN_CREATE | vfs.OPEN_MAIN_DB);
+    try std.testing.expectEqual(vfs.OK, opened.rc);
+    try std.testing.expectEqual(vfs.OK, memory.closeAndDestroy(opened.file.?));
+    try installFile(&memory, "empty-wal.db-wal", "stale");
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "empty-wal.db", .{ .writable = true }).pager.?;
+    try std.testing.expectEqual(ResultCode.ok, pager.beginRead());
+    try std.testing.expect(!pager.isWalMode());
+    try std.testing.expect(pager.wal_state == null);
+    var exists: c_int = 1;
+    try std.testing.expectEqual(vfs.OK, memory.access("empty-wal.db-wal", vfs.ACCESS_EXISTS, &exists));
+    try std.testing.expectEqual(@as(c_int, 0), exists);
+    try std.testing.expectEqual(ResultCode.ok, pager.close());
 }
 
 test "WAL read write recovery and checkpoint use committed snapshots" {
