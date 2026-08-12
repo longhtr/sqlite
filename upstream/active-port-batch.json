@@ -195,6 +195,15 @@
       "atomic_unit_id": "prepare-vdbe-reprepare-orchestration",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeSetP4KeyInfo::line-1629",
+      "source_sha256": "372162d138189dbb364ee9faee1ddebd343548a4de805fa9ab988a36963c6207",
+      "zig_declaration_id": "src/core/internal/select_analysis.zig::function::setP4KeyInfo",
+      "zig_declaration_sha256": "d2ff4238bdba0cf58a4a6540f53c36738cc7545d3fa8751e0d7abd4c0005e5b3",
+      "atomic_unit_id": "vdbe-index-keyinfo-p4-attachment",
+      "class": "short",
+      "complete": true
     }
   ]
 }

@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-index-keyinfo-p4-attachment",
+  "title": "Index-derived KeyInfo P4 attachment",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3VdbeSetP4KeyInfo derives KeyInfo from an Index and transfers a successful result to the most recently emitted VDBE operation as P4_KEYINFO while preserving parse-error and allocation-failure no-attachment behavior.",
+    "source_files": [{"path": "src/vdbeaux.c", "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"}],
+    "source_entity_ids": ["src/vdbeaux.c::function::sqlite3VdbeSetP4KeyInfo::line-1629"],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeSetP4KeyInfo::behavior::assert::line-1632-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetP4KeyInfo::behavior::assert::line-1633-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeSetP4KeyInfo::behavior::if::line-1635-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["KeyInfo derivation internals", "P4 replacement/destruction internals", "Index code generation"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": ["vdbe-p4-attachment-dispatch-and-object-destruction"],
+    "external_source_responsibilities": ["sqlite3KeyInfoOfIndex collation, sort-order, allocation, and corruption handling"],
+    "caller_closure": "The complete conditional attachment wrapper is assigned; broader index code-generation integration remains open."
+  },
+  "contracts": {
+    "inputs": ["Parse with a non-null VDBE and non-null Index"],
+    "outputs": ["Latest VDBE operation owns derived KeyInfo P4 on success; no operation mutation on derivation failure"],
+    "ownership": "Successful KeyInfo ownership transfers to VDBE P4; failed derivation retains no owner.",
+    "state_and_results": "Existing parse errors and KeyInfo allocation/collation failures suppress attachment without adding a second result path.",
+    "locks_callbacks_io": "Caller owns connection serialization; no callbacks or direct I/O.",
+    "failure_and_continuation": "Null KeyInfo leaves the operation array unchanged and preserves the derivation owner's parse/connection error."
+  },
+  "mappings": [{"source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeSetP4KeyInfo::line-1629", "relation": "source-index-keyinfo-to-latest-operation-p4", "zig_declaration_ids": ["src/core/internal/select_analysis.zig::function::setP4KeyInfo"]}],
+  "representation_differences": ["Typed Parse, Index, VDBE, and KeyInfo pointers replace C casts; the P4 tag is the generated active-profile keyinfo constant."],
+  "oracle": {
+    "protocol": "Invoke attachment with an existing parse error and observe no operation mutation; compile-trace successful derivation into the typed P4 owner pending a pinned-C positive-path trace.",
+    "internal_observations": ["operation count and latest-operation ownership", "parse-error no-attachment branch"],
+    "normalization": "Pointer values are owner identities only; P4 tags and scalar state are exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "KeyInfo OOM returns null and suppresses attachment; allocator behavior belongs to sqlite3KeyInfoOfIndex.",
+    "io_crash_concurrency": "No I/O; caller serialization remains external.",
+    "malformed_input": "Null VDBE or Index violates source assertions.",
+    "continuation": "Success leaves KeyInfo under VDBE ownership; failure preserves parser continuation state.",
+    "performance": "One KeyInfo derivation and constant-time latest-operation attachment.",
+    "commands": ["zig build vdbe-builder-differential", "zig build test"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/select_analysis.zig schema/index code-generation layer",
+    "native_call_path": "The typed owner is compile- and error-branch unit-traced; index generation dispatch remains pending.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires positive-path trace, caller integration, assurance closure, and independent review."},
+  "known_blockers": ["Connect ordinary index operation generation to this owner.", "Add pinned-C positive/error/OOM trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/vdbeaux.c:1623-1636 was reviewed completely", "src/core/internal/select_analysis.zig KeyInfo derivation was reviewed", "src/core/internal/vdbe_aux.zig appendP4 ownership was reviewed"],
+    "callers": ["Index seek/open code generation after emitting the target opcode", "Source-layout error-branch unit trace invokes the owner directly"],
+    "callees": ["sqlite3KeyInfoOfIndex", "sqlite3VdbeAppendP4"],
+    "assertions_branches_cleanup": ["Both source non-null assertions and the conditional KeyInfo branch are assigned", "Successful attachment transfers ownership; failed derivation does not append or mutate P4"],
+    "upstream_tests": ["Upstream index, collation, schema-corruption, and OOM tests cover this wrapper", "Project unit trace covers existing-parse-error no-attachment"]
+  },
+  "evidence_receipts": []
+}

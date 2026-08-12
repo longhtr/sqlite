@@ -308,6 +308,11 @@
       "id": "prepare-vdbe-reprepare-orchestration",
       "path": "upstream/atomic-units/prepare-vdbe-reprepare-orchestration.json",
       "status": "source-translated"
+    },
+    {
+      "id": "vdbe-index-keyinfo-p4-attachment",
+      "path": "upstream/atomic-units/vdbe-index-keyinfo-p4-attachment.json",
+      "status": "source-translated"
     }
   ]
 }

@@ -84,6 +84,28 @@ pub fn keyInfoOfIndex(parse: *parse_types.Parse, index: *schema.Index) ?*vdbe_ty
     return result;
 }
 
+/// Source `sqlite3VdbeSetP4KeyInfo()`: derive the Index KeyInfo and transfer
+/// it to the most recently emitted operation when derivation succeeds.
+pub fn setP4KeyInfo(parse: *parse_types.Parse, index: *schema.Index) void {
+    const machine: *vdbe_types.Vdbe = @ptrCast(@alignCast(parse.pVdbe.?));
+    if (keyInfoOfIndex(parse, index)) |info| {
+        vdbe_aux.appendP4(machine, info, vdbe_types.p4.keyinfo);
+    }
+}
+
+test "source P4 KeyInfo attachment preserves parse-error operation" {
+    var parse = std.mem.zeroes(parse_types.Parse);
+    var index = std.mem.zeroes(schema.Index);
+    var machine = std.mem.zeroes(vdbe_types.Vdbe);
+    parse.pVdbe = @ptrCast(&machine);
+    parse.nErr = 1;
+    machine.nOp = 7;
+
+    setP4KeyInfo(&parse, &index);
+
+    try std.testing.expectEqual(@as(c_int, 7), machine.nOp);
+}
+
 /// Source `sqlite3KeyInfoFromExprList()`.
 pub fn keyInfoFromExpressionList(parse: *parse_types.Parse, list: *parse_types.ExprList, start: c_int, extra_fields: c_int) ?*vdbe_types.KeyInfo {
     const db: *vdbe_types.Sqlite3 = @ptrCast(@alignCast(parse.db.?));
