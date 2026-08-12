@@ -1477,6 +1477,15 @@ pub const Pager = struct {
         return .ok;
     }
 
+    /// Source `sqlite3PagerRekey()`: replace the complete page flag state and
+    /// move a live cache page to a different positive page number.
+    pub fn rekeyPage(self: *Pager, page: *page_cache.Page, new_number: u32, flags: page_cache.Flags) ResultCode {
+        if (page.key == new_number or new_number == 0 or page.ref_count == 0) return .misuse;
+        if (page.owner != self.cache) return .misuse;
+        page.flags = flags;
+        return cacheResult(self.cache.move(page, new_number));
+    }
+
     pub fn movePage(self: *Pager, page: *page_cache.Page, new_number: u32) ResultCode {
         _ = self;
         _ = page;
@@ -2253,6 +2262,31 @@ fn probeBusyFileControl(file: *vfs.sqlite3_file, operation: c_int, argument: ?*a
     probe.seen_argument = argument;
     const control = probe.delegate.xFileControl orelse return vfs.NOTFOUND;
     return control(file, operation, argument);
+}
+
+test "pager rekey replaces flags and moves a live cache page" {
+    const fixture = try readFixture("valid-empty-4096.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "rekey.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-rekey", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "rekey.db", .{ .writable = true }).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+
+    try std.testing.expectEqual(ResultCode.ok, pager.beginRead());
+    const page = pager.getPage(1, false).page.?;
+    pager.cache.makeDirty(page);
+    const flags = page_cache.Flags{ .dirty = true, .writeable = true, .need_sync = true };
+    try std.testing.expectEqual(ResultCode.ok, pager.rekeyPage(page, 2, flags));
+    try std.testing.expectEqual(@as(u32, 2), page.key);
+    try std.testing.expect(std.meta.eql(flags, page.flags));
+    try std.testing.expect(pager.lookup(1) == null);
+    const moved = pager.lookup(2).?;
+    try std.testing.expect(moved == page);
+    try std.testing.expectEqual(ResultCode.ok, pager.release(moved));
+    pager.cache.makeClean(page);
+    try std.testing.expectEqual(ResultCode.ok, pager.release(page));
 }
 
 test "truncate image records the commit size and rollback restores the original" {

@@ -545,6 +545,11 @@
       "status": "source-translated"
     },
     {
+      "id": "pager-page-rekey-and-flags",
+      "path": "upstream/atomic-units/pager-page-rekey-and-flags.json",
+      "status": "source-translated"
+    },
+    {
       "id": "pager-journal-or-wal-file-accessor",
       "path": "upstream/atomic-units/pager-journal-or-wal-file-accessor.json",
       "status": "source-translated"

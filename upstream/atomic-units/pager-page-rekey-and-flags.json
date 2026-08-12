@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "id": "pager-page-rekey-and-flags",
+  "title": "Pager page rekey and flag replacement",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerRekey replaces the complete page flag state and moves a live cache page to a distinct positive page number.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::sqlite3PagerRekey::line-7342"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::sqlite3PagerRekey::behavior::assert::line-7343-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "B-tree balance page-number sorting",
+      "General Pager move-page journaling",
+      "Page-cache hash rekey implementation"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Page cache owns collision eviction, hash rekey, and dirty-list repositioning",
+      "B-tree balancing supplies live dirty writable pages and source-derived replacement flags"
+    ],
+    "caller_closure": "The complete flag replacement and cache-move body is assigned and exercised against a live runtime Pager/cache owner."
+  },
+  "contracts": {
+    "inputs": [
+      "Mutable Pager",
+      "Live cache-owned Page",
+      "Distinct positive destination page number",
+      "Complete replacement Flags value"
+    ],
+    "outputs": [
+      "ResultCode and rekeyed page on success"
+    ],
+    "ownership": "Page and its data remain cache-owned; no allocation or ownership transfer.",
+    "state_and_results": "Reject zero, unchanged, unreferenced, or foreign-cache pages. Replace Page.flags before delegating the hash-key move. On success the old key is absent, the new key resolves to the same page, and need-sync dirty pages move to the dirty-list front.",
+    "locks_callbacks_io": "Cache.move serializes through the cache group lock; no callbacks or I/O.",
+    "failure_and_continuation": "Typed precondition failures return misuse. Cache collision or ownership failures preserve a bounded exact ResultCode."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerRekey::line-7342",
+      "relation": "source-page-flags-replacement-and-cache-rekey",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.rekeyPage"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Zig accepts the typed page_cache.Flags structure rather than a u16 bit mask.",
+    "Zig returns ResultCode so release-mode precondition and cache invariant failures do not depend only on C assertions."
+  ],
+  "oracle": {
+    "protocol": "Acquire live page 1, mark it dirty, replace its flags with dirty/writeable/need-sync, rekey to page 2, require exact flags, old-key absence, new-key identity, and balanced reference release.",
+    "internal_observations": [
+      "old and new page keys",
+      "complete Flags value",
+      "cache lookup identity",
+      "reference count",
+      "dirty-list ownership"
+    ],
+    "normalization": "Page numbers, flag bits, result code, and within-process page identity compare exactly."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation in rekey; cache hash storage is pre-existing.",
+    "io_crash_concurrency": "No I/O; cache group lock serializes hash and dirty-list mutation.",
+    "malformed_input": "Zero, unchanged, unreferenced, and foreign-cache inputs are rejected.",
+    "continuation": "Successful page remains live under the new key and can be cleaned/released normally.",
+    "performance": "Expected constant-time hash rekey plus bounded collision cleanup.",
+    "commands": [
+      "zig build test",
+      "zig build pcache-differential",
+      "zig build btree-mutation-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig Pager.rekeyPage and src/core/page_cache.zig Cache.move",
+    "native_call_path": "Runtime Pager owns the typed rekey operation; full B-tree balance sorting remains to be routed through it.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires B-tree balance integration, pinned-C trace, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Route native B-tree balance page-number sorting through Pager.rekeyPage.",
+    "Add pinned-C collision and dirty-list ordering trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:7334-7348, pcache.c:655-688, and btree.c:8690-8740 were reviewed",
+      "src/core/pager.zig Pager.rekeyPage and tests plus src/core/page_cache.zig Cache.move/PageTable.rekey were reviewed"
+    ],
+    "callers": [
+      "Source B-tree balance ascending-page-number swap",
+      "Runtime Pager trace exercises a live dirty page"
+    ],
+    "callees": [
+      "sqlite3PcacheMove in the source",
+      "Cache.move and PageTable.rekey in Zig"
+    ],
+    "assertions_branches_cleanup": [
+      "The generated distinct-page assertion is assigned",
+      "Typed guards cover positive/live/cache ownership preconditions",
+      "Flag replacement precedes move as in the source"
+    ],
+    "upstream_tests": [
+      "Upstream B-tree balance and pcache tests exercise page rekey and collision handling",
+      "Project Pager/PCache tests exercise exact flags, identity, and dirty-page continuation"
+    ]
+  },
+  "evidence_receipts": []
+}

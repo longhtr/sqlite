@@ -1041,6 +1041,15 @@
       "atomic_unit_id": "pager-page-data-and-extra-accessors",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerRekey::line-7342",
+      "source_sha256": "5bcd1b7e9c80316738cc354219ed2c7ac938e76064b3dbc67f67eb081c9e3a95",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.rekeyPage",
+      "zig_declaration_sha256": "02f5986c339a7a5e39d6d9ce277a65c495823063f338df47392311a63dd11fec",
+      "atomic_unit_id": "pager-page-rekey-and-flags",
+      "class": "short",
+      "complete": true
     }
   ]
 }
