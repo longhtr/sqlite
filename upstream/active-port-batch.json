@@ -339,6 +339,42 @@
       "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbemem.c::function::sqlite3VdbeMemFromBtree::line-1462",
+      "source_sha256": "d0e1f158a2f1df70c20e8da9532c03833998bd22376accd4a30dabfa130bbaef",
+      "zig_declaration_id": "src/core/internal/vdbe_mem.zig::function::memFromBtree",
+      "zig_declaration_sha256": "713048f8d5f4eaeeb26cc5a75fdcb40f11b4def8e400175730abd23bd59fc6b4",
+      "atomic_unit_id": "vdbe-btree-and-constant-expression-value-materialization",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbemem.c::function::sqlite3VdbeMemFromBtreeZeroOffset::line-1490",
+      "source_sha256": "a99ad1029a63b4806c44a7e235c07689a2326c46a6b79185af611e9991b5314d",
+      "zig_declaration_id": "src/core/internal/vdbe_mem.zig::function::memFromBtreeZeroOffset",
+      "zig_declaration_sha256": "d33d005b8dd5f7326bfa805f447b17119ad6a358b606a48f326cd955815e19cb",
+      "atomic_unit_id": "vdbe-btree-and-constant-expression-value-materialization",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbemem.c::function::valueFromExpr::line-1795",
+      "source_sha256": "949ef56a947923c89b4034a5993298033d36e30a1e9a83cbdf04cf3ed63f968c",
+      "zig_declaration_id": "src/core/internal/vdbe_mem.zig::function::valueFromConstantExpression",
+      "zig_declaration_sha256": "910acee9bf452bd060837f853eb822131cd6620bf54456cc063c6ab33dcadc15",
+      "atomic_unit_id": "vdbe-btree-and-constant-expression-value-materialization",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/whereexpr.c::function::whereCombineDisjuncts::line-559",
+      "source_sha256": "210c6e946ed9b0961edb65ecde83c7ee4d93cbd774a4aaf5c6527325f2101e41",
+      "zig_declaration_id": "src/core/internal/where_planner.zig::function::combineDisjuncts",
+      "zig_declaration_sha256": "bea1793a0bf9f31f68ba990b8d2e6fed981a7f9c08b130b9bf1df45f0bd1998e",
+      "atomic_unit_id": "where-compatible-or-range-combination",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

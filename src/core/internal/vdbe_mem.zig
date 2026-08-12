@@ -8,7 +8,10 @@ const formatter = @import("../formatter.zig");
 const utf = @import("../utf.zig");
 const varint = @import("../varint.zig");
 const memory = @import("../memory.zig");
+const tokens = @import("../generated/tokens.zig");
 const db_allocator = @import("db_allocator.zig");
+const parse_types = @import("parse_types.zig");
+const schema_analysis = @import("schema_analysis.zig");
 const public_api = @import("../public_api.zig");
 const rowset = @import("../rowset.zig");
 pub const types = @import("vdbe_types.zig");
@@ -1608,12 +1611,194 @@ pub fn valueIsOfClass(value: *const types.Mem, destructor: *const fn (?*anyopaqu
         value.flags & types.mem_flag.dynamic != 0 and value.xDel == destructor;
 }
 
+pub const BtreeMemOperations = struct {
+    max_record_size: *const fn (*types.BtCursor) u64,
+    payload: *const fn (*types.BtCursor, u32, u32, [*]u8) c_int,
+    payload_fetch: *const fn (*types.BtCursor, *u32) ?[*]const u8,
+};
+
+/// Source `sqlite3VdbeMemFromBtree()` over a typed Btree operation boundary.
+pub fn memFromBtree(cursor: *types.BtCursor, offset: u32, amount: u32, output: *types.Mem, operations: BtreeMemOperations) c_int {
+    output.flags = types.mem_flag.null_;
+    if (amount >= 2_147_483_391) return types.result_no_memory;
+    if (@as(u64, amount) + @as(u64, offset) > operations.max_record_size(cursor)) return 11;
+    const resize_result = clearAndResize(output, @intCast(amount + 1));
+    if (resize_result != 0) return resize_result;
+    const result = operations.payload(cursor, offset, amount, output.z.?);
+    if (result != 0) {
+        release(output);
+        return result;
+    }
+    output.z.?[amount] = 0;
+    output.flags = types.mem_flag.blob;
+    output.n = @intCast(amount);
+    return 0;
+}
+
+/// Source `sqlite3VdbeMemFromBtreeZeroOffset()`: borrow a complete local
+/// payload ephemerally and fall back to the owned copy path for overflow.
+pub fn memFromBtreeZeroOffset(cursor: *types.BtCursor, amount: u32, output: *types.Mem, operations: BtreeMemOperations) c_int {
+    std.debug.assert(!types.memIsDynamic(output));
+    var available: u32 = 0;
+    const local = operations.payload_fetch(cursor, &available) orelse return 11;
+    if (amount <= available) {
+        output.z = @constCast(local);
+        output.flags = types.mem_flag.blob | types.mem_flag.ephemeral;
+        output.n = @intCast(amount);
+        return 0;
+    }
+    return memFromBtree(cursor, 0, amount, output, operations);
+}
+
 pub fn valueNew(db: ?*types.Sqlite3) ?*types.Mem {
     const raw = db_allocator.mallocZero(db, @sizeOf(types.Mem)) orelse return null;
     const value: *types.Mem = @ptrCast(@alignCast(raw));
     value.flags = types.mem_flag.null_;
     value.db = db;
     return value;
+}
+
+fn constantExpressionText(db: *types.Sqlite3, token: [*:0]const u8, negative: bool, value: *types.Mem) c_int {
+    if (!negative) return setStr(value, token, -1, 1, .transient);
+    const text = std.mem.span(token);
+    const allocation = memory.processAllocator().allocSentinel(u8, text.len + 1, 0) catch {
+        _ = db_allocator.oomFault(db);
+        return types.result_no_memory;
+    };
+    allocation[0] = '-';
+    @memcpy(allocation[1 .. text.len + 1], text);
+    return setStr(value, allocation.ptr, -1, 1, .dynamic);
+}
+
+fn constantExpressionBlob(db: *types.Sqlite3, token: [*:0]const u8, value: *types.Mem) c_int {
+    const text = std.mem.span(token);
+    std.debug.assert(text.len >= 3 and (text[0] == 'x' or text[0] == 'X') and text[1] == '\'' and text[text.len - 1] == '\'');
+    const blob = numeric.hexToBlob(memory.processAllocator(), text[2..]) catch {
+        _ = db_allocator.oomFault(db);
+        return types.result_no_memory;
+    };
+    return setStr(value, blob.ptr, @intCast(blob.len), 0, .dynamic);
+}
+
+/// Source `valueFromExpr()` for the active non-STAT4 profile. Fold a scalar
+/// literal expression into an owned Mem, including CAST, repeated unary minus,
+/// the signed-integer boundary, blob decoding, affinity, and output encoding.
+pub fn valueFromConstantExpression(db: *types.Sqlite3, expression_initial: *const parse_types.Expr, encoding: u8, affinity: u8, output: *?*types.Mem) c_int {
+    output.* = null;
+    var expression = expression_initial;
+    var operation: u8 = expression.op;
+    while (operation == tokens.tk_uplus or operation == tokens.tk_span) {
+        expression = expression.pLeft orelse return 0;
+        operation = expression.op;
+    }
+    if (operation == tokens.tk_register) operation = expression.op2;
+
+    if (operation == tokens.tk_cast) {
+        const cast_affinity = schema_analysis.affinityType(expression.u.zToken orelse return 0, null);
+        var value: ?*types.Mem = null;
+        const rc = valueFromConstantExpression(db, expression.pLeft orelse return 0, encoding, cast_affinity, &value);
+        if (rc != 0 or value == null) return rc;
+        if (cast(value.?, cast_affinity, encoding) != 0) {
+            valueFree(value);
+            return types.result_no_memory;
+        }
+        applyAffinity(value.?, affinity, encoding);
+        output.* = value;
+        return 0;
+    }
+
+    var negative = false;
+    if (operation == tokens.tk_uminus) {
+        const left = expression.pLeft orelse return 0;
+        if (left.op == tokens.tk_integer or left.op == tokens.tk_float) {
+            const token = left.u.zToken;
+            if (left.flags & 0x0000_0800 != 0 or token == null or token.?[0] != '0' or (token.?[1] & ~@as(u8, 0x20)) != 'X') {
+                expression = left;
+                operation = left.op;
+                negative = true;
+            }
+        }
+    }
+
+    var value: ?*types.Mem = null;
+    if (operation == tokens.tk_string or operation == tokens.tk_float or operation == tokens.tk_integer) {
+        value = valueNew(db) orelse return types.result_no_memory;
+        if (expression.flags & 0x0000_0800 != 0) {
+            const sign: i64 = if (negative) -1 else 1;
+            setInt64(value.?, @as(i64, expression.u.iValue) * sign);
+        } else {
+            const token = expression.u.zToken orelse {
+                valueFree(value);
+                return 0;
+            };
+            const parsed = if (operation == tokens.tk_integer) numeric.parseDecimalOrHex(token) else numeric.ParseI64Result{ .value = 0, .code = 1 };
+            if (operation == tokens.tk_integer and parsed.code == 0) {
+                setInt64(value.?, if (negative) -%parsed.value else parsed.value);
+            } else {
+                const text_result = constantExpressionText(db, token, negative, value.?);
+                if (text_result != 0) {
+                    valueFree(value);
+                    return text_result;
+                }
+            }
+        }
+        if (affinity == schema_analysis.affinity.blob) {
+            if (operation == tokens.tk_float) {
+                const parsed = sqlite_float.parse(@ptrCast(value.?.z.?));
+                setDouble(value.?, parsed.value);
+            } else if (operation == tokens.tk_integer) {
+                applyNumericAffinity(value.?, true);
+            }
+        } else {
+            applyAffinity(value.?, affinity, 1);
+        }
+        if (value.?.flags & (types.mem_flag.integer | types.mem_flag.integer_real | types.mem_flag.real) != 0) {
+            value.?.flags &= ~types.mem_flag.string;
+        }
+        if (encoding != 1 and changeEncoding(value.?, encoding) != 0) {
+            valueFree(value);
+            return types.result_no_memory;
+        }
+    } else if (operation == tokens.tk_uminus) {
+        var inner: ?*types.Mem = null;
+        const rc = valueFromConstantExpression(db, expression.pLeft orelse return 0, encoding, affinity, &inner);
+        if (rc != 0 or inner == null) return rc;
+        value = inner;
+        _ = numerify(value.?);
+        if (value.?.flags & types.mem_flag.real != 0) {
+            value.?.u.r = -value.?.u.r;
+        } else if (value.?.u.i == std.math.minInt(i64)) {
+            value.?.u.r = -@as(f64, @floatFromInt(std.math.minInt(i64)));
+            types.memSetTypeFlag(value.?, types.mem_flag.real);
+        } else {
+            value.?.u.i = -value.?.u.i;
+        }
+        applyAffinity(value.?, affinity, encoding);
+    } else if (operation == tokens.tk_null) {
+        value = valueNew(db) orelse return types.result_no_memory;
+        setNull(value.?);
+    } else if (operation == tokens.tk_blob) {
+        value = valueNew(db) orelse return types.result_no_memory;
+        const token = expression.u.zToken orelse {
+            valueFree(value);
+            return 0;
+        };
+        const blob_result = constantExpressionBlob(db, token, value.?);
+        if (blob_result != 0) {
+            valueFree(value);
+            return blob_result;
+        }
+    } else if (operation == tokens.tk_truefalse) {
+        value = valueNew(db) orelse return types.result_no_memory;
+        const token = expression.u.zToken orelse {
+            valueFree(value);
+            return 0;
+        };
+        setInt64(value.?, @intFromBool(token[4] == 0));
+        applyAffinity(value.?, affinity, encoding);
+    }
+    output.* = value;
+    return 0;
 }
 
 pub fn valueSetStr(value: ?*types.Mem, length: c_int, source: ?[*]const u8, encoding: u8, ownership: StringOwnership) void {
@@ -1797,6 +1982,110 @@ pub fn move(to: *types.Mem, from: *types.Mem) void {
 var test_aux_destructor_calls: usize = 0;
 fn testAuxDestructor(_: ?*anyopaque) callconv(.c) void {
     test_aux_destructor_calls += 1;
+}
+
+test "Btree Mem materialization borrows local payload and copies overflow" {
+    const Harness = struct {
+        const record = "abcde";
+
+        fn maxRecordSize(_: *types.BtCursor) u64 {
+            return record.len;
+        }
+        fn payload(_: *types.BtCursor, offset: u32, amount: u32, output: [*]u8) c_int {
+            @memcpy(output[0..amount], record[offset .. offset + amount]);
+            return 0;
+        }
+        fn payloadFetch(_: *types.BtCursor, available: *u32) ?[*]const u8 {
+            available.* = 3;
+            return record.ptr;
+        }
+    };
+    const operations: BtreeMemOperations = .{ .max_record_size = Harness.maxRecordSize, .payload = Harness.payload, .payload_fetch = Harness.payloadFetch };
+    var cursor_storage: usize = 0;
+    const cursor: *types.BtCursor = @ptrCast(&cursor_storage);
+    var output_mem = std.mem.zeroes(types.Mem);
+    output_mem.flags = types.mem_flag.null_;
+
+    try std.testing.expectEqual(@as(c_int, 0), memFromBtreeZeroOffset(cursor, 3, &output_mem, operations));
+    try std.testing.expectEqual(types.mem_flag.blob | types.mem_flag.ephemeral, output_mem.flags);
+    try std.testing.expectEqualStrings("abc", output_mem.z.?[0..3]);
+    release(&output_mem);
+
+    try std.testing.expectEqual(@as(c_int, 0), memFromBtreeZeroOffset(cursor, 5, &output_mem, operations));
+    try std.testing.expectEqual(types.mem_flag.blob, output_mem.flags);
+    try std.testing.expectEqualStrings("abcde", output_mem.z.?[0..5]);
+    try std.testing.expectEqual(@as(u8, 0), output_mem.z.?[5]);
+    try std.testing.expectEqual(@as(c_int, 11), memFromBtree(cursor, 4, 2, &output_mem, operations));
+    try std.testing.expectEqual(types.mem_flag.null_, output_mem.flags);
+    try std.testing.expectEqual(types.result_no_memory, memFromBtree(cursor, 0, 2_147_483_391, &output_mem, operations));
+    release(&output_mem);
+}
+
+test "constant expression folding preserves literals casts unary signs and blobs" {
+    var connection = std.mem.zeroes(types.Sqlite3);
+    connection.aLimit[0] = 1_000_000;
+
+    var minimum_token = std.mem.zeroes(parse_types.Expr);
+    minimum_token.op = tokens.tk_integer;
+    minimum_token.u.zToken = @constCast("9223372036854775808");
+    var minimum_expression = std.mem.zeroes(parse_types.Expr);
+    minimum_expression.op = tokens.tk_uminus;
+    minimum_expression.pLeft = &minimum_token;
+    var result_mem: ?*types.Mem = null;
+    try std.testing.expectEqual(@as(c_int, 0), valueFromConstantExpression(&connection, &minimum_expression, 1, schema_analysis.affinity.blob, &result_mem));
+    try std.testing.expectEqual(std.math.minInt(i64), result_mem.?.u.i);
+    try std.testing.expectEqual(types.mem_flag.integer, result_mem.?.flags & types.mem_flag.type_mask);
+    valueFree(result_mem);
+
+    var integer_token = std.mem.zeroes(parse_types.Expr);
+    integer_token.op = tokens.tk_integer;
+    integer_token.flags = 0x0000_0800;
+    integer_token.u.iValue = 5;
+    var inner_minus = std.mem.zeroes(parse_types.Expr);
+    inner_minus.op = tokens.tk_uminus;
+    inner_minus.pLeft = &integer_token;
+    var outer_minus = std.mem.zeroes(parse_types.Expr);
+    outer_minus.op = tokens.tk_uminus;
+    outer_minus.pLeft = &inner_minus;
+    result_mem = null;
+    try std.testing.expectEqual(@as(c_int, 0), valueFromConstantExpression(&connection, &outer_minus, 1, schema_analysis.affinity.blob, &result_mem));
+    try std.testing.expectEqual(@as(i64, 5), result_mem.?.u.i);
+    valueFree(result_mem);
+
+    var string_token = std.mem.zeroes(parse_types.Expr);
+    string_token.op = tokens.tk_string;
+    string_token.u.zToken = @constCast("42");
+    var cast_expression = std.mem.zeroes(parse_types.Expr);
+    cast_expression.op = tokens.tk_cast;
+    cast_expression.u.zToken = @constCast("INTEGER");
+    cast_expression.pLeft = &string_token;
+    result_mem = null;
+    try std.testing.expectEqual(@as(c_int, 0), valueFromConstantExpression(&connection, &cast_expression, 1, schema_analysis.affinity.blob, &result_mem));
+    try std.testing.expectEqual(@as(i64, 42), result_mem.?.u.i);
+    valueFree(result_mem);
+
+    var blob_expression = std.mem.zeroes(parse_types.Expr);
+    blob_expression.op = tokens.tk_blob;
+    blob_expression.u.zToken = @constCast("X'4142'");
+    result_mem = null;
+    try std.testing.expectEqual(@as(c_int, 0), valueFromConstantExpression(&connection, &blob_expression, 1, schema_analysis.affinity.blob, &result_mem));
+    try std.testing.expectEqual(types.mem_flag.blob, result_mem.?.flags & types.mem_flag.type_mask);
+    try std.testing.expectEqualStrings("AB", result_mem.?.z.?[0..2]);
+    valueFree(result_mem);
+
+    var true_expression = std.mem.zeroes(parse_types.Expr);
+    true_expression.op = tokens.tk_truefalse;
+    true_expression.u.zToken = @constCast("true");
+    result_mem = null;
+    try std.testing.expectEqual(@as(c_int, 0), valueFromConstantExpression(&connection, &true_expression, 1, schema_analysis.affinity.blob, &result_mem));
+    try std.testing.expectEqual(@as(i64, 1), result_mem.?.u.i);
+    valueFree(result_mem);
+
+    var column_expression = std.mem.zeroes(parse_types.Expr);
+    column_expression.op = tokens.tk_column;
+    result_mem = @ptrFromInt(16);
+    try std.testing.expectEqual(@as(c_int, 0), valueFromConstantExpression(&connection, &column_expression, 1, schema_analysis.affinity.blob, &result_mem));
+    try std.testing.expect(result_mem == null);
 }
 
 test "VDBE auxiliary data deletion honors opcode masks and ownership" {

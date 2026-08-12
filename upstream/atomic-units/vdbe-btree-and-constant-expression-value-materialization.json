@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-btree-and-constant-expression-value-materialization",
+  "title": "VDBE Btree payload and constant-expression value materialization",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "One Mem materialization unit owns bounded Btree payload copies/local borrowing and active-profile scalar AST literal folding used by VDBE and planner consumers.",
+    "source_files": [
+      {
+        "path": "src/vdbemem.c",
+        "sha256": "df7532dfef62b136506d471c15e474fc2ed0303ef8886dfb7aca13f5e21ed568"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtree::line-1462",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtreeZeroOffset::line-1490",
+      "src/vdbemem.c::function::valueFromExpr::line-1795"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtree::behavior::if::line-1472-column-3::ordinal-0",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtree::behavior::return::line-1473-column-5::ordinal-0",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtree::behavior::if::line-1475-column-3::ordinal-0",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtree::behavior::return::line-1476-column-5::ordinal-0",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtree::behavior::if::line-1478-column-3::ordinal-0",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtree::behavior::if::line-1480-column-5::ordinal-0",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtree::behavior::return::line-1488-column-3::ordinal-0",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtreeZeroOffset::behavior::assert::line-1498-column-3::ordinal-0",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtreeZeroOffset::behavior::assert::line-1499-column-3::ordinal-0",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtreeZeroOffset::behavior::assert::line-1503-column-3::ordinal-0",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtreeZeroOffset::behavior::assert::line-1505-column-3::ordinal-0",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtreeZeroOffset::behavior::if::line-1507-column-3::ordinal-0",
+      "src/vdbemem.c::function::sqlite3VdbeMemFromBtreeZeroOffset::behavior::return::line-1514-column-3::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1810-column-3::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::while::line-1811-column-3::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1812-column-3::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1818-column-3::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1820-column-3::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1822-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1826-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1832-column-7::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::return::line-1837-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1843-column-3::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1845-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1846-column-7::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1857-column-3::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1859-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::goto::line-1859-column-19::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1860-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1864-column-7::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1868-column-9::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::goto::line-1868-column-23::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1872-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1873-column-7::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1874-column-9::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1877-column-13::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1886-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1887-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1892-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1895-column-9::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1897-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1901-column-7::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1903-column-13::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1915-column-9::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1917-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::goto::line-1917-column-19::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1921-column-8::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1923-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1924-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1925-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1927-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::goto::line-1927-column-17::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1930-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1940-column-8::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1941-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::if::line-1943-column-5::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::return::line-1951-column-3::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::label::line-1953-column-1::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1959-column-3::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::assert::line-1963-column-3::ordinal-0",
+      "src/vdbemem.c::function::valueFromExpr::behavior::return::line-1965-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "STAT4-only valueFromFunction and ValueNewStat4Ctx behavior is inactive in the pinned profile.",
+      "Connect exact Btree cursor operations and vtab RHS resolver production callers.",
+      "Pinned-C trace and independent review remain open."
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Connection allocator and Mem lifecycle",
+      "Exact AST or Btree cursor ownership supplied by caller"
+    ],
+    "caller_closure": "Every assigned source body is complete behind typed ownership boundaries; remaining public/compiler callers are explicit blockers."
+  },
+  "contracts": {
+    "inputs": [
+      "Valid exact BtCursor plus payload range, or scalar Expr plus encoding and affinity"
+    ],
+    "outputs": [
+      "Owned or ephemeral Mem and exact SQLite result"
+    ],
+    "ownership": "Btree local bytes are ephemeral; overflow/literals are connection-domain Mem allocations transferred to caller.",
+    "state_and_results": "Outputs start null. Bounds/corruption/NOMEM propagate. CAST, unary signs, literals, blobs, true/false, affinity, and encoding follow active non-STAT4 source branches.",
+    "locks_callbacks_io": "Btree operation callbacks run under caller-held Btree/database synchronization; expression folding has no callbacks or I/O.",
+    "failure_and_continuation": "Payload failure releases partial dynamic state; expression failure leaves output null and frees temporary values."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbemem.c::function::sqlite3VdbeMemFromBtree::line-1462",
+      "relation": "source-btree-payload-owned-mem-copy",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_mem.zig::function::memFromBtree"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbemem.c::function::sqlite3VdbeMemFromBtreeZeroOffset::line-1490",
+      "relation": "source-btree-local-payload-borrow-or-copy",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_mem.zig::function::memFromBtreeZeroOffset"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbemem.c::function::valueFromExpr::line-1795",
+      "relation": "source-active-profile-constant-expression-folding",
+      "zig_declaration_ids": [
+        "src/core/internal/vdbe_mem.zig::function::valueFromConstantExpression"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Typed Btree operations replace direct C calls while preserving order/results.",
+    "STAT4-only function folding and UnpackedRecord allocation are inactive-profile exclusions."
+  ],
+  "oracle": {
+    "protocol": "Exercise local/overflow/corrupt/oversized payloads and string/integer/min-int/repeated-minus/CAST/blob/boolean/unsupported expressions.",
+    "internal_observations": [
+      "result code and output ownership",
+      "Mem flags, encoding, bytes, and scalar representation",
+      "continuation after rejected or non-foldable input"
+    ],
+    "normalization": "Compare exact primary result, Mem type/value/bytes, and owned versus ephemeral state."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Allocation failure publishes NOMEM, null output where required, and preserves releasable Mem ownership.",
+    "io_crash_concurrency": "Btree synchronization and I/O are caller/typed-operation responsibilities; literal folding performs no I/O.",
+    "malformed_input": "Record bounds, maximum allocation, absent AST children/tokens, and unsupported expressions fail without fabricated values.",
+    "continuation": "Successful values remain caller-owned; failed temporary values are released.",
+    "performance": "Local payloads remain zero-copy; overflow copies once; literal folding is linear in token/payload size.",
+    "commands": [
+      "zig build vdbe-mem-differential",
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/vdbe_mem.zig exact Mem owner",
+    "native_call_path": "VDBE/planner callers invoke typed materialization helpers; focused native tests execute every active-profile family.",
+    "bounded_owner_retired": "No substitute source behavior remains inside the assigned helper bodies."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires pinned-C trace, caller integration, assurance, and independent review."
+  },
+  "known_blockers": [
+    "STAT4-only valueFromFunction and ValueNewStat4Ctx behavior is inactive in the pinned profile.",
+    "Connect exact Btree cursor operations and vtab RHS resolver production callers.",
+    "Pinned-C trace and independent review remain open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned source bodies and adjacent allocation, cursor, AST, affinity, and error helpers",
+      "Native exact Mem, AST, Btree operation boundary, and callers"
+    ],
+    "callers": [
+      "VDBE record materialization, virtual-table RHS folding, and WHERE expression analysis"
+    ],
+    "callees": [
+      "Mem allocation/release/affinity/encoding, AST duplication, Btree payload operations, and term insertion"
+    ],
+    "assertions_branches_cleanup": [
+      "All source branches, ownership transitions, bounds, operator compatibility, and cleanup paths assigned"
+    ],
+    "upstream_tests": [
+      "Upstream expression-value, record payload, virtual-table RHS, OR-planner, OOM, and corruption tests",
+      "Native focused ownership and result tests"
+    ]
+  },
+  "evidence_receipts": []
+}

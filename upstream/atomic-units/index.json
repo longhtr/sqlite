@@ -5,6 +5,16 @@
   "warning": "Only independently-fidelity-reviewed units count as final fidelity closure; implementers may promote no further than assurance-passed.",
   "units": [
     {
+      "id": "vdbe-btree-and-constant-expression-value-materialization",
+      "path": "upstream/atomic-units/vdbe-btree-and-constant-expression-value-materialization.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "where-compatible-or-range-combination",
+      "path": "upstream/atomic-units/where-compatible-or-range-combination.json",
+      "status": "source-translated"
+    },
+    {
       "id": "vtab-constraint-collation-in-and-rhs",
       "path": "upstream/atomic-units/vtab-constraint-collation-in-and-rhs.json",
       "status": "source-translated"

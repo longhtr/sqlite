@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "id": "where-compatible-or-range-combination",
+  "title": "Compatible OR disjunct range combination",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The WHERE planner now recognizes compatible equal-operand disjuncts, duplicates one expression, normalizes the combined range operator, inserts a dynamic virtual term, and analyzes it.",
+    "source_files": [
+      {
+        "path": "src/whereexpr.c",
+        "sha256": "a6dc7d0fe5e325f3a028882251c38be07d7e779ec6d222e58eb7d0568827d309"
+      }
+    ],
+    "source_entity_ids": [
+      "src/whereexpr.c::function::whereCombineDisjuncts::line-559"
+    ],
+    "behavioral_block_ids": [
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::if::line-572-column-3::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::return::line-572-column-54::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::if::line-573-column-3::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::return::line-573-column-64::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::if::line-574-column-3::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::return::line-574-column-64::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::if::line-575-column-3::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::return::line-576-column-42::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::assert::line-579-column-3::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::assert::line-580-column-3::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::if::line-581-column-3::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::return::line-581-column-57::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::if::line-582-column-3::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::return::line-582-column-57::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::if::line-583-column-3::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::return::line-584-column-5::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::if::line-587-column-3::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::if::line-588-column-5::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::assert::line-591-column-7::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::if::line-597-column-3::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::return::line-597-column-17::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::for::line-598-column-3::ordinal-0",
+      "src/whereexpr.c::function::whereCombineDisjuncts::behavior::assert::line-598-column-50::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Complete exprAnalyze/exprAnalyzeOrTerm production integration.",
+      "Pinned-C planner trace and independent review remain open."
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Connection allocator and Mem lifecycle",
+      "Exact AST or Btree cursor ownership supplied by caller"
+    ],
+    "caller_closure": "Every assigned source body is complete behind typed ownership boundaries; remaining public/compiler callers are explicit blockers."
+  },
+  "contracts": {
+    "inputs": [
+      "FROM source list, owning WhereClause, two analyzed disjunct terms, and the source analyze-term continuation"
+    ],
+    "outputs": [
+      "At most one owned dynamic virtual term analyzed in the parent clause"
+    ],
+    "ownership": "Duplicated expression transfers to WhereClause on insertion; failed insertion consumes it through the dynamic-term contract.",
+    "state_and_results": "VNULL/non-comparison/mixed-direction/different-operand/different-commutation terms are unchanged. Compatible terms normalize to EQ, LE, or GE.",
+    "locks_callbacks_io": "No I/O or locks; invokes the typed expression-analysis continuation once after successful insertion.",
+    "failure_and_continuation": "Duplication/insertion OOM adds no usable term; compatible success leaves normal clause cleanup ownership."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/whereexpr.c::function::whereCombineDisjuncts::line-559",
+      "relation": "source-compatible-or-range-virtual-term",
+      "zig_declaration_ids": [
+        "src/core/internal/where_planner.zig::function::combineDisjuncts"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The recursive exprAnalyze call is a typed continuation because that source owner is not yet translated."
+  ],
+  "oracle": {
+    "protocol": "Construct x<7 OR x=7 and require one dynamic x<=7 term plus one analysis callback; reject VNULL and incompatible families.",
+    "internal_observations": [
+      "result code and output ownership",
+      "Mem flags, encoding, bytes, and scalar representation",
+      "continuation after rejected or non-foldable input"
+    ],
+    "normalization": "Compare exact primary result, Mem type/value/bytes, and owned versus ephemeral state."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Allocation failure publishes NOMEM, null output where required, and preserves releasable Mem ownership.",
+    "io_crash_concurrency": "Btree synchronization and I/O are caller/typed-operation responsibilities; literal folding performs no I/O.",
+    "malformed_input": "Record bounds, maximum allocation, absent AST children/tokens, and unsupported expressions fail without fabricated values.",
+    "continuation": "Successful values remain caller-owned; failed temporary values are released.",
+    "performance": "Local payloads remain zero-copy; overflow copies once; literal folding is linear in token/payload size.",
+    "commands": [
+      "zig build vdbe-mem-differential",
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/where_planner.zig WhereClause owner",
+    "native_call_path": "WHERE expression analysis calls combineDisjuncts for two-way OR terms once the recursive analyzer owner is connected.",
+    "bounded_owner_retired": "No substitute source behavior remains inside the assigned helper bodies."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires pinned-C trace, caller integration, assurance, and independent review."
+  },
+  "known_blockers": [
+    "Complete exprAnalyze/exprAnalyzeOrTerm production integration.",
+    "Pinned-C planner trace and independent review remain open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned source bodies and adjacent allocation, cursor, AST, affinity, and error helpers",
+      "Native exact Mem, AST, Btree operation boundary, and callers"
+    ],
+    "callers": [
+      "VDBE record materialization, virtual-table RHS folding, and WHERE expression analysis"
+    ],
+    "callees": [
+      "Mem allocation/release/affinity/encoding, AST duplication, Btree payload operations, and term insertion"
+    ],
+    "assertions_branches_cleanup": [
+      "All source branches, ownership transitions, bounds, operator compatibility, and cleanup paths assigned"
+    ],
+    "upstream_tests": [
+      "Upstream expression-value, record payload, virtual-table RHS, OR-planner, OOM, and corruption tests",
+      "Native focused ownership and result tests"
+    ]
+  },
+  "evidence_receipts": []
+}

@@ -32,6 +32,10 @@ pub const term_flag = struct {
 pub const operation = struct {
     pub const in: u16 = 0x0001;
     pub const eq: u16 = 0x0002;
+    pub const gt: u16 = 0x0004;
+    pub const le: u16 = 0x0008;
+    pub const lt: u16 = 0x0010;
+    pub const ge: u16 = 0x0020;
     pub const aux: u16 = 0x0040;
     pub const is: u16 = 0x0080;
     pub const is_null: u16 = 0x0100;
@@ -268,6 +272,40 @@ pub fn insertClauseTerm(clause: *WhereClause, expression_node: ?*parse_types.Exp
     term.clause = clause;
     term.parent_index = -1;
     return index;
+}
+
+pub const AnalyzeInsertedTerm = *const fn (*parse_types.SrcList, *WhereClause, c_int) void;
+
+/// Source `whereCombineDisjuncts()`: combine compatible equal-left/equal-right
+/// OR terms into one dynamic virtual range term and analyze that term.
+pub fn combineDisjuncts(sources: *parse_types.SrcList, clause: *WhereClause, first: *WhereTerm, second: *WhereTerm, analyze: AnalyzeInsertedTerm) void {
+    if ((first.flags | second.flags) & term_flag.vnull != 0) return;
+    const comparison_operations = operation.eq | operation.lt | operation.le | operation.gt | operation.ge;
+    if (first.operator & comparison_operations == 0 or second.operator & comparison_operations == 0) return;
+    var combined = first.operator | second.operator;
+    if (combined & (operation.eq | operation.lt | operation.le) != combined and
+        combined & (operation.eq | operation.gt | operation.ge) != combined) return;
+    const first_expression = first.expression orelse return;
+    const second_expression = second.expression orelse return;
+    if (first_expression.pLeft == null or first_expression.pRight == null or second_expression.pLeft == null or second_expression.pRight == null) return;
+    if (expression.compareExpressions(null, first_expression.pLeft, second_expression.pLeft, -1) != 0 or
+        expression.compareExpressions(null, first_expression.pRight, second_expression.pRight, -1) != 0 or
+        (first_expression.flags & 0x0000_0400 != 0) != (second_expression.flags & 0x0000_0400 != 0)) return;
+    if (combined & (combined - 1) != 0) {
+        combined = if (combined & (operation.lt | operation.le) != 0) operation.le else operation.ge;
+    }
+    const db: *types.Sqlite3 = @ptrCast(@alignCast(clause.info.parse.db.?));
+    const new_expression = ast_duplication.duplicateExpression(db, first_expression, false) orelse return;
+    new_expression.op = switch (combined) {
+        operation.eq => tokens.tk_eq,
+        operation.gt => tokens.tk_gt,
+        operation.le => tokens.tk_le,
+        operation.lt => tokens.tk_lt,
+        operation.ge => tokens.tk_ge,
+        else => unreachable,
+    };
+    const inserted = insertClauseTerm(clause, new_expression, term_flag.virtual | term_flag.dynamic) orelse return;
+    analyze(sources, clause, inserted);
 }
 
 /// Source `sqlite3WhereClauseInit()`.
@@ -1122,6 +1160,60 @@ pub fn applyPartialIndexConstants(parse: *parse_types.Parse, index: *schema.Inde
         parse.pIdxPartExpr = entry;
         if (entry.next == null) _ = parse_cleanup.add(parse, indexedExpressionCleanup, &parse.pIdxPartExpr);
     } else if (left.iColumn < 63) column_mask.?.* &= ~(@as(u64, 1) << @intCast(left.iColumn));
+}
+
+test "compatible OR disjuncts create and analyze one virtual range term" {
+    const Harness = struct {
+        var calls: usize = 0;
+
+        fn analyze(_: *parse_types.SrcList, clause: *WhereClause, index: c_int) void {
+            calls += 1;
+            clause.terms[@intCast(index)].operator = operation.le;
+        }
+    };
+    Harness.calls = 0;
+    var connection = std.mem.zeroes(types.Sqlite3);
+    var parse = std.mem.zeroes(parse_types.Parse);
+    parse.db = @ptrCast(&connection);
+    var info = WhereInfo{ .parse = &parse };
+    var clause: WhereClause = undefined;
+    initializeClause(&clause, &info);
+    var sources = std.mem.zeroes(parse_types.SrcList);
+
+    var left = std.mem.zeroes(parse_types.Expr);
+    left.op = tokens.tk_column;
+    left.iTable = 1;
+    left.iColumn = 2;
+    var right = std.mem.zeroes(parse_types.Expr);
+    right.op = tokens.tk_integer;
+    right.flags = 0x0000_0800;
+    right.u.iValue = 7;
+    var less_expression = std.mem.zeroes(parse_types.Expr);
+    less_expression.op = tokens.tk_lt;
+    less_expression.pLeft = &left;
+    less_expression.pRight = &right;
+    var equal_expression = std.mem.zeroes(parse_types.Expr);
+    equal_expression.op = tokens.tk_eq;
+    equal_expression.pLeft = &left;
+    equal_expression.pRight = &right;
+    var first = std.mem.zeroes(WhereTerm);
+    first.expression = &less_expression;
+    first.operator = operation.lt;
+    var second = std.mem.zeroes(WhereTerm);
+    second.expression = &equal_expression;
+    second.operator = operation.eq;
+
+    combineDisjuncts(&sources, &clause, &first, &second, Harness.analyze);
+    try std.testing.expectEqual(@as(usize, 1), Harness.calls);
+    try std.testing.expectEqual(@as(c_int, 1), clause.term_count);
+    try std.testing.expectEqual(@as(u8, tokens.tk_le), clause.terms[0].expression.?.op);
+    try std.testing.expectEqual(operation.le, clause.terms[0].operator);
+    clearClause(&clause);
+
+    first.flags = term_flag.vnull;
+    combineDisjuncts(&sources, &clause, &first, &second, Harness.analyze);
+    try std.testing.expectEqual(@as(c_int, 0), clause.term_count);
+    try std.testing.expectEqual(@as(usize, 1), Harness.calls);
 }
 
 /// Source `whereUsablePartialIndex()`.
