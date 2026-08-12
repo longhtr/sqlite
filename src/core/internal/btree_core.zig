@@ -532,6 +532,13 @@ pub fn setMmapLimit(tree: *Btree, byte_limit: i64) void {
     tree.shared.mmap_limit = byte_limit;
 }
 
+/// Source `sqlite3BtreeMaxPageCount()` with the Pager maximum-page operation
+/// supplied by the typed Pager owner.
+pub fn maximumPageCount(tree: *Btree, requested: u32, context: ?*anyopaque, pager_maximum: *const fn (?*anyopaque, u32) u32) u32 {
+    _ = tree;
+    return pager_maximum(context, requested);
+}
+
 /// Source `sqlite3BtreeSetPagerFlags()`.
 pub fn setPagerFlags(tree: *Btree, flags: u32) void {
     tree.shared.pager_flags = flags;
@@ -2418,6 +2425,16 @@ test "btree core page cursor lock and integrity primitives" {
     try std.testing.expectEqual(@as(i64, 300), setSpillSize(&tree, 300));
     try std.testing.expectEqual(@as(i64, 300), setSpillSize(&tree, 0));
     setMmapLimit(&tree, 4096);
+    const MaximumTrace = struct {
+        fn maximum(context: ?*anyopaque, requested: u32) u32 {
+            const current: *u32 = @ptrCast(@alignCast(context.?));
+            if (requested != 0) current.* = @max(current.*, requested);
+            return current.*;
+        }
+    };
+    var maximum_pages: u32 = 8;
+    try std.testing.expectEqual(@as(u32, 12), maximumPageCount(&tree, 12, &maximum_pages, MaximumTrace.maximum));
+    try std.testing.expectEqual(@as(u32, 12), maximumPageCount(&tree, 0, &maximum_pages, MaximumTrace.maximum));
     setPagerFlags(&tree, 7);
     try std.testing.expectEqual(@as(i64, 200), shared.cache_size);
     try std.testing.expectEqual(@as(i64, 4096), shared.mmap_limit);

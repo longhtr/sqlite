@@ -789,6 +789,15 @@
       "atomic_unit_id": "btree-page-reference-release",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeMaxPageCount::line-3155",
+      "source_sha256": "6aa8b60700e4d79d07f6ee713a32717298b38a9ff9fa52818d9538e28cc13656",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::maximumPageCount",
+      "zig_declaration_sha256": "2c8e0e10364edaa868acdcf33e2825332faa896853ea94857fb8fd199934d12f",
+      "atomic_unit_id": "btree-pager-maximum-page-count",
+      "class": "short",
+      "complete": true
     }
   ]
 }

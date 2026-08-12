@@ -543,6 +543,11 @@
       "id": "btree-page-reference-release",
       "path": "upstream/atomic-units/btree-page-reference-release.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-pager-maximum-page-count",
+      "path": "upstream/atomic-units/btree-pager-maximum-page-count.json",
+      "status": "source-translated"
     }
   ]
 }
