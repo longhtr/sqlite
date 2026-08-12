@@ -12844,6 +12844,7 @@ test "attached schema serialize and deserialize preserve image ownership" {
     _ = target_connection.database.?.pager.cache.shrink();
     _ = attached_owner.database.?.pager.cache.shrink();
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_db_release_memory(target));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_db_cacheflush(target));
     const created_schema_outcome = attached_owner.database.?.schemaTable("created");
     try std.testing.expectEqual(ResultCode.ok, created_schema_outcome.result);
     var created_schema = created_schema_outcome.table.?;
