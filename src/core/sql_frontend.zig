@@ -12639,6 +12639,7 @@ test "memory ATTACH and DETACH maintain the connection schema catalog" {
     try std.testing.expectEqualStrings("main", std.mem.span(sqlite3_db_name(database, 0).?));
     try std.testing.expectEqualStrings("temp", std.mem.span(sqlite3_db_name(database, 1).?));
     try std.testing.expectEqualStrings("aux", std.mem.span(sqlite3_db_name(database, 2).?));
+    try std.testing.expectEqual(null, sqlite3_db_name(database, -1));
     try std.testing.expectEqual(null, sqlite3_db_name(database, 3));
     try std.testing.expectEqual(ResultCode.error_.toC(), sqlite3_exec(database, "ATTACH ':memory:' AS aux", null, null, null));
     try std.testing.expectEqual(ResultCode.error_.toC(), sqlite3_exec(database, "DETACH main", null, null, null));

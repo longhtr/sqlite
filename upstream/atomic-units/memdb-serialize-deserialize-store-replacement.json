@@ -16,6 +16,7 @@
       "src/memdb.c::function::memdbFromDbSchema::line-734",
       "src/memdb.c::function::sqlite3_serialize::line-750",
       "src/memdb.c::function::sqlite3_deserialize::line-841",
+      "src/main.c::function::sqlite3_db_name::line-5007",
       "src/main.c::function::sqlite3_db_filename::line-5027",
       "src/main.c::function::sqlite3_db_readonly::line-5043"
     ],
@@ -26,6 +27,8 @@
       "src/memdb.c::function::memdbFromDbSchema::behavior::return::line-739-column-45::ordinal-0",
       "src/memdb.c::function::memdbFromDbSchema::behavior::if::line-742-column-3::ordinal-0",
       "src/memdb.c::function::memdbFromDbSchema::behavior::return::line-744-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_db_name::behavior::if::line-5016-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_db_name::behavior::return::line-5020-column-3::ordinal-0",
       "src/main.c::function::sqlite3_db_filename::behavior::return::line-5036-column-3::ordinal-0",
       "src/main.c::function::sqlite3_db_readonly::behavior::return::line-5052-column-3::ordinal-0",
       "src/main.c::function::sqlite3_db_readonly::behavior::conditional::line-5052-column-10::ordinal-0",
@@ -115,6 +118,13 @@
       ]
     },
     {
+      "source_entity_id": "src/main.c::function::sqlite3_db_name::line-5007",
+      "relation": "source-schema-index-to-connection-owned-name",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::databaseName"
+      ]
+    },
+    {
       "source_entity_id": "src/main.c::function::sqlite3_db_readonly::line-5043",
       "relation": "source-schema-to-native-btree-readonly-state",
       "zig_declaration_ids": [
@@ -148,7 +158,7 @@
     "Backup handles copy source/destination schema names, preserve one owned source snapshot plus selected-Pager-size remaining/page-count state across bounded steps, reject source-schema deserialize replacement while retained, restart after intervening DML or DDL writes, deserialize the selected attached image on completion, and retain the attached source owner until finish.",
     "Transaction-state and checkpoint APIs resolve attached owners; post-autocommit Pager reader state reports SQL transaction NONE and non-WAL checkpoint outputs remain -1.",
     "Metadata and file-control APIs resolve the selected attached B-tree, while connection-wide cache status/release/flush iterates all attached pagers; CACHE_USED remains a native page-object approximation.",
-    "Configured primary schema names and the permanent main alias converge on the same native B-tree in SQL and public lookup paths; sqlite3_db_filename returns the user-visible main or attached database filename and never the internal memdb storage alias, while sqlite3_db_readonly reports the resolved main or attached B-tree state and distinguishes missing schemas."
+    "Configured primary schema names and the permanent main alias converge on the same native B-tree in SQL and public lookup paths; sqlite3_db_name preserves main, TEMP, and attached schema index order with out-of-range null results, sqlite3_db_filename returns the user-visible main or attached database filename and never the internal memdb storage alias, and sqlite3_db_readonly reports the resolved main or attached B-tree state while distinguishing missing schemas."
   ],
   "oracle": {
     "protocol": "Native SQL frontend and C ABI integration create memory and ordinary Unix database images, copy serialize with nullable size, NOCOPY borrow/rejection and exact size, clone the ordinary live Pager image through deserialize and execute its content, reject missing schema with size -1, enforce read-only opening, validate negative-capacity armor, preserve the old database on pre-publication allocation failure, publish malformed transferred storage before validation, preserve exact NOCOPY identity, return NOTADB on preparation and replacement, release FREEONCLOSE input at the correct owner, enforce the configured maximum, and inject realloc failure while checking exact pointer/content/size continuation. A maintained pinned C/Zig public-API differential compares deterministic private-store copy OOM with exact size output, copy size/header, main and attached-schema transfer/NOCOPY identity, schema-qualified attached query and aggregate, incremental-blob open/read/write/DETACH blocking, attached backup transfer/source retention/source-replacement blocking/DML-and-DDL restart, attached transaction/checkpoint/metadata/file-control/cache state, renamed-primary/main alias lookup, TEMP-before-main shadowing across bounded DDL/DML/scans, main/attached BEGIN-COMMIT-ROLLBACK, explicit-transaction CREATE/DROP commit and rollback, immediate-error statement savepoints, and failed deferred-COMMIT repair, bounded attached INSERT/UPDATE/DELETE, ordinary CREATE/DROP TABLE, single-and-multi-column CREATE/DROP INDEX/optionally-parenthesized-unary-plus-identity/unary-minus-NOT-INTEGER/either-order-INTEGER-or-REAL-signed-integer-or-float-add-subtract-multiply-divide-plus-integer-coerced-signed-integer-or-float-remainder-bit-and-bit-or-left-shift-right-shift-plus-column-bit-not/abs/sign/round/NULL-bearing-round/ceil/ceiling/floor/trunc/sqrt/exp/log/trigonometric/hyperbolic/angle-conversion/either-order-integer/float/NULL-power/modulo/atan2/binary-log/typeof/octet-length/length/unicode/trim/ltrim/rtrim-with-optional-NULL/signed-integer/float/NULL-substr/substring/concat-with-NULL-arguments-or-either-order-NULL-concat-operator-and-NULL-propagating-arithmetic-bitwise-relational-operators/likely/unlikely/likelihood/either-order-signed-integer/float/NULL-scalar-min/scalar-max/either-order-integer/float/NULL-ifnull/coalesce/nullif/either-order-IS-NULL/IS-NOT-NULL/ISNULL/NOTNULL/either-order-integer-or-float-comparison/integer-or-float-IS/IS-NOT/IS-DISTINCT/IS-NOT-DISTINCT/integer-or-float-BETWEEN/NOT-BETWEEN/two-value-IN/NOT-IN-and-TEXT-affinity-or-INTEGER-operator/function-LIKE/NOT-LIKE/GLOB/NOT-GLOB expression index plus bounded recursively-parenthesized and unary-NOT-negated one-to-eight-term AND/OR/NOT-combined-with-SQL-three-valued-precedence constant-integer/float/NULL-truth/either-order-NULL-comparison and IS-NULL/IS-NOT-NULL/ISNULL/NOTNULL, either-order-INTEGER-or-REAL/integer-or-float-IS/IS-NOT/IS-DISTINCT/IS-NOT-DISTINCT/integer-or-float-comparison/BETWEEN/NOT-BETWEEN/two-value-IN/NOT-IN, bare/NOT-INTEGER-or-REAL-truth, and declared-or-explicit-left-precedence-BINARY/NOCASE/RTRIM-TEXT-affinity-either-order-equality/inequality/relational-comparison/BETWEEN/NOT-BETWEEN/either-order-IS/IS-NOT/IS-DISTINCT/IS-NOT-DISTINCT/two-value-IN/NOT-IN/TEXT-affinity-or-INTEGER-ASCII-NOCASE-operator/function-LIKE/NOT-LIKE-with-optional-ASCII-ESCAPE-and-case-sensitive-operator/function-GLOB/NOT-GLOB-with-ASCII-character-classes partial-index plus built-in BINARY/NOCASE/RTRIM and registered-or-factory-resolved-UTF-8/UTF-16 application-collated mixed-ASC/DESC index refill/collation-aware UNIQUE-NULL-and-conflict rollback/membership-changing direct-and-FK-action maintenance/named-index/table/registered-collation/all-index/expression-set REINDEX refill/scalar-and-composite-secondary-parent-key actions/transaction rollback/main-and-attached INDEXED BY ordering plus indexed-or-foreign-key-child-column writable-blob rejection and indexed-column read-only continuation, and inline-key foreign-key constraint plus delete/update CASCADE/SET NULL/SET DEFAULT/RESTRICT continuation, READONLY reporting/write rejection, malformed deferred failure/replacement rejection, and close results.",
@@ -233,8 +243,8 @@
       "command": "zig build memdb-api-differential",
       "result_owner": "upstream/evidence/memdb-api-differential.txt",
       "result_sha256": "c897d625f201b5cd61b6904a9b1df33573e97b6d11fb2c6024597340e4dbef76",
-      "source_scope_sha256": "56e897a1355a0409d2953919ed9659d3cd40a7981c65599a259ce632c251cc4c",
-      "zig_scope_sha256": "c26bead9c7578e838e1804e0ec95ba50f88ec1b65eb52c4b90b1473c01bad577"
+      "source_scope_sha256": "50e5d695fdbc3719c05bc7dd3700b1485cf1f58aebb7ff468cc296b0b933fe4d",
+      "zig_scope_sha256": "771897b14903f7e6f9616548aa57562203bdd312aa565dc279a015730ff1fe23"
     }
   ]
 }
