@@ -744,6 +744,15 @@
       "atomic_unit_id": "pager-nontemporary-cache-clear",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerWalSupported::line-7595",
+      "source_sha256": "f2979e1477125086d22933586c2b3d6ae43030cecd21bdbc45130e8266094d3a",
+      "zig_declaration_id": "src/core/internal/pager_core.zig::function::walSupported",
+      "zig_declaration_sha256": "da5bbbc204638178eff36c116ed7e99c2dbc009ecb5c56d5fd7172232d590a44",
+      "atomic_unit_id": "pager-wal-transport-support",
+      "class": "short",
+      "complete": true
     }
   ]
 }

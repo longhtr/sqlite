@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "pager-wal-transport-support",
+  "title": "Pager WAL transport support predicate",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerWalSupported rejects no-lock pagers and otherwise accepts exclusive locking mode or a version-2-or-newer VFS with shared-memory mapping.",
+    "source_files": [{"path": "src/pager.c", "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"}],
+    "source_entity_ids": ["src/pager.c::function::sqlite3PagerWalSupported::line-7595"],
+    "behavioral_block_ids": ["src/pager.c::function::sqlite3PagerWalSupported::behavior::if::line-7597-column-3::ordinal-0", "src/pager.c::function::sqlite3PagerWalSupported::behavior::return::line-7597-column-24::ordinal-0", "src/pager.c::function::sqlite3PagerWalSupported::behavior::return::line-7598-column-3::ordinal-0"],
+    "excluded_responsibilities": ["WAL opening", "VFS method dispatch", "Exclusive locking-mode transition"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["VFS owner supplies method version and xShmMap availability"],
+    "caller_closure": "The complete support predicate is assigned and observes Pager locking state plus explicit VFS capabilities."
+  },
+  "contracts": {
+    "inputs": ["Borrowed Pager, VFS I/O method version, and shared-memory-map availability"],
+    "outputs": ["Boolean WAL support"],
+    "ownership": "Pure observation.",
+    "state_and_results": "no_lock always rejects. Otherwise exclusive accepts regardless of VFS shared-memory support; normal mode requires version at least 2 and xShmMap.",
+    "locks_callbacks_io": "No lock acquisition, callbacks, or I/O.",
+    "failure_and_continuation": "Infallible."
+  },
+  "mappings": [{
+    "source_entity_id": "src/pager.c::function::sqlite3PagerWalSupported::line-7595",
+    "relation": "source-pager-wal-transport-support",
+    "zig_declaration_ids": ["src/core/internal/pager_core.zig::function::walSupported"]
+  }],
+  "representation_differences": ["Zig receives method version and xShmMap presence as explicit values instead of dereferencing sqlite3_file.pMethods."],
+  "oracle": {
+    "protocol": "Trace old VFS rejection, version-2 shared-memory acceptance, no-lock rejection, and exclusive-mode acceptance without shared-memory mapping.",
+    "internal_observations": ["no_lock", "exclusive", "method version", "shared-memory-map presence", "result"],
+    "normalization": "Boolean maps to source zero/nonzero."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; capability observation only.",
+    "malformed_input": "Method version is an unsigned VFS capability value.",
+    "continuation": "Pure observation.",
+    "performance": "Constant time.",
+    "commands": ["zig build test", "zig build pager-differential", "zig build wal-unix-hybrid"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/pager_core.zig Pager locking/WAL owner",
+    "native_call_path": "Pager WAL-opening policy can pass capabilities from the same VFS transport used by Unix WAL shared-memory methods.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires VFS capability differential, assurance closure, and independent review."},
+  "known_blockers": ["Wire/trace the predicate at the typed VFS-to-Pager WAL-opening boundary.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/pager.c:7585-7601 and pagerOpenWal callers were reviewed", "src/core/internal/pager_core.zig locking/WAL fields and src/core/unix_vfs.zig shared-memory method tables were reviewed"],
+    "callers": ["Pager WAL opening and journal-mode transition owner", "Unit four-boundary capability matrix"],
+    "callees": ["sqlite3_file.pMethods capability fields in the source", "Explicit typed capability values in Zig"],
+    "assertions_branches_cleanup": ["All three generated blocks are assigned", "no_lock rejection has precedence", "No allocation or cleanup paths exist"],
+    "upstream_tests": ["Upstream WAL, locking-mode, no-lock VFS, and shared-memory tests exercise support detection", "Project pager/WAL/Unix hybrid suites exercise the underlying transport"]
+  },
+  "evidence_receipts": []
+}

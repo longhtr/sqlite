@@ -757,6 +757,12 @@ pub fn beginReadTransaction(pager: *Pager, wal_changed: bool) Error!void {
     pager.state = .reader;
 }
 
+/// Source `sqlite3PagerWalSupported()`.
+pub fn walSupported(pager: *const Pager, method_version: u8, shared_memory_map: bool) bool {
+    if (pager.no_lock) return false;
+    return pager.exclusive or (method_version >= 2 and shared_memory_map);
+}
+
 /// Source `sqlite3PagerClearCache()`.
 pub fn clearCache(pager: *Pager) void {
     if (pager.temporary) return;
@@ -1236,6 +1242,14 @@ test "pager source savepoint journal locking and sector primitives" {
     try std.testing.expectEqual(scratch.ptr, (try temporarySpace(&pager)).ptr);
     try std.testing.expect(isReadOnly(&pager));
     try std.testing.expectEqual(JournalMode.truncate, getJournalMode(&pager));
+    try std.testing.expect(!walSupported(&pager, 1, true));
+    try std.testing.expect(walSupported(&pager, 2, true));
+    pager.no_lock = true;
+    try std.testing.expect(!walSupported(&pager, 3, true));
+    pager.no_lock = false;
+    pager.exclusive = true;
+    try std.testing.expect(walSupported(&pager, 1, false));
+    pager.exclusive = false;
     try std.testing.expect(journalModeMayChange(&pager));
     pager.state = .writer_cache_modified;
     try std.testing.expect(!journalModeMayChange(&pager));

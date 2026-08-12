@@ -523,6 +523,11 @@
       "id": "pager-nontemporary-cache-clear",
       "path": "upstream/atomic-units/pager-nontemporary-cache-clear.json",
       "status": "source-translated"
+    },
+    {
+      "id": "pager-wal-transport-support",
+      "path": "upstream/atomic-units/pager-wal-transport-support.json",
+      "status": "source-translated"
     }
   ]
 }
