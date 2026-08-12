@@ -17,6 +17,7 @@
       "src/memdb.c::function::sqlite3_serialize::line-750",
       "src/memdb.c::function::sqlite3_deserialize::line-841",
       "src/main.c::function::sqlite3_db_release_memory::line-897",
+      "src/main.c::function::sqlite3_txn_state::line-1328",
       "src/main.c::function::sqlite3_db_name::line-5007",
       "src/main.c::function::sqlite3_db_filename::line-5027",
       "src/main.c::function::sqlite3_db_readonly::line-5043"
@@ -29,6 +30,12 @@
       "src/memdb.c::function::memdbFromDbSchema::behavior::if::line-742-column-3::ordinal-0",
       "src/memdb.c::function::memdbFromDbSchema::behavior::return::line-744-column-3::ordinal-0",
       "src/main.c::function::sqlite3_db_release_memory::behavior::for::line-905-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_txn_state::behavior::if::line-1338-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_txn_state::behavior::if::line-1340-column-5::ordinal-0",
+      "src/main.c::function::sqlite3_txn_state::behavior::for::line-1345-column-3::ordinal-0",
+      "src/main.c::function::sqlite3_txn_state::behavior::conditional::line-1347-column-13::ordinal-0",
+      "src/main.c::function::sqlite3_txn_state::behavior::if::line-1348-column-5::ordinal-0",
+      "src/main.c::function::sqlite3_txn_state::behavior::return::line-1351-column-3::ordinal-0",
       "src/main.c::function::sqlite3_db_release_memory::behavior::if::line-907-column-5::ordinal-0",
       "src/main.c::function::sqlite3_db_release_memory::behavior::return::line-914-column-3::ordinal-0",
       "src/main.c::function::sqlite3_db_name::behavior::if::line-5016-column-3::ordinal-0",
@@ -122,6 +129,13 @@
       ]
     },
     {
+      "source_entity_id": "src/main.c::function::sqlite3_txn_state::line-1328",
+      "relation": "source-selected-or-maximum-schema-transaction-state",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::transactionState"
+      ]
+    },
+    {
       "source_entity_id": "src/main.c::function::sqlite3_db_release_memory::line-897",
       "relation": "source-connection-wide-pager-cache-shrink",
       "zig_declaration_ids": [
@@ -167,7 +181,7 @@
     "Attached private stores are stable heap owners selected through the connection attachment catalog rather than source aDb/Btree file-control traversal.",
     "Incremental blob handles retain the selected native B-tree and attached owner until close; DETACH rejects that live owner before catalog removal.",
     "Backup handles copy source/destination schema names, preserve one owned source snapshot plus selected-Pager-size remaining/page-count state across bounded steps, reject source-schema deserialize replacement while retained, restart after intervening DML or DDL writes, deserialize the selected attached image on completion, and retain the attached source owner until finish.",
-    "Transaction-state and checkpoint APIs resolve attached owners; post-autocommit Pager reader state reports SQL transaction NONE and non-WAL checkpoint outputs remain -1.",
+    "Transaction-state and checkpoint APIs resolve attached owners; sqlite3_txn_state reports a named main/attached B-tree state or the maximum over every open owner, rejects missing names, and treats post-autocommit Pager reader state as SQL transaction NONE; non-WAL checkpoint outputs remain -1.",
     "Metadata and file-control APIs resolve the selected attached B-tree, while connection-wide cache status/release/flush iterates all attached pagers; sqlite3_db_release_memory shrinks main and every open attached pager cache under the connection mutex, and CACHE_USED remains a native page-object approximation.",
     "Configured primary schema names and the permanent main alias converge on the same native B-tree in SQL and public lookup paths; sqlite3_db_name preserves main, TEMP, and attached schema index order with out-of-range null results, sqlite3_db_filename returns the user-visible main or attached database filename and never the internal memdb storage alias, and sqlite3_db_readonly reports the resolved main or attached B-tree state while distinguishing missing schemas."
   ],
@@ -254,8 +268,8 @@
       "command": "zig build memdb-api-differential",
       "result_owner": "upstream/evidence/memdb-api-differential.txt",
       "result_sha256": "c897d625f201b5cd61b6904a9b1df33573e97b6d11fb2c6024597340e4dbef76",
-      "source_scope_sha256": "3d2450d6bc218940b040b0bff7b6c4e48f71496f2162065861d63e6673d7e082",
-      "zig_scope_sha256": "6b9aa685e7eca5bf8d9c59e987d83b41377510d40e9ae2e3aa28003aa8b6c181"
+      "source_scope_sha256": "c3e60b22b870e40ad75d80454bef127e422aa77cb75ab54ed0315507401a67f0",
+      "zig_scope_sha256": "6052064d673e9e99e8c5cb66d610ef267478cd774ca2a80118bccc980d506e27"
     }
   ]
 }
