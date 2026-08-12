@@ -96,6 +96,15 @@
       "atomic_unit_id": "json-hex-decode-and-prefix-validation",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonIs4HexB::line-1355",
+      "source_sha256": "4d2cab9473d0ed47582dd0c9ae6d17af1d285814054ca391d819f512344a5fff",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::is4HexEscape",
+      "zig_declaration_sha256": "a4df85ebb727e9d239161f433f054103421f574a71c10f262b800aff7ef682d0",
+      "atomic_unit_id": "json-hex-decode-and-prefix-validation",
+      "class": "short",
+      "complete": true
     }
   ]
 }

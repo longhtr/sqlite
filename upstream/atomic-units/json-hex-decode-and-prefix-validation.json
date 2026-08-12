@@ -5,7 +5,7 @@
   "status": "source-translated",
   "admission_ready": true,
   "scope": {
-    "rationale": "jsonHexToInt, jsonHexToInt4, jsonIs2Hex, and jsonIs4Hex form the allocation-free ASCII hexadecimal primitive used by JSON string escape parsing. Together they preserve the distinction between caller-validated nibble decoding and explicit two/four-digit validation.",
+    "rationale": "jsonHexToInt, jsonHexToInt4, jsonIs2Hex, jsonIs4Hex, and jsonIs4HexB form the allocation-free ASCII hexadecimal primitive used by JSON string escape parsing. Together they preserve the distinction between caller-validated nibble decoding, explicit two/four-digit validation, and success-only JSONB operation mutation.",
     "source_files": [
       {
         "path": "src/json.c",
@@ -16,13 +16,19 @@
       "src/json.c::function::jsonHexToInt::line-947",
       "src/json.c::function::jsonHexToInt4::line-960",
       "src/json.c::function::jsonIs2Hex::line-972",
-      "src/json.c::function::jsonIs4Hex::line-979"
+      "src/json.c::function::jsonIs4Hex::line-979",
+      "src/json.c::function::jsonIs4HexB::line-1355"
     ],
     "behavioral_block_ids": [
       "src/json.c::function::jsonHexToInt::behavior::return::line-954-column-3::ordinal-0",
       "src/json.c::function::jsonHexToInt4::behavior::return::line-966-column-3::ordinal-0",
       "src/json.c::function::jsonIs2Hex::behavior::return::line-973-column-3::ordinal-0",
-      "src/json.c::function::jsonIs4Hex::behavior::return::line-980-column-3::ordinal-0"
+      "src/json.c::function::jsonIs4Hex::behavior::return::line-980-column-3::ordinal-0",
+      "src/json.c::function::jsonIs4HexB::behavior::if::line-1356-column-3::ordinal-0",
+      "src/json.c::function::jsonIs4HexB::behavior::return::line-1356-column-19::ordinal-0",
+      "src/json.c::function::jsonIs4HexB::behavior::if::line-1357-column-3::ordinal-0",
+      "src/json.c::function::jsonIs4HexB::behavior::return::line-1357-column-28::ordinal-0",
+      "src/json.c::function::jsonIs4HexB::behavior::return::line-1359-column-3::ordinal-0"
     ],
     "excluded_responsibilities": [
       "JSON5 backslash-operation classification",
@@ -36,14 +42,14 @@
       "ASCII character classification",
       "Callers validate escape digits before invoking the permissive nibble decoder"
     ],
-    "caller_closure": "All four complete source bodies are assigned. jsonUnescapeOneChar consumes the four-digit and nibble decoders; JSON text parsing owns malformed escape validation."
+    "caller_closure": "All five complete source bodies are assigned. jsonUnescapeOneChar consumes the four-digit and nibble decoders; JSON text parsing owns malformed escape validation and the JSONB text-operation transition."
   },
   "contracts": {
     "inputs": [
       "One byte for nibble decoding, or fixed two/four-byte ASCII prefixes"
     ],
     "outputs": [
-      "Low hexadecimal nibble, packed four-digit u32, or exact prefix-validity boolean"
+      "Low hexadecimal nibble, packed four-digit u32, exact prefix-validity boolean, or success-only JSONB text operation update"
     ],
     "ownership": "Pure borrowed fixed-size inputs; no state mutation.",
     "state_and_results": "Nibble decode intentionally gives defined low-nibble behavior without asserting on nonhex input, matching source caller-precondition semantics. Prefix functions classify all required bytes.",
@@ -78,6 +84,13 @@
       "zig_declaration_ids": [
         "src/core/internal/json_core.zig::function::is4Hex"
       ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonIs4HexB::line-1355",
+      "relation": "source-jsonb-u-escape-recognition-and-operation-update",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::is4HexEscape"
+      ]
     }
   ],
   "representation_differences": [
@@ -85,12 +98,13 @@
     "Boolean results replace source int 0/1 values."
   ],
   "oracle": {
-    "protocol": "Decode boundary and mixed-case validated digits, pack a mixed-case four-digit value, and validate true/false two- and four-byte prefixes. Existing JSON escape execution covers production unescape callers.",
+    "protocol": "Decode boundary and mixed-case validated digits, pack a mixed-case four-digit value, validate true/false two- and four-byte prefixes, and require failed u-escape recognition to preserve the operation while success sets JSON text. Existing JSON escape execution covers production unescape callers.",
     "internal_observations": [
       "decoded nibble",
       "packed u32",
       "two-byte prefix result",
-      "four-byte prefix result"
+      "four-byte prefix result",
+      "JSONB operation before and after failed/successful u-escape recognition"
     ],
     "normalization": "Compare exact integer and boolean values."
   },
@@ -120,7 +134,7 @@
     "notes": "Requires explicit parser validation routing through is2Hex/is4Hex, pinned-C trace, assurance closure, and independent review."
   },
   "known_blockers": [
-    "Route JSON text escape validation through is2Hex/is4Hex rather than a duplicate classifier.",
+    "Route JSON text escape validation and operation selection through is2Hex/is4Hex/is4HexEscape rather than duplicate classifiers.",
     "Add pinned-C nibble and prefix trace.",
     "Independent fidelity review remains open."
   ],
@@ -140,7 +154,7 @@
       "Nested two-byte validation for four-byte prefixes"
     ],
     "assertions_branches_cleanup": [
-      "All four source return blocks are assigned",
+      "All five source bodies and their branches/returns are assigned",
       "Decoder has no source assertion and preserves permissive behavior",
       "No cleanup path"
     ],

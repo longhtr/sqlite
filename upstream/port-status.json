@@ -94,7 +94,7 @@
     "utf_active_entities_differentially_checked": 13,
     "vdbe_opcode_coverage_warning": "A mapped case proves name-level runtime presence only, not complete SQLite semantics or fidelity.",
     "vlist_entities_differentially_checked": 0,
-    "zig_source_lines": 91114
+    "zig_source_lines": 91130
   },
   "overall_status": "incomplete-control-revalidation-and-source-port",
   "public_api": {
@@ -133,21 +133,21 @@
   ],
   "schema_version": 3,
   "source": {
-    "active_entities_context_reviewed_or_later": 2253,
+    "active_entities_context_reviewed_or_later": 2254,
     "active_entities_initially_classified": 6752,
     "active_entities_inventoried": 0,
-    "active_entities_unmapped": 3766,
+    "active_entities_unmapped": 3765,
     "active_entities_with_legacy_candidates": 733,
     "active_profile_entities": 6752,
     "active_source_files": 85,
     "ast_resolved_legacy_target_references": 425,
-    "ast_resolved_reviewed_target_references": 2040,
+    "ast_resolved_reviewed_target_references": 2041,
     "atomic_unit_dossiers_admission_ready": 125,
     "atomic_unit_dossiers_total": 125,
     "atomic_units_assurance_passed": 0,
     "atomic_units_source_translated_or_later": 125,
     "atomic_units_subsystem_integrated_or_later": 19,
-    "behavioral_blocks_assigned_to_atomic_units": 1478,
+    "behavioral_blocks_assigned_to_atomic_units": 1483,
     "behavioral_blocks_inventoried": 25930,
     "behavioral_functions_inventoried": 2457,
     "by_kind": {
@@ -155,7 +155,7 @@
         "active": 2588,
         "inventoried": 0,
         "legacy_candidates": 551,
-        "reviewed": 641
+        "reviewed": 642
       },
       "macro": {
         "active": 1484,
@@ -199,15 +199,15 @@
     "mapping_status": "working-classification-with-inventoried-unpromoted-atomic-units",
     "mapping_warning": "Inventoried mappings, AST resolution, and legacy candidates are planning facts only, not semantic review, promotion, or fidelity evidence.",
     "reviewed_coverage_is_completion_metric": false,
-    "reviewed_coverage_percent": 33.37,
+    "reviewed_coverage_percent": 33.38,
     "source_dependency_file_units": 85,
     "unresolved_legacy_target_references": 400,
-    "zig_declaration_inventory": 13611
+    "zig_declaration_inventory": 13612
   },
   "translation_tracking": {
-    "active_batch_entries": 10,
+    "active_batch_entries": 11,
     "active_batch_schema": 2,
-    "active_batch_short_functions": 10,
+    "active_batch_short_functions": 11,
     "active_batch_status": "active",
     "active_batch_substantive_functions": 0,
     "checkpoint_ledger": "upstream/port-checkpoints.json",

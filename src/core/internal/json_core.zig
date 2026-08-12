@@ -377,6 +377,15 @@ pub fn is4Hex(bytes: *const [4]u8) bool {
     return is2Hex(bytes[0..2]) and is2Hex(bytes[2..4]);
 }
 
+/// Source `jsonIs4HexB()`: recognize one `u` escape prefix and update the
+/// caller's JSONB operation only on success.
+pub fn is4HexEscape(input: []const u8, operation: *u8) bool {
+    if (input.len < 5 or input[0] != 'u') return false;
+    if (!is4Hex(input[1..5])) return false;
+    operation.* = kind.text_json;
+    return true;
+}
+
 /// Source `jsonUnescapeOneChar()`.
 pub fn unescapeOne(input: []const u8, output: *u32) usize {
     const invalid = 0x99999;
@@ -493,4 +502,11 @@ test "JSON hex accessors decode validated ASCII digits and classify prefixes" {
     try std.testing.expect(!is2Hex("0g"));
     try std.testing.expect(is4Hex("aB9f"));
     try std.testing.expect(!is4Hex("abc-"));
+    var operation = kind.text5;
+    try std.testing.expect(!is4HexEscape("x0041", &operation));
+    try std.testing.expectEqual(kind.text5, operation);
+    try std.testing.expect(!is4HexEscape("u00g1", &operation));
+    try std.testing.expectEqual(kind.text5, operation);
+    try std.testing.expect(is4HexEscape("u0041", &operation));
+    try std.testing.expectEqual(kind.text_json, operation);
 }
