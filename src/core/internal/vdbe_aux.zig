@@ -1055,6 +1055,40 @@ pub fn resetStepResult(machine: *types.Vdbe) void {
     machine.rc = types.result_ok;
 }
 
+pub const CursorRestoreFunction = *const fn (*types.BtCursor, *c_int) c_int;
+
+/// Source `sqlite3VdbeHandleMovedCursor()`: restore a moved B-tree cursor,
+/// invalidate its row cache, and publish a null row if restoration moved to a
+/// different record.
+pub fn handleMovedCursor(cursor: *types.VdbeCursor, restore: CursorRestoreFunction) c_int {
+    std.debug.assert(cursor.eCurType == types.cursor_type.btree);
+    const btree_cursor = cursor.uc.pCursor.?;
+    var different_row: c_int = 0;
+    const result = restore(btree_cursor, &different_row);
+    cursor.cacheStatus = types.cache_stale;
+    if (different_row != 0) {
+        cursor.nullRow = 1;
+    }
+    return result;
+}
+
+fn testRestoreMovedCursor(_: *types.BtCursor, different_row: *c_int) c_int {
+    different_row.* = 1;
+    return 10;
+}
+
+test "source moved cursor restoration invalidates cache and nulls changed row" {
+    var opaque_cursor: usize = 0;
+    var cursor = std.mem.zeroes(types.VdbeCursor);
+    cursor.eCurType = types.cursor_type.btree;
+    cursor.uc.pCursor = @ptrCast(&opaque_cursor);
+    cursor.cacheStatus = 42;
+
+    try std.testing.expectEqual(@as(c_int, 10), handleMovedCursor(&cursor, testRestoreMovedCursor));
+    try std.testing.expectEqual(types.cache_stale, cursor.cacheStatus);
+    try std.testing.expectEqual(@as(u8, 1), cursor.nullRow);
+}
+
 pub fn transferError(machine: *types.Vdbe) c_int {
     const db = machine.db.?;
     const result = machine.rc;

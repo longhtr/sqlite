@@ -204,6 +204,15 @@
       "atomic_unit_id": "vdbe-index-keyinfo-p4-attachment",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeHandleMovedCursor::line-3827",
+      "source_sha256": "c02ced1df36ba44820601f7e1aa7c36753f156ff5715309aeb9c133b967a4a40",
+      "zig_declaration_id": "src/core/internal/vdbe_aux.zig::function::handleMovedCursor",
+      "zig_declaration_sha256": "92942ef196422a165cecad3d1e2f38f5d5b2785b8644f439da405e6e76141266",
+      "atomic_unit_id": "vdbe-moved-btree-cursor-restoration",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

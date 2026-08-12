@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-moved-btree-cursor-restoration",
+  "title": "Moved VDBE B-tree cursor restoration",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3VdbeHandleMovedCursor restores a moved native B-tree cursor, always invalidates its cached row state, marks the VDBE cursor as a null row when restoration reports a different record, and returns the exact B-tree result.",
+    "source_files": [{"path": "src/vdbeaux.c", "sha256": "1d88b620f0d52107c9569285bbecf9c4b17e1b7cce139814db29a1acec9a004e"}],
+    "source_entity_ids": ["src/vdbeaux.c::function::sqlite3VdbeHandleMovedCursor::line-3827"],
+    "behavioral_block_ids": [
+      "src/vdbeaux.c::function::sqlite3VdbeHandleMovedCursor::behavior::assert::line-3829-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeHandleMovedCursor::behavior::assert::line-3830-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeHandleMovedCursor::behavior::assert::line-3831-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeHandleMovedCursor::behavior::if::line-3834-column-3::ordinal-0",
+      "src/vdbeaux.c::function::sqlite3VdbeHandleMovedCursor::behavior::return::line-3835-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["B-tree cursor restore internals", "Moved-state detection", "Deferred table moveto"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["sqlite3BtreeCursorHasMoved precondition and sqlite3BtreeCursorRestore implementation"], "caller_closure": "The complete moved-cursor state update is assigned behind a typed restore seam; cursor-restore dispatch remains open."},
+  "contracts": {
+    "inputs": ["Native VdbeCursor of B-tree type with non-null moved BtCursor", "Typed B-tree restore operation"],
+    "outputs": ["Exact restore result, stale cache status, and nullRow when the restored row differs"],
+    "ownership": "All cursor pointers are borrowed; no allocation or ownership transfer.",
+    "state_and_results": "cacheStatus becomes CACHE_STALE regardless of restore result; nonzero isDifferentRow sets nullRow without clearing an existing nullRow otherwise.",
+    "locks_callbacks_io": "B-tree restore seam owns required cursor locking and pager I/O.",
+    "failure_and_continuation": "Restore errors pass through after cache invalidation and source-defined different-row publication."
+  },
+  "mappings": [{"source_entity_id": "src/vdbeaux.c::function::sqlite3VdbeHandleMovedCursor::line-3827", "relation": "source-native-btree-cursor-restore-cache-nullrow", "zig_declaration_ids": ["src/core/internal/vdbe_aux.zig::function::handleMovedCursor"]}],
+  "representation_differences": ["A typed restore function seam represents sqlite3BtreeCursorRestore until native BtCursor behavior is connected to this layout owner.", "The existing src/core/vdbe.zig Cursor-union helper remains a separate integrated runtime owner; this declaration supplies exact native VdbeCursor field behavior."],
+  "oracle": {"protocol": "Restore a native-layout VdbeCursor through a deterministic seam returning an error and different-row marker, then compare exact result, cacheStatus, and nullRow.", "internal_observations": ["restore result", "cacheStatus", "nullRow", "isDifferentRow output"], "normalization": "Opaque BtCursor address is identity-only; all scalar fields and result codes are exact. Pinned-C trace remains pending."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "Restore I/O and locking belong to the B-tree seam.", "malformed_input": "Non-B-tree, null, or not-moved cursors violate source assertions.", "continuation": "Caller receives the exact restore result with stale cache and any null-row transition published.", "performance": "One B-tree restore plus constant-time state updates.",
+    "commands": ["zig build vdbe-mem-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/vdbe_aux.zig native-layout VDBE state layer", "native_call_path": "The native-layout owner is compile- and unit-traced; opcode cursor dispatch remains on the separate Cursor-union owner.", "bounded_owner_retired": "No; src/core/vdbe.zig remains the current runtime path."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires native cursor dispatch, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect native BtCursor restore and moved-state detection.", "Dispatch native VDBE cursor operations through this owner.", "Add pinned-C restore trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/vdbeaux.c:3794-3848 was reviewed completely for deferred, moved, and wrapper cursor context", "src/core/internal/vdbe_types.zig native VdbeCursor layout/constants were reviewed", "src/core/vdbe.zig existing Cursor-union runtime owner was reviewed and distinguished"],
+    "callers": ["sqlite3VdbeCursorRestore after moved-state detection", "Opcode paths that need a stable cursor position", "Native-layout unit trace invokes the owner directly"],
+    "callees": ["sqlite3BtreeCursorRestore via typed seam"],
+    "assertions_branches_cleanup": ["All five active behavior blocks are assigned", "Cache invalidation is unconditional after restore", "Only a different row sets nullRow"],
+    "upstream_tests": ["Upstream cursor save/restore, delete/rebalance, corruption, and I/O tests cover this owner", "Project native-layout unit trace covers exact result/cache/null-row transition"]
+  },
+  "evidence_receipts": []
+}

@@ -313,6 +313,11 @@
       "id": "vdbe-index-keyinfo-p4-attachment",
       "path": "upstream/atomic-units/vdbe-index-keyinfo-p4-attachment.json",
       "status": "source-translated"
+    },
+    {
+      "id": "vdbe-moved-btree-cursor-restoration",
+      "path": "upstream/atomic-units/vdbe-moved-btree-cursor-restoration.json",
+      "status": "source-translated"
     }
   ]
 }
