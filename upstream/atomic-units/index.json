@@ -383,6 +383,11 @@
       "id": "btree-cursor-clear-and-static-observations",
       "path": "upstream/atomic-units/btree-cursor-clear-and-static-observations.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-cursor-hint-flags",
+      "path": "upstream/atomic-units/btree-cursor-hint-flags.json",
+      "status": "source-translated"
     }
   ]
 }

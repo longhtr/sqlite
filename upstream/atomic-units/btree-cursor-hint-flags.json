@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "btree-cursor-hint-flags",
+  "title": "B-tree cursor hint flags",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeCursorHintFlags replaces the cursor hint byte with exactly zero, BULKLOAD, or SEEK_EQ, and sqlite3BtreeCursorHasHint tests a requested hint mask. Together they own the direct cursor-hint state boundary.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}, {"path": "src/btree.h", "sha256": "0ec3e384349a75947f0cd087e3a3629f8b2628d2d0129e9973fdef47f01c9296"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreeCursorHintFlags::line-1020", "src/btree.c::function::sqlite3BtreeCursorHasHint::line-11545"],
+    "behavioral_block_ids": [
+      "src/btree.c::function::sqlite3BtreeCursorHintFlags::behavior::assert::line-1021-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeCursorHasHint::behavior::return::line-11546-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Expression cursor hints", "Planner hint generation", "Hint-consuming seek/bulkload optimizations"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Planner generation and B-tree optimization consumption of hints"], "caller_closure": "Both direct hint bodies are assigned; planner/seek integration remains open."},
+  "contracts": {
+    "inputs": ["Live Cursor and replacement hint in {0,BULKLOAD=1,SEEK_EQ=2}; arbitrary mask for observation"],
+    "outputs": ["Replaced hint byte and true iff any requested mask bit is present"],
+    "ownership": "Borrowed Cursor; no allocation.",
+    "state_and_results": "Setter replaces rather than ORs. Predicate computes nonzero bitwise intersection.",
+    "locks_callbacks_io": "Caller owns cursor serialization; no callbacks or I/O.",
+    "failure_and_continuation": "Unsupported setter value violates source assertion; valid values are infallible."
+  },
+  "mappings": [
+    {"source_entity_id": "src/btree.c::function::sqlite3BtreeCursorHintFlags::line-1020", "relation": "source-cursor-hint-byte-replacement", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::setCursorHintFlags"]},
+    {"source_entity_id": "src/btree.c::function::sqlite3BtreeCursorHasHint::line-11545", "relation": "source-cursor-hint-mask-predicate", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::cursorHasHint"]}
+  ],
+  "representation_differences": ["Typed u8 hint storage replaces source unsigned input narrowed to BtCursor.hints.", "Source has-hint is assertion-only in upstream callers but remains a production helper under the active inventory."],
+  "oracle": {"protocol": "Set SEEK_EQ=2, assert mask 2 is present and BULKLOAD=1 is absent.", "internal_observations": ["cursor.hints", "matching mask result", "nonmatching mask result"], "normalization": "Hint values and mask semantics are exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; caller serialization external.", "malformed_input": "Unsupported setter hint violates assertion.", "continuation": "Hint remains available to later cursor operations until replaced.", "performance": "Constant time.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig Cursor state", "native_call_path": "Typed hint state and both mask outcomes are unit-traced; planner/seek consumers remain pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires planner/seek integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect planner hint generation.", "Connect B-tree seek/bulkload consumers.", "Add pinned-C replacement/mask trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:995-1023 and 11538-11547 were reviewed completely", "upstream/sqlite/src/btree.h:199-206 hint constants were reviewed", "src/core/internal/btree_core.zig Cursor state and tests were reviewed"],
+    "callers": ["VDBE cursor open/planner code and assertion checks", "Unit trace invokes both owners directly"],
+    "callees": ["No callees; direct byte store and mask read"],
+    "assertions_branches_cleanup": ["Both active blocks are assigned", "Setter accepts only exact source values", "No allocation or cleanup"],
+    "upstream_tests": ["Upstream cursor hint, planner, index seek, and bulkload tests cover these helpers", "Project unit trace covers SEEK_EQ present/BULKLOAD absent"]
+  },
+  "evidence_receipts": []
+}

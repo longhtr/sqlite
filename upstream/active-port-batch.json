@@ -402,6 +402,24 @@
       "atomic_unit_id": "btree-cursor-clear-and-static-observations",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeCursorHintFlags::line-1020",
+      "source_sha256": "36d0fd00f53ae26d478b39bf9e35670756911fa624571a3d527242c3272bb724",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::setCursorHintFlags",
+      "zig_declaration_sha256": "4316e72c1136f0854c366006cb0bc11ccd45ab75bd52c130dc74171ed2204eb1",
+      "atomic_unit_id": "btree-cursor-hint-flags",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeCursorHasHint::line-11545",
+      "source_sha256": "a036b3c4133e2857bb8be732e38ed9b494961edb3655f5bf0aff64e8f75d4866",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::cursorHasHint",
+      "zig_declaration_sha256": "1b4a2957a2e163d011b62227a6815a61ec2a12b44feb45ccfc8f5f9051f8d2a1",
+      "atomic_unit_id": "btree-cursor-hint-flags",
+      "class": "short",
+      "complete": true
     }
   ]
 }

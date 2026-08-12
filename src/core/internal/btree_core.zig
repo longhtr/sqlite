@@ -126,6 +126,7 @@ pub const Cursor = struct {
     valid_key: bool = false,
     valid_overflow: bool = false,
     pinned: bool = false,
+    hints: u8 = 0,
     info: CellInfo = .{},
     pub fn deinit(self: *Cursor) void {
         if (self.saved_key) |key| self.allocator.free(key);
@@ -147,6 +148,17 @@ pub fn clearCursor(cursor: *Cursor) void {
 /// Source `sqlite3BtreeCursorHasMoved()`.
 pub fn cursorHasMoved(cursor: *const Cursor) bool {
     return cursor.state != .valid;
+}
+
+/// Source `sqlite3BtreeCursorHintFlags()`.
+pub fn setCursorHintFlags(cursor: *Cursor, hints: u8) void {
+    std.debug.assert(hints == 0 or hints == 1 or hints == 2);
+    cursor.hints = hints;
+}
+
+/// Source `sqlite3BtreeCursorHasHint()`.
+pub fn cursorHasHint(cursor: *const Cursor, mask: u8) bool {
+    return cursor.hints & mask != 0;
 }
 
 /// Source `sqlite3BtreeCursorPin()`.
@@ -183,6 +195,9 @@ test "source cursor moved and pin state transitions preserve exact flags" {
     try std.testing.expect(cursorHasMoved(&cursor));
     cursor.state = .valid;
     try std.testing.expect(!cursorHasMoved(&cursor));
+    setCursorHintFlags(&cursor, 2);
+    try std.testing.expect(cursorHasHint(&cursor, 2));
+    try std.testing.expect(!cursorHasHint(&cursor, 1));
     pinCursor(&cursor);
     try std.testing.expect(cursor.pinned);
     unpinCursor(&cursor);
