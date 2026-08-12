@@ -510,6 +510,24 @@
       "atomic_unit_id": "pager-data-version-observation",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerIsreadonly::line-6864",
+      "source_sha256": "98760f19e3129f499f936dd316f8008f144cf07dd1b75023bbedeb6292e808e6",
+      "zig_declaration_id": "src/core/internal/pager_core.zig::function::isReadOnly",
+      "zig_declaration_sha256": "bfb480b7ede4616a9bf1beeb196bca143ac26102a176644f9d2eb8898868969a",
+      "atomic_unit_id": "pager-readonly-and-journal-mode-observations",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerGetJournalMode::line-7497",
+      "source_sha256": "ed45dca33cbc9fea2ad5e1ff7c9e367921458d49fa16f95b5166a298bd1461e6",
+      "zig_declaration_id": "src/core/internal/pager_core.zig::function::getJournalMode",
+      "zig_declaration_sha256": "abfb609982a5b795bb50700bcd3c49207040030e37769bf9348263f401463888",
+      "atomic_unit_id": "pager-readonly-and-journal-mode-observations",
+      "class": "short",
+      "complete": true
     }
   ]
 }

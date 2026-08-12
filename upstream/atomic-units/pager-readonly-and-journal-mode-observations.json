@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "id": "pager-readonly-and-journal-mode-observations",
+  "title": "Pager read-only and journal-mode observations",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerIsreadonly and sqlite3PagerGetJournalMode directly expose the pager's live read-only flag and journal mode.",
+    "source_files": [{"path": "src/pager.c", "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"}],
+    "source_entity_ids": ["src/pager.c::function::sqlite3PagerIsreadonly::line-6864", "src/pager.c::function::sqlite3PagerGetJournalMode::line-7497"],
+    "behavioral_block_ids": ["src/pager.c::function::sqlite3PagerIsreadonly::behavior::return::line-6865-column-3::ordinal-0", "src/pager.c::function::sqlite3PagerGetJournalMode::behavior::return::line-7498-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Journal-mode transitions", "VFS open-mode selection", "Write transaction validation"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Pager open and journal-mode mutation owners"], "caller_closure": "Both complete observation bodies are assigned; public PRAGMA/configuration consumers remain open."},
+  "contracts": {
+    "inputs": ["Borrowed Pager"],
+    "outputs": ["Live read-only boolean and current JournalMode"],
+    "ownership": "Pure borrowed observations.",
+    "state_and_results": "Return stored fields exactly without normalization or mutation.",
+    "locks_callbacks_io": "No callbacks or I/O; caller synchronization external.",
+    "failure_and_continuation": "No failure paths and no state mutation."
+  },
+  "mappings": [
+    {"source_entity_id": "src/pager.c::function::sqlite3PagerIsreadonly::line-6864", "relation": "source-pager-read-only-flag-observation", "zig_declaration_ids": ["src/core/internal/pager_core.zig::function::isReadOnly"]},
+    {"source_entity_id": "src/pager.c::function::sqlite3PagerGetJournalMode::line-7497", "relation": "source-pager-journal-mode-observation", "zig_declaration_ids": ["src/core/internal/pager_core.zig::function::getJournalMode"]}
+  ],
+  "representation_differences": ["JournalMode is a typed Zig enum instead of an integer result; enum members correspond to source PAGER_JOURNALMODE values.", "The read-only u8 is exposed as bool."],
+  "oracle": {"protocol": "Seed read_only true and journal_mode truncate, then observe exact values.", "internal_observations": ["Pager.read_only", "Pager.journal_mode", "typed results"], "normalization": "Source nonzero u8 maps to true; journal mode compares semantically by enum member."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; synchronization external.", "malformed_input": "Null Pager is unrepresentable.", "continuation": "Pure observations.", "performance": "Constant time.",
+    "commands": ["zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/pager_core.zig Pager state owner", "native_call_path": "Typed accessors and direct state trace exist; public configuration consumers remain pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires open/mutation consumer integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect VFS-derived read-only state.", "Connect journal-mode PRAGMA/configuration paths.", "Add pinned-C mode trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/pager.c:6848-6866 and 7488-7499 were reviewed completely", "src/core/internal/pager_core.zig read_only/journal_mode state and transitions were reviewed"],
+    "callers": ["B-tree read-only checks and journal-mode configuration/PRAGMA paths", "Unit trace invokes both accessors directly"],
+    "callees": ["Direct Pager fields"],
+    "assertions_branches_cleanup": ["Both sole return blocks are assigned", "No branches, allocation, mutation, or cleanup"],
+    "upstream_tests": ["Upstream read-only VFS and journal-mode tests cover these observations", "Project trace covers true/truncate states"]
+  },
+  "evidence_receipts": []
+}

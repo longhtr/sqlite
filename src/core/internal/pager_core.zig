@@ -124,6 +124,16 @@ pub fn dataVersion(pager: *const Pager) u32 {
     return @truncate(pager.data_version);
 }
 
+/// Source `sqlite3PagerIsreadonly()`.
+pub fn isReadOnly(pager: *const Pager) bool {
+    return pager.read_only;
+}
+
+/// Source `sqlite3PagerGetJournalMode()`.
+pub fn getJournalMode(pager: *const Pager) JournalMode {
+    return pager.journal_mode;
+}
+
 fn putU32(output: []u8, value: u32) void {
     std.mem.writeInt(u32, output[0..4], value, .big);
 }
@@ -1154,7 +1164,11 @@ test "pager source savepoint journal locking and sector primitives" {
     var pager = Pager{ .allocator = std.testing.allocator, .database_pages = 4, .original_pages = 4, .journal_offset = 513, .journal_size = 1024 };
     defer pager.deinit();
     pager.data_version = @as(u64, std.math.maxInt(u32)) + 3;
+    pager.read_only = true;
+    pager.journal_mode = .truncate;
     try std.testing.expectEqual(@as(u32, 2), dataVersion(&pager));
+    try std.testing.expect(isReadOnly(&pager));
+    try std.testing.expectEqual(JournalMode.truncate, getJournalMode(&pager));
     try std.testing.expectEqual(@as(u64, 1024), journalHeaderOffset(&pager));
     try syncHotJournal(&pager, null);
     try openSavepoints(&pager, 2);
