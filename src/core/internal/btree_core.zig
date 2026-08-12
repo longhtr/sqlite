@@ -887,18 +887,38 @@ pub fn clearTable(tree: *Btree, root: u32) Error!usize {
     return changes;
 }
 
-pub const IntegrityCheck = struct { referenced: []bool, message: ?[]const u8 = null, errors: usize = 0, maximum_errors: usize = 100, steps: usize = 0, interrupted: bool = false, progress_interval: usize = 0, progress: ?*const fn () bool = null };
+pub const IntegrityCheck = struct { referenced: []u8, checked_pages: u32, result: ?Error = null, message: ?[]const u8 = null, errors: usize = 0, maximum_errors: usize = 100, steps: usize = 0, interrupted: bool = false, progress_interval: usize = 0, progress: ?*const fn () bool = null };
+
+/// Source `checkOom()`.
+pub fn checkOutOfMemory(check: *IntegrityCheck) void {
+    check.result = error.NoMemory;
+    check.maximum_errors = 0;
+    if (check.errors == 0) check.errors = 1;
+}
+
+/// Source `getPageReferenced()`.
+pub fn getPageReferenced(check: *const IntegrityCheck, page_number: u32) bool {
+    std.debug.assert(page_number <= check.checked_pages);
+    return check.referenced[page_number / 8] & (@as(u8, 1) << @intCast(page_number & 0x07)) != 0;
+}
+
+/// Source `setPageReferenced()`.
+pub fn setPageReferenced(check: *IntegrityCheck, page_number: u32) void {
+    std.debug.assert(page_number <= check.checked_pages);
+    check.referenced[page_number / 8] |= @as(u8, 1) << @intCast(page_number & 0x07);
+}
+
 /// Source `checkRef()`.
 pub fn checkReference(check: *IntegrityCheck, page_number: u32) bool {
-    if (page_number == 0 or page_number >= check.referenced.len) {
+    if (page_number == 0 or page_number > check.checked_pages) {
         check.message = "invalid page number";
         return false;
     }
-    if (check.referenced[page_number]) {
+    if (getPageReferenced(check, page_number)) {
         check.message = "second page reference";
         return false;
     }
-    check.referenced[page_number] = true;
+    setPageReferenced(check, page_number);
     return true;
 }
 
@@ -2104,9 +2124,10 @@ pub fn checkTreePage(check: *IntegrityCheck, shared: *Shared, page_number: u32, 
 
 /// Source `sqlite3BtreeIntegrityCheck()`.
 pub fn integrityCheck(tree: *Btree, roots: []const u32, maximum_errors: usize) Error!IntegrityCheck {
-    const referenced = tree.shared.allocator.alloc(bool, tree.shared.pages.items.len + tree.shared.free_pages.items.len + 2) catch return error.NoMemory;
-    @memset(referenced, false);
-    var check = IntegrityCheck{ .referenced = referenced, .maximum_errors = maximum_errors };
+    const checked_pages: u32 = @intCast(tree.shared.pages.items.len + tree.shared.free_pages.items.len + 1);
+    const referenced = tree.shared.allocator.alloc(u8, @as(usize, checked_pages) / 8 + 1) catch return error.NoMemory;
+    @memset(referenced, 0);
+    var check = IntegrityCheck{ .referenced = referenced, .checked_pages = checked_pages, .maximum_errors = maximum_errors };
     errdefer tree.shared.allocator.free(referenced);
     for (roots) |root| {
         if (root != 0) _ = checkTreePage(&check, tree.shared, root, 0) catch {};
@@ -2115,7 +2136,7 @@ pub fn integrityCheck(tree: *Btree, roots: []const u32, maximum_errors: usize) E
         _ = checkReference(&check, number);
     }
     for (tree.shared.pages.items) |page| {
-        if (page.number < check.referenced.len and !check.referenced[page.number]) appendCheckMessage(&check, "page never used");
+        if (page.number <= check.checked_pages and !getPageReferenced(&check, page.number)) appendCheckMessage(&check, "page never used");
     }
     return check;
 }
@@ -2231,8 +2252,8 @@ test "extended btree source surface is compile-covered" {
     const page = try testPage(&shared, 2, true);
     var tree = Btree{ .shared = &shared, .transaction = .write };
     const cursor = try createCursor(&tree, 2, true);
-    var referenced = [_]bool{false} ** 8;
-    var check = IntegrityCheck{ .referenced = &referenced };
+    var referenced = [_]u8{0};
+    var check = IntegrityCheck{ .referenced = &referenced, .checked_pages = 7 };
     try compileExtendedBtreeSurface(false, &tree, cursor, page, &check);
 }
 
@@ -2320,10 +2341,17 @@ test "btree core page cursor lock and integrity primitives" {
     try populateCellCache(&cache, 0, 1);
     try std.testing.expectEqual(@as(usize, 5), sizes[0]);
 
-    var referenced = [_]bool{false} ** 8;
-    var integrity = IntegrityCheck{ .referenced = &referenced };
+    var referenced = [_]u8{0};
+    var integrity = IntegrityCheck{ .referenced = &referenced, .checked_pages = 7 };
+    try std.testing.expect(!getPageReferenced(&integrity, 2));
     try std.testing.expect(checkReference(&integrity, 2));
+    try std.testing.expect(getPageReferenced(&integrity, 2));
     try std.testing.expect(!checkReference(&integrity, 2));
+    checkOutOfMemory(&integrity);
+    if (integrity.result) |failure| {
+        try std.testing.expectEqual(error.NoMemory, failure);
+    } else return error.TestExpectedEqual;
+    try std.testing.expectEqual(@as(usize, 0), integrity.maximum_errors);
     var heap = [_]u32{0} ** 8;
     try heapInsert(&heap, 9);
     try heapInsert(&heap, 2);

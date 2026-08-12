@@ -627,6 +627,33 @@
       "atomic_unit_id": "btree-database-page-count-header",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::checkOom::line-10581",
+      "source_sha256": "5ad3b5e40152f7f2e6925bfd94446ad98165c91f873dbcccc6dfbca89afd7b67",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::checkOutOfMemory",
+      "zig_declaration_sha256": "2ffbf9c157d600e43bf8cee952624923f651de6da732f4f629aa692658aa39d2",
+      "atomic_unit_id": "btree-integrity-reference-bitmap-and-oom",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::getPageReferenced::line-10648",
+      "source_sha256": "0b02d69e647e9be21636f9382e2967a960f300eadc7db9128841ab4ee496df0d",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::getPageReferenced",
+      "zig_declaration_sha256": "d41b43312edef2483421dac5a45b6cf388800a0b8f2c6db74752e7ff7263ddfd",
+      "atomic_unit_id": "btree-integrity-reference-bitmap-and-oom",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::setPageReferenced::line-10657",
+      "source_sha256": "f5707330252b9b89886159c6b7f50bac8afdfd8be3779d697b58671d1cb9bbd2",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::setPageReferenced",
+      "zig_declaration_sha256": "e03c7416c415f69bad3bed109a184fc3fcaa8be404574da8b970bff6884f5a09",
+      "atomic_unit_id": "btree-integrity-reference-bitmap-and-oom",
+      "class": "short",
+      "complete": true
     }
   ]
 }

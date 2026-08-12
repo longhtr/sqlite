@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "btree-integrity-reference-bitmap-and-oom",
+  "title": "B-tree integrity reference bitmap and OOM stop state",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Integrity checking records fatal OOM exactly once and stops further reports, and tracks page references in a compact byte bitmap used to detect duplicate references.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::checkOom::line-10581", "src/btree.c::function::getPageReferenced::line-10648", "src/btree.c::function::setPageReferenced::line-10657"],
+    "behavioral_block_ids": [
+      "src/btree.c::function::checkOom::behavior::if::line-10584-column-3::ordinal-0",
+      "src/btree.c::function::getPageReferenced::behavior::assert::line-10649-column-3::ordinal-0",
+      "src/btree.c::function::getPageReferenced::behavior::assert::line-10650-column-3::ordinal-0",
+      "src/btree.c::function::getPageReferenced::behavior::return::line-10651-column-3::ordinal-0",
+      "src/btree.c::function::setPageReferenced::behavior::assert::line-10658-column-3::ordinal-0",
+      "src/btree.c::function::setPageReferenced::behavior::assert::line-10659-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Integrity message formatting", "B-tree traversal", "Pointer-map validation"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Integrity-check allocator creates and frees the reference bitmap"],
+    "caller_closure": "The OOM state transition and both bitmap helpers are complete; checkReference and integrity traversal consume the bitmap in production."
+  },
+  "contracts": {
+    "inputs": ["Integrity-check owner and page number bounded by checked_pages"],
+    "outputs": ["Reference-bit observation or mutation; sticky NoMemory stop state"],
+    "ownership": "Integrity owner owns the byte bitmap; helpers borrow and mutate it in place.",
+    "state_and_results": "Bit i is byte i/8 mask 1<<(i&7). OOM stores NoMemory, zeros remaining error capacity, and increments errors only when no prior error exists.",
+    "locks_callbacks_io": "No locks, callbacks, or I/O inside these helpers.",
+    "failure_and_continuation": "Bitmap bounds are asserted. OOM intentionally prevents further integrity messages."
+  },
+  "mappings": [
+    {"source_entity_id": "src/btree.c::function::checkOom::line-10581", "relation": "source-btree-integrity-oom-stop", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::checkOutOfMemory"]},
+    {"source_entity_id": "src/btree.c::function::getPageReferenced::line-10648", "relation": "source-btree-integrity-reference-bit-read", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::getPageReferenced"]},
+    {"source_entity_id": "src/btree.c::function::setPageReferenced::line-10657", "relation": "source-btree-integrity-reference-bit-set", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::setPageReferenced"]}
+  ],
+  "representation_differences": ["Zig stores the result as optional bounded Error instead of an integer SQLite result code. The compact byte bitmap and page-to-bit arithmetic are exact."],
+  "oracle": {
+    "protocol": "Read an unset page bit, set it, read it again, detect a duplicate through checkReference, then transition a zero-error integrity owner to NoMemory stop state.",
+    "internal_observations": ["page number", "byte index", "bit mask", "bitmap byte", "result", "error count", "remaining error capacity"],
+    "normalization": "NoMemory maps to SQLITE_NOMEM; booleans normalize to zero/nonzero."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Fatal integrity OOM state is represented and unit-traced; allocator-site injection remains pending.",
+    "io_crash_concurrency": "No I/O or concurrency.",
+    "malformed_input": "Out-of-range pages are rejected by checkReference before bitmap helpers.",
+    "continuation": "NoMemory zeros maximum_errors so message processing stops.",
+    "performance": "Constant-time bit operations and state update.",
+    "commands": ["zig build test", "zig build btree-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/btree_core.zig integrity-check owner",
+    "native_call_path": "integrityCheck allocates the compact bitmap; checkTreePage/checkReference use the read/set helpers and duplicate detection.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires OOM injection/differential, assurance closure, and independent review."},
+  "known_blockers": ["Inject integrity-message allocation OOM and compare stop state to pinned C.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:10573-10680 was reviewed for OOM, progress/message interaction, bitmap helpers, and checkRef", "src/core/internal/btree_core.zig IntegrityCheck, checkReference, integrityCheck, traversal, and tests were reviewed"],
+    "callers": ["checkAppendMsg invokes checkOom on accumulator NoMemory in the source", "checkReference reads then sets the bitmap", "integrity traversal uses checkReference and later detects unreferenced pages"],
+    "callees": ["Pure byte bitmap operations", "Bounded error-state assignments"],
+    "assertions_branches_cleanup": ["All six generated blocks are assigned", "Bitmap bounds and byte width assumptions are represented", "Bitmap ownership remains with integrityCheck for caller release"],
+    "upstream_tests": ["Upstream integrity_check, corrupt, OOM, and auto-vacuum tests cover these helpers", "Project B-tree core/differential suites exercise duplicate references and traversal"]
+  },
+  "evidence_receipts": []
+}
