@@ -798,6 +798,15 @@
       "atomic_unit_id": "btree-pager-maximum-page-count",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::subjournalPageIfRequired::line-4628",
+      "source_sha256": "9e25e367ca292d617fe1483c934921abdcb9c2978c68c902d9b8f31a2df0fb32",
+      "zig_declaration_id": "src/core/internal/pager_core.zig::function::subjournalPageWhenRequired",
+      "zig_declaration_sha256": "e7ae8da4cef5f32a28eb07551c75b8e259c1125281df7e074fdc479841faf0ee",
+      "atomic_unit_id": "pager-conditional-subjournal-page",
+      "class": "short",
+      "complete": true
     }
   ]
 }

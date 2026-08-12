@@ -589,12 +589,17 @@ pub fn subjournalPage(pager: *Pager, page_number: u32, data: []const u8) Error!v
     try addToSavepointBitvectors(pager, page_number);
 }
 
+/// Source `subjournalPageIfRequired()`.
+pub fn subjournalPageWhenRequired(pager: *Pager, page_number: u32, data: []const u8) Error!void {
+    if (subjournalRequiresPage(pager, page_number)) try subjournalPage(pager, page_number, data);
+}
+
 /// Source `pagerStress()`.
 pub fn stressPage(pager: *Pager, page: *Page, data: []const u8) Error!void {
     if (pager.error_code != null or pager.spill_disabled or !page.dirty) return;
     pager.stats[3] += 1;
     if (pager.wal_open) {
-        if (subjournalRequiresPage(pager, page.number)) try subjournalPage(pager, page.number, data);
+        try subjournalPageWhenRequired(pager, page.number, data);
         _ = walFrames(pager, @as(*[1]Page, page)[0..], 0, false);
     } else {
         try writePageList(pager, @as(*[1]Page, page)[0..], &.{data});
@@ -668,7 +673,7 @@ pub fn exclusiveLockRecovering(pager: *Pager, attempt: LockAttempt, context: ?*a
 pub fn movePage(pager: *Pager, pages: []Page, source_index: usize, destination_number: u32, commit: bool, source_data: []const u8) Error!void {
     if (source_index >= pages.len or destination_number == 0) return error.Range;
     const source = &pages[source_index];
-    if (source.dirty and subjournalRequiresPage(pager, source.number)) try subjournalPage(pager, source.number, source_data);
+    if (source.dirty) try subjournalPageWhenRequired(pager, source.number, source_data);
     const original_number = source.number;
     const preserve_sync = source.need_sync and !commit;
     for (pages, 0..) |*page, index| {
@@ -1269,6 +1274,9 @@ test "pager source savepoint journal locking and sector primitives" {
     try openSavepoints(&pager, 2);
     try std.testing.expectEqual(@as(usize, 2), pager.savepoints.items.len);
     try std.testing.expect(subjournalRequiresPage(&pager, 2));
+    const initial_subjournal_records = pager.subjournal_records;
+    try subjournalPageWhenRequired(&pager, 2, &([_]u8{0} ** 4096));
+    try std.testing.expectEqual(initial_subjournal_records + 1, pager.subjournal_records);
     try addToSavepointBitvectors(&pager, 2);
     try std.testing.expect(!subjournalRequiresPage(&pager, 2));
     pager.mmap_size = 4096;
