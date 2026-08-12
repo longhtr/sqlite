@@ -453,6 +453,11 @@
       "id": "wal-callback-frame-consumption",
       "path": "upstream/atomic-units/wal-callback-frame-consumption.json",
       "status": "source-translated"
+    },
+    {
+      "id": "wal-savepoint-capture",
+      "path": "upstream/atomic-units/wal-savepoint-capture.json",
+      "status": "source-translated"
     }
   ]
 }

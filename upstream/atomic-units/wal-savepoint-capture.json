@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "wal-savepoint-capture",
+  "title": "WAL savepoint capture",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3WalSavepoint captures the current maximum frame, two frame-checksum words, and checkpoint sequence into the four-word state consumed by WAL savepoint rollback.",
+    "source_files": [{"path": "src/wal.c", "sha256": "0c0467f7c4de773512b3327b0d3973fc31d50cf74603d6aec0e3b3e1c787e217"}],
+    "source_entity_ids": ["src/wal.c::function::sqlite3WalSavepoint::line-3818"],
+    "behavioral_block_ids": ["src/wal.c::function::sqlite3WalSavepoint::behavior::assert::line-3819-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Savepoint rollback", "Hash cleanup", "Checkpoint sequencing"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Write-lock acquisition and savepointUndo consumer"], "caller_closure": "The complete four-word capture body is assigned and uses the existing savepointUndo representation."},
+  "contracts": {
+    "inputs": ["Borrowed Wal with write lock held"],
+    "outputs": ["Four u32 words: max frame, checksum word 0, checksum word 1, checkpoint sequence"],
+    "ownership": "Returns a value array; no allocation or mutation.",
+    "state_and_results": "Field order and values are exact.",
+    "locks_callbacks_io": "Asserts write lock; no callbacks or I/O.",
+    "failure_and_continuation": "No runtime failure path under precondition."
+  },
+  "mappings": [{"source_entity_id": "src/wal.c::function::sqlite3WalSavepoint::line-3818", "relation": "source-four-word-wal-savepoint-capture", "zig_declaration_ids": ["src/core/internal/wal_core.zig::function::savepoint"]}],
+  "representation_differences": ["Zig returns [4]u32 by value instead of writing through a caller pointer."],
+  "oracle": {"protocol": "Seed max frame 2, checksum {11,12}, checkpoint sequence 4 under write lock and compare exact array.", "internal_observations": ["write_lock", "Header.max_frame", "Header.frame_checksum", "checkpoint_sequence", "returned array"], "normalization": "Array order and u32 values are exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; caller write lock external.", "malformed_input": "Missing write lock violates asserted precondition.", "continuation": "Pure snapshot leaves WAL unchanged.", "performance": "Constant time.",
+    "commands": ["zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/wal_core.zig Wal savepoint owner", "native_call_path": "Capture representation feeds the existing savepointUndo shape in the unit trace; transaction savepoint callers remain pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires transaction savepoint integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect pager/transaction savepoint creation.", "Add pinned-C capture/undo trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/wal.c:3808-3824 was reviewed completely", "src/core/internal/wal_core.zig Header, checkpoint_sequence, savepointUndo, and tests were reviewed"],
+    "callers": ["Pager savepoint creation", "Unit trace captures and then prepares rollback state"],
+    "callees": ["Direct Wal/Header fields"],
+    "assertions_branches_cleanup": ["The generated write-lock assertion and all four assignments are assigned", "No branch, allocation, mutation, or cleanup"],
+    "upstream_tests": ["Upstream WAL savepoint rollback tests cover capture", "Project trace compares exact four-word state"]
+  },
+  "evidence_receipts": []
+}

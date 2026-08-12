@@ -564,6 +564,15 @@
       "atomic_unit_id": "wal-callback-frame-consumption",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::sqlite3WalSavepoint::line-3818",
+      "source_sha256": "8e38e75cd3ad082eb6bc0df9013bd4948c2d3d558fba088e40d07350977a0f7b",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::savepoint",
+      "zig_declaration_sha256": "5163ba8576570de862cdb1e303f9c1b703ac6568553ffb8ef02562aab6947537",
+      "atomic_unit_id": "wal-savepoint-capture",
+      "class": "short",
+      "complete": true
     }
   ]
 }

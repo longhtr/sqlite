@@ -380,6 +380,17 @@ pub fn iteratorInitialize(wal: *Wal, backfill: u32) Error!OwnedIterator {
     return result;
 }
 
+/// Source `sqlite3WalSavepoint()`.
+pub fn savepoint(wal: *const Wal) [4]u32 {
+    std.debug.assert(wal.write_lock);
+    return .{
+        wal.header.max_frame,
+        wal.header.frame_checksum[0],
+        wal.header.frame_checksum[1],
+        wal.checkpoint_sequence,
+    };
+}
+
 /// Source `sqlite3WalSavepointUndo()` (`src/wal.c:3832-3861`).
 pub fn savepointUndo(wal: *Wal, data: *[4]u32) Error!void {
     if (!wal.write_lock) return error.Range;
@@ -996,8 +1007,12 @@ test "WAL index append cleanup and savepoint undo" {
     wal.header.max_frame = 2;
     indexWriteHeader(&wal);
     try std.testing.expectEqual(@as(u32, 2), wal.published_headers[0].max_frame);
-    var savepoint = [4]u32{ 1, 11, 12, 0 };
-    try savepointUndo(&wal, &savepoint);
+    wal.header.frame_checksum = .{ 11, 12 };
+    wal.checkpoint_sequence = 4;
+    const captured = savepoint(&wal);
+    try std.testing.expectEqual([4]u32{ 2, 11, 12, 4 }, captured);
+    var savepoint_data = [4]u32{ 1, 11, 12, 4 };
+    try savepointUndo(&wal, &savepoint_data);
     try std.testing.expectEqual(@as(u32, 1), wal.header.max_frame);
 }
 
