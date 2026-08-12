@@ -443,6 +443,11 @@
       "id": "pager-mmap-and-journal-size-limits",
       "path": "upstream/atomic-units/pager-mmap-and-journal-size-limits.json",
       "status": "source-translated"
+    },
+    {
+      "id": "wal-database-size-observation",
+      "path": "upstream/atomic-units/wal-database-size-observation.json",
+      "status": "source-translated"
     }
   ]
 }

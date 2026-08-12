@@ -104,6 +104,13 @@ pub const Wal = struct {
     }
 };
 
+/// Source `sqlite3WalDbsize()`.
+pub fn databaseSize(wal: ?*const Wal) u32 {
+    const value = wal orelse return 0;
+    if (value.read_lock < 0) return 0;
+    return value.header.database_pages;
+}
+
 fn headerChecksum(header: *const Header) [2]u32 {
     var one: u32 = @intFromBool(header.initialized) +% header.version;
     var two: u32 = header.max_frame +% header.database_pages +% one;
@@ -965,6 +972,11 @@ test "checkpoint batch WAL backfills the latest safe frame" {
 test "WAL index append cleanup and savepoint undo" {
     var wal = Wal{ .allocator = std.testing.allocator, .write_lock = true };
     defer wal.deinit();
+    wal.header.database_pages = 9;
+    try std.testing.expectEqual(@as(u32, 0), databaseSize(null));
+    try std.testing.expectEqual(@as(u32, 0), databaseSize(&wal));
+    wal.read_lock = 0;
+    try std.testing.expectEqual(@as(u32, 9), databaseSize(&wal));
     try indexAppend(&wal, 1, 7);
     try indexAppend(&wal, 2, 3);
     wal.header.max_frame = 2;

@@ -546,6 +546,15 @@
       "atomic_unit_id": "pager-mmap-and-journal-size-limits",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::sqlite3WalDbsize::line-3678",
+      "source_sha256": "1f6bae3549d2d5866bf97ad3d5a7e3107376a617e336da13994462d817f5a369",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::databaseSize",
+      "zig_declaration_sha256": "eab6e95dd0b2ae5781f39ae6cc616eb421abc43602a08586c7e9071431f72428",
+      "atomic_unit_id": "wal-database-size-observation",
+      "class": "short",
+      "complete": true
     }
   ]
 }

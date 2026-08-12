@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "wal-database-size-observation",
+  "title": "WAL database-size observation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3WalDbsize returns the committed WAL header database page count when a non-null WAL has an active read lock, and zero when the size is unknown.",
+    "source_files": [{"path": "src/wal.c", "sha256": "0c0467f7c4de773512b3327b0d3973fc31d50cf74603d6aec0e3b3e1c787e217"}],
+    "source_entity_ids": ["src/wal.c::function::sqlite3WalDbsize::line-3678"],
+    "behavioral_block_ids": ["src/wal.c::function::sqlite3WalDbsize::behavior::if::line-3679-column-3::ordinal-0", "src/wal.c::function::sqlite3WalDbsize::behavior::return::line-3680-column-5::ordinal-0", "src/wal.c::function::sqlite3WalDbsize::behavior::return::line-3682-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Read transaction acquisition", "WAL header validation", "Database-size publication"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["WAL read-lock and header lifecycle"], "caller_closure": "The complete nullable observation body is assigned; pager/B-tree consumers remain open."},
+  "contracts": {
+    "inputs": ["Nullable borrowed Wal"],
+    "outputs": ["Header database page count or zero when null/unlocked"],
+    "ownership": "Pure borrowed observation.",
+    "state_and_results": "A nonnegative read_lock makes header.database_pages observable; null or negative read_lock returns zero.",
+    "locks_callbacks_io": "No callbacks or I/O; active read lock is represented state.",
+    "failure_and_continuation": "No failure path and no mutation."
+  },
+  "mappings": [{"source_entity_id": "src/wal.c::function::sqlite3WalDbsize::line-3678", "relation": "source-active-read-lock-wal-database-size", "zig_declaration_ids": ["src/core/internal/wal_core.zig::function::databaseSize"]}],
+  "representation_differences": ["Nullable Zig pointer and signed read_lock model directly represent source null and >=0 checks."],
+  "oracle": {"protocol": "Observe zero for null WAL, zero for read_lock -1 with header size 9, and 9 after read_lock becomes 0.", "internal_observations": ["nullable Wal", "read_lock", "header.database_pages", "returned page count"], "normalization": "Page count and zero unknown sentinel are exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; read transaction synchronization external.", "malformed_input": "Null/unlocked state safely returns unknown zero.", "continuation": "Pure observation.", "performance": "Constant time.",
+    "commands": ["zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/wal_core.zig Wal header/read-lock owner", "native_call_path": "Typed observation and all three branches are traced; pager/B-tree consumers remain pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires read-transaction/pager integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect pager database-size path.", "Connect source-shaped read transaction lifecycle.", "Add pinned-C null/unlocked/locked trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/wal.c:3668-3683 was reviewed completely", "src/core/internal/wal_core.zig Header, read_lock transitions, and tests were reviewed"],
+    "callers": ["Pager/B-tree database-size paths", "Unit trace invokes nullable accessor directly"],
+    "callees": ["Direct Wal read_lock and Header.database_pages fields"],
+    "assertions_branches_cleanup": ["All if and return blocks are assigned", "No allocation, mutation, or cleanup"],
+    "upstream_tests": ["Upstream WAL read transaction and page-count tests cover this observation", "Project trace covers null, unlocked, and locked results"]
+  },
+  "evidence_receipts": []
+}
