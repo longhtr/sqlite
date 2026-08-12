@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "btree-page-reference-release",
+  "title": "B-tree nullable and non-null page reference release",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "releasePageNotNull validates a B-tree page wrapper and releases one Pager reference, while releasePage provides the nullable no-op wrapper.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::releasePageNotNull::line-2421", "src/btree.c::function::releasePage::line-2430"],
+    "behavioral_block_ids": [
+      "src/btree.c::function::releasePageNotNull::behavior::assert::line-2422-column-3::ordinal-0",
+      "src/btree.c::function::releasePageNotNull::behavior::assert::line-2423-column-3::ordinal-0",
+      "src/btree.c::function::releasePageNotNull::behavior::assert::line-2424-column-3::ordinal-0",
+      "src/btree.c::function::releasePageNotNull::behavior::assert::line-2425-column-3::ordinal-0",
+      "src/btree.c::function::releasePageNotNull::behavior::assert::line-2426-column-3::ordinal-0",
+      "src/btree.c::function::releasePageNotNull::behavior::assert::line-2427-column-3::ordinal-0",
+      "src/btree.c::function::releasePage::behavior::if::line-2431-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Page-1 special release", "Pager cache eviction", "Page acquisition"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Pager/cache owner maintains reference count and wrapper/data identity"],
+    "caller_closure": "Both complete release helpers are assigned and releasePageOne delegates to the same validated non-null owner."
+  },
+  "contracts": {
+    "inputs": ["Non-null or optional B-tree Page"],
+    "outputs": ["No value"],
+    "ownership": "Consumes one borrowed page reference when non-null; Shared retains cached page ownership.",
+    "state_and_results": "Non-null page reference count decrements exactly once after invariant assertions. Null input is an exact no-op.",
+    "locks_callbacks_io": "Caller owns B-tree synchronization. No callbacks or I/O.",
+    "failure_and_continuation": "Invalid non-null reference state violates assertions; valid release is infallible."
+  },
+  "mappings": [
+    {"source_entity_id": "src/btree.c::function::releasePageNotNull::line-2421", "relation": "source-btree-nonnull-page-reference-release", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::releasePageNotNull"]},
+    {"source_entity_id": "src/btree.c::function::releasePage::line-2430", "relation": "source-btree-nullable-page-reference-release", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::releasePage"]}
+  ],
+  "representation_differences": ["Zig Page combines the source MemPage wrapper and bounded Pager reference observation; data/wrapper identity is structural rather than separate pDbPage/pExtra pointers."],
+  "oracle": {
+    "protocol": "Acquire a page reference, invoke nullable release with null and observe no change, then release non-null and observe one decrement.",
+    "internal_observations": ["page identity", "data presence", "prior reference count", "post-reference count", "nullable branch"],
+    "normalization": "Wrapper/Pager pointer assertions normalize to typed Zig Page structural identity."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; caller owns B-tree synchronization.",
+    "malformed_input": "Zero references or empty data violate assertions.",
+    "continuation": "Valid release leaves cache ownership and remaining references usable.",
+    "performance": "Constant time.",
+    "commands": ["zig build test", "zig build btree-differential", "zig build pager-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/btree_core.zig page-reference owner",
+    "native_call_path": "Cursor movement, lookup, overflow traversal, integrity, and unused-page paths release through releasePageOne/non-null owner.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires Pager-reference differential, assurance closure, and independent review."},
+  "known_blockers": ["Trace exact Pager reference and cache retention across nullable/non-null/page-one releases.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:2408-2445 and Pager unref ownership were reviewed", "src/core/internal/btree_core.zig Page fields, get/release paths, cursor ownership, and tests were reviewed"],
+    "callers": ["Cursor parent/child movement and teardown", "Unused page and overflow traversal", "Integrity and page lookup owners", "Unit null/non-null release trace"],
+    "callees": ["sqlite3PagerUnrefNotNull in the source", "Typed reference decrement in Zig"],
+    "assertions_branches_cleanup": ["All seven generated blocks are assigned", "Nullable no-op is explicit", "Non-null release consumes exactly one reference and does not free cache owner"],
+    "upstream_tests": ["Upstream B-tree cursor, Pager reference, balance, overflow, and corruption tests exercise release", "Project B-tree/Pager differentials exercise page ownership"]
+  },
+  "evidence_receipts": []
+}

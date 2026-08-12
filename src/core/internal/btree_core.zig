@@ -474,10 +474,21 @@ pub fn getPage(shared: *Shared, page_number: u32, readonly: bool) Error!*Page {
     return page;
 }
 
-/// Source `releasePageOne()`.
-pub fn releasePageOne(page: *Page) void {
+/// Source `releasePageNotNull()`.
+pub fn releasePageNotNull(page: *Page) void {
+    std.debug.assert(page.data.len != 0);
     std.debug.assert(page.ref_count > 0);
     page.ref_count -= 1;
+}
+
+/// Source `releasePage()`.
+pub fn releasePage(page: ?*Page) void {
+    if (page) |value| releasePageNotNull(value);
+}
+
+/// Source `releasePageOne()`.
+pub fn releasePageOne(page: *Page) void {
+    releasePageNotNull(page);
 }
 
 /// Source `btreeGetUnusedPage()`.
@@ -2375,7 +2386,8 @@ test "btree core page cursor lock and integrity primitives" {
     _ = try testPage(&shared, 5, true);
     const unused = try getUnusedPage(&shared, 5, false);
     try reinitializePage(unused);
-    releasePageOne(unused);
+    releasePage(null);
+    releasePage(unused);
 
     var sizes = [_]usize{0};
     var cells = [_][]const u8{&no_payload};
