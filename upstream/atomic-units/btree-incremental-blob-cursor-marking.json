@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "btree-incremental-blob-cursor-marking",
+  "title": "B-tree incremental-blob cursor marking",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeIncrblobCursor marks both a cursor and its owning Btree so later table mutation can cheaply determine whether incremental-blob cursors require invalidation.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreeIncrblobCursor::line-11499"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Incremental-blob payload reads/writes", "Cursor invalidation", "Blob API ownership"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Cursor/Btree lifetime and later invalidateIncrblobCursors behavior"], "caller_closure": "The complete straight-line marking body is assigned; public blob-open dispatch remains open."},
+  "contracts": {
+    "inputs": ["Live B-tree Cursor with owning Btree"],
+    "outputs": ["Cursor incremental-blob flag set and owning Btree aggregate flag set"],
+    "ownership": "Cursor and Btree are borrowed; no allocation or transfer.",
+    "state_and_results": "Both flags are idempotently set true; no existing state is cleared.",
+    "locks_callbacks_io": "Caller owns B-tree serialization; no callbacks or I/O.",
+    "failure_and_continuation": "No error path for a valid cursor."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3BtreeIncrblobCursor::line-11499", "relation": "source-cursor-and-owner-incrblob-mark", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::markIncrblobCursor"]}],
+  "representation_differences": ["Boolean fields replace BTCF_Incrblob and hasIncrblobCur integer/bit flags."],
+  "oracle": {"protocol": "Mark an initially ordinary Cursor and observe both the cursor flag and owning Btree aggregate flag.", "internal_observations": ["cursor.incrblob", "tree.has_incrblob_cursor"], "normalization": "Boolean flags are semantically exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; caller lock discipline pending.", "malformed_input": "Dangling cursor/tree ownership is outside the source contract.", "continuation": "Marked state enables later invalidation scans.", "performance": "Two constant-time stores.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig cursor owner", "native_call_path": "Typed mark owner and unit trace exist; public incremental-blob open dispatch remains pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires blob-open integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect public incremental-blob cursor opening to this owner.", "Add pinned-C mark/invalidation trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:11479-11502 was reviewed completely for incremental-blob write and marking context", "src/core/internal/btree_core.zig cursor flags, Btree aggregate flag, and invalidation owner were reviewed"],
+    "callers": ["Incremental blob open after establishing the B-tree cursor", "Unit trace invokes the owner directly"],
+    "callees": ["No callees; direct state stores"],
+    "assertions_branches_cleanup": ["The active body has no inventory control-flow blocks", "Both source stores are represented", "No allocation or cleanup"],
+    "upstream_tests": ["Upstream incremental-blob open, mutation invalidation, and close tests cover this owner", "Project unit trace covers both flags"]
+  },
+  "evidence_receipts": []
+}

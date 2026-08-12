@@ -343,6 +343,11 @@
       "id": "btree-basic-state-observations",
       "path": "upstream/atomic-units/btree-basic-state-observations.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-incremental-blob-cursor-marking",
+      "path": "upstream/atomic-units/btree-incremental-blob-cursor-marking.json",
+      "status": "source-translated"
     }
   ]
 }

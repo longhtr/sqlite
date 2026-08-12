@@ -221,6 +221,12 @@ pub fn downgradeAllSharedCacheTableLocks(tree: *Btree) void {
     }
 }
 
+/// Source `sqlite3BtreeIncrblobCursor()`.
+pub fn markIncrblobCursor(cursor: *Cursor) void {
+    cursor.incrblob = true;
+    cursor.tree.has_incrblob_cursor = true;
+}
+
 /// Source `invalidateIncrblobCursors()`.
 pub fn invalidateIncrblobCursors(tree: *Btree, root: u32, rowid: i64, clear_table: bool) void {
     tree.has_incrblob_cursor = false;
@@ -995,6 +1001,17 @@ pub fn isReadOnly(tree: *const Btree) bool {
 /// format currently reserves.
 pub fn requestedReserve(tree: *const Btree) u8 {
     return @max(tree.shared.requested_reserved_bytes, tree.shared.reserved_bytes);
+}
+
+test "source incremental blob cursor marks cursor and owning B-tree" {
+    var shared = Shared.init(std.testing.allocator);
+    defer shared.deinit();
+    var tree = Btree{ .shared = &shared };
+    var cursor = Cursor{ .allocator = std.testing.allocator, .tree = &tree, .root = 1, .writable = false };
+    defer cursor.deinit();
+    markIncrblobCursor(&cursor);
+    try std.testing.expect(cursor.incrblob);
+    try std.testing.expect(tree.has_incrblob_cursor);
 }
 
 test "source page size and requested reserve reflect live page format" {

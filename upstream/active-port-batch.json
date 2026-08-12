@@ -276,6 +276,15 @@
       "atomic_unit_id": "btree-basic-state-observations",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeIncrblobCursor::line-11499",
+      "source_sha256": "2ea8aaf4e4a62f88709a4867f1d111e33ee7fa566aa8dee651bbe55317ca8fea",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::markIncrblobCursor",
+      "zig_declaration_sha256": "84a6051a9ae49ad14ece8f0e8f13057b0019c5d59f0776492988c9336d20ff02",
+      "atomic_unit_id": "btree-incremental-blob-cursor-marking",
+      "class": "short",
+      "complete": true
     }
   ]
 }
