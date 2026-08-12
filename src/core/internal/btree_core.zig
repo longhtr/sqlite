@@ -258,17 +258,11 @@ test "source cursor last-page check requires every rightmost ancestor" {
     cursor.ancestor_indices.clearRetainingCapacity();
 }
 
-/// Source `btreePageLookup()` after the Pager cache lookup has produced the
-/// shared owner's cached-page registry.
-pub fn lookupCachedPage(shared: *Shared, number: u32) ?*Page {
+fn findPage(shared: *Shared, number: u32) ?*Page {
     for (shared.pages.items) |page| {
         if (page.number == number) return page;
     }
     return null;
-}
-
-fn findPage(shared: *Shared, number: u32) ?*Page {
-    return lookupCachedPage(shared, number);
 }
 fn readU32(bytes: []const u8) u32 {
     return std.mem.readInt(u32, bytes[0..4], .big);
@@ -474,21 +468,10 @@ pub fn getPage(shared: *Shared, page_number: u32, readonly: bool) Error!*Page {
     return page;
 }
 
-/// Source `releasePageNotNull()`.
-pub fn releasePageNotNull(page: *Page) void {
-    std.debug.assert(page.data.len != 0);
-    std.debug.assert(page.ref_count > 0);
-    page.ref_count -= 1;
-}
-
-/// Source `releasePage()`.
-pub fn releasePage(page: ?*Page) void {
-    if (page) |value| releasePageNotNull(value);
-}
-
 /// Source `releasePageOne()`.
 pub fn releasePageOne(page: *Page) void {
-    releasePageNotNull(page);
+    std.debug.assert(page.ref_count > 0);
+    page.ref_count -= 1;
 }
 
 /// Source `btreeGetUnusedPage()`.
@@ -530,13 +513,6 @@ pub fn setSpillSize(tree: *Btree, maximum_pages: i64) i64 {
 /// Source `sqlite3BtreeSetMmapLimit()`.
 pub fn setMmapLimit(tree: *Btree, byte_limit: i64) void {
     tree.shared.mmap_limit = byte_limit;
-}
-
-/// Source `sqlite3BtreeMaxPageCount()` with the Pager maximum-page operation
-/// supplied by the typed Pager owner.
-pub fn maximumPageCount(tree: *Btree, requested: u32, context: ?*anyopaque, pager_maximum: *const fn (?*anyopaque, u32) u32) u32 {
-    _ = tree;
-    return pager_maximum(context, requested);
 }
 
 /// Source `sqlite3BtreeSetPagerFlags()`.
@@ -848,30 +824,12 @@ pub fn previous(cursor: *Cursor) Error!bool {
 }
 
 pub const CellArray = struct { reference: *Page, cells: []const []const u8, sizes: []usize };
-
-/// Source `computeCellSize()`.
-pub fn computeCellSize(array: *CellArray, index: usize) Error!usize {
-    if (index >= array.cells.len or index >= array.sizes.len) return error.Range;
-    std.debug.assert(array.sizes[index] == 0);
-    const cell = array.cells[index];
-    const size = if (array.reference.leaf) cell.len else try cellSizeNoPayload(array.reference, cell);
-    array.sizes[index] = size;
-    return size;
-}
-
-/// Source `cachedCellSize()`.
-pub fn cachedCellSize(array: *CellArray, index: usize) Error!usize {
-    if (index >= array.cells.len or index >= array.sizes.len) return error.Range;
-    if (array.sizes[index] != 0) return array.sizes[index];
-    return computeCellSize(array, index);
-}
-
 /// Source `populateCellCache()`.
 pub fn populateCellCache(array: *CellArray, start: usize, count: usize) Error!void {
     if (start > array.cells.len or count > array.cells.len - start or array.sizes.len < array.cells.len) return error.Range;
-    for (array.cells[start..][0..count], array.sizes[start..][0..count], start..) |cell, *size, index| {
-        const computed = if (size.* == 0) try computeCellSize(array, index) else if (array.reference.leaf) cell.len else try cellSizeNoPayload(array.reference, cell);
-        if (size.* != computed) return error.Corrupt;
+    for (array.cells[start..][0..count], array.sizes[start..][0..count]) |cell, *size| {
+        const computed = if (array.reference.leaf) cell.len else try cellSizeNoPayload(array.reference, cell);
+        if (size.* == 0) size.* = computed else if (size.* != computed) return error.Corrupt;
     }
 }
 
@@ -1169,14 +1127,6 @@ pub fn allocateTemporarySpace(shared: *Shared) Error![]u8 {
     }
     return shared.temporary_space.?[4..];
 }
-/// Source `freeTempSpace()`.
-pub fn freeTemporarySpace(shared: *Shared) void {
-    if (shared.temporary_space) |space| {
-        shared.allocator.free(space);
-        shared.temporary_space = null;
-    }
-}
-
 /// Source `sqlite3BtreeClose()`.
 pub fn closeBtree(tree: *Btree) void {
     rollback(tree, false) catch {};
@@ -1190,7 +1140,10 @@ pub fn setPageSize(tree: *Btree, page_size: u32, reserved: u8, fixed: bool) Erro
     if (page_size >= 512 and page_size <= 65536 and std.math.isPowerOfTwo(page_size)) {
         tree.shared.usable_size = page_size - reserved;
         tree.shared.reserved_bytes = reserved;
-        freeTemporarySpace(tree.shared);
+        if (tree.shared.temporary_space) |space| {
+            tree.shared.allocator.free(space);
+            tree.shared.temporary_space = null;
+        }
     }
     if (fixed) tree.shared.page_size_fixed = true;
 }
@@ -1214,12 +1167,6 @@ pub fn transactionState(tree: ?*const Btree) Transaction {
 /// Source `sqlite3BtreeIsReadonly()`.
 pub fn isReadOnly(tree: *const Btree) bool {
     return tree.read_only;
-}
-
-/// Source `sqlite3BtreeClearCache()`: invoke the Pager cache reset only when
-/// no transaction is active on the shared B-tree.
-pub fn clearPagerCacheIfIdle(tree: *Btree, context: ?*anyopaque, clear: *const fn (?*anyopaque) void) void {
-    if (tree.shared.transaction == .none) clear(context);
 }
 
 /// Source `sqlite3BtreeIntegerKey()` after CellInfo has been populated.
@@ -1309,25 +1256,12 @@ test "source page size and requested reserve reflect live page format" {
     try std.testing.expectEqual(Transaction.none, transactionState(null));
     try std.testing.expectEqual(Transaction.none, transactionState(&tree));
     try std.testing.expect(!isReadOnly(&tree));
-    const ClearTrace = struct {
-        var calls: usize = 0;
-        fn clear(_: ?*anyopaque) void {
-            calls += 1;
-        }
-    };
-    ClearTrace.calls = 0;
-    clearPagerCacheIfIdle(&tree, null, ClearTrace.clear);
-    try std.testing.expectEqual(@as(usize, 1), ClearTrace.calls);
-    shared.transaction = .read;
-    clearPagerCacheIfIdle(&tree, null, ClearTrace.clear);
-    try std.testing.expectEqual(@as(usize, 1), ClearTrace.calls);
-    shared.transaction = .none;
     try std.testing.expectEqual(@as(usize, 1), connectionCount(&tree));
     try std.testing.expect(!isInBackup(&tree));
     try std.testing.expect(headerSizeBtree() >= @sizeOf(Page));
     try std.testing.expectEqual(@as(usize, 0), pageCount(&shared));
     var header = [_]u8{0} ** 32;
-    var header_page = Page{ .allocator = std.testing.allocator, .shared = &shared, .number = 1, .data = &header };
+    var header_page = Page{ .allocator = std.testing.allocator, .shared = &shared, .number = 1, .data = &header, .usable_size = header.len, .header_offset = 0 };
     try setDatabasePageCount(&shared, &header_page, 7);
     try std.testing.expectEqual(@as(usize, 7), pageCount(&shared));
     std.mem.writeInt(u32, header[28..32], 9, .big);
@@ -1355,12 +1289,6 @@ pub fn initializeDatabase(shared: *Shared) Error!void {
     try zeroPage(page, 0x0d);
     shared.page_size_fixed = true;
 }
-/// Source `sqlite3BtreeNewDb()`.
-pub fn initializeNewDatabase(tree: *Btree) Error!void {
-    tree.shared.database_pages = 0;
-    try initializeDatabase(tree.shared);
-}
-
 /// Source `sqlite3BtreeBeginTrans()`.
 pub fn beginTransaction(tree: *Btree, write: bool, schema_version: ?*u32) Error!void {
     if (write and tree.shared.writer != null and tree.shared.writer != tree) return error.Locked;
@@ -2272,8 +2200,6 @@ fn allocationExercise(allocator: std.mem.Allocator) !void {
     defer shared.deinit();
     shared.usable_size = 512;
     const root = try testPage(&shared, 2, true);
-    try std.testing.expectEqual(root, lookupCachedPage(&shared, 2).?);
-    try std.testing.expect(lookupCachedPage(&shared, 99) == null);
     try appendTestCell(root, "row");
     var tree = Btree{ .shared = &shared, .transaction = .write };
     shared.transaction = .write;
@@ -2299,9 +2225,6 @@ test "source btree cursor initialization enforces state and ownership" {
     const write_cursor = try openCursor(&tree, 2, true);
     try std.testing.expect(!write_cursor.pager_readonly);
     try std.testing.expect(shared.temporary_space != null);
-    freeTemporarySpace(&shared);
-    try std.testing.expect(shared.temporary_space == null);
-    _ = try allocateTemporarySpace(&shared);
     const read_cursor = try openCursor(&tree, 2, false);
     try std.testing.expect(write_cursor.multiple);
     try std.testing.expect(read_cursor.multiple);
@@ -2333,15 +2256,7 @@ test "btree core page cursor lock and integrity primitives" {
     defer shared.deinit();
     shared.usable_size = 512;
     shared.pending_byte_page = 50;
-    var tree = Btree{ .shared = &shared, .sharable = true, .transaction = .write };
     const root = try testPage(&shared, 2, false);
-    const page_one_data = try allocator.alloc(u8, 512);
-    @memset(page_one_data, 0);
-    const page_one = try pageFromData(&shared, 1, page_one_data);
-    shared.page_one = page_one;
-    try initializeNewDatabase(&tree);
-    try std.testing.expectEqual(@as(u32, 1), shared.database_pages);
-    try std.testing.expectEqual(@as(u8, 1), page_one.data[31]);
     const left_page = try testPage(&shared, 3, true);
     const right_page = try testPage(&shared, 4, true);
     try appendTestCell(root, &.{ 0, 0, 0, 3, 1 });
@@ -2350,6 +2265,7 @@ test "btree core page cursor lock and integrity primitives" {
     try appendTestCell(left_page, "left");
     try appendTestCell(right_page, "right");
 
+    var tree = Btree{ .shared = &shared, .sharable = true, .transaction = .write };
     shared.transaction = .write;
     try lockTable(&tree, 2, true);
     const cursor = try createCursor(&tree, 2, true);
@@ -2406,15 +2322,11 @@ test "btree core page cursor lock and integrity primitives" {
     _ = try testPage(&shared, 5, true);
     const unused = try getUnusedPage(&shared, 5, false);
     try reinitializePage(unused);
-    releasePage(null);
-    releasePage(unused);
+    releasePageOne(unused);
 
     var sizes = [_]usize{0};
     var cells = [_][]const u8{&no_payload};
     var cache = CellArray{ .reference = root, .cells = &cells, .sizes = &sizes };
-    try std.testing.expectEqual(@as(usize, 5), try computeCellSize(&cache, 0));
-    try std.testing.expectEqual(@as(usize, 5), try cachedCellSize(&cache, 0));
-    sizes[0] = 0;
     try populateCellCache(&cache, 0, 1);
     try std.testing.expectEqual(@as(usize, 5), sizes[0]);
 
@@ -2438,16 +2350,6 @@ test "btree core page cursor lock and integrity primitives" {
     try std.testing.expectEqual(@as(i64, 300), setSpillSize(&tree, 300));
     try std.testing.expectEqual(@as(i64, 300), setSpillSize(&tree, 0));
     setMmapLimit(&tree, 4096);
-    const MaximumTrace = struct {
-        fn maximum(context: ?*anyopaque, requested: u32) u32 {
-            const current: *u32 = @ptrCast(@alignCast(context.?));
-            if (requested != 0) current.* = @max(current.*, requested);
-            return current.*;
-        }
-    };
-    var maximum_pages: u32 = 8;
-    try std.testing.expectEqual(@as(u32, 12), maximumPageCount(&tree, 12, &maximum_pages, MaximumTrace.maximum));
-    try std.testing.expectEqual(@as(u32, 12), maximumPageCount(&tree, 0, &maximum_pages, MaximumTrace.maximum));
     setPagerFlags(&tree, 7);
     try std.testing.expectEqual(@as(i64, 200), shared.cache_size);
     try std.testing.expectEqual(@as(i64, 4096), shared.mmap_limit);

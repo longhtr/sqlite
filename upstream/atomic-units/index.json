@@ -475,11 +475,6 @@
       "status": "source-translated"
     },
     {
-      "id": "btree-cell-size-cache-lookup",
-      "path": "upstream/atomic-units/btree-cell-size-cache-lookup.json",
-      "status": "source-translated"
-    },
-    {
       "id": "btree-database-page-count-header",
       "path": "upstream/atomic-units/btree-database-page-count-header.json",
       "status": "source-translated"
@@ -490,11 +485,6 @@
       "status": "source-translated"
     },
     {
-      "id": "btree-temporary-space-release",
-      "path": "upstream/atomic-units/btree-temporary-space-release.json",
-      "status": "source-translated"
-    },
-    {
       "id": "btree-overflow-cache-invalidation",
       "path": "upstream/atomic-units/btree-overflow-cache-invalidation.json",
       "status": "source-translated"
@@ -502,11 +492,6 @@
     {
       "id": "pager-memory-classification-and-page-refcount",
       "path": "upstream/atomic-units/pager-memory-classification-and-page-refcount.json",
-      "status": "source-translated"
-    },
-    {
-      "id": "pager-cache-size-spill-and-shrink-delegation",
-      "path": "upstream/atomic-units/pager-cache-size-spill-and-shrink-delegation.json",
       "status": "source-translated"
     },
     {
@@ -527,36 +512,6 @@
     {
       "id": "pager-wal-transport-support",
       "path": "upstream/atomic-units/pager-wal-transport-support.json",
-      "status": "source-translated"
-    },
-    {
-      "id": "btree-idle-pager-cache-clear",
-      "path": "upstream/atomic-units/btree-idle-pager-cache-clear.json",
-      "status": "source-translated"
-    },
-    {
-      "id": "btree-cached-page-lookup",
-      "path": "upstream/atomic-units/btree-cached-page-lookup.json",
-      "status": "source-translated"
-    },
-    {
-      "id": "btree-page-reference-release",
-      "path": "upstream/atomic-units/btree-page-reference-release.json",
-      "status": "source-translated"
-    },
-    {
-      "id": "btree-pager-maximum-page-count",
-      "path": "upstream/atomic-units/btree-pager-maximum-page-count.json",
-      "status": "source-translated"
-    },
-    {
-      "id": "pager-conditional-subjournal-page",
-      "path": "upstream/atomic-units/pager-conditional-subjournal-page.json",
-      "status": "source-translated"
-    },
-    {
-      "id": "btree-new-database-initialization-entry",
-      "path": "upstream/atomic-units/btree-new-database-initialization-entry.json",
       "status": "source-translated"
     }
   ]

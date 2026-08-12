@@ -602,24 +602,6 @@
       "complete": true
     },
     {
-      "source_entity_id": "src/btree.c::function::computeCellSize::line-7619",
-      "source_sha256": "ae952b3885fb9d80cd700cb461d180e1d6b7ebc94a5e502ccb823713a93a269e",
-      "zig_declaration_id": "src/core/internal/btree_core.zig::function::computeCellSize",
-      "zig_declaration_sha256": "9d3d8a44f59d0c02533968bebad69402b56885d93afe2dc03020696969bd7306",
-      "atomic_unit_id": "btree-cell-size-cache-lookup",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/btree.c::function::cachedCellSize::line-7625",
-      "source_sha256": "a88fa0dc4d93df1edd28e671b8c0aaf018f2706b36393df8cb1452946a149f68",
-      "zig_declaration_id": "src/core/internal/btree_core.zig::function::cachedCellSize",
-      "zig_declaration_sha256": "4ca50d625a9e4d389dec3c74beda934b16f83d3f4e598eb97154ffc4f3bfea60",
-      "atomic_unit_id": "btree-cell-size-cache-lookup",
-      "class": "short",
-      "complete": true
-    },
-    {
       "source_entity_id": "src/btree.c::function::btreeSetNPage::line-4503",
       "source_sha256": "869d2f9cb4942a07e7e0ed4a8d34d146e3e0d9cd11816d21177a41cbebf7eff3",
       "zig_declaration_id": "src/core/internal/btree_core.zig::function::setDatabasePageCount",
@@ -656,15 +638,6 @@
       "complete": true
     },
     {
-      "source_entity_id": "src/btree.c::function::freeTempSpace::line-2910",
-      "source_sha256": "0a4c6560e284ff1d536ce4dd90e31c41beda02202e615edc4a29e1d18bb376f6",
-      "zig_declaration_id": "src/core/internal/btree_core.zig::function::freeTemporarySpace",
-      "zig_declaration_sha256": "f93b19629bdf73b0ff9a9f96dcc75aeac0bdc4151e5f56a6187cfdbe8992fffb",
-      "atomic_unit_id": "btree-temporary-space-release",
-      "class": "short",
-      "complete": true
-    },
-    {
       "source_entity_id": "src/btree.c::function::invalidateAllOverflowCache::line-569",
       "source_sha256": "a82fd17895dc66414df862d4869d40208af557ab716bd0a8f8b8a27e73a9416c",
       "zig_declaration_id": "src/core/internal/btree_core.zig::function::invalidateAllOverflowCaches",
@@ -688,33 +661,6 @@
       "zig_declaration_id": "src/core/internal/pager_core.zig::function::isMemoryDatabase",
       "zig_declaration_sha256": "63cad93e7e9a2d21fecf0f8226d6b8bad62163f497975ec55de8d1783a547a58",
       "atomic_unit_id": "pager-memory-classification-and-page-refcount",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pager.c::function::sqlite3PagerSetCachesize::line-3564",
-      "source_sha256": "bec608fc4d5419532efe6e49a1dbf24186779dfe8908942fbc16db44b2c3da34",
-      "zig_declaration_id": "src/core/page_cache.zig::function::Cache.setPagerCacheSize",
-      "zig_declaration_sha256": "d50f9598303aa35562e93c86186213a40d807217c9d4eba5946e3d8b33d6f434",
-      "atomic_unit_id": "pager-cache-size-spill-and-shrink-delegation",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pager.c::function::sqlite3PagerSetSpillsize::line-3572",
-      "source_sha256": "1891ea61f1aad36e63014561b66f6ee1a4484d1998536023596ba3d8f0a36c78",
-      "zig_declaration_id": "src/core/page_cache.zig::function::Cache.setPagerSpillSize",
-      "zig_declaration_sha256": "d7e954752b6b6bee4fb4f68e5266af81795b4a4e90d181d67cc69842543cc750",
-      "atomic_unit_id": "pager-cache-size-spill-and-shrink-delegation",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pager.c::function::sqlite3PagerShrink::line-3603",
-      "source_sha256": "4a3a60d5e324bcdb77bb529bfb77cee5f67f00dda1939f914d285d61daac657c",
-      "zig_declaration_id": "src/core/page_cache.zig::function::Cache.shrinkPagerCache",
-      "zig_declaration_sha256": "46c135384cf7c981367a6477254886feb2e988335f85da3e0c1d36f213d7364d",
-      "atomic_unit_id": "pager-cache-size-spill-and-shrink-delegation",
       "class": "short",
       "complete": true
     },
@@ -751,69 +697,6 @@
       "zig_declaration_id": "src/core/internal/pager_core.zig::function::walSupported",
       "zig_declaration_sha256": "da5bbbc204638178eff36c116ed7e99c2dbc009ecb5c56d5fd7172232d590a44",
       "atomic_unit_id": "pager-wal-transport-support",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/btree.c::function::sqlite3BtreeClearCache::line-11565",
-      "source_sha256": "0abbb4980907a43bd43d131ca51379947bff450220c357e2955029b0dc49ac76",
-      "zig_declaration_id": "src/core/internal/btree_core.zig::function::clearPagerCacheIfIdle",
-      "zig_declaration_sha256": "974e7814c1062d5e34a5f482767265fb13ca625d33774e64ffc92c0402ef8d36",
-      "atomic_unit_id": "btree-idle-pager-cache-clear",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/btree.c::function::btreePageLookup::line-2354",
-      "source_sha256": "84d40e757ae98434de04eb334f8f1f6ffb6b03854f83263ba65f6958ee69a8df",
-      "zig_declaration_id": "src/core/internal/btree_core.zig::function::lookupCachedPage",
-      "zig_declaration_sha256": "5615001114870de910c8355ed40c0391199b5b95502ab5b4776311132dc8579b",
-      "atomic_unit_id": "btree-cached-page-lookup",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/btree.c::function::releasePageNotNull::line-2421",
-      "source_sha256": "c1f6596b415c2c5beacc186724e61700c8378240de76946a31026d51b4692921",
-      "zig_declaration_id": "src/core/internal/btree_core.zig::function::releasePageNotNull",
-      "zig_declaration_sha256": "656611390fc1dc75ed335c359c660213e149d7bfaadee052ed646782d456f114",
-      "atomic_unit_id": "btree-page-reference-release",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/btree.c::function::releasePage::line-2430",
-      "source_sha256": "d766fa1f6ec6261b6c8b0b61a23d43e8a7af28ca28578baf0029c05d63b1ab8f",
-      "zig_declaration_id": "src/core/internal/btree_core.zig::function::releasePage",
-      "zig_declaration_sha256": "813a9b59810174eec0c5c19c2ea4e406e7ef761b25143512467cbe1aac483b12",
-      "atomic_unit_id": "btree-page-reference-release",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/btree.c::function::sqlite3BtreeMaxPageCount::line-3155",
-      "source_sha256": "6aa8b60700e4d79d07f6ee713a32717298b38a9ff9fa52818d9538e28cc13656",
-      "zig_declaration_id": "src/core/internal/btree_core.zig::function::maximumPageCount",
-      "zig_declaration_sha256": "2c8e0e10364edaa868acdcf33e2825332faa896853ea94857fb8fd199934d12f",
-      "atomic_unit_id": "btree-pager-maximum-page-count",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pager.c::function::subjournalPageIfRequired::line-4628",
-      "source_sha256": "9e25e367ca292d617fe1483c934921abdcb9c2978c68c902d9b8f31a2df0fb32",
-      "zig_declaration_id": "src/core/internal/pager_core.zig::function::subjournalPageWhenRequired",
-      "zig_declaration_sha256": "e7ae8da4cef5f32a28eb07551c75b8e259c1125281df7e074fdc479841faf0ee",
-      "atomic_unit_id": "pager-conditional-subjournal-page",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/btree.c::function::sqlite3BtreeNewDb::line-3554",
-      "source_sha256": "c646e45646ff643b24fd34410589a77551517f8508a827a99a64edbbb28f4ad0",
-      "zig_declaration_id": "src/core/internal/btree_core.zig::function::initializeNewDatabase",
-      "zig_declaration_sha256": "5c983aaa5fc698dadb31210f7b0592bfe20364bbce10f60128239e05a18415bc",
-      "atomic_unit_id": "btree-new-database-initialization-entry",
       "class": "short",
       "complete": true
     }
