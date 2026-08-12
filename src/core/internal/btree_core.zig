@@ -64,6 +64,7 @@ pub const Shared = struct {
     pending: bool = false,
     transaction: Transaction = .none,
     page_one: ?*Page = null,
+    database_pages: u32 = 0,
     usable_size: u32 = 4096,
     page_size_fixed: bool = false,
     auto_vacuum: bool = false,
@@ -1202,9 +1203,16 @@ pub fn isInBackup(tree: *const Btree) bool {
     return tree.backup_count != 0;
 }
 
+/// Source `btreeSetNPage()`.
+pub fn setDatabasePageCount(shared: *Shared, page_one: *const Page, pager_page_count: u32) Error!void {
+    if (page_one.data.len < 32) return error.Corrupt;
+    const header_count = readU32(page_one.data[28..32]);
+    shared.database_pages = if (header_count == 0) pager_page_count else header_count;
+}
+
 /// Source `btreePagecount()`.
 pub fn pageCount(shared: *const Shared) usize {
-    return shared.pages.items.len;
+    return if (shared.database_pages != 0) shared.database_pages else shared.pages.items.len;
 }
 
 /// Source `sqlite3BtreeLastPage()` under the caller-held B-tree mutex.
@@ -1245,6 +1253,14 @@ test "source page size and requested reserve reflect live page format" {
     try std.testing.expect(!isInBackup(&tree));
     try std.testing.expect(headerSizeBtree() >= @sizeOf(Page));
     try std.testing.expectEqual(@as(usize, 0), pageCount(&shared));
+    var header = [_]u8{0} ** 32;
+    var header_page = Page{ .allocator = std.testing.allocator, .shared = &shared, .number = 1, .data = &header };
+    try setDatabasePageCount(&shared, &header_page, 7);
+    try std.testing.expectEqual(@as(usize, 7), pageCount(&shared));
+    std.mem.writeInt(u32, header[28..32], 9, .big);
+    try setDatabasePageCount(&shared, &header_page, 7);
+    try std.testing.expectEqual(@as(usize, 9), pageCount(&shared));
+    shared.database_pages = 0;
     try std.testing.expectEqual(@as(usize, 0), lastPage(&tree));
     shared.requested_reserved_bytes = 8;
     try std.testing.expectEqual(@as(u8, 12), requestedReserve(&tree));
@@ -1733,6 +1749,7 @@ pub fn lockBtree(shared: *Shared) Error!void {
     shared.usable_size = encoded_size - page.data[20];
     shared.read_version = page.data[18];
     shared.write_version = page.data[19];
+    try setDatabasePageCount(shared, page, @intCast(shared.pages.items.len));
     page.min_local = @intCast((shared.usable_size - 12) * 32 / 255 - 23);
     page.max_local = @intCast((shared.usable_size - 12) * 64 / 255 - 23);
 }

@@ -478,6 +478,11 @@
       "id": "btree-cell-size-cache-lookup",
       "path": "upstream/atomic-units/btree-cell-size-cache-lookup.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-database-page-count-header",
+      "path": "upstream/atomic-units/btree-database-page-count-header.json",
+      "status": "source-translated"
     }
   ]
 }

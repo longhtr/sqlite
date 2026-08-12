@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "btree-database-page-count-header",
+  "title": "B-tree database page-count header selection",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "btreeSetNPage reads the database page count from page-1 header offset 28 and falls back to the Pager page count only when the header field is zero.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::btreeSetNPage::line-4503"],
+    "behavioral_block_ids": ["src/btree.c::function::btreeSetNPage::behavior::if::line-4506-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Pager page-count calculation", "Database-header validation outside the bounded field read", "B-tree transaction rollback"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Pager supplies its current page count to the bounded owner"],
+    "caller_closure": "The complete selection helper is integrated into page-1 B-tree locking and the shared page-count owner."
+  },
+  "contracts": {
+    "inputs": ["Shared B-tree, valid page-1 bytes, and current Pager page count"],
+    "outputs": ["Updated shared database page count"],
+    "ownership": "Page bytes and shared owner are borrowed; only database_pages is mutated.",
+    "state_and_results": "A nonzero big-endian header field wins. Zero selects the Pager count.",
+    "locks_callbacks_io": "Caller owns the B-tree mutex. Pager I/O is outside this bounded representation.",
+    "failure_and_continuation": "A page shorter than offset 32 returns Corrupt without updating the count."
+  },
+  "mappings": [{
+    "source_entity_id": "src/btree.c::function::btreeSetNPage::line-4503",
+    "relation": "source-btree-database-page-count-header",
+    "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::setDatabasePageCount"]
+  }],
+  "representation_differences": ["Zig receives the already observed Pager count as an explicit u32 argument and reports a bounded short-header error; the source invokes sqlite3PagerPagecount directly."],
+  "oracle": {
+    "protocol": "Trace header count zero with Pager count 7, then header count 9 with the same Pager count.",
+    "internal_observations": ["header bytes 28..31", "decoded header count", "Pager fallback count", "published shared count"],
+    "normalization": "Page counts compare as exact unsigned integers."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "Pager I/O is external; caller owns B-tree synchronization.",
+    "malformed_input": "Short page-1 input returns Corrupt.",
+    "continuation": "Short input preserves the prior count; valid input deterministically replaces it.",
+    "performance": "Constant-time four-byte decode and one branch.",
+    "commands": ["zig build test", "zig build btree-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/btree_core.zig shared B-tree page-count owner",
+    "native_call_path": "lockBtree invokes the helper after page-1 header validation; pageCount and lastPage observe the published count.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pinned-C page-count trace, assurance closure, and independent review."},
+  "known_blockers": ["Add pinned-C zero/nonzero header differential around Pager fallback.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:4488-4510 and lockBtree callers were reviewed", "src/core/internal/btree_core.zig lockBtree, pageCount, lastPage, page-1 ownership, and tests were reviewed"],
+    "callers": ["lockBtree after validating the database header", "Unit trace covers zero fallback and nonzero header precedence"],
+    "callees": ["get4byte and sqlite3PagerPagecount in the source", "readU32 and explicit Pager count in Zig"],
+    "assertions_branches_cleanup": ["The generated zero-header branch is assigned", "Nonzero header bypasses Pager fallback", "No allocation or cleanup paths exist"],
+    "upstream_tests": ["Upstream B-tree header, page-count, rollback, and corruption tests exercise this state", "Project B-tree core/differential suites exercise page-1 handling"]
+  },
+  "evidence_receipts": []
+}

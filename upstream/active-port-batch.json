@@ -326,7 +326,7 @@
       "source_entity_id": "src/btree.c::function::btreePagecount::line-2368",
       "source_sha256": "9cc464c3e37d32dfef140b2609d9a741ccaa1365d1597f02d74003f9e193cab6",
       "zig_declaration_id": "src/core/internal/btree_core.zig::function::pageCount",
-      "zig_declaration_sha256": "403fa72fe441708eb90ec4221071eae4637ca962b017dbcc143357e6d2304924",
+      "zig_declaration_sha256": "2424c61239bdd99809e2970d0db704799655b3dccfa58502333c1eef98b54bbb",
       "atomic_unit_id": "btree-page-count-and-last-page",
       "class": "short",
       "complete": true
@@ -616,6 +616,15 @@
       "zig_declaration_id": "src/core/internal/btree_core.zig::function::cachedCellSize",
       "zig_declaration_sha256": "4ca50d625a9e4d389dec3c74beda934b16f83d3f4e598eb97154ffc4f3bfea60",
       "atomic_unit_id": "btree-cell-size-cache-lookup",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::btreeSetNPage::line-4503",
+      "source_sha256": "869d2f9cb4942a07e7e0ed4a8d34d146e3e0d9cd11816d21177a41cbebf7eff3",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::setDatabasePageCount",
+      "zig_declaration_sha256": "b6bdf9b1a092ec2e7826c5ae765197d22f4f3a2f4891dff2c77cac5841d06ec0",
+      "atomic_unit_id": "btree-database-page-count-header",
       "class": "short",
       "complete": true
     }
