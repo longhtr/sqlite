@@ -898,15 +898,15 @@ pub fn setPageReferenced(check: *IntegrityCheck, page_number: u32) void {
 /// Source `checkRef()`.
 pub fn checkReference(check: *IntegrityCheck, page_number: u32) bool {
     if (page_number == 0 or page_number > check.checked_pages) {
-        check.message = "invalid page number";
-        return false;
+        appendCheckMessage(check, "invalid page number");
+        return true;
     }
     if (getPageReferenced(check, page_number)) {
-        check.message = "second page reference";
-        return false;
+        appendCheckMessage(check, "second page reference");
+        return true;
     }
     setPageReferenced(check, page_number);
-    return true;
+    return false;
 }
 
 /// Source `btreeHeapInsert()`.
@@ -1566,7 +1566,7 @@ pub fn checkPageList(check: *IntegrityCheck, shared: *Shared, first_page: u32, e
     var page_number = first_page;
     var count: usize = 0;
     while (page_number != 0 and check.maximum_errors != 0) {
-        if (!checkReference(check, page_number)) break;
+        if (checkReference(check, page_number)) break;
         const page = findPage(shared, page_number) orelse {
             appendCheckMessage(check, "failed to get list page");
             break;
@@ -2094,7 +2094,7 @@ pub fn dropTable(tree: *Btree, root: u32) Error!?u32 {
 
 /// Source `checkTreePage()`.
 pub fn checkTreePage(check: *IntegrityCheck, shared: *Shared, page_number: u32, depth: usize) Error!usize {
-    if (!checkReference(check, page_number)) return error.Corrupt;
+    if (checkReference(check, page_number)) return error.Corrupt;
     const page = findPage(shared, page_number) orelse {
         appendCheckMessage(check, "unable to get b-tree page");
         return error.NotFound;
@@ -2333,9 +2333,9 @@ test "btree core page cursor lock and integrity primitives" {
     var referenced = [_]u8{0};
     var integrity = IntegrityCheck{ .referenced = &referenced, .checked_pages = 7 };
     try std.testing.expect(!getPageReferenced(&integrity, 2));
-    try std.testing.expect(checkReference(&integrity, 2));
-    try std.testing.expect(getPageReferenced(&integrity, 2));
     try std.testing.expect(!checkReference(&integrity, 2));
+    try std.testing.expect(getPageReferenced(&integrity, 2));
+    try std.testing.expect(checkReference(&integrity, 2));
     checkOutOfMemory(&integrity);
     if (integrity.result) |failure| {
         try std.testing.expectEqual(error.NoMemory, failure);

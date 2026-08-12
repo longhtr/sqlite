@@ -717,6 +717,15 @@
       "atomic_unit_id": "date-pure-keyword-guard-and-value-parse",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::checkRef::line-10672",
+      "source_sha256": "146050dd7f26a5297c80d473d85ed2942c087dadb1353c4e915c10bcf56ae055",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::checkReference",
+      "zig_declaration_sha256": "c0c907d4779d012a67824e0cd3bd30b911d381ecb283d72d839b82cc24d08b9c",
+      "atomic_unit_id": "btree-integrity-reference-bitmap-and-oom",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }
