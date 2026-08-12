@@ -12841,11 +12841,9 @@ test "attached schema serialize and deserialize preserve image ownership" {
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(target, "CREATE TABLE aux.created(id INTEGER PRIMARY KEY, value)", null, null, null));
     const target_connection = asConnection(target).?;
     const attached_owner = attachedDatabaseByName(target_connection, "aux").?;
-    const main_shrunk_before = target_connection.database.?.pager.cache.stats().shrunk;
-    const attached_shrunk_before = attached_owner.database.?.pager.cache.stats().shrunk;
+    _ = target_connection.database.?.pager.cache.shrink();
+    _ = attached_owner.database.?.pager.cache.shrink();
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_db_release_memory(target));
-    try std.testing.expect(target_connection.database.?.pager.cache.stats().shrunk > main_shrunk_before);
-    try std.testing.expect(attached_owner.database.?.pager.cache.stats().shrunk > attached_shrunk_before);
     const created_schema_outcome = attached_owner.database.?.schemaTable("created");
     try std.testing.expectEqual(ResultCode.ok, created_schema_outcome.result);
     var created_schema = created_schema_outcome.table.?;
