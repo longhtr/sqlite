@@ -5,38 +5,135 @@
   "status": "source-translated",
   "admission_ready": true,
   "scope": {
-    "rationale": "sqlite3WalCallback returns the frame count recorded by the most recent commit since the prior callback read and clears the pending value, while null WAL returns zero.",
-    "source_files": [{"path": "src/wal.c", "sha256": "0c0467f7c4de773512b3327b0d3973fc31d50cf74603d6aec0e3b3e1c787e217"}],
-    "source_entity_ids": ["src/wal.c::function::sqlite3WalCallback::line-4439"],
-    "behavioral_block_ids": ["src/wal.c::function::sqlite3WalCallback::behavior::if::line-4441-column-3::ordinal-0", "src/wal.c::function::sqlite3WalCallback::behavior::return::line-4445-column-3::ordinal-0"],
-    "excluded_responsibilities": ["Connection WAL-hook invocation", "Commit frame writing", "Automatic checkpoint policy"]
+    "rationale": "sqlite3WalCallback consumes and clears the frame count recorded by the most recent commit, while sqlite3PagerWalCallback forwards that one-shot observation through the Pager owner.",
+    "source_files": [
+      {
+        "path": "src/wal.c",
+        "sha256": "0c0467f7c4de773512b3327b0d3973fc31d50cf74603d6aec0e3b3e1c787e217"
+      },
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/wal.c::function::sqlite3WalCallback::line-4439",
+      "src/pager.c::function::sqlite3PagerWalCallback::line-7587"
+    ],
+    "behavioral_block_ids": [
+      "src/wal.c::function::sqlite3WalCallback::behavior::if::line-4441-column-3::ordinal-0",
+      "src/wal.c::function::sqlite3WalCallback::behavior::return::line-4445-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerWalCallback::behavior::return::line-7588-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Connection WAL-hook invocation",
+      "Commit frame writing",
+      "Automatic checkpoint policy"
+    ]
   },
-  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Successful commit publication and connection hook dispatch"], "caller_closure": "The complete consume-and-clear body is assigned; writeFrames records the committed terminal frame and public hook dispatch remains open."},
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Successful commit publication and connection hook dispatch"
+    ],
+    "caller_closure": "Both complete consume-and-clear functions are assigned; runtime WAL append publishes the committed terminal frame and connection post-commit dispatch consumes it through Pager."
+  },
   "contracts": {
-    "inputs": ["Nullable mutable Wal"],
-    "outputs": ["Pending callback frame number or zero"],
+    "inputs": [
+      "Nullable mutable Wal or mutable Pager with optional owned Wal"
+    ],
+    "outputs": [
+      "Pending callback frame number or zero"
+    ],
     "ownership": "Mutates only the pending scalar callback value.",
-    "state_and_results": "Null returns zero. Non-null returns callback_frame exactly and clears it to zero, so repeated reads return zero until another commit.",
+    "state_and_results": "Null or missing WAL returns zero. Non-null returns callback_frame exactly and clears it to zero, so repeated reads return zero until another successful commit.",
     "locks_callbacks_io": "Does not invoke the hook or perform I/O; caller synchronization external.",
     "failure_and_continuation": "No failure path; consumption is one-shot."
   },
-  "mappings": [{"source_entity_id": "src/wal.c::function::sqlite3WalCallback::line-4439", "relation": "source-one-shot-wal-callback-frame-consumption", "zig_declaration_ids": ["src/core/internal/wal_core.zig::function::takeCallbackFrame"]}],
-  "representation_differences": ["The bounded Wal field is named callback_frame instead of iCallback; the result remains u32 until the eventual C API boundary."],
-  "oracle": {"protocol": "Observe zero for null, seed 17, observe 17, then observe zero on repeat.", "internal_observations": ["nullable Wal", "callback_frame before/after", "returned frame"], "normalization": "Frame count and zero sentinel are exact."},
-  "assurance": {
-    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
-    "oom": "No allocation.", "io_crash_concurrency": "No I/O; hook dispatch synchronization external.", "malformed_input": "Null safely returns zero.", "continuation": "Repeated consumption remains zero until a later commit publishes a frame.", "performance": "Constant time.",
-    "commands": ["zig build test"]
+  "mappings": [
+    {
+      "source_entity_id": "src/wal.c::function::sqlite3WalCallback::line-4439",
+      "relation": "source-one-shot-wal-callback-frame-consumption",
+      "zig_declaration_ids": [
+        "src/core/internal/wal_core.zig::function::takeCallbackFrame"
+      ]
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerWalCallback::line-7587",
+      "relation": "source-pager-forwarding-of-one-shot-wal-callback-frame",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.takeWalCallbackFrame"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The bounded Wal field is named callback_frame instead of iCallback; the result remains u32 until the eventual C API boundary.",
+    "The runtime Pager owns optional wal.Wal directly and performs the same nullable consume-and-clear operation rather than calling across a C module boundary."
+  ],
+  "oracle": {
+    "protocol": "Observe zero with no Pager WAL; publish a successful one-frame WAL commit, observe 1 through Pager, then observe zero on repeat; the internal source-state owner separately covers null, seeded 17, and repeated zero.",
+    "internal_observations": [
+      "optional runtime Pager WAL",
+      "callback_frame before/after",
+      "returned frame",
+      "successful append publication"
+    ],
+    "normalization": "Frame count and zero sentinel are exact."
   },
-  "integration": {"production_owner": "src/core/internal/wal_core.zig Wal commit/callback state owner", "native_call_path": "Successful bounded commit records callback_frame and typed accessor consumes it; connection hook dispatch remains pending.", "bounded_owner_retired": "No."},
-  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires connection hook integration, pinned-C trace, assurance closure, and independent review."},
-  "known_blockers": ["Connect connection WAL hook dispatch.", "Verify commit/failure publication timing against pinned C.", "Add pinned-C null/one-shot trace.", "Independent fidelity review remains open."],
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "Successful WAL append publishes callback_frame only after the committed index publication; failed append paths leave it unchanged. Pager consumption performs no I/O; caller synchronization is external.",
+    "malformed_input": "Null safely returns zero.",
+    "continuation": "Repeated consumption remains zero until a later commit publishes a frame.",
+    "performance": "Constant time.",
+    "commands": [
+      "zig build test",
+      "zig build wal-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/wal.zig runtime Wal plus src/core/pager.zig Pager, with src/core/internal/wal_core.zig source-state owner",
+    "native_call_path": "Successful runtime WAL append records callback_frame, Pager.takeWalCallbackFrame consumes it once, and the post-commit connection callback path invokes the configured hook only for a positive result.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires connection hook integration, pinned-C trace, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Extend pinned-C WAL-hook differential across main and attached database names.",
+    "Verify every failed commit publication boundary against pinned C.",
+    "Independent fidelity review remains open."
+  ],
   "context_review": {
-    "implementation_spans": ["upstream/sqlite/src/wal.c:4428-4446 and commit assignment at line 4260 were reviewed", "src/core/internal/wal_core.zig writeFrames commit publication and tests were reviewed"],
-    "callers": ["Pager/connection WAL hook path", "Unit trace invokes nullable accessor directly"],
-    "callees": ["Direct Wal.callback_frame state"],
-    "assertions_branches_cleanup": ["Both generated blocks and the source clear side effect are assigned", "No allocation or cleanup", "Commit publication occurs only in the commit branch"] ,
-    "upstream_tests": ["Upstream WAL hook and transaction tests cover this one-shot value", "Project trace covers null, seeded, and repeated results"]
+    "implementation_spans": [
+      "upstream/sqlite/src/wal.c:4200-4263 and 4428-4446 plus src/pager.c:7580-7590 were reviewed",
+      "src/core/wal.zig append publication, src/core/pager.zig Pager forwarding, src/core/sql_frontend.zig post-commit dispatch, and internal WAL state/tests were reviewed"
+    ],
+    "callers": [
+      "sqlite3Step invokes doWalCallbacks after successful commit completion",
+      "Runtime Connection.afterWrite and explicit transaction completion invoke doWalCallbacks",
+      "Unit trace invokes nullable and Pager accessors directly"
+    ],
+    "callees": [
+      "Direct Wal.callback_frame state",
+      "Pager optional WAL ownership forwarding"
+    ],
+    "assertions_branches_cleanup": [
+      "All generated WAL and Pager callback blocks and both clear side effects are assigned",
+      "No allocation or cleanup",
+      "Commit publication occurs only after successful WAL-index publication"
+    ],
+    "upstream_tests": [
+      "Upstream WAL hook and transaction tests cover the one-shot value and Pager forwarding",
+      "Project runtime Pager trace covers successful commit, first consumption, and repeated zero; internal trace covers null and seeded values"
+    ]
   },
   "evidence_receipts": []
 }

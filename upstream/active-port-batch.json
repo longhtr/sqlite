@@ -1005,6 +1005,15 @@
       "atomic_unit_id": "pager-memory-classification-and-page-refcount",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerWalCallback::line-7587",
+      "source_sha256": "61f683940b0e3a8b4ae6af5aed4f7d9a68b20e166b1b0eb83bad9f78f6d64fc8",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.takeWalCallbackFrame",
+      "zig_declaration_sha256": "45e2a6b050e24bcf8d43e16b1f617438f8ed085d6e1b334d4013d27fb8a8d625",
+      "atomic_unit_id": "wal-callback-frame-consumption",
+      "class": "short",
+      "complete": true
     }
   ]
 }

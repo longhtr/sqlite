@@ -48,6 +48,7 @@ pub const Wal = struct {
     checkpoint_locked: bool = false,
     event_hook: ?EventHook = null,
     event_context: ?*anyopaque = null,
+    callback_frame: u32 = 0,
     publish_native_index: bool = true,
 
     pub fn open(
@@ -403,7 +404,9 @@ pub const Wal = struct {
         self.frame_count = number;
         self.database_pages = database_pages;
         self.frame_checksum = running;
-        return self.publishIndex();
+        rc = self.publishIndex();
+        if (rc == .ok) self.callback_frame = number;
+        return rc;
     }
 
     /// Source `sqlite3WalCheckpoint()`: distinguish passive, full, restart,

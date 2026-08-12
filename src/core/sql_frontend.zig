@@ -3353,7 +3353,7 @@ pub export fn sqlite3_backup_pagecount(pointer: ?*sqlite3_backup) callconv(.c) c
 fn doWalCallbacks(connection: *Connection) ResultCode {
     const database = connection.database orelse return .ok;
     if (!database.pager.isWalMode()) return .ok;
-    const frame_count: c_int = if (database.pager.wal_state) |*state| @intCast(state.frame_count) else 0;
+    const frame_count: c_int = @intCast(database.pager.takeWalCallbackFrame());
     if (frame_count <= 0) return .ok;
     const callback = connection.wal_callback orelse return .ok;
     return ResultCode.fromC(callback(connection.wal_context, toOpaque(connection), "main", frame_count));

@@ -1345,6 +1345,15 @@ pub const Pager = struct {
         return self.checkpointWalMode(.truncate);
     }
 
+    /// Source `sqlite3PagerWalCallback()`: forward one-shot committed-frame
+    /// consumption to the owned WAL handle, or return zero without one.
+    pub fn takeWalCallbackFrame(self: *Pager) u32 {
+        const state = if (self.wal_state) |*value| value else return 0;
+        const frame = state.callback_frame;
+        state.callback_frame = 0;
+        return frame;
+    }
+
     pub fn rollback(self: *Pager) ResultCode {
         if (self.state == .reader or self.state == .open) return .ok;
         if (self.state != .writer_locked and self.state != .writer_cache_modified and
@@ -2126,6 +2135,7 @@ test "journal file accessor selects rollback journal and open WAL handles" {
     defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
 
     try std.testing.expect(pager.journalFile() == null);
+    try std.testing.expectEqual(@as(u32, 0), pager.takeWalCallbackFrame());
     try std.testing.expectEqual(ResultCode.ok, pager.openJournalFile(true));
     try std.testing.expect(pager.journalFile() == pager.journal.?.abiFile());
     try std.testing.expectEqual(ResultCode.ok, pager.closeJournalFile(false));
@@ -2137,6 +2147,8 @@ test "journal file accessor selects rollback journal and open WAL handles" {
     @memset(page.data, 0x5a);
     try std.testing.expectEqual(ResultCode.ok, pager.wal_state.?.append(page, 1));
     try std.testing.expect(pager.journalFile() == pager.wal_state.?.file);
+    try std.testing.expectEqual(@as(u32, 1), pager.takeWalCallbackFrame());
+    try std.testing.expectEqual(@as(u32, 0), pager.takeWalCallbackFrame());
     try std.testing.expectEqual(page_cache.Result.ok, pager.cache.release(page));
     pager.wal_state.?.deinit();
     pager.wal_state = null;
