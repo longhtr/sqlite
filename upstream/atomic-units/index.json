@@ -333,6 +333,11 @@
       "id": "btree-cursor-last-page-detection",
       "path": "upstream/atomic-units/btree-cursor-last-page-detection.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-live-page-size-observation",
+      "path": "upstream/atomic-units/btree-live-page-size-observation.json",
+      "status": "source-translated"
     }
   ]
 }

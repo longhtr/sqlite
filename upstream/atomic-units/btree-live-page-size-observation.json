@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "btree-live-page-size-observation",
+  "title": "B-tree live page-size observation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeGetPageSize returns the currently configured physical B-tree page size without locking, allocation, or side effects.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreeGetPageSize::line-3109"],
+    "behavioral_block_ids": ["src/btree.c::function::sqlite3BtreeGetPageSize::behavior::return::line-3110-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Page-size mutation", "Reserved-byte observation", "Pager page-size negotiation"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["B-tree page-size and usable-size state maintenance"], "caller_closure": "The complete source observation is assigned; broader backup/pager callers remain independently owned."},
+  "contracts": {
+    "inputs": ["Valid Btree with initialized shared page-format state"],
+    "outputs": ["Current physical page size"],
+    "ownership": "Borrowed Btree; no allocation or mutation.",
+    "state_and_results": "Returns usable size plus reserved trailer bytes, the Zig model's representation of pBt.pageSize.",
+    "locks_callbacks_io": "Source performs no B-tree enter/leave; caller provides safe observation context. No callbacks or I/O.",
+    "failure_and_continuation": "Total for valid Btree state and has no error result."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3BtreeGetPageSize::line-3109", "relation": "source-live-physical-page-size-read", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::pageSize"]}],
+  "representation_differences": ["The Zig Shared model stores usable_size and reserved_bytes separately, so their sum is the source pBt.pageSize field."],
+  "oracle": {"protocol": "Set a 4,084-byte usable region and 12 reserved bytes, then observe an exact 4,096-byte page size.", "internal_observations": ["usable_size", "reserved_bytes", "returned page size"], "normalization": "All byte counts are exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; safe caller observation remains external.", "malformed_input": "Invalid Btree ownership is outside the source contract.", "continuation": "Pure observation leaves state unchanged.", "performance": "Constant time.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig page-format state owner", "native_call_path": "Typed state owner and exact unit observation exist; backup and pager consumers remain separate.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires caller integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect source-shaped backup/pager consumers.", "Add pinned-C page-size trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:3061-3110 was reviewed completely for page-size mutation context and exact observation", "src/core/internal/btree_core.zig page-format representation was reviewed"],
+    "callers": ["Backup destination page-size matching", "Public page-size and pager integration", "Unit trace invokes the owner directly"],
+    "callees": ["No callees; direct shared state observation"],
+    "assertions_branches_cleanup": ["The sole active return block is assigned", "No branches, allocation, locking, or cleanup"],
+    "upstream_tests": ["Upstream page-size, backup, VACUUM, and reserved-byte tests cover this observation", "Project unit trace covers exact physical-size reconstruction"]
+  },
+  "evidence_receipts": []
+}
