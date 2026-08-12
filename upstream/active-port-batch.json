@@ -803,7 +803,7 @@
       "source_entity_id": "src/main.c::function::sqlite3_db_release_memory::line-897",
       "source_sha256": "83914e29f5e567554ac627f533a60643f49ca18e63981826200f92ad73a0bec6",
       "zig_declaration_id": "src/core/sql_frontend.zig::function::releaseDatabaseMemory",
-      "zig_declaration_sha256": "535eedd427c22f117831ff639b7f94de6ceb0ec850c3eaa0067945c980c47877",
+      "zig_declaration_sha256": "54f2f066ef0c303275593bf2fb9493d688e64887335016140712e6c70629d3c1",
       "atomic_unit_id": "memdb-serialize-deserialize-store-replacement",
       "class": "substantive",
       "complete": true
@@ -886,6 +886,33 @@
       "zig_declaration_id": "src/core/internal/wal_core.zig::function::framePageNumber",
       "zig_declaration_sha256": "f2d6ee33c7b4c9b3fb918c0281cd9b878d952b44dbd86221c4bdbb16f30d2c41",
       "atomic_unit_id": "wal-hash-probing-and-frame-page-number",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerSetCachesize::line-3564",
+      "source_sha256": "bec608fc4d5419532efe6e49a1dbf24186779dfe8908942fbc16db44b2c3da34",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.setCacheSize",
+      "zig_declaration_sha256": "d9c830fe4812a534ab32b05be4856fb4d1402e229275498e8b431bdc04b9c661",
+      "atomic_unit_id": "pager-cache-configuration-and-shrink-forwarding",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerSetSpillsize::line-3572",
+      "source_sha256": "1891ea61f1aad36e63014561b66f6ee1a4484d1998536023596ba3d8f0a36c78",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.setSpillSize",
+      "zig_declaration_sha256": "56ae7acb769a12c2cd154261e261610faf87f26a2f41a2ac38bbdfb9a56cdbe3",
+      "atomic_unit_id": "pager-cache-configuration-and-shrink-forwarding",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerShrink::line-3603",
+      "source_sha256": "4a3a60d5e324bcdb77bb529bfb77cee5f67f00dda1939f914d285d61daac657c",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.shrinkCache",
+      "zig_declaration_sha256": "ec1f4dee9fe108789d8f11cc1733d6db39b4a9f09e77e303f5e029b83884960d",
+      "atomic_unit_id": "pager-cache-configuration-and-shrink-forwarding",
       "class": "short",
       "complete": true
     }

@@ -307,7 +307,7 @@
       "result_owner": "upstream/evidence/memdb-api-differential.txt",
       "result_sha256": "c897d625f201b5cd61b6904a9b1df33573e97b6d11fb2c6024597340e4dbef76",
       "source_scope_sha256": "92cde8ca05f20378137a668c15188b96f2c47126b05895960496517daa4cc103",
-      "zig_scope_sha256": "0335fb7306f8dcced90f6a9bcc92ac651f6ddace2c1fdd69d814ad007d111f04"
+      "zig_scope_sha256": "f491a9ffdcc6f3b656be1acac7e08edc5c340feb8e89115b2304973dff279171"
     }
   ]
 }

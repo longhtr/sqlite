@@ -2726,14 +2726,14 @@ pub export fn sqlite3_file_control(pointer: ?*sqlite3, database_name: ?[*:0]cons
 /// owned by the connection pager without changing transaction state.
 fn releaseDatabaseMemory(connection: *Connection) c_int {
     if (connection.database) |database| {
-        _ = database.pager.cache.shrink();
+        _ = database.pager.shrinkCache();
     }
     if (connection.attachments) |*attachments| {
         for (attachments.databases.items[2..]) |entry| {
             const native = entry.native_context orelse continue;
             const attached: *AttachedDatabase = @ptrCast(@alignCast(native));
             if (attached.database) |*database| {
-                _ = database.pager.cache.shrink();
+                _ = database.pager.shrinkCache();
             }
         }
     }

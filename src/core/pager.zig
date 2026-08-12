@@ -890,6 +890,24 @@ pub const Pager = struct {
         return self.cache.pageCount();
     }
 
+    /// Source `sqlite3PagerSetCachesize()`: forward the signed cache
+    /// configuration to the owned PCache.
+    pub fn setCacheSize(self: *Pager, pages: i64) void {
+        self.cache.setConfiguredCacheSize(pages);
+    }
+
+    /// Source `sqlite3PagerSetSpillsize()`: update or query the signed spill
+    /// limit and return its effective PCache value.
+    pub fn setSpillSize(self: *Pager, pages: i64) usize {
+        return self.cache.setConfiguredSpillSize(pages);
+    }
+
+    /// Source `sqlite3PagerShrink()`: release as many unpinned clean cache
+    /// pages as possible.
+    pub fn shrinkCache(self: *Pager) usize {
+        return self.cache.shrink();
+    }
+
     fn lockForWrite(self: *Pager, target: c_int, invoke_busy: bool) ResultCode {
         const methods = self.ioMethods() orelse return .io_error;
         const lock_fn = methods.xLock orelse return .io_error;

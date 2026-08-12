@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "id": "pager-cache-configuration-and-shrink-forwarding",
+  "title": "Pager cache configuration and shrink forwarding",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerSetCachesize, sqlite3PagerSetSpillsize, and sqlite3PagerShrink are the Pager ownership boundary over PCache cache limits, spill update/query semantics, and group-wide release of unpinned clean pages.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::sqlite3PagerSetCachesize::line-3564",
+      "src/pager.c::function::sqlite3PagerSetSpillsize::line-3572",
+      "src/pager.c::function::sqlite3PagerShrink::line-3603"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::sqlite3PagerSetSpillsize::behavior::return::line-3573-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "PCache limit conversion and eviction internals",
+      "B-tree mutex forwarding wrappers",
+      "Connection-wide database iteration"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "pcache-pgroup-cross-cache-lru-and-limits"
+    ],
+    "external_source_responsibilities": [
+      "Owning B-tree or connection selects the Pager and holds required synchronization"
+    ],
+    "caller_closure": "All three complete Pager forwarding bodies are assigned. Production release-memory dispatch calls shrinkCache on main and attached Pager owners; cache/spill methods preserve the PCache signed configuration boundary."
+  },
+  "contracts": {
+    "inputs": [
+      "Live Pager and signed cache/spill configuration, or a shrink request"
+    ],
+    "outputs": [
+      "Updated PCache configuration, effective spill size, or count of released pages"
+    ],
+    "ownership": "Pager and PCache are borrowed connection owners. Shrink releases only PCache-owned unpinned clean pages.",
+    "state_and_results": "Cache size always replaces configuration. Spill zero queries without mutation; nonzero replaces it and returns at least effective cache size. Shrink preserves pinned/dirty pages and Pager transaction state.",
+    "locks_callbacks_io": "PCache owns group synchronization. No callbacks or direct Pager I/O.",
+    "failure_and_continuation": "The forwarding calls are infallible. Cache pressure may retain pages that are pinned or dirty; later operations continue on the same Pager."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerSetCachesize::line-3564",
+      "relation": "source-pcache-cache-size-forwarding",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.setCacheSize"
+      ]
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerSetSpillsize::line-3572",
+      "relation": "source-pcache-spill-update-query-forwarding",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.setSpillSize"
+      ]
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerShrink::line-3603",
+      "relation": "source-pcache-shrink-forwarding",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.shrinkCache"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The Pager methods expose the number of pages released by shrink even though the C wrapper discards the PCache result; callers may discard it to preserve the source API.",
+    "Signed KiB/page conversion remains in the existing native PCache owner rather than being duplicated in Pager."
+  ],
+  "oracle": {
+    "protocol": "Set positive and negative cache sizes, update and zero-query spill size, populate clean/unpinned plus retained pages, and shrink through the Pager methods; retain the 787-observation PCache differential and connection release-memory differential.",
+    "internal_observations": [
+      "configured/effective cache pages",
+      "spill update and zero-query result",
+      "released and retained page counts",
+      "unchanged Pager state"
+    ],
+    "normalization": "Configuration, counts, and state are exact; page addresses are identity-only."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No Pager-wrapper allocation; PCache allocation and pressure paths have bounded deterministic coverage.",
+    "io_crash_concurrency": "No direct I/O; PCache group locking and concurrent recycle are differentially and stress tested.",
+    "malformed_input": "Signed cache/spill values preserve the existing bounded PCache conversion and zero-query rules.",
+    "continuation": "Pinned/dirty pages survive shrink and later release/cleanup remains valid.",
+    "performance": "Cache/spill forwarding is constant-time; shrink is bounded by purgeable group pages.",
+    "commands": [
+      "zig build pcache-differential",
+      "zig build memdb-api-differential",
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig Pager over src/core/page_cache.zig Cache",
+    "native_call_path": "Production Pager owns the PCache and sqlite3_db_release_memory invokes Pager.shrinkCache for main and attached databases; atomic-unit trace promotion awaits a scoped durable receipt.",
+    "bounded_owner_retired": "Direct connection shrink bypass is retired in favor of the Pager source boundary."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires public PRAGMA cache/spill dispatch closure and independent review."
+  },
+  "known_blockers": [
+    "Capture a scoped Pager/PCache durable receipt before internal-trace promotion.",
+    "Route all public cache_size/cache_spill PRAGMA updates through the Pager owner.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:3557-3605 was reviewed completely for cache-size, spill-size, mmap adjacency, and shrink forwarding",
+      "src/core/pager.zig cache ownership, src/core/page_cache.zig signed configuration/group shrink, and connection release-memory callers were reviewed"
+    ],
+    "callers": [
+      "B-tree cache/spill configuration wrappers",
+      "Connection-wide sqlite3_db_release_memory on main and attached databases"
+    ],
+    "callees": [
+      "Cache.setConfiguredCacheSize",
+      "Cache.setConfiguredSpillSize",
+      "Cache.shrink"
+    ],
+    "assertions_branches_cleanup": [
+      "The only active source behavior block is the spill return and is assigned",
+      "Cache and shrink wrappers are straight forwarding bodies",
+      "PCache owns all release and retained-page cleanup"
+    ],
+    "upstream_tests": [
+      "Upstream cache-size, cache-spill, shrink, release-memory, PCache, OOM, and mutex tests cover this boundary",
+      "Project PCache differential and connection release-memory differential cover forwarding and integrated main/attached shrink"
+    ]
+  },
+  "evidence_receipts": []
+}
