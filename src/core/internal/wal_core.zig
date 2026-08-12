@@ -138,11 +138,14 @@ fn headerChecksum(header: *const Header) [2]u32 {
     return .{ one, two };
 }
 
-fn hashPage(page_number: u32) usize {
+/// Source `walHash()`.
+pub fn hashPage(page_number: u32) usize {
+    std.debug.assert(page_number > 0);
     return @intCast((page_number *% 383) & (hash_table_slot_count - 1));
 }
 
-fn nextHash(slot: usize) usize {
+/// Source `walNextHash()`.
+pub fn nextHash(slot: usize) usize {
     return (slot + 1) & (hash_table_slot_count - 1);
 }
 
@@ -1006,6 +1009,8 @@ test "WAL index append cleanup and savepoint undo" {
     wal.header.database_pages = 9;
     wal.header.page_size = 65_536;
     try std.testing.expectEqual(@as(u32, 65_536), pageSize(&wal));
+    try std.testing.expectEqual(@as(usize, 383), hashPage(1));
+    try std.testing.expectEqual(@as(usize, 0), nextHash(hash_table_slot_count - 1));
     setLimit(null, 31);
     setLimit(&wal, 31);
     try std.testing.expectEqual(@as(i64, 31), wal.maximum_size);

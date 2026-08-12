@@ -591,6 +591,24 @@
       "atomic_unit_id": "wal-page-size-observation",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::walHash::line-1138",
+      "source_sha256": "a6f485a9325f355b1bf135a5825bc2b91399f539762a4072f825d2a9ee12fcc4",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::hashPage",
+      "zig_declaration_sha256": "01677aff5cce8ee35bc47809264525c80fb5ef7a286911b3e300822934ec491d",
+      "atomic_unit_id": "wal-page-hash-probing",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::walNextHash::line-1143",
+      "source_sha256": "b9071d4d766fc749bb7c9fe140ca4d54a200698a4c0fabd0054d8f5b991bcdc6",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::nextHash",
+      "zig_declaration_sha256": "dc49659447c6add9494c4c7a1418681494db9dd9f040414a8d1f2e4104b6377a",
+      "atomic_unit_id": "wal-page-hash-probing",
+      "class": "short",
+      "complete": true
     }
   ]
 }
