@@ -15,7 +15,6 @@ const wal = @import("wal.zig");
 pub const btree = @import("btree.zig");
 const unix_vfs = @import("unix_vfs.zig");
 const memdb = @import("memdb.zig");
-const page_cache = @import("page_cache.zig");
 const public_api = @import("public_api.zig");
 const mutex = @import("mutex.zig");
 const lookaside = @import("lookaside.zig");
@@ -2576,11 +2575,7 @@ fn statementMemoryUsed(connection: *const Connection) i64 {
 
 fn addDatabaseStatus(current: *i64, database: *btree.Database, operation: c_int, reset: bool) void {
     const value: u64 = switch (operation) {
-        1, 11 => value: {
-            const per_page = @as(usize, database.pager.page_size) + @sizeOf(page_cache.Page);
-            const bytes = std.math.mul(usize, database.pager.cache.pageCount(), per_page) catch std.math.maxInt(usize);
-            break :value @intCast(bytes);
-        },
+        1, 11 => @intCast(database.pager.memoryUsed()),
         7 => database.pager.stats.cache_hits,
         8 => database.pager.stats.cache_misses,
         9 => database.pager.stats.database_writes,

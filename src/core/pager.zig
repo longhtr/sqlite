@@ -959,6 +959,22 @@ pub const Pager = struct {
         return self.cache.pageCount();
     }
 
+    /// Source `sqlite3PagerMemUsed()`: approximate the Pager and PCache bytes.
+    /// Zig owns these allocations separately, so allocator object sizes replace
+    /// the source's single sqlite3MallocSize(pPager) allocation measurement.
+    pub fn memoryUsed(self: *const Pager) usize {
+        const pointer_overhead = 5 * @sizeOf(*anyopaque);
+        const per_page = std.math.add(usize, @as(usize, self.page_size), self.cache.extra_size) catch return std.math.maxInt(usize);
+        const modeled_per_page = std.math.add(usize, per_page, @sizeOf(page_cache.Page) + pointer_overhead) catch return std.math.maxInt(usize);
+        const cache_bytes = std.math.mul(usize, modeled_per_page, self.cache.pageCount()) catch return std.math.maxInt(usize);
+        const pager_bytes = std.math.add(usize, @sizeOf(Pager), self.file_bytes.len) catch return std.math.maxInt(usize);
+        const filename_bytes = std.math.add(usize, self.filename.len + 1, self.journal_name.len + 1) catch return std.math.maxInt(usize);
+        const all_names = std.math.add(usize, filename_bytes, self.wal_name.len + 1) catch return std.math.maxInt(usize);
+        const owner_bytes = std.math.add(usize, pager_bytes, @sizeOf(page_cache.Cache) + all_names) catch return std.math.maxInt(usize);
+        const with_cache = std.math.add(usize, owner_bytes, cache_bytes) catch return std.math.maxInt(usize);
+        return std.math.add(usize, with_cache, @as(usize, self.page_size)) catch std.math.maxInt(usize);
+    }
+
     /// Source `sqlite3PagerSetCachesize()`: forward the signed cache
     /// configuration to the owned PCache.
     pub fn setCacheSize(self: *Pager, pages: i64) void {
@@ -1630,6 +1646,26 @@ test "page acquisition fills cache normalizes short reads and tracks hits" {
     try std.testing.expect(pager.cache.checkInvariants());
     try std.testing.expectEqual(ResultCode.ok, pager.endRead());
     try std.testing.expectEqual(ResultCode.ok, pager.close());
+}
+
+test "pager memory usage tracks owner, page size, extra bytes, and cache pages" {
+    const fixture = try readFixture("valid-empty-4096.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "memory-used.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-memory-used", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "memory-used.db", .{ .extra_size = 24 }).pager.?;
+    defer std.testing.expectEqual(ResultCode.ok, pager.close()) catch unreachable;
+
+    const owner_bytes = pager.memoryUsed();
+    try std.testing.expect(owner_bytes >= @sizeOf(Pager) + @sizeOf(page_cache.Cache) + pager.file_bytes.len + @as(usize, pager.page_size));
+    try std.testing.expectEqual(ResultCode.ok, pager.beginRead());
+    const page = pager.getPage(1, false).page.?;
+    const expected_page_bytes = @as(usize, pager.page_size) + pager.cache.extra_size + @sizeOf(page_cache.Page) + 5 * @sizeOf(*anyopaque);
+    try std.testing.expectEqual(owner_bytes + expected_page_bytes, pager.memoryUsed());
+    try std.testing.expectEqual(ResultCode.ok, pager.release(page));
+    try std.testing.expectEqual(ResultCode.ok, pager.endRead());
 }
 
 fn readUserVersion(page: []const u8) u32 {
