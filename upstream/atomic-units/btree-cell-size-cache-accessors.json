@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "id": "btree-cell-size-cache-accessors",
+  "title": "B-tree cell-size cache compute and lookup accessors",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "computeCellSize and cachedCellSize jointly own lazy population and reuse of one CellArray size slot. Keeping them together preserves the source zero-sentinel contract and the single computation path used by page rebuild and balance planning.",
+    "source_files": [
+      {
+        "path": "src/btree.c",
+        "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"
+      }
+    ],
+    "source_entity_ids": [
+      "src/btree.c::function::computeCellSize::line-7619",
+      "src/btree.c::function::cachedCellSize::line-7625"
+    ],
+    "behavioral_block_ids": [
+      "src/btree.c::function::computeCellSize::behavior::assert::line-7620-column-3::ordinal-0",
+      "src/btree.c::function::computeCellSize::behavior::assert::line-7621-column-3::ordinal-0",
+      "src/btree.c::function::computeCellSize::behavior::return::line-7623-column-3::ordinal-0",
+      "src/btree.c::function::cachedCellSize::behavior::assert::line-7626-column-3::ordinal-0",
+      "src/btree.c::function::cachedCellSize::behavior::if::line-7627-column-3::ordinal-0",
+      "src/btree.c::function::cachedCellSize::behavior::return::line-7627-column-22::ordinal-0",
+      "src/btree.c::function::cachedCellSize::behavior::return::line-7628-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Bulk populateCellCache verification loop",
+      "Cell payload parsing and local/overflow size calculation",
+      "Page rebuild, edit, and balance ownership"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "CellArray supplies aligned cell and size slices",
+      "Page cell-size owner computes the source-equivalent size for one cell"
+    ],
+    "caller_closure": "Both complete source accessor bodies are assigned. populateCellCache routes empty slots through computeCellSize; direct lazy callers use cachedCellSize."
+  },
+  "contracts": {
+    "inputs": [
+      "Mutable CellArray and in-range index"
+    ],
+    "outputs": [
+      "Exact cell size and a populated size slot when it was previously zero"
+    ],
+    "ownership": "Borrowed page/cell slices; only the indexed cache slot is mutated.",
+    "state_and_results": "computeCellSize requires a zero slot, computes once, stores, and returns it. cachedCellSize returns a nonzero slot unchanged or delegates to computeCellSize.",
+    "locks_callbacks_io": "No locks, callbacks, allocation, or I/O. B-tree owner synchronization is external.",
+    "failure_and_continuation": "Source assertions become Range or Corrupt for malformed typed input; a successful cache write remains reusable."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/btree.c::function::computeCellSize::line-7619",
+      "relation": "source-empty-cell-size-slot-computation",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_core.zig::function::computeCellSize"
+      ]
+    },
+    {
+      "source_entity_id": "src/btree.c::function::cachedCellSize::line-7625",
+      "relation": "source-cell-size-cache-hit-or-compute",
+      "zig_declaration_ids": [
+        "src/core/internal/btree_core.zig::function::cachedCellSize"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Source u16 slots are usize slots in the bounded typed CellArray; page geometry constrains successful values while avoiding truncation in intermediate native logic.",
+    "Source assertions become explicit Range/Corrupt errors at the Zig boundary."
+  ],
+  "oracle": {
+    "protocol": "Create one interior cell with an empty size slot, call cachedCellSize and require exact storage, call it again and require the cached value, reject direct recomputation of a nonzero slot, then clear and repopulate through populateCellCache.",
+    "internal_observations": [
+      "size slot before and after first lookup",
+      "second lookup result without slot mutation",
+      "nonzero compute rejection",
+      "bulk population result"
+    ],
+    "normalization": "Compare exact nonzero integer sizes and typed error classes."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; synchronization external.",
+    "malformed_input": "Bounds, slice alignment, and zero-slot preconditions return typed errors.",
+    "continuation": "Successful cached state is reusable; failed preconditions do not mutate it.",
+    "performance": "Constant-time cache hit; one bounded cell-size parse on miss.",
+    "commands": [
+      "zig build test",
+      "zig build btree-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/btree_core.zig CellArray owner",
+    "native_call_path": "populateCellCache consumes computeCellSize for empty entries; cachedCellSize is available to rebuild and balance callers and covered in the owner trace.",
+    "bounded_owner_retired": "Inline empty-slot computation in populateCellCache is retired in favor of the source-shaped compute accessor."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires full rebuild/balance integration, pinned-C cache trace, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Route native rebuild/edit/balance size queries through cachedCellSize.",
+    "Add pinned-C cache hit/miss trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/btree.c:7584-7630 CellArray population and both accessors were reviewed",
+      "upstream sqlite rebuildPage, editPage, and balance callers were reviewed",
+      "src/core/internal/btree_core.zig CellArray, cell-size parsers, rebuild, edit, balance, and owner trace were reviewed"
+    ],
+    "callers": [
+      "Upstream rebuildPage, editPage, balance_nonroot, and divider-size planning",
+      "Native populateCellCache and direct owner trace"
+    ],
+    "callees": [
+      "MemPage.xCellSize in source",
+      "leaf slice length or cellSizeNoPayload in the typed native model"
+    ],
+    "assertions_branches_cleanup": [
+      "Both index assertions and compute zero-slot assertion are represented",
+      "Cache-hit branch returns without mutation",
+      "Cache-miss branch delegates to the sole mutating computation path",
+      "No cleanup path"
+    ],
+    "upstream_tests": [
+      "Upstream balance, rebuild, corruption, and cell-size tests exercise these accessors",
+      "Project owner trace exercises miss, hit, precondition failure, and population integration"
+    ]
+  },
+  "evidence_receipts": []
+}

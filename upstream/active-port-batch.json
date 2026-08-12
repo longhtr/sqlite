@@ -42,6 +42,24 @@
       "atomic_unit_id": "pager-cache-reset-and-data-version",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::computeCellSize::line-7619",
+      "source_sha256": "ae952b3885fb9d80cd700cb461d180e1d6b7ebc94a5e502ccb823713a93a269e",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::computeCellSize",
+      "zig_declaration_sha256": "47ab76f5bf66846b9ae03d8b9c3f734e8aa0b967de4e7aea3a7a5be5474307c6",
+      "atomic_unit_id": "btree-cell-size-cache-accessors",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::cachedCellSize::line-7625",
+      "source_sha256": "a88fa0dc4d93df1edd28e671b8c0aaf018f2706b36393df8cb1452946a149f68",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::cachedCellSize",
+      "zig_declaration_sha256": "c3ce8bb55e52f5bf66e2c9b99a4556335d145766033a54e4afdbaa3ca309bf05",
+      "atomic_unit_id": "btree-cell-size-cache-accessors",
+      "class": "short",
+      "complete": true
     }
   ]
 }

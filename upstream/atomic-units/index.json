@@ -435,6 +435,11 @@
       "status": "source-translated"
     },
     {
+      "id": "btree-cell-size-cache-accessors",
+      "path": "upstream/atomic-units/btree-cell-size-cache-accessors.json",
+      "status": "source-translated"
+    },
+    {
       "id": "pager-data-version-observation",
       "path": "upstream/atomic-units/pager-data-version-observation.json",
       "status": "source-translated"

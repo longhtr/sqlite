@@ -824,12 +824,30 @@ pub fn previous(cursor: *Cursor) Error!bool {
 }
 
 pub const CellArray = struct { reference: *Page, cells: []const []const u8, sizes: []usize };
+
+/// Source `computeCellSize()`: populate one previously empty cache slot.
+pub fn computeCellSize(array: *CellArray, index: usize) Error!usize {
+    if (index >= array.cells.len or array.sizes.len < array.cells.len) return error.Range;
+    if (array.sizes[index] != 0) return error.Corrupt;
+    const cell = array.cells[index];
+    const size = if (array.reference.leaf) cell.len else try cellSizeNoPayload(array.reference, cell);
+    array.sizes[index] = size;
+    return size;
+}
+
+/// Source `cachedCellSize()`: return an existing size or compute it once.
+pub fn cachedCellSize(array: *CellArray, index: usize) Error!usize {
+    if (index >= array.cells.len or array.sizes.len < array.cells.len) return error.Range;
+    if (array.sizes[index] != 0) return array.sizes[index];
+    return computeCellSize(array, index);
+}
+
 /// Source `populateCellCache()`.
 pub fn populateCellCache(array: *CellArray, start: usize, count: usize) Error!void {
     if (start > array.cells.len or count > array.cells.len - start or array.sizes.len < array.cells.len) return error.Range;
-    for (array.cells[start..][0..count], array.sizes[start..][0..count]) |cell, *size| {
-        const computed = if (array.reference.leaf) cell.len else try cellSizeNoPayload(array.reference, cell);
-        if (size.* == 0) size.* = computed else if (size.* != computed) return error.Corrupt;
+    for (array.cells[start..][0..count], array.sizes[start..][0..count], start..) |cell, *size, index| {
+        const computed = if (size.* == 0) try computeCellSize(array, index) else if (array.reference.leaf) cell.len else try cellSizeNoPayload(array.reference, cell);
+        if (size.* != computed) return error.Corrupt;
     }
 }
 
@@ -2327,6 +2345,11 @@ test "btree core page cursor lock and integrity primitives" {
     var sizes = [_]usize{0};
     var cells = [_][]const u8{&no_payload};
     var cache = CellArray{ .reference = root, .cells = &cells, .sizes = &sizes };
+    try std.testing.expectEqual(@as(usize, 5), try cachedCellSize(&cache, 0));
+    try std.testing.expectEqual(@as(usize, 5), sizes[0]);
+    try std.testing.expectEqual(@as(usize, 5), try cachedCellSize(&cache, 0));
+    try std.testing.expectError(error.Corrupt, computeCellSize(&cache, 0));
+    sizes[0] = 0;
     try populateCellCache(&cache, 0, 1);
     try std.testing.expectEqual(@as(usize, 5), sizes[0]);
 
