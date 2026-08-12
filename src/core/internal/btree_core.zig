@@ -996,6 +996,11 @@ pub fn isReadOnly(tree: *const Btree) bool {
     return tree.read_only;
 }
 
+/// Source `sqlite3BtreeConnectionCount()`.
+pub fn connectionCount(tree: *const Btree) usize {
+    return tree.shared.references;
+}
+
 /// Source `sqlite3BtreeGetRequestedReserve()`: reserve bytes may grow to a
 /// pending file-control request but never report less than the live page
 /// format currently reserves.
@@ -1025,6 +1030,7 @@ test "source page size and requested reserve reflect live page format" {
     try std.testing.expectEqual(Transaction.none, transactionState(null));
     try std.testing.expectEqual(Transaction.none, transactionState(&tree));
     try std.testing.expect(!isReadOnly(&tree));
+    try std.testing.expectEqual(@as(usize, 1), connectionCount(&tree));
     shared.requested_reserved_bytes = 8;
     try std.testing.expectEqual(@as(u8, 12), requestedReserve(&tree));
     shared.requested_reserved_bytes = 24;

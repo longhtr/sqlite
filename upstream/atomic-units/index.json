@@ -348,6 +348,11 @@
       "id": "btree-incremental-blob-cursor-marking",
       "path": "upstream/atomic-units/btree-incremental-blob-cursor-marking.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-shared-connection-count",
+      "path": "upstream/atomic-units/btree-shared-connection-count.json",
+      "status": "source-translated"
     }
   ]
 }

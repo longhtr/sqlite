@@ -285,6 +285,15 @@
       "atomic_unit_id": "btree-incremental-blob-cursor-marking",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeConnectionCount::line-11585",
+      "source_sha256": "5d36a6f9680420a075b92f3e2144931173cbb858e80a3530a70a297bba2056cd",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::connectionCount",
+      "zig_declaration_sha256": "b844c74182710a5e499ffffd02103d9521f397b6f43db736e0291ceb6b0e277e",
+      "atomic_unit_id": "btree-shared-connection-count",
+      "class": "short",
+      "complete": true
     }
   ]
 }

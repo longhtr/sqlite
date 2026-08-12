@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "btree-shared-connection-count",
+  "title": "B-tree shared connection-count observation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeConnectionCount returns the BtShared reference count, which is always one for a private cache and may be greater for a shared cache.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreeConnectionCount::line-11585"],
+    "behavioral_block_ids": ["src/btree.c::function::sqlite3BtreeConnectionCount::behavior::return::line-11587-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Shared-cache enablement", "Btree handle insertion/removal", "Sharable flag observation"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["BtShared reference-count ownership"], "caller_closure": "The complete source observation is assigned; shared-cache public consumers remain open."},
+  "contracts": {
+    "inputs": ["Live Btree handle with shared owner"],
+    "outputs": ["Current shared-owner reference count"],
+    "ownership": "Borrowed Btree; no allocation or mutation.",
+    "state_and_results": "Returns one for a private owner and one or greater for a shared owner under valid invariants.",
+    "locks_callbacks_io": "Caller provides safe shared-state observation context; no callbacks or I/O.",
+    "failure_and_continuation": "Total for a valid live Btree."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3BtreeConnectionCount::line-11585", "relation": "source-shared-owner-reference-count-read", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::connectionCount"]}],
+  "representation_differences": ["The Zig Shared.references usize field represents source BtShared.nRef."],
+  "oracle": {"protocol": "Observe a newly initialized private Shared owner and compare an exact connection count of one.", "internal_observations": ["Shared.references", "returned count"], "normalization": "Reference count is exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; synchronization remains caller-owned.", "malformed_input": "Dangling Btree/shared ownership is outside the source contract.", "continuation": "Pure observation leaves reference state unchanged.", "performance": "Constant time.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig shared-owner state", "native_call_path": "Typed owner and private-count trace exist; shared-cache public consumer integration remains pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires shared-cache caller integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect shared-cache public consumers.", "Add private/shared pinned-C count trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:11571-11588 was reviewed completely for sharable/count context", "src/core/internal/btree_core.zig Shared reference insertion/removal and sole-cursor owners were reviewed"],
+    "callers": ["Shared-cache diagnostics and invalidation decisions", "Unit trace invokes the owner directly"],
+    "callees": ["No callees; direct reference-count read"],
+    "assertions_branches_cleanup": ["The sole active return block is assigned", "Inactive testcase instrumentation has no production behavior", "No allocation or cleanup"],
+    "upstream_tests": ["Upstream shared-cache open/close and connection-count tests cover this observation", "Project unit trace covers private count one"]
+  },
+  "evidence_receipts": []
+}
