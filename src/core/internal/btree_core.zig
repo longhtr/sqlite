@@ -52,6 +52,7 @@ pub const Shared = struct {
     metadata: [16]u32 = [_]u32{0} ** 16,
     references: usize = 1,
     reserved_bytes: u8 = 0,
+    requested_reserved_bytes: u8 = 0,
     read_version: u8 = 1,
     write_version: u8 = 1,
     interrupted: bool = false,
@@ -927,6 +928,25 @@ pub fn setPageSize(tree: *Btree, page_size: u32, reserved: u8, fixed: bool) Erro
     }
     if (fixed) tree.shared.page_size_fixed = true;
 }
+
+/// Source `sqlite3BtreeGetRequestedReserve()`: reserve bytes may grow to a
+/// pending file-control request but never report less than the live page
+/// format currently reserves.
+pub fn requestedReserve(tree: *const Btree) u8 {
+    return @max(tree.shared.requested_reserved_bytes, tree.shared.reserved_bytes);
+}
+
+test "source requested page reserve never shrinks below live format" {
+    var shared = Shared.init(std.testing.allocator);
+    defer shared.deinit();
+    const tree = Btree{ .shared = &shared };
+    shared.reserved_bytes = 12;
+    shared.requested_reserved_bytes = 8;
+    try std.testing.expectEqual(@as(u8, 12), requestedReserve(&tree));
+    shared.requested_reserved_bytes = 24;
+    try std.testing.expectEqual(@as(u8, 24), requestedReserve(&tree));
+}
+
 /// Source `newDatabase()`.
 pub fn initializeDatabase(shared: *Shared) Error!void {
     const page = shared.page_one orelse return error.NotFound;

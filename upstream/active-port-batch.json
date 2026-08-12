@@ -222,6 +222,15 @@
       "atomic_unit_id": "vdbe-deferred-table-moveto",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeGetRequestedReserve::line-3140",
+      "source_sha256": "df4c86dbd137dbab2b6226ba93188efd035ba0257d1c34a5a03b26439ecb520c",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::requestedReserve",
+      "zig_declaration_sha256": "da997365252bd09652d3e7064b9a50dc030f37549fab12e210eacca7d93d204e",
+      "atomic_unit_id": "btree-requested-page-reserve",
+      "class": "short",
+      "complete": true
     }
   ]
 }

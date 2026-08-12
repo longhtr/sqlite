@@ -323,6 +323,11 @@
       "id": "vdbe-deferred-table-moveto",
       "path": "upstream/atomic-units/vdbe-deferred-table-moveto.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-requested-page-reserve",
+      "path": "upstream/atomic-units/btree-requested-page-reserve.json",
+      "status": "source-translated"
     }
   ]
 }

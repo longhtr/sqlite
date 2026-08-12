@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "btree-requested-page-reserve",
+  "title": "B-tree requested page reserve reporting",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeGetRequestedReserve reports the larger of the live page-format reserve and the latest file-control reserve request so reserve reporting can grow but never shrink below on-disk requirements.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreeGetRequestedReserve::line-3140"],
+    "behavioral_block_ids": ["src/btree.c::function::sqlite3BtreeGetRequestedReserve::behavior::return::line-3146-column-3::ordinal-0", "src/btree.c::function::sqlite3BtreeGetRequestedReserve::behavior::conditional::line-3146-column-10::ordinal-0"],
+    "excluded_responsibilities": ["RESERVE_BYTES file-control mutation", "Page-size mutation", "B-tree mutex implementation"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["B-tree serialization and RESERVE_BYTES request publication"], "caller_closure": "The complete max-selection body is assigned; file-control request integration remains open."},
+  "contracts": {
+    "inputs": ["Btree with live reserved bytes and latest requested reserve bytes"],
+    "outputs": ["Maximum of live and requested reserve"],
+    "ownership": "Borrowed Btree; no allocation.",
+    "state_and_results": "Pure observation; requested reserve never lowers the reported live reserve.",
+    "locks_callbacks_io": "The simplified Btree owner requires caller serialization; no callbacks or I/O.",
+    "failure_and_continuation": "Total for valid Btree state and has no error result."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3BtreeGetRequestedReserve::line-3140", "relation": "source-max-live-and-requested-page-reserve", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::requestedReserve"]}],
+  "representation_differences": ["The Zig Btree model stores live reserve directly instead of recomputing pageSize-usableSize.", "Caller serialization represents sqlite3BtreeEnter/Leave until the simplified Btree owner gains the native shared-cache mutex boundary."],
+  "oracle": {"protocol": "Set requested reserve below and above the live reserve and compare both results.", "internal_observations": ["reserved_bytes", "requested_reserved_bytes", "returned maximum"], "normalization": "Byte counts are exact; lock events remain pending."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; mutex integration pending.", "malformed_input": "Invalid Btree ownership is outside the source contract.", "continuation": "Observation does not mutate Btree state.", "performance": "Constant-time maximum.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig B-tree state owner", "native_call_path": "Typed state owner and unit trace exist; file-control caller integration remains pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires file-control and locking integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Publish RESERVE_BYTES requests into requested_reserved_bytes.", "Integrate B-tree mutex events.", "Add pinned-C trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:3119-3147 was reviewed completely", "src/core/internal/btree_core.zig page-size/reserve state was reviewed", "Project file-control reserve paths were searched"],
+    "callers": ["SQLITE_FILECTRL_RESERVE_BYTES handling", "Unit trace invokes the owner directly"],
+    "callees": ["sqlite3BtreeGetReserveNoMutex represented by live reserved_bytes", "sqlite3BtreeEnter/Leave represented by caller serialization"],
+    "assertions_branches_cleanup": ["Both active return/conditional blocks are assigned", "No allocation or cleanup", "Maximum preserves monotonic reporting contract"],
+    "upstream_tests": ["Upstream reserve-byte, page-size, codec-extension, and file-control tests cover this owner", "Project unit trace covers both maximum branches"]
+  },
+  "evidence_receipts": []
+}
