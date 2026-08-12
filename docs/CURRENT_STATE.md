@@ -9,17 +9,17 @@ Incomplete and unsafe for production data. Reusable source-corresponding slices 
 | Fact | Current value |
 |---|---:|
 | Active source entities | 6,752 active |
-| Historical reviewed-or-later classifications | 2,255 |
+| Historical reviewed-or-later classifications | 2,256 |
 | Inventoried, unpromoted entities | 0 |
-| Unmapped entities | 3,764 |
+| Unmapped entities | 3,763 |
 | Behavioral inventory | 25,930 blocks in 2,457 functions |
-| Atomic-unit dossiers total | 126 |
-| Admission-ready dossiers | 126 |
-| Source-translated atomic units | 76 |
+| Atomic-unit dossiers total | 127 |
+| Admission-ready dossiers | 127 |
+| Source-translated atomic units | 77 |
 | Internal-trace-equivalent atomic units | 31 |
 | Subsystem-integrated atomic units | 19 |
 | Historical mechanical function claims | 1,738; 0 completion credit |
-| Active batch and durable checkpoints | 12 entries; 1 checkpoints |
+| Active batch and durable checkpoints | 13 entries; 1 checkpoints |
 | Exact internal layouts | 69 |
 | Purposeful tools | 111 purposeful Python scripts |
 | Bounded opcode mappings | 107/190; 0 integrated |

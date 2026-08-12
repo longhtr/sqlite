@@ -38,6 +38,12 @@ pub const Connection = struct {
     last_error: ?Error = null,
 };
 
+/// Source `isFatalError()`: BUSY is the only retryable error represented by
+/// this typed backup owner; LOCKED is not in its local error set.
+pub fn isFatalError(result: ?Error) bool {
+    return if (result) |failure| failure != error.Busy else false;
+}
+
 pub const Backup = struct {
     allocator: std.mem.Allocator,
     destination_connection: *Connection,
@@ -113,9 +119,7 @@ pub fn initialize(destination_connection: *Connection, destination_name: []const
 
 /// Source `sqlite3_backup_step()`.
 pub fn step(backup: *Backup, requested_pages: isize) Error!void {
-    if (backup.result) |failure| {
-        if (failure != error.Busy) return failure;
-    }
+    if (isFatalError(backup.result)) return backup.result.?;
     if (backup.source.transaction == .write) {
         backup.result = error.Busy;
         return error.Busy;
@@ -241,6 +245,10 @@ test "checkpoint batch backup step copies pages and commits a changed schema coo
     var source_connection = Connection{ .allocator = std.testing.allocator, .databases = &source_databases };
     var destination_connection = Connection{ .allocator = std.testing.allocator, .databases = &destination_databases };
     const handle = try initialize(&destination_connection, "main", &source_connection, "main");
+    try std.testing.expect(!isFatalError(null));
+    try std.testing.expect(!isFatalError(error.Busy));
+    try std.testing.expect(isFatalError(error.Io));
+    try std.testing.expect(isFatalError(error.Done));
     try std.testing.expectError(error.Done, step(handle, -1));
     try std.testing.expectEqual(@as(u32, 12), destination_databases[0].schema_cookie);
     try std.testing.expectEqual(@as(usize, 1024), destination_databases[0].data.items.len);

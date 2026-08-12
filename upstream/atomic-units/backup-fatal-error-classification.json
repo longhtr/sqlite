@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "id": "backup-fatal-error-classification",
+  "title": "Online backup fatal-error classification",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "isFatalError is the single retryability predicate used by backup step and per-page update paths: success and lock contention are nonfatal, while all other results permanently stop copy/update work.",
+    "source_files": [
+      {
+        "path": "src/backup.c",
+        "sha256": "2304c4f820c977aa009ceb464d9b774942cd7b4686156a5ed28d50a3e50f861e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/backup.c::function::isFatalError::line-226"
+    ],
+    "behavioral_block_ids": [
+      "src/backup.c::function::isFatalError::behavior::return::line-227-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Producing backup errors",
+      "Busy/locked retry scheduling",
+      "Backup page copying and cleanup"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Typed backup Error set",
+      "Step and update owners preserve retryable busy state"
+    ],
+    "caller_closure": "The complete source predicate is assigned. The typed step owner consumes it; update retains the equivalent retryability condition pending source-shaped routing."
+  },
+  "contracts": {
+    "inputs": [
+      "Optional typed backup error, where null represents SQLITE_OK"
+    ],
+    "outputs": [
+      "False for success or Busy; true for every other representable backup error"
+    ],
+    "ownership": "Pure scalar observation.",
+    "state_and_results": "The bounded backup Error set cannot produce SQLITE_LOCKED, so Busy is its sole lock-contention alternative and all remaining errors are fatal.",
+    "locks_callbacks_io": "No locks, callbacks, allocation, or I/O.",
+    "failure_and_continuation": "The classifier itself cannot fail. False permits retry/continuation; true preserves the stored failure."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/backup.c::function::isFatalError::line-226",
+      "relation": "source-backup-fatal-error-predicate",
+      "zig_declaration_ids": [
+        "src/core/internal/backup_core.zig::function::isFatalError"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Null optional Error represents SQLITE_OK.",
+    "SQLITE_LOCKED is absent from the typed local Error set; if introduced, this predicate must add it as nonfatal before callers can produce it."
+  ],
+  "oracle": {
+    "protocol": "Classify null success, Busy, Io, and Done; require only success and Busy to be nonfatal, then execute a completed backup step through the consuming owner.",
+    "internal_observations": [
+      "input optional Error",
+      "fatal boolean",
+      "step continuation/failure"
+    ],
+    "normalization": "Compare exact booleans and typed step errors."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Pure classifier; OutOfMemory classifies fatal.",
+    "io_crash_concurrency": "Pure classifier; Io classifies fatal.",
+    "malformed_input": "Closed typed error set and null success constrain input.",
+    "continuation": "Busy remains retryable; all other errors remain sticky.",
+    "performance": "Constant-time comparison.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/backup_core.zig online backup state machine",
+    "native_call_path": "step calls isFatalError before retrying or returning stored state; owner trace exercises success, Busy, Io, Done, and complete copy.",
+    "bounded_owner_retired": "The inline step failure!=Busy condition is retired."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires update-path routing, pinned-C result matrix, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Route internal backup update through isFatalError.",
+    "Connect the internal source-shaped backup state machine to the public Backup owner.",
+    "Add pinned-C result-code matrix.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/backup.c structure/thread-safety notes, isFatalError, backupOnePage, step, and update callers were reviewed",
+      "src/core/internal/backup_core.zig complete state machine, typed Error set, step/update callers, and owner trace were reviewed"
+    ],
+    "callers": [
+      "sqlite3_backup_step stored-error handling",
+      "backupUpdate page recopy guard",
+      "Native step owner"
+    ],
+    "callees": [
+      "Scalar result comparisons only"
+    ],
+    "assertions_branches_cleanup": [
+      "The sole source return block is assigned",
+      "ALWAYS(rc!=SQLITE_LOCKED) corresponds to the typed Error set excluding Locked",
+      "No cleanup path"
+    ],
+    "upstream_tests": [
+      "Upstream backup busy/locked, OOM, I/O, completion, and update tests exercise this predicate",
+      "Project owner trace exercises exact local result classes and consuming step"
+    ]
+  },
+  "evidence_receipts": []
+}

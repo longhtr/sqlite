@@ -633,6 +633,11 @@
       "id": "backup-restart-on-pager-data-version",
       "path": "upstream/atomic-units/backup-restart-on-pager-data-version.json",
       "status": "source-translated"
+    },
+    {
+      "id": "backup-fatal-error-classification",
+      "path": "upstream/atomic-units/backup-fatal-error-classification.json",
+      "status": "source-translated"
     }
   ]
 }

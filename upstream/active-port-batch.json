@@ -114,6 +114,15 @@
       "atomic_unit_id": "backup-restart-on-pager-data-version",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::isFatalError::line-226",
+      "source_sha256": "b687d5a7864e72400183a7a7b280af43fdd378e2b3e950c58fd21ba4a408ad52",
+      "zig_declaration_id": "src/core/internal/backup_core.zig::function::isFatalError",
+      "zig_declaration_sha256": "eb30893528df0e4d4b8d9ef4ac8278aa7adc1e98c51193071f2dd088da404b41",
+      "atomic_unit_id": "backup-fatal-error-classification",
+      "class": "short",
+      "complete": true
     }
   ]
 }
