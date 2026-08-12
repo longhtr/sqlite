@@ -1104,6 +1104,33 @@
       "atomic_unit_id": "btree-pager-and-filename-observations",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pagerUnlockDb::line-1133",
+      "source_sha256": "b5a736fbca5b8314c15b3b33ef527df38c389f7d34977d1815020d2c7cc1270f",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.unlockDatabase",
+      "zig_declaration_sha256": "72399f5d4bcbc1bfcb04dcba1bd4f6bf33414691699392e411f3ecc45bd14823",
+      "atomic_unit_id": "pager-database-lock-transitions",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pagerLockDb::line-1161",
+      "source_sha256": "23ac77763507cea15362bb94c82def77dc6e899831084977c0d5fd73236a8527",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.lockDatabase",
+      "zig_declaration_sha256": "378e3e76eaef16e5f125d5ba1fb773b1f158451f9419b2956c430c36de60aa2c",
+      "atomic_unit_id": "pager-database-lock-transitions",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pager_wait_on_lock::line-3992",
+      "source_sha256": "cf8b3898f190060633f61df0f59ba2eef87f8c6eb30eaba46dfd4f62eb1c225e",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.waitOnLock",
+      "zig_declaration_sha256": "4b3216a3fc4f4a96cb1d6c3695d997446abb8b67a7d3e0f9e8449f8cb9ee9557",
+      "atomic_unit_id": "pager-database-lock-transitions",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

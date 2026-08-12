@@ -22,6 +22,7 @@ pub const maximum_page_size: u32 = limits.max_page_size;
 pub const default_page_size: u32 = limits.default_page_size;
 pub const maximum_page_count: u32 = limits.max_page_count;
 pub const pending_byte: u64 = 0x4000_0000;
+const unknown_lock: c_int = vfs.LOCK_EXCLUSIVE + 1;
 
 pub const readonly_rollback = ResultCode.fromC(8 | (3 << 8));
 pub const readonly_database_moved = ResultCode.fromC(8 | (4 << 8));
@@ -160,6 +161,9 @@ pub const Pager = struct {
     maximum_pages: u32 = maximum_page_count,
     read_only: bool = true,
     memory_file: bool = false,
+    no_lock: bool = false,
+    lock_level: c_int = vfs.LOCK_NONE,
+    change_count_done: bool = false,
     has_held_shared_lock: bool = false,
     configured: bool = false,
     file_version: [16]u8 = .{0} ** 16,
@@ -297,6 +301,8 @@ pub const Pager = struct {
             .cache = cache,
             .read_only = !options.writable,
             .memory_file = output_flags & vfs.OPEN_MEMORY != 0,
+            .no_lock = output_flags & vfs.OPEN_MEMORY != 0,
+            .change_count_done = output_flags & vfs.OPEN_MEMORY != 0,
             .wal_external_index = options.wal_external_index,
             .journal_spill_threshold = options.journal_spill_threshold,
         };
@@ -674,19 +680,14 @@ pub const Pager = struct {
     }
 
     fn recoverHotJournal(self: *Pager) ResultCode {
-        const methods = self.ioMethods() orelse return .io_error;
-        const lock_fn = methods.xLock orelse return .io_error;
-        var rc = ResultCode.fromC(lock_fn(self.file, vfs.LOCK_EXCLUSIVE));
+        var rc = self.lockDatabase(vfs.LOCK_EXCLUSIVE);
         if (rc != .ok) return rc;
         rc = self.openJournalFile(false);
         if (rc == .ok) rc = self.syncHotJournal();
         if (rc == .ok) rc = self.playbackJournal(&self.journal.?, true);
         const close_rc = self.closeJournalFile(rc == .ok);
         if (rc == .ok) rc = close_rc;
-        if (rc == .ok) {
-            const unlock_fn = methods.xUnlock orelse return .io_error;
-            rc = ResultCode.fromC(unlock_fn(self.file, vfs.LOCK_SHARED));
-        }
+        if (rc == .ok) rc = self.unlockDatabase(vfs.LOCK_SHARED);
         if (rc == .ok) self.cache.clear();
         return rc;
     }
@@ -759,11 +760,39 @@ pub const Pager = struct {
         _ = vfs.osFileControl(self.file, vfs.FCNTL_BUSYHANDLER, @ptrCast(&self.busy_handler_hint));
     }
 
-    fn lockShared(self: *Pager) ResultCode {
-        const methods = self.ioMethods() orelse return .io_error;
-        const lock_fn = methods.xLock orelse return .io_error;
+    /// Source `pagerLockDb()`: acquire only a stronger database-file lock and
+    /// publish the new lock level only after the VFS operation succeeds.
+    fn lockDatabase(self: *Pager, target: c_int) ResultCode {
+        std.debug.assert(target == vfs.LOCK_SHARED or target == vfs.LOCK_RESERVED or target == vfs.LOCK_EXCLUSIVE);
+        if (self.lock_level >= target and self.lock_level != unknown_lock) return .ok;
+        const rc = if (self.no_lock) ResultCode.ok else operation: {
+            const methods = self.ioMethods() orelse return .io_error;
+            const lock_fn = methods.xLock orelse return .io_error;
+            break :operation ResultCode.fromC(lock_fn(self.file, target));
+        };
+        if (rc == .ok and (self.lock_level != unknown_lock or target == vfs.LOCK_EXCLUSIVE)) self.lock_level = target;
+        return rc;
+    }
+
+    /// Source `pagerUnlockDb()`: attempt a downgrade to NONE or SHARED and
+    /// retain the attempted lock level even when the VFS reports an error.
+    fn unlockDatabase(self: *Pager, target: c_int) ResultCode {
+        std.debug.assert(target == vfs.LOCK_NONE or target == vfs.LOCK_SHARED);
+        const rc = if (self.no_lock) ResultCode.ok else operation: {
+            const methods = self.ioMethods() orelse return .io_error;
+            const unlock_fn = methods.xUnlock orelse return .io_error;
+            break :operation ResultCode.fromC(unlock_fn(self.file, target));
+        };
+        if (self.lock_level != unknown_lock) self.lock_level = target;
+        self.change_count_done = self.memory_file;
+        return rc;
+    }
+
+    /// Source `pager_wait_on_lock()`: retry BUSY lock transitions through the
+    /// installed busy callback and preserve all non-BUSY result codes.
+    fn waitOnLock(self: *Pager, target: c_int) ResultCode {
         while (true) {
-            const rc = ResultCode.fromC(lock_fn(self.file, vfs.LOCK_SHARED));
+            const rc = self.lockDatabase(target);
             if (rc != .busy) return rc;
             const handler = self.busy_handler orelse return rc;
             if (!handler(self.busy_context)) return rc;
@@ -773,9 +802,7 @@ pub const Pager = struct {
     fn failedBeginRead(self: *Pager, result: ResultCode) ResultCode {
         if (self.wal_state) |*state| state.deinit();
         self.wal_state = null;
-        if (self.ioMethods()) |methods| {
-            if (methods.xUnlock) |unlock_fn| _ = unlock_fn(self.file, vfs.LOCK_NONE);
-        }
+        _ = self.unlockDatabase(vfs.LOCK_NONE);
         self.state = .open;
         return result;
     }
@@ -787,7 +814,7 @@ pub const Pager = struct {
         if (self.state == .reader) return .ok;
         if (self.state != .open or !self.configured) return .misuse;
         if (self.cache.refCount() != 0) return .busy;
-        var rc = self.lockShared();
+        var rc = self.waitOnLock(vfs.LOCK_SHARED);
         if (rc != .ok) return rc;
 
         const journal = self.probeJournal();
@@ -851,9 +878,7 @@ pub const Pager = struct {
         if (self.state == .open) return .ok;
         if (self.state != .reader) return .misuse;
         if (self.cache.refCount() != 0) return .busy;
-        const methods = self.ioMethods() orelse return .io_error;
-        const unlock_fn = methods.xUnlock orelse return .io_error;
-        const rc = ResultCode.fromC(unlock_fn(self.file, vfs.LOCK_NONE));
+        const rc = self.unlockDatabase(vfs.LOCK_NONE);
         if (rc != .ok) return rc;
         if (self.wal_state) |*state| state.deinit();
         self.wal_state = null;
@@ -1034,17 +1059,6 @@ pub const Pager = struct {
         return self.cache.shrink();
     }
 
-    fn lockForWrite(self: *Pager, target: c_int, invoke_busy: bool) ResultCode {
-        const methods = self.ioMethods() orelse return .io_error;
-        const lock_fn = methods.xLock orelse return .io_error;
-        while (true) {
-            const rc = ResultCode.fromC(lock_fn(self.file, target));
-            if (rc != .busy or !invoke_busy) return rc;
-            const handler = self.busy_handler orelse return rc;
-            if (!handler(self.busy_context)) return rc;
-        }
-    }
-
     pub fn beginWrite(self: *Pager) ResultCode {
         if (self.read_only) return .read_only;
         if (self.state != .reader) return if (self.state == .writer_locked or
@@ -1052,7 +1066,7 @@ pub const Pager = struct {
         const rc = if (self.wal_mode)
             if (self.wal_state) |*state| state.beginWrite() else .cannot_open
         else
-            self.lockForWrite(vfs.LOCK_RESERVED, false);
+            self.lockDatabase(vfs.LOCK_RESERVED);
         if (rc != .ok) return rc;
         self.original_database_pages = self.database_pages;
         std.debug.assert(transitionAllowed(self.state, .writer_locked));
@@ -1211,6 +1225,7 @@ pub const Pager = struct {
     }
 
     fn updateChangeCounter(self: *Pager) ResultCode {
+        if (self.change_count_done) return .ok;
         const fetched = self.getPage(1, false);
         if (fetched.result != .ok) return fetched.result;
         const page = fetched.page.?;
@@ -1221,12 +1236,13 @@ pub const Pager = struct {
         putU32(page.data, 24, counter);
         putU32(page.data, 92, counter);
         putU32(page.data, 96, 3_053_004);
+        self.change_count_done = true;
         return .ok;
     }
 
     fn syncJournalForCommit(self: *Pager) ResultCode {
         const journal = if (self.journal) |*value| value else return .misuse;
-        var rc = self.lockForWrite(vfs.LOCK_EXCLUSIVE, true);
+        var rc = self.waitOnLock(vfs.LOCK_EXCLUSIVE);
         if (rc != .ok) return rc;
         rc = ResultCode.fromC(journal.sync(2));
         if (rc != .ok) return rc;
@@ -1329,9 +1345,7 @@ pub const Pager = struct {
         if (rc != .ok) return rc;
         self.cache.cleanAll();
         self.clearTransaction();
-        const methods = self.ioMethods() orelse return .io_error;
-        const unlock_fn = methods.xUnlock orelse return .io_error;
-        rc = ResultCode.fromC(unlock_fn(self.file, vfs.LOCK_SHARED));
+        rc = self.unlockDatabase(vfs.LOCK_SHARED);
         if (rc != .ok) return rc;
         std.debug.assert(transitionAllowed(self.state, .reader));
         self.state = .reader;
@@ -1417,9 +1431,7 @@ pub const Pager = struct {
         if (rc != .ok) return rc;
         self.cache.cleanAll();
         self.clearTransaction();
-        const methods = self.ioMethods() orelse return .io_error;
-        const unlock_fn = methods.xUnlock orelse return .io_error;
-        rc = ResultCode.fromC(unlock_fn(self.file, vfs.LOCK_SHARED));
+        rc = self.unlockDatabase(vfs.LOCK_SHARED);
         if (rc != .ok) return rc;
         std.debug.assert(transitionAllowed(self.state, .reader));
         self.state = .reader;
@@ -2296,6 +2308,27 @@ fn probeBusyFileControl(file: *vfs.sqlite3_file, operation: c_int, argument: ?*a
     return control(file, operation, argument);
 }
 
+const LockCallProbe = struct {
+    delegate: *const vfs.sqlite3_io_methods,
+    lock_calls: usize = 0,
+    unlock_calls: usize = 0,
+};
+var lock_call_probe: ?*LockCallProbe = null;
+
+fn probeLock(file: *vfs.sqlite3_file, target: c_int) callconv(.c) c_int {
+    const probe = lock_call_probe orelse return vfs.IOERR_LOCK;
+    probe.lock_calls += 1;
+    const callback = probe.delegate.xLock orelse return vfs.IOERR_LOCK;
+    return callback(file, target);
+}
+
+fn probeUnlock(file: *vfs.sqlite3_file, target: c_int) callconv(.c) c_int {
+    const probe = lock_call_probe orelse return vfs.IOERR_UNLOCK;
+    probe.unlock_calls += 1;
+    const callback = probe.delegate.xUnlock orelse return vfs.IOERR_UNLOCK;
+    return callback(file, target);
+}
+
 test "pager rekey replaces flags and moves a live cache page" {
     const fixture = try readFixture("valid-empty-4096.db");
     defer std.testing.allocator.free(fixture);
@@ -2387,6 +2420,51 @@ test "busy handler installation forwards callback and context as a VFS hint" {
     try std.testing.expectEqual(@as(usize, 1), calls);
 }
 
+test "database lock wrappers preserve stronger no-op failed-lock and failed-unlock state" {
+    const fixture = try readFixture("valid-empty-4096.db");
+    defer std.testing.allocator.free(fixture);
+    var memory = vfs.MemoryVfs.init(std.testing.allocator);
+    defer memory.deinit();
+    try installFile(&memory, "lock-state.db", fixture);
+    var adapter = vfs.AbiAdapter.init("pager-lock-state", &memory);
+    var pager = Pager.open(std.testing.allocator, &adapter.abi, "lock-state.db", .{ .writable = true }).pager.?;
+    const original_methods = pager.file.pMethods.?;
+    var probe = LockCallProbe{ .delegate = original_methods };
+    var probing_methods = original_methods.*;
+    probing_methods.xLock = probeLock;
+    probing_methods.xUnlock = probeUnlock;
+    lock_call_probe = &probe;
+    defer lock_call_probe = null;
+    pager.file.pMethods = &probing_methods;
+
+    try std.testing.expectEqual(ResultCode.ok, pager.lockDatabase(vfs.LOCK_SHARED));
+    try std.testing.expectEqual(vfs.LOCK_SHARED, pager.lock_level);
+    try std.testing.expectEqual(@as(usize, 1), probe.lock_calls);
+    try std.testing.expectEqual(ResultCode.ok, pager.lockDatabase(vfs.LOCK_SHARED));
+    try std.testing.expectEqual(@as(usize, 1), probe.lock_calls);
+    var lock_rules = [_]vfs.FaultRule{.{ .method = .lock, .code = vfs.IOERR_LOCK }};
+    var lock_faults = vfs.FaultController{ .rules = &lock_rules };
+    memory.faults = &lock_faults;
+    try std.testing.expectEqual(ResultCode.fromC(vfs.IOERR_LOCK), pager.lockDatabase(vfs.LOCK_RESERVED));
+    try std.testing.expectEqual(vfs.LOCK_SHARED, pager.lock_level);
+    try std.testing.expectEqual(@as(usize, 2), probe.lock_calls);
+    memory.faults = null;
+    try std.testing.expectEqual(ResultCode.ok, pager.lockDatabase(vfs.LOCK_RESERVED));
+    try std.testing.expectEqual(vfs.LOCK_RESERVED, pager.lock_level);
+    try std.testing.expectEqual(@as(usize, 3), probe.lock_calls);
+    pager.change_count_done = true;
+
+    var unlock_rules = [_]vfs.FaultRule{.{ .method = .unlock, .code = vfs.IOERR_UNLOCK }};
+    var unlock_faults = vfs.FaultController{ .rules = &unlock_rules };
+    memory.faults = &unlock_faults;
+    try std.testing.expectEqual(ResultCode.fromC(vfs.IOERR_UNLOCK), pager.unlockDatabase(vfs.LOCK_SHARED));
+    try std.testing.expectEqual(vfs.LOCK_SHARED, pager.lock_level);
+    try std.testing.expectEqual(@as(usize, 1), probe.unlock_calls);
+    try std.testing.expect(!pager.change_count_done);
+    memory.faults = null;
+    try std.testing.expectEqual(ResultCode.ok, pager.close());
+}
+
 test "writer reserved and exclusive contention preserve busy-callback policy" {
     const fixture = try readFixture("valid-empty-4096.db");
     defer std.testing.allocator.free(fixture);
@@ -2398,11 +2476,16 @@ test "writer reserved and exclusive contention preserve busy-callback policy" {
     var second = Pager.open(std.testing.allocator, &adapter.abi, "writer-busy.db", .{ .writable = true }).pager.?;
     try std.testing.expectEqual(ResultCode.ok, first.beginRead());
     try std.testing.expectEqual(ResultCode.ok, second.beginRead());
+    try std.testing.expectEqual(vfs.LOCK_SHARED, first.lock_level);
+    try std.testing.expectEqual(vfs.LOCK_SHARED, second.lock_level);
+    try std.testing.expectEqual(ResultCode.ok, first.lockDatabase(vfs.LOCK_SHARED));
     try std.testing.expectEqual(ResultCode.ok, first.beginWrite());
+    try std.testing.expectEqual(vfs.LOCK_RESERVED, first.lock_level);
     var reserved_busy_calls: usize = 0;
     second.setBusyHandler(stopAfterOneBusy, &reserved_busy_calls);
     try std.testing.expectEqual(ResultCode.busy, second.beginWrite());
     try std.testing.expectEqual(@as(usize, 0), reserved_busy_calls);
+    try std.testing.expectEqual(vfs.LOCK_SHARED, second.lock_level);
 
     const page = first.getPage(1, false).page.?;
     try std.testing.expectEqual(ResultCode.ok, first.makeWritable(page));
@@ -2412,10 +2495,14 @@ test "writer reserved and exclusive contention preserve busy-callback policy" {
     first.setBusyHandler(stopAfterOneBusy, &exclusive_busy_calls);
     try std.testing.expectEqual(ResultCode.busy, first.commitPhaseOne());
     try std.testing.expectEqual(@as(usize, 1), exclusive_busy_calls);
+    try std.testing.expectEqual(vfs.LOCK_RESERVED, first.lock_level);
     try std.testing.expectEqual(State.writer_cache_modified, first.state);
     try std.testing.expectEqual(ResultCode.ok, second.close());
+    try std.testing.expectEqual(vfs.LOCK_NONE, second.lock_level);
     try std.testing.expectEqual(ResultCode.ok, first.commit());
+    try std.testing.expectEqual(vfs.LOCK_SHARED, first.lock_level);
     try std.testing.expectEqual(ResultCode.ok, first.close());
+    try std.testing.expectEqual(vfs.LOCK_NONE, first.lock_level);
 }
 
 test "hot journal and lock contention return exact codes without mutation" {

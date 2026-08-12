@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "id": "pager-database-lock-transitions",
+  "title": "Pager database-file lock transitions and busy retry",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "pagerLockDb and pagerUnlockDb centralize database-file lock state, no-lock behavior, unknown-lock conservatism, and change-counter reset, while pager_wait_on_lock retries only BUSY transitions through the configured callback.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::pagerUnlockDb::line-1133",
+      "src/pager.c::function::pagerLockDb::line-1161",
+      "src/pager.c::function::pager_wait_on_lock::line-3992"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::pagerUnlockDb::behavior::assert::line-1136-column-3::ordinal-0",
+      "src/pager.c::function::pagerUnlockDb::behavior::assert::line-1137-column-3::ordinal-0",
+      "src/pager.c::function::pagerUnlockDb::behavior::assert::line-1138-column-3::ordinal-0",
+      "src/pager.c::function::pagerUnlockDb::behavior::if::line-1139-column-3::ordinal-0",
+      "src/pager.c::function::pagerUnlockDb::behavior::assert::line-1140-column-5::ordinal-0",
+      "src/pager.c::function::pagerUnlockDb::behavior::conditional::line-1141-column-10::ordinal-0",
+      "src/pager.c::function::pagerUnlockDb::behavior::if::line-1142-column-5::ordinal-0",
+      "src/pager.c::function::pagerUnlockDb::behavior::return::line-1148-column-3::ordinal-0",
+      "src/pager.c::function::pagerLockDb::behavior::assert::line-1164-column-3::ordinal-0",
+      "src/pager.c::function::pagerLockDb::behavior::if::line-1165-column-3::ordinal-0",
+      "src/pager.c::function::pagerLockDb::behavior::conditional::line-1166-column-10::ordinal-0",
+      "src/pager.c::function::pagerLockDb::behavior::if::line-1167-column-5::ordinal-0",
+      "src/pager.c::function::pagerLockDb::behavior::return::line-1172-column-3::ordinal-0",
+      "src/pager.c::function::pager_wait_on_lock::behavior::assert::line-4000-column-3::ordinal-0",
+      "src/pager.c::function::pager_wait_on_lock::behavior::do::line-4005-column-3::ordinal-0",
+      "src/pager.c::function::pager_wait_on_lock::behavior::return::line-4008-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "OS-specific lock implementation",
+      "Pager transaction state-machine transitions",
+      "Busy-handler installation and VFS file-control hinting"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "pager-busy-handler-installation-and-vfs-hint"
+    ],
+    "external_source_responsibilities": [
+      "VFS xLock and xUnlock implement database-file locking",
+      "Pager callers request source-valid lock transitions"
+    ],
+    "caller_closure": "All three lock helpers and generated behavior blocks are assigned; read, hot-journal, write, commit, rollback, close, contention, and fault paths consume the helpers."
+  },
+  "contracts": {
+    "inputs": [
+      "Mutable Pager and source-valid target lock level"
+    ],
+    "outputs": [
+      "Exact VFS or busy-callback result code"
+    ],
+    "ownership": "No ownership transfer or allocation.",
+    "state_and_results": "A held equal-or-stronger known lock makes lockDatabase a no-op. Successful stronger locking publishes the target. Failed locking retains the prior level. Unknown lock stays unknown except after successful EXCLUSIVE acquisition. unlockDatabase accepts NONE or SHARED, skips VFS calls for no-lock owners, preserves unknown lock, otherwise records the attempted target even on error, and resets change-count state to the memory-file baseline. waitOnLock retries only BUSY while the callback returns true.",
+    "locks_callbacks_io": "lockDatabase and unlockDatabase make at most one VFS call. waitOnLock can repeat lockDatabase and invoke the installed callback after BUSY.",
+    "failure_and_continuation": "Non-BUSY failures return immediately. BUSY returns when no callback exists or the callback declines. Lock state remains conservative after failure."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::pagerUnlockDb::line-1133",
+      "relation": "source-pager-database-unlock-transition",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.unlockDatabase"
+      ]
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pagerLockDb::line-1161",
+      "relation": "source-pager-database-lock-transition",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.lockDatabase"
+      ]
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pager_wait_on_lock::line-3992",
+      "relation": "source-pager-busy-lock-retry",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.waitOnLock"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Production Pager stores the numeric SQLite lock constants directly; UNKNOWN_LOCK is a private constant one greater than EXCLUSIVE.",
+    "No-lock mode is selected for VFS-opened memory files in the current production profile; URI nolock and exclusive locking-mode configuration remain outside this unit."
+  ],
+  "oracle": {
+    "protocol": "Acquire SHARED, count one VFS call, prove repeated SHARED is a no-op with no second call, inject a stronger-lock error and require retained SHARED state, acquire RESERVED, inject unlock error and require attempted SHARED plus change-count reset, then exercise read and write contention with exact busy-callback counts and final lock levels.",
+    "internal_observations": [
+      "Pager.lock_level",
+      "Pager.change_count_done",
+      "instrumented VFS xLock/xUnlock call counts",
+      "VFS lock/unlock fault counters",
+      "busy callback count",
+      "Pager transaction state"
+    ],
+    "normalization": "Compare numeric lock levels, exact ResultCode values, and callback counts."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "VFS owns OS lock atomicity; Pager publishes successful lock acquisitions and conservative attempted unlocks.",
+    "malformed_input": "Debug assertions constrain lock targets to source-valid sets.",
+    "continuation": "Failed stronger lock permits retry; failed unlock leaves conservative attempted state and resets change-counter work.",
+    "performance": "Constant time except deliberate busy retry.",
+    "commands": [
+      "zig build test",
+      "zig build pager-differential",
+      "zig build rollback-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig Pager read, hot-journal, write, commit, rollback, and close paths",
+    "native_call_path": "beginRead and commit synchronization use waitOnLock; beginWrite and hot-journal recovery use lockDatabase; failed read, endRead, recovery, commit, and rollback use unlockDatabase.",
+    "bounded_owner_retired": "Direct lock/unlock calls in these production paths are retired in favor of the helpers."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires unknown/no-lock production traces, pinned-C comparison, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Connect production URI nolock and explicit exclusive-locking modes.",
+    "Add pinned-C unknown-lock and no-lock traces.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:1122-1174 and 3981-4010 were reviewed",
+      "Upstream shared-lock, begin-write, commit, rollback, close, exclusive-locking, and WAL-mode callers were searched and reviewed",
+      "src/core/pager.zig read, recovery, write, commit, rollback, close, contention, and VFS-fault paths were reviewed"
+    ],
+    "callers": [
+      "pager shared-lock and hot-journal recovery",
+      "sqlite3PagerBegin and commit synchronization",
+      "rollback, close, locking-mode, WAL, and exclusive-lock paths",
+      "Production Pager.beginRead, recoverHotJournal, beginWrite, commit, rollback, and close"
+    ],
+    "callees": [
+      "sqlite3OsLock and sqlite3OsUnlock",
+      "Pager busy callback",
+      "VFS sqlite3_io_methods.xLock and xUnlock"
+    ],
+    "assertions_branches_cleanup": [
+      "Source-valid lock targets asserted",
+      "Known stronger-lock no-op, no-lock bypass, unknown-lock preservation, successful publication, failed-lock retention, and attempted-unlock publication covered",
+      "BUSY retry and callback stop branches covered",
+      "No cleanup"
+    ],
+    "upstream_tests": [
+      "Upstream pager locking and busy-handler suites exercise these helpers",
+      "Project lock-state, writer contention, hot-journal contention, and VFS-fault tests exercise native paths"
+    ]
+  },
+  "evidence_receipts": []
+}
