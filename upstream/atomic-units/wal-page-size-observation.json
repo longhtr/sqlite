@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "wal-page-size-observation",
+  "title": "WAL page-size observation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "walPagesize decodes and returns the database page size cached in the valid WAL-index header, including the source 65536 encoding.",
+    "source_files": [{"path": "src/wal.c", "sha256": "0c0467f7c4de773512b3327b0d3973fc31d50cf74603d6aec0e3b3e1c787e217"}],
+    "source_entity_ids": ["src/wal.c::function::walPagesize::line-2131"],
+    "behavioral_block_ids": ["src/wal.c::function::walPagesize::behavior::return::line-2132-column-3::ordinal-0"],
+    "excluded_responsibilities": ["WAL-index header validation", "On-disk encoded page-size parsing", "Pager page-size negotiation"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["WAL-index header decoding and validity precondition"], "caller_closure": "The complete observation after header decoding is assigned."},
+  "contracts": {
+    "inputs": ["Borrowed Wal with valid decoded header"],
+    "outputs": ["Database page size in bytes, including 65536"],
+    "ownership": "Pure borrowed observation.",
+    "state_and_results": "Returns decoded Header.page_size exactly.",
+    "locks_callbacks_io": "No callbacks or I/O; valid header synchronization external.",
+    "failure_and_continuation": "Invalid header violates source precondition."
+  },
+  "mappings": [{"source_entity_id": "src/wal.c::function::walPagesize::line-2131", "relation": "source-decoded-wal-header-page-size", "zig_declaration_ids": ["src/core/internal/wal_core.zig::function::pageSize"]}],
+  "representation_differences": ["The bounded Header stores the already-decoded u32 byte size, so the source bitfield decode occurs at WAL-header parsing rather than in this accessor."],
+  "oracle": {"protocol": "Seed decoded Header.page_size 65536 and compare exact result.", "internal_observations": ["Header.page_size", "returned u32"], "normalization": "Decoded bytes are exact, including source special encoding."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; header synchronization external.", "malformed_input": "Invalid/undecoded header violates precondition.", "continuation": "Pure observation.", "performance": "Constant time.",
+    "commands": ["zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/wal_core.zig decoded Header owner", "native_call_path": "Typed decoded accessor and 65536 trace exist; all page-size consumers remain to be unified.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires header decode/caller integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect all callers to decoded header owner.", "Add pinned-C 512/4096/65536 trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/wal.c:2122-2133 was reviewed completely", "src/core/internal/wal_core.zig disk header parse, Header.page_size, frame operations, and tests were reviewed"],
+    "callers": ["WAL restart/checkpoint/frame paths", "Unit trace invokes accessor directly"],
+    "callees": ["Direct decoded Header.page_size field"],
+    "assertions_branches_cleanup": ["The sole return block is assigned", "No branch, allocation, mutation, or cleanup"],
+    "upstream_tests": ["Upstream WAL page-size tests cover encoding", "Project trace covers the 65536 boundary"]
+  },
+  "evidence_receipts": []
+}

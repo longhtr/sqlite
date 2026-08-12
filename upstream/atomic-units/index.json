@@ -463,6 +463,11 @@
       "id": "wal-size-limit-setting",
       "path": "upstream/atomic-units/wal-size-limit-setting.json",
       "status": "source-translated"
+    },
+    {
+      "id": "wal-page-size-observation",
+      "path": "upstream/atomic-units/wal-page-size-observation.json",
+      "status": "source-translated"
     }
   ]
 }

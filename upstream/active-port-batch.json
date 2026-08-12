@@ -582,6 +582,15 @@
       "atomic_unit_id": "wal-size-limit-setting",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::walPagesize::line-2131",
+      "source_sha256": "bd60a3be2e0d9ca017d4e7398a6567a90a4a0b09b390e4db90906f9b334bbf60",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::pageSize",
+      "zig_declaration_sha256": "223b0218f27e775cbc9a7c9723ee57fdfe7f709dec237dd795ecff2bc3a4726b",
+      "atomic_unit_id": "wal-page-size-observation",
+      "class": "short",
+      "complete": true
     }
   ]
 }

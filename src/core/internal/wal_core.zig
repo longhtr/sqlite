@@ -105,6 +105,11 @@ pub const Wal = struct {
     }
 };
 
+/// Source `walPagesize()` after the WAL header page size has been decoded.
+pub fn pageSize(wal: *const Wal) u32 {
+    return wal.header.page_size;
+}
+
 /// Source `sqlite3WalLimit()`.
 pub fn setLimit(wal: ?*Wal, byte_limit: i64) void {
     if (wal) |value| value.maximum_size = byte_limit;
@@ -999,6 +1004,8 @@ test "WAL index append cleanup and savepoint undo" {
     var wal = Wal{ .allocator = std.testing.allocator, .write_lock = true };
     defer wal.deinit();
     wal.header.database_pages = 9;
+    wal.header.page_size = 65_536;
+    try std.testing.expectEqual(@as(u32, 65_536), pageSize(&wal));
     setLimit(null, 31);
     setLimit(&wal, 31);
     try std.testing.expectEqual(@as(i64, 31), wal.maximum_size);
