@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": "btree-page-count-and-last-page",
+  "title": "B-tree page count and last-page observation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "btreePagecount returns the current shared database page count and sqlite3BtreeLastPage exposes that count through a Btree handle under the caller-held B-tree mutex.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::btreePagecount::line-2368", "src/btree.c::function::sqlite3BtreeLastPage::line-2371"],
+    "behavioral_block_ids": [
+      "src/btree.c::function::btreePagecount::behavior::return::line-2369-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeLastPage::behavior::assert::line-2372-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeLastPage::behavior::return::line-2373-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Pager file-size reads", "Page allocation/free-list accounting", "B-tree mutex implementation"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Shared page-list/count maintenance and caller lock discipline"], "caller_closure": "Both direct observation bodies are assigned; pager synchronization remains externally owned."},
+  "contracts": {
+    "inputs": ["Live Shared for page count; live Btree under held mutex for last page"],
+    "outputs": ["Current database page count / highest page number"],
+    "ownership": "Inputs are borrowed; no allocation or mutation.",
+    "state_and_results": "The simplified owner uses the dense pages list length as the source nPage value.",
+    "locks_callbacks_io": "lastPage requires caller-held B-tree mutex; pageCount observes already-owned shared state. No callbacks or I/O.",
+    "failure_and_continuation": "Total for valid synchronized B-tree state."
+  },
+  "mappings": [
+    {"source_entity_id": "src/btree.c::function::btreePagecount::line-2368", "relation": "source-shared-database-page-count-read", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::pageCount"]},
+    {"source_entity_id": "src/btree.c::function::sqlite3BtreeLastPage::line-2371", "relation": "source-btree-last-page-through-shared-count", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::lastPage"]}
+  ],
+  "representation_differences": ["The Zig Shared model's dense pages list length represents source BtShared.nPage; the source wrapper's mutex assertion is a caller contract."],
+  "oracle": {"protocol": "Observe a newly initialized Shared with no loaded database pages through both direct and Btree-wrapper owners and compare zero.", "internal_observations": ["pages.items.len", "direct pageCount", "lastPage wrapper"], "normalization": "Page counts are exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; mutex and pager/count synchronization remain external.", "malformed_input": "Invalid shared ownership is outside the source contract.", "continuation": "Pure observation leaves state unchanged.", "performance": "Constant time.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig shared page owner", "native_call_path": "Typed observations and empty-state trace exist; live pager synchronization consumers remain pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pager/count integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Synchronize dense page owner with native pager page count.", "Connect caller-held mutex path.", "Add pinned-C nonempty trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:2350-2374 was reviewed completely for cache lookup/page count/last-page context", "src/core/internal/btree_core.zig Shared page allocation/free/vacuum owners were reviewed"],
+    "callers": ["B-tree allocation, vacuum, backup, and page-count consumers", "Unit trace invokes both owners directly"],
+    "callees": ["sqlite3BtreeLastPage calls btreePagecount; Zig lastPage calls pageCount"],
+    "assertions_branches_cleanup": ["All three active blocks are assigned", "Wrapper lock assertion remains caller-owned", "No allocation or cleanup"],
+    "upstream_tests": ["Upstream page-count, allocation, vacuum, backup, and corruption tests cover these observations", "Project unit trace covers empty shared state through both owners"]
+  },
+  "evidence_receipts": []
+}

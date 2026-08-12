@@ -1033,6 +1033,16 @@ pub fn connectionCount(tree: *const Btree) usize {
     return tree.shared.references;
 }
 
+/// Source `btreePagecount()`.
+pub fn pageCount(shared: *const Shared) usize {
+    return shared.pages.items.len;
+}
+
+/// Source `sqlite3BtreeLastPage()` under the caller-held B-tree mutex.
+pub fn lastPage(tree: *const Btree) usize {
+    return pageCount(tree.shared);
+}
+
 /// Source `sqlite3BtreeGetRequestedReserve()`: reserve bytes may grow to a
 /// pending file-control request but never report less than the live page
 /// format currently reserves.
@@ -1063,6 +1073,8 @@ test "source page size and requested reserve reflect live page format" {
     try std.testing.expectEqual(Transaction.none, transactionState(&tree));
     try std.testing.expect(!isReadOnly(&tree));
     try std.testing.expectEqual(@as(usize, 1), connectionCount(&tree));
+    try std.testing.expectEqual(@as(usize, 0), pageCount(&shared));
+    try std.testing.expectEqual(@as(usize, 0), lastPage(&tree));
     shared.requested_reserved_bytes = 8;
     try std.testing.expectEqual(@as(u8, 12), requestedReserve(&tree));
     shared.requested_reserved_bytes = 24;

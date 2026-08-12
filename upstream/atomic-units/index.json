@@ -358,6 +358,11 @@
       "id": "btree-cursor-moved-and-pin-state",
       "path": "upstream/atomic-units/btree-cursor-moved-and-pin-state.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-page-count-and-last-page",
+      "path": "upstream/atomic-units/btree-page-count-and-last-page.json",
+      "status": "source-translated"
     }
   ]
 }
