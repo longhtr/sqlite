@@ -798,6 +798,15 @@
       "atomic_unit_id": "btree-careful-shared-cache-mutex-ordering",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3_db_release_memory::line-897",
+      "source_sha256": "83914e29f5e567554ac627f533a60643f49ca18e63981826200f92ad73a0bec6",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::releaseDatabaseMemory",
+      "zig_declaration_sha256": "535eedd427c22f117831ff639b7f94de6ceb0ec850c3eaa0067945c980c47877",
+      "atomic_unit_id": "memdb-serialize-deserialize-store-replacement",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }
