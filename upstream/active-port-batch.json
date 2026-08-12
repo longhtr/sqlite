@@ -834,6 +834,15 @@
       "atomic_unit_id": "memdb-serialize-deserialize-store-replacement",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3Checkpoint::line-2658",
+      "source_sha256": "64db7545b2cd358ae8d173852091fc2d6f0b53ff5f16861d0e516d8c59d30a8b",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::checkpointConnection",
+      "zig_declaration_sha256": "731d705ce34c9a61d07a375cfec8303f891dda002cf721f02021da5991986d98",
+      "atomic_unit_id": "memdb-serialize-deserialize-store-replacement",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

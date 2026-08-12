@@ -862,12 +862,16 @@ pub export fn sqlite3_bind_text64(pointer: ?*sqlite3_stmt, index: c_int, input: 
     }
     var mem = std.mem.zeroes(vdbe_types.Mem);
     vdbe_mem.init(&mem, null, vdbe_types.mem_flag.null_);
-    const rc = if (encoding == 16) blk: {
+    var rc = if (encoding == 16) blk: {
         const result = vdbe_mem.setStr(&mem, input, @intCast(length), 1, ownership(destructor));
         mem.flags |= vdbe_types.mem_flag.terminated;
         break :blk result;
     } else vdbe_mem.setStr(&mem, input, @intCast(length), encoding, ownership(destructor));
-    if (rc != 0) return ResultCode.fromC(rc).toC();
+    if (rc == 0 and encoding != 1 and encoding != 16) rc = vdbe_mem.changeEncoding(&mem, 1);
+    if (rc != 0) {
+        vdbe_mem.release(&mem);
+        return ResultCode.fromC(rc).toC();
+    }
     return statement.bindMem(index, &mem).toC();
 }
 
@@ -879,8 +883,12 @@ pub export fn sqlite3_bind_text16(pointer: ?*sqlite3_stmt, index: c_int, input: 
     var mem = std.mem.zeroes(vdbe_types.Mem);
     vdbe_mem.init(&mem, null, vdbe_types.mem_flag.null_);
     const bytes: ?[*]const u8 = if (input) |value| @ptrCast(value) else null;
-    const rc = vdbe_mem.setStr(&mem, bytes, length_value, 2, ownership(destructor));
-    if (rc != 0) return ResultCode.fromC(rc).toC();
+    var rc = vdbe_mem.setStr(&mem, bytes, length_value & ~@as(c_int, 1), 2, ownership(destructor));
+    if (rc == 0) rc = vdbe_mem.changeEncoding(&mem, 1);
+    if (rc != 0) {
+        vdbe_mem.release(&mem);
+        return ResultCode.fromC(rc).toC();
+    }
     return statement.bindMem(index, &mem).toC();
 }
 

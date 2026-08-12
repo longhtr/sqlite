@@ -18,6 +18,7 @@
       "src/memdb.c::function::sqlite3_deserialize::line-841",
       "src/main.c::function::sqlite3_db_release_memory::line-897",
       "src/main.c::function::sqlite3_db_cacheflush::line-921",
+      "src/main.c::function::sqlite3Checkpoint::line-2658",
       "src/main.c::function::sqlite3_txn_state::line-1328",
       "src/main.c::function::sqlite3_get_autocommit::line-3972",
       "src/main.c::function::sqlite3_db_name::line-5007",
@@ -33,6 +34,14 @@
       "src/memdb.c::function::memdbFromDbSchema::behavior::return::line-744-column-3::ordinal-0",
       "src/main.c::function::sqlite3_db_release_memory::behavior::for::line-905-column-3::ordinal-0",
       "src/main.c::function::sqlite3_db_cacheflush::behavior::for::line-931-column-3::ordinal-0",
+      "src/main.c::function::sqlite3Checkpoint::behavior::assert::line-2663-column-3::ordinal-0",
+      "src/main.c::function::sqlite3Checkpoint::behavior::assert::line-2664-column-3::ordinal-0",
+      "src/main.c::function::sqlite3Checkpoint::behavior::assert::line-2665-column-3::ordinal-0",
+      "src/main.c::function::sqlite3Checkpoint::behavior::for::line-2669-column-3::ordinal-0",
+      "src/main.c::function::sqlite3Checkpoint::behavior::if::line-2670-column-5::ordinal-0",
+      "src/main.c::function::sqlite3Checkpoint::behavior::if::line-2674-column-7::ordinal-0",
+      "src/main.c::function::sqlite3Checkpoint::behavior::return::line-2681-column-3::ordinal-0",
+      "src/main.c::function::sqlite3Checkpoint::behavior::conditional::line-2681-column-10::ordinal-0",
       "src/main.c::function::sqlite3_db_cacheflush::behavior::if::line-933-column-5::ordinal-0",
       "src/main.c::function::sqlite3_db_cacheflush::behavior::if::line-936-column-7::ordinal-0",
       "src/main.c::function::sqlite3_db_cacheflush::behavior::return::line-944-column-3::ordinal-0",
@@ -151,6 +160,13 @@
       ]
     },
     {
+      "source_entity_id": "src/main.c::function::sqlite3Checkpoint::line-2658",
+      "relation": "source-selected-or-all-schema-checkpoint-dispatch",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::checkpointConnection"
+      ]
+    },
+    {
       "source_entity_id": "src/main.c::function::sqlite3_db_cacheflush::line-921",
       "relation": "source-connection-wide-write-transaction-cache-flush",
       "zig_declaration_ids": [
@@ -203,7 +219,7 @@
     "Attached private stores are stable heap owners selected through the connection attachment catalog rather than source aDb/Btree file-control traversal.",
     "Incremental blob handles retain the selected native B-tree and attached owner until close; DETACH rejects that live owner before catalog removal.",
     "Backup handles copy source/destination schema names, preserve one owned source snapshot plus selected-Pager-size remaining/page-count state across bounded steps, reject source-schema deserialize replacement while retained, restart after intervening DML or DDL writes, deserialize the selected attached image on completion, and retain the attached source owner until finish.",
-    "Transaction-state and checkpoint APIs resolve attached owners; sqlite3_get_autocommit follows BEGIN/COMMIT/ROLLBACK connection state, sqlite3_txn_state reports a named main/attached B-tree state or the maximum over every open owner, rejects missing names, and treats post-autocommit Pager reader state as SQL transaction NONE; non-WAL checkpoint outputs remain -1.",
+    "Transaction-state and checkpoint APIs resolve attached owners; sqlite3_get_autocommit follows BEGIN/COMMIT/ROLLBACK connection state, sqlite3_txn_state reports a named main/attached B-tree state or the maximum over every open owner, and sqlite3Checkpoint dispatches one validated mode to a selected schema or all open owners with source-ordered stop-on-error behavior; missing names are rejected, post-autocommit Pager reader state is SQL transaction NONE, and non-WAL checkpoint outputs remain -1.",
     "Metadata and file-control APIs resolve the selected attached B-tree, while connection-wide cache status/release/flush iterates all attached pagers; sqlite3_db_release_memory shrinks main and every open attached pager cache, sqlite3_db_cacheflush flushes eligible main/attached dirty caches while deferring BUSY until traversal completes, and CACHE_USED remains a native page-object approximation.",
     "Configured primary schema names and the permanent main alias converge on the same native B-tree in SQL and public lookup paths; sqlite3_db_name preserves main, TEMP, and attached schema index order with out-of-range null results, sqlite3_db_filename returns the user-visible main or attached database filename and never the internal memdb storage alias, and sqlite3_db_readonly reports the resolved main or attached B-tree state while distinguishing missing schemas."
   ],
@@ -290,8 +306,8 @@
       "command": "zig build memdb-api-differential",
       "result_owner": "upstream/evidence/memdb-api-differential.txt",
       "result_sha256": "c897d625f201b5cd61b6904a9b1df33573e97b6d11fb2c6024597340e4dbef76",
-      "source_scope_sha256": "a51733bdcbb13bfc9fea9e2a51b03d647b038026eeb78ec49fedbb0085dde10b",
-      "zig_scope_sha256": "86e46fe6e43ec056b3aa3089004ea61cce81d891cec89126ee8df3bc17312353"
+      "source_scope_sha256": "92cde8ca05f20378137a668c15188b96f2c47126b05895960496517daa4cc103",
+      "zig_scope_sha256": "0335fb7306f8dcced90f6a9bcc92ac651f6ddace2c1fdd69d814ad007d111f04"
     }
   ]
 }

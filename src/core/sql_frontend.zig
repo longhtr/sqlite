@@ -3404,9 +3404,9 @@ pub export fn sqlite3_wal_autocheckpoint(pointer: ?*sqlite3, pages: c_int) callc
     return configureWalAutocheckpoint(connection, pages);
 }
 
-/// Source `sqlite3Checkpoint()`: dispatch one validated checkpoint mode to
-/// the selected pager and preserve separate log and backfill counts.
-fn checkpoint(database: *btree.Database, mode: wal.CheckpointMode, log_frames: ?*c_int, checkpointed_frames: ?*c_int) c_int {
+/// Source `sqlite3BtreeCheckpoint()`: checkpoint one selected database pager
+/// and preserve separate log and backfill counts.
+fn checkpointBtree(database: *btree.Database, mode: wal.CheckpointMode, log_frames: ?*c_int, checkpointed_frames: ?*c_int) c_int {
     if (!database.pager.isWalMode()) return ResultCode.ok.toC();
     const result = database.pager.checkpointWalMode(mode);
     if (log_frames) |value| {
@@ -3418,8 +3418,9 @@ fn checkpoint(database: *btree.Database, mode: wal.CheckpointMode, log_frames: ?
     return result.result.toC();
 }
 
-/// Source `sqlite3_wal_checkpoint_v2()`: validate the checkpoint mode and
-/// schema, initialize outputs, and clear an idle connection's interrupt.
+/// Source `sqlite3_wal_checkpoint_v2()` and `sqlite3Checkpoint()`: validate
+/// the request, traverse selected schemas, defer BUSY, and clear an idle
+/// connection's interrupt.
 fn checkpointConnection(connection: *Connection, schema: ?[*:0]const u8, mode: c_int, log_frames: ?*c_int, checkpointed_frames: ?*c_int) c_int {
     if (log_frames) |value| {
         value.* = -1;
@@ -3434,24 +3435,29 @@ fn checkpointConnection(connection: *Connection, schema: ?[*:0]const u8, mode: c
     if (schema_name.len != 0) {
         const located = locateDatabase(connection, if (schemaNameMatches(connection, schema)) null else schema_name);
         if (located.result != .ok) return (if (located.result == .not_found) ResultCode.error_ else located.result).toC();
-        result = checkpoint(located.database.?, checkpoint_mode, log_frames, checkpointed_frames);
+        result = checkpointBtree(located.database.?, checkpoint_mode, log_frames, checkpointed_frames);
     } else {
         const main_database = connection.database orelse return ResultCode.misuse.toC();
-        result = checkpoint(main_database, checkpoint_mode, log_frames, checkpointed_frames);
+        const main_result = checkpointBtree(main_database, checkpoint_mode, log_frames, checkpointed_frames);
+        var saw_busy = main_result == ResultCode.busy.toC();
+        if (!saw_busy) result = main_result;
         if (result == ResultCode.ok.toC()) {
             if (connection.attachments) |*attachments| {
                 for (attachments.databases.items[2..]) |entry| {
                     const native = entry.native_context orelse continue;
                     const attached: *AttachedDatabase = @ptrCast(@alignCast(native));
                     const database = if (attached.database) |*database| database else continue;
-                    const attached_result = checkpoint(database, checkpoint_mode, null, null);
-                    if (attached_result != ResultCode.ok.toC()) {
+                    const attached_result = checkpointBtree(database, checkpoint_mode, null, null);
+                    if (attached_result == ResultCode.busy.toC()) {
+                        saw_busy = true;
+                    } else if (attached_result != ResultCode.ok.toC()) {
                         result = attached_result;
                         break;
                     }
                 }
             }
         }
+        if (result == ResultCode.ok.toC() and saw_busy) result = ResultCode.busy.toC();
     }
     if (connection.active_statements == 0) {
         connection.interrupted = false;

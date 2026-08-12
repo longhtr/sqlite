@@ -632,6 +632,9 @@ test "source careful Btree lock preserves ascending reacquisition" {
     third.inTrans = 3;
     third.sharable = 1;
     third.wantToLock = 1;
+    first.pBt = @ptrFromInt(0x1000);
+    second.pBt = @ptrFromInt(0x2000);
+    third.pBt = @ptrFromInt(0x3000);
     first.pNext = &second;
     second.pNext = &third;
     btreeLockCarefully(&first, &operations);
