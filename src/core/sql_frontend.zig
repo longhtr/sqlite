@@ -265,6 +265,7 @@ pub const Connection = struct {
     filename: ?[:0]u8 = null,
     main_schema_name: ?[:0]u8 = null,
     active_statements: usize = 0,
+    executing_statements: usize = 0,
     statement_head: ?*statement.Statement = null,
     active_blobs: usize = 0,
     active_backups: usize = 0,
@@ -2455,56 +2456,81 @@ fn getTableCallback(context: ?*anyopaque, count: c_int, row: [*]?[*:0]const u8, 
     return 0;
 }
 
-pub export fn sqlite3_get_table(database: ?*sqlite3, sql: ?[*:0]const u8, result_output: ?*?[*]?[*:0]u8, row_count: ?*c_int, column_count: ?*c_int, error_output: ?*?[*:0]u8) callconv(.c) c_int {
-    if (result_output == null or row_count == null or column_count == null) return ResultCode.misuse.toC();
-    result_output.?.* = null;
-    row_count.?.* = 0;
-    column_count.?.* = 0;
+/// Source `sqlite3_get_table()`: execute the complete SQL input, collect one
+/// compatible row-major result with a hidden allocation header, and transfer
+/// all result strings to caller ownership.
+fn collectTable(database: ?*sqlite3, sql: ?[*:0]const u8, result_output: *?[*]?[*:0]u8, row_count: ?*c_int, column_count: ?*c_int, error_output: ?*?[*:0]u8) c_int {
+    result_output.* = null;
+    if (column_count) |count| count.* = 0;
+    if (row_count) |count| count.* = 0;
     if (error_output) |output| output.* = null;
+    const connection = asConnection(database) orelse return ResultCode.misuse.toC();
     var collector = TableCollector{ .allocator = std.heap.c_allocator };
     defer collector.deinit();
     const rc = sqlite3_exec(database, sql, getTableCallback, &collector, error_output);
     if (rc != ResultCode.ok.toC()) {
-        if (collector.failed) return ResultCode.no_memory.toC();
+        if (collector.failed) {
+            connection.last_result = .no_memory;
+            return ResultCode.no_memory.toC();
+        }
         if (collector.incompatible) {
             if (error_output) |output| {
                 if (output.*) |old| public_api.sqlite3_free(old);
                 setExtensionError(output, "sqlite3_get_table() called with two or more incompatible queries");
             }
+            connection.last_result = .error_;
             return ResultCode.error_.toC();
         }
         return rc;
     }
-    if (collector.columns == 0) return ResultCode.ok.toC();
     const pointer_count = collector.values.items.len;
-    const raw = public_api.sqlite3_malloc64(2 * @sizeOf(usize) + pointer_count * @sizeOf(?[*:0]u8)) orelse return ResultCode.no_memory.toC();
+    const raw = public_api.sqlite3_malloc64(2 * @sizeOf(usize) + pointer_count * @sizeOf(?[*:0]u8)) orelse {
+        connection.last_result = .no_memory;
+        return ResultCode.no_memory.toC();
+    };
     const words: [*]usize = @ptrCast(@alignCast(raw));
     words[0] = 0x5a5441424c45;
     words[1] = pointer_count;
     const pointers: [*]?[*:0]u8 = @ptrCast(words + 2);
     @memset(pointers[0..pointer_count], null);
-    for (collector.values.items, 0..) |value, index| if (value) |bytes| {
+    for (collector.values.items, 0..) |value, index| {
+        const bytes = value orelse continue;
         const copy = public_api.sqlite3_malloc64(bytes.len + 1) orelse {
-            sqlite3_free_table(pointers);
+            freeCollectedTable(pointers);
+            connection.last_result = .no_memory;
             return ResultCode.no_memory.toC();
         };
         const target: [*]u8 = @ptrCast(copy);
         @memcpy(target[0..bytes.len], bytes);
         target[bytes.len] = 0;
         pointers[index] = @ptrCast(target);
-    };
-    result_output.?.* = pointers;
-    column_count.?.* = collector.columns;
-    row_count.?.* = @intCast(pointer_count / @as(usize, @intCast(collector.columns)) - 1);
+    }
+    result_output.* = pointers;
+    if (column_count) |count| count.* = collector.columns;
+    if (row_count) |count| count.* = if (collector.columns == 0) 0 else @intCast(pointer_count / @as(usize, @intCast(collector.columns)) - 1);
+    connection.last_result = .ok;
     return ResultCode.ok.toC();
 }
-pub export fn sqlite3_free_table(result: ?[*]?[*:0]u8) callconv(.c) void {
+
+pub export fn sqlite3_get_table(database: ?*sqlite3, sql: ?[*:0]const u8, result_output: ?*?[*]?[*:0]u8, row_count: ?*c_int, column_count: ?*c_int, error_output: ?*?[*:0]u8) callconv(.c) c_int {
+    return collectTable(database, sql, result_output orelse return ResultCode.misuse.toC(), row_count, column_count, error_output);
+}
+
+/// Source `sqlite3_free_table()`: recover the hidden result header, release
+/// each non-null cell, then release the pointer array itself.
+fn freeCollectedTable(result: ?[*]?[*:0]u8) void {
     const pointers = result orelse return;
     const words: [*]usize = @ptrCast(@alignCast(pointers));
     const header = words - 2;
     if (header[0] != 0x5a5441424c45) return;
-    for (pointers[0..header[1]]) |value| if (value) |bytes| public_api.sqlite3_free(bytes);
+    for (pointers[0..header[1]]) |value| {
+        if (value) |bytes| public_api.sqlite3_free(bytes);
+    }
     public_api.sqlite3_free(header);
+}
+
+pub export fn sqlite3_free_table(result: ?[*]?[*:0]u8) callconv(.c) void {
+    freeCollectedTable(result);
 }
 
 pub export fn sqlite3_complete16(sql_pointer: ?*const anyopaque) callconv(.c) c_int {
@@ -2682,15 +2708,24 @@ pub export fn sqlite3_db_status64(pointer: ?*sqlite3, operation: c_int, current:
     defer connection.connection_mutex.leave();
     return databaseStatus64(connection, operation, now, maximum, reset != 0);
 }
-pub export fn sqlite3_db_status(pointer: ?*sqlite3, operation: c_int, current: ?*c_int, highwater: ?*c_int, reset: c_int) callconv(.c) c_int {
+/// Source `sqlite3_db_status()`: obtain the 64-bit connection status and
+/// publish the low non-sign 31 bits only after a successful query.
+fn databaseStatus(connection: *Connection, operation: c_int, current: *c_int, highwater: *c_int, reset: bool) c_int {
     var now: i64 = 0;
     var high: i64 = 0;
-    const rc = sqlite3_db_status64(pointer, operation, &now, &high, reset);
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    const rc = databaseStatus64(connection, operation, &now, &high, reset);
     if (rc == ResultCode.ok.toC()) {
-        if (current) |value| value.* = @intCast(now);
-        if (highwater) |value| value.* = @intCast(high);
+        current.* = @intCast(@as(u64, @bitCast(now)) & 0x7fff_ffff);
+        highwater.* = @intCast(@as(u64, @bitCast(high)) & 0x7fff_ffff);
     }
     return rc;
+}
+
+pub export fn sqlite3_db_status(pointer: ?*sqlite3, operation: c_int, current: ?*c_int, highwater: ?*c_int, reset: c_int) callconv(.c) c_int {
+    const connection = asConnection(pointer) orelse return ResultCode.misuse.toC();
+    return databaseStatus(connection, operation, current orelse return ResultCode.misuse.toC(), highwater orelse return ResultCode.misuse.toC(), reset != 0);
 }
 /// Source `sqlite3_file_control()`: expose core pager/VFS pointers and state,
 /// handle reserve/cache controls locally, and dispatch all other operations to
@@ -11859,6 +11894,7 @@ fn prepareUtf8(
         connection.active_statements += 1;
         prepared.onFinalize(connection, Connection.statementFinalized, &connection.interrupted);
         prepared.setResultMask(&connection.error_mask);
+        prepared.setExecutionDepth(&connection.executing_statements);
         output.* = statement.toOpaque(prepared);
     }
     return outcome.result.toC();
@@ -13186,6 +13222,39 @@ test "deserialize adopts caller storage and preserves resize ownership and reado
     try std.testing.expectEqual(@as(c_int, 0), sqlite3_db_readonly(readonly, "main"));
     try std.testing.expectEqual(ResultCode.read_only.toC(), sqlite3_exec(readonly, "INSERT INTO t VALUES(99)", null, null, null));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_close(readonly));
+}
+
+test "database status narrows successful values and preserves outputs on error" {
+    var connection = Connection.init(std.testing.allocator, null);
+    var current: c_int = -1;
+    var highwater: c_int = -1;
+    try std.testing.expectEqual(ResultCode.ok.toC(), databaseStatus(&connection, 0, &current, &highwater, false));
+    try std.testing.expectEqual(@as(c_int, 0), current);
+    try std.testing.expectEqual(@as(c_int, 0), highwater);
+    current = 17;
+    highwater = 19;
+    try std.testing.expectEqual(ResultCode.error_.toC(), databaseStatus(&connection, 99, &current, &highwater, false));
+    try std.testing.expectEqual(@as(c_int, 17), current);
+    try std.testing.expectEqual(@as(c_int, 19), highwater);
+}
+
+test "get table permits nullable counts and returns a freeable empty result" {
+    var database: ?*sqlite3 = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &database));
+    defer _ = sqlite3_close(database);
+
+    var result: ?[*]?[*:0]u8 = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_get_table(database, "SELECT 1", &result, null, null, null));
+    try std.testing.expect(result != null);
+    try std.testing.expectEqualStrings("1", std.mem.span(result.?[0].?));
+    try std.testing.expectEqualStrings("1", std.mem.span(result.?[1].?));
+    sqlite3_free_table(result);
+
+    result = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_get_table(database, "CREATE TABLE t(x)", &result, null, null, null));
+    try std.testing.expect(result != null);
+    sqlite3_free_table(result);
+    try std.testing.expectEqual(ResultCode.misuse.toC(), sqlite3_get_table(database, "SELECT 1", null, null, null, null));
 }
 
 test "public open close error and deferred statement lifecycle" {

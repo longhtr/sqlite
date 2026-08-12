@@ -375,6 +375,87 @@
       "atomic_unit_id": "where-compatible-or-range-combination",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/status.c::function::sqlite3_db_status::line-426",
+      "source_sha256": "1fcfd1166c4f04aab72467b89e50ed686ffbe67f7f7fc8c2376c730cd1c67fa0",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::databaseStatus",
+      "zig_declaration_sha256": "0b2e376997a9ab272f0b1778aac52db6619602ad1015b598a574be2d3b4cb03c",
+      "atomic_unit_id": "connection-status-32-bit-wrapper",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/table.c::function::sqlite3_get_table::line-116",
+      "source_sha256": "b86ba1e380cc6da5a2afe57da76c67e34439edb88b8c1d9a4676ceeb79c3124a",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::collectTable",
+      "zig_declaration_sha256": "5fdc90e30641904fa2d767f360f3d7569776139993abf1ae74bc46278e6b1bb9",
+      "atomic_unit_id": "get-table-result-collection-and-release",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/table.c::function::sqlite3_free_table::line-185",
+      "source_sha256": "26d7f26ab3a354e8b1ab461797888e634f0bc8cb3d7482b82d59fbfd1afbf0b4",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::freeCollectedTable",
+      "zig_declaration_sha256": "2e04ed904b2b1934c0091f80762faa8d2b86ad3a76fd46b4961d1424d05156ec",
+      "atomic_unit_id": "get-table-result-collection-and-release",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbetrace.c::function::sqlite3VdbeExpandSql::line-72",
+      "source_sha256": "87bb1f08e87688f9de6c17b929204960c8d4aeb7cd7992d3e3cfe0d4873f2a3b",
+      "zig_declaration_id": "src/core/statement.zig::function::expandSql",
+      "zig_declaration_sha256": "d240b53cf847bb416632c6c2d978e62b6b1feea99b60b854ea7403f422ced0e7",
+      "atomic_unit_id": "vdbe-expanded-sql-nested-execution",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/util.c::function::sqlite3ColumnType::line-104",
+      "source_sha256": "d10561311f5cfc6f0f9db86524c2ef09507755080ad21308aef71136a11d8e41",
+      "zig_declaration_id": "src/core/internal/schema_analysis.zig::function::schemaColumnType",
+      "zig_declaration_sha256": "47d9e848c67fe49288d946acc242d8493dba86db12fcfccf41247d22d60e4416",
+      "atomic_unit_id": "schema-column-type-representation",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/util.c::function::sqlite3ErrorFinish::line-120",
+      "source_sha256": "21e5152c73b2ae3e092a873bb22a012151eb4db20febfcf98d8edb5fb64040ef",
+      "zig_declaration_id": "src/core/internal/error_state.zig::function::finishDatabaseError",
+      "zig_declaration_sha256": "398b2d4633efe4e413ee9a49339973d73898f42264f592123aa6234cb9b2710b",
+      "atomic_unit_id": "connection-error-state-and-fault-simulation",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/util.c::function::sqlite3Error::line-130",
+      "source_sha256": "f228bd55fb3ddd30f705f06193005d5793082fd00fe022d8917fdbb0c0450485",
+      "zig_declaration_id": "src/core/internal/error_state.zig::function::setDatabaseError",
+      "zig_declaration_sha256": "4c47f251fc047e7f4712b4be051f87892c2615e44b359077998bef19c29fab1e",
+      "atomic_unit_id": "connection-error-state-and-fault-simulation",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/util.c::function::sqlite3ErrorClear::line-144",
+      "source_sha256": "5ad34d91a9859efba6c05a66bcb2d723f64face05ec74fca51617da476c09a97",
+      "zig_declaration_id": "src/core/internal/error_state.zig::function::clearDatabaseError",
+      "zig_declaration_sha256": "34a5199a99f8fd5ee1e169678270c3d044fd086f4c88ed8132af463c9cc6f1e7",
+      "atomic_unit_id": "connection-error-state-and-fault-simulation",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/util.c::function::sqlite3FaultSim::line-44",
+      "source_sha256": "bdd6014400ddc1fe469d0242b36b56d4f642e6b8d3f75110aef23870be9e947e",
+      "zig_declaration_id": "src/core/public_api.zig::function::faultSimulation",
+      "zig_declaration_sha256": "21e46bda1696f4cb49e8e4d62a7a680740b45a312cc097f941766723cc8d7498",
+      "atomic_unit_id": "connection-error-state-and-fault-simulation",
+      "class": "short",
+      "complete": true
     }
   ]
 }

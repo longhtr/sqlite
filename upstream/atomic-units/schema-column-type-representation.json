@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "id": "schema-column-type-representation",
+  "title": "Schema column declared-type representation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "This dependency-closed unit replaces a bounded public/runtime substitute with the complete active source behavior for schema column declared-type representation.",
+    "source_files": [
+      {
+        "path": "src/util.c",
+        "sha256": "f3ad5a891625459352c1b57c053d3b89dcc973206644126a857c0ff82b7ce37f"
+      }
+    ],
+    "source_entity_ids": [
+      "src/util.c::function::sqlite3ColumnType::line-104"
+    ],
+    "behavioral_block_ids": [
+      "src/util.c::function::sqlite3ColumnType::behavior::if::line-105-column-3::ordinal-0",
+      "src/util.c::function::sqlite3ColumnType::behavior::return::line-106-column-5::ordinal-0",
+      "src/util.c::function::sqlite3ColumnType::behavior::if::line-107-column-9::ordinal-0",
+      "src/util.c::function::sqlite3ColumnType::behavior::assert::line-108-column-5::ordinal-0",
+      "src/util.c::function::sqlite3ColumnType::behavior::return::line-109-column-5::ordinal-0",
+      "src/util.c::function::sqlite3ColumnType::behavior::return::line-111-column-5::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Broader caller subsystem completion",
+      "Pinned-C internal trace, assurance, and independent review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Existing exact connection, statement, schema, VFS, allocator, and sqlite3_exec owners"
+    ],
+    "caller_closure": "Every assigned source body is complete and connected to its exported or internal native caller; adjacent helpers outside the source identities remain separately owned."
+  },
+  "contracts": {
+    "inputs": [
+      "Validated typed owner plus source API parameters"
+    ],
+    "outputs": [
+      "Exact source state/result and transferred or borrowed output where applicable"
+    ],
+    "ownership": "Connection and statement inputs are borrowed; process allocations transfer to public callers; schema pointers remain schema-owned.",
+    "state_and_results": "Success publishes outputs atomically; failures preserve required outputs, result masks, error state, and continuation.",
+    "locks_callbacks_io": "Connection synchronization and callbacks follow the existing typed owner; VFS error lookup and SQL execution are delegated through native interfaces.",
+    "failure_and_continuation": "OOM and callback failures release partial ownership and leave valid close/retry state."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/util.c::function::sqlite3ColumnType::line-104",
+      "relation": "source-custom-standard-or-fallback-type",
+      "zig_declaration_ids": [
+        "src/core/internal/schema_analysis.zig::function::schemaColumnType"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Typed Zig slices, optionals, and owner fields replace raw C pointer arithmetic while retaining source lifetime and result behavior."
+  ],
+  "oracle": {
+    "protocol": "Exercise success, null/empty input, invalid operation or owner, allocation/callback failure, output ownership, and continuation for every assigned function.",
+    "internal_observations": [
+      "result and output fields",
+      "allocation ownership and release",
+      "connection/statement state before and after"
+    ],
+    "normalization": "Compare primary result codes, bytes, counters, masks, and nullability."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Partial process allocations are released and NOMEM is published without fabricated outputs.",
+    "io_crash_concurrency": "No direct persistent mutation; connection and VFS synchronization are delegated to native owners.",
+    "malformed_input": "Null/invalid owners and operations preserve documented misuse/error behavior.",
+    "continuation": "Success and failure both leave owners freeable and reusable as source permits.",
+    "performance": "Linear only in returned table or SQL/type bytes; otherwise constant time.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/schema_analysis.zig",
+    "native_call_path": "Exported/public runtime entry points and internal consumers invoke the mapped helpers directly.",
+    "bounded_owner_retired": "Prior incomplete inline/stub behavior for the assigned responsibilities is retired."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Pinned-C trace, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Add pinned-C internal trace for this unit.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned source bodies and immediately adjacent ownership helpers",
+      "Native mapped bodies, exported callers, tests, and allocation/error owners"
+    ],
+    "callers": [
+      "Public C-shaped API exports and internal VDBE/schema/runtime consumers"
+    ],
+    "callees": [
+      "Native allocator, sqlite3_exec, status, tokenizer, VFS, Mem, and schema owners"
+    ],
+    "assertions_branches_cleanup": [
+      "All source branches, nullability, ownership transfer, cleanup, and result publication assigned"
+    ],
+    "upstream_tests": [
+      "Upstream API/runtime tests for assigned functions",
+      "Native focused and aggregate tests"
+    ]
+  },
+  "evidence_receipts": []
+}

@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "id": "vdbe-expanded-sql-nested-execution",
+  "title": "VDBE expanded SQL nested execution",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "This dependency-closed unit replaces a bounded public/runtime substitute with the complete active source behavior for vdbe expanded sql nested execution.",
+    "source_files": [
+      {
+        "path": "src/vdbetrace.c",
+        "sha256": "96c0faddbbc08021fb3ed4d01620bff649045210791513d406f4c8a4801423a2"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::line-72"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-90-column-3::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::while::line-91-column-5::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::while::line-93-column-7::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::assert::line-95-column-7::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-98-column-9::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::while::line-101-column-5::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::assert::line-103-column-7::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::assert::line-106-column-7::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-107-column-7::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::break::line-107-column-23::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-108-column-7::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-109-column-9::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::assert::line-110-column-11::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::assert::line-116-column-9::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::assert::line-123-column-9::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::conditional::line-126-column-19::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::assert::line-127-column-7::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-129-column-7::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-131-column-13::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-133-column-13::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-135-column-13::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-139-column-9::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-143-column-11::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-164-column-9::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-166-column-13::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::assert::line-170-column-9::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::for::line-176-column-9::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::if::line-188-column-3::ordinal-0",
+      "src/vdbetrace.c::function::sqlite3VdbeExpandSql::behavior::return::line-189-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Broader caller subsystem completion",
+      "Pinned-C internal trace, assurance, and independent review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Existing exact connection, statement, schema, VFS, allocator, and sqlite3_exec owners"
+    ],
+    "caller_closure": "Every assigned source body is complete and connected to its exported or internal native caller; adjacent helpers outside the source identities remain separately owned."
+  },
+  "contracts": {
+    "inputs": [
+      "Validated typed owner plus source API parameters"
+    ],
+    "outputs": [
+      "Exact source state/result and transferred or borrowed output where applicable"
+    ],
+    "ownership": "Connection and statement inputs are borrowed; process allocations transfer to public callers; schema pointers remain schema-owned.",
+    "state_and_results": "Success publishes outputs atomically; failures preserve required outputs, result masks, error state, and continuation.",
+    "locks_callbacks_io": "Connection synchronization and callbacks follow the existing typed owner; VFS error lookup and SQL execution are delegated through native interfaces.",
+    "failure_and_continuation": "OOM and callback failures release partial ownership and leave valid close/retry state."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbetrace.c::function::sqlite3VdbeExpandSql::line-72",
+      "relation": "source-nested-comment-or-ordinary-expansion",
+      "zig_declaration_ids": [
+        "src/core/statement.zig::function::expandSql"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Typed Zig slices, optionals, and owner fields replace raw C pointer arithmetic while retaining source lifetime and result behavior."
+  ],
+  "oracle": {
+    "protocol": "Exercise success, null/empty input, invalid operation or owner, allocation/callback failure, output ownership, and continuation for every assigned function.",
+    "internal_observations": [
+      "result and output fields",
+      "allocation ownership and release",
+      "connection/statement state before and after"
+    ],
+    "normalization": "Compare primary result codes, bytes, counters, masks, and nullability."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Partial process allocations are released and NOMEM is published without fabricated outputs.",
+    "io_crash_concurrency": "No direct persistent mutation; connection and VFS synchronization are delegated to native owners.",
+    "malformed_input": "Null/invalid owners and operations preserve documented misuse/error behavior.",
+    "continuation": "Success and failure both leave owners freeable and reusable as source permits.",
+    "performance": "Linear only in returned table or SQL/type bytes; otherwise constant time.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/statement.zig",
+    "native_call_path": "Exported/public runtime entry points and internal consumers invoke the mapped helpers directly.",
+    "bounded_owner_retired": "Prior incomplete inline/stub behavior for the assigned responsibilities is retired."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Pinned-C trace, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Add pinned-C internal trace for this unit.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned source bodies and immediately adjacent ownership helpers",
+      "Native mapped bodies, exported callers, tests, and allocation/error owners"
+    ],
+    "callers": [
+      "Public C-shaped API exports and internal VDBE/schema/runtime consumers"
+    ],
+    "callees": [
+      "Native allocator, sqlite3_exec, status, tokenizer, VFS, Mem, and schema owners"
+    ],
+    "assertions_branches_cleanup": [
+      "All source branches, nullability, ownership transfer, cleanup, and result publication assigned"
+    ],
+    "upstream_tests": [
+      "Upstream API/runtime tests for assigned functions",
+      "Native focused and aggregate tests"
+    ]
+  },
+  "evidence_receipts": []
+}

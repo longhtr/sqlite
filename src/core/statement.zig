@@ -86,6 +86,7 @@ pub const Statement = struct {
     profile_emitted: bool = false,
     profile_start_ms: i64 = 0,
     variable_mask: u64 = 0,
+    execution_depth: ?*usize = null,
 
     pub fn create(
         allocator: std.mem.Allocator,
@@ -156,6 +157,10 @@ pub const Statement = struct {
         self.result_mask = result_mask;
     }
 
+    pub fn setExecutionDepth(self: *Statement, depth: *usize) void {
+        self.execution_depth = depth;
+    }
+
     fn resultMask(self: *const Statement) c_int {
         return if (self.result_mask) |mask| mask.* else 0xff;
     }
@@ -191,6 +196,13 @@ pub const Statement = struct {
         if (self.in_api) return .misuse;
         self.in_api = true;
         defer self.in_api = false;
+        if (self.execution_depth) |depth| {
+            depth.* += 1;
+        }
+        defer if (self.execution_depth) |depth| {
+            std.debug.assert(depth.* > 0);
+            depth.* -= 1;
+        };
         self.clearCaches();
         if (self.interrupt_flag) |flag| if (flag.*) {
             self.last_result = .interrupt;
@@ -1138,8 +1150,33 @@ fn expandedSql(statement: *Statement) ?[*:0]u8 {
     return @ptrCast(output);
 }
 
+/// Source `sqlite3VdbeExpandSql()`: nested VDBE execution renders raw SQL as
+/// commented lines. Ordinary execution delegates host-parameter scanning and
+/// literal rendering to the public expanded-SQL owner.
+fn expandSql(statement: *Statement, raw_sql: [:0]const u8) ?[*:0]u8 {
+    if (statement.execution_depth == null or statement.execution_depth.?.* <= 1) return expandedSql(statement);
+    var output = std.ArrayList(u8).empty;
+    defer output.deinit(statement.allocator);
+    var start: usize = 0;
+    while (start < raw_sql.len) {
+        var end = start;
+        while (end < raw_sql.len and raw_sql[end] != '\n') : (end += 1) {}
+        if (end < raw_sql.len) end += 1;
+        output.appendSlice(statement.allocator, "-- ") catch return null;
+        output.appendSlice(statement.allocator, raw_sql[start..end]) catch return null;
+        start = end;
+    }
+    const allocation = public_api.sqlite3_malloc64(output.items.len + 1) orelse return null;
+    const bytes: [*]u8 = @ptrCast(allocation);
+    @memcpy(bytes[0..output.items.len], output.items);
+    bytes[output.items.len] = 0;
+    return @ptrCast(bytes);
+}
+
 pub export fn sqlite3_expanded_sql(pointer: ?*sqlite3_stmt) callconv(.c) ?[*:0]u8 {
-    return expandedSql(asStatement(pointer) orelse return null);
+    const prepared = asStatement(pointer) orelse return null;
+    const sql = prepared.sql_copy orelse return null;
+    return expandSql(prepared, sql);
 }
 
 pub export fn sqlite3_expired(_: ?*sqlite3_stmt) callconv(.c) c_int {
@@ -1201,6 +1238,18 @@ test "source host parameter scan skips quoted text and comments" {
     try std.testing.expectEqual(@as(usize, 2), token_length);
     try std.testing.expectEqual(@as(usize, 8), findNextHostParameter("SELECT 1", &token_length));
     try std.testing.expectEqual(@as(usize, 0), token_length);
+}
+
+test "nested execution expands raw SQL as commented lines" {
+    const prepared = try Statement.create(std.testing.allocator, &test_statement_program, &test_parameters, &test_columns);
+    const handle = toOpaque(prepared);
+    try prepared.setSql("SELECT ?1;\nSELECT ?2;");
+    var depth: usize = 2;
+    prepared.setExecutionDepth(&depth);
+    const expanded = sqlite3_expanded_sql(handle) orelse return error.TestUnexpectedResult;
+    defer public_api.sqlite3_free(expanded);
+    try std.testing.expectEqualStrings("-- SELECT ?1;\n-- SELECT ?2;", std.mem.span(expanded));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_finalize(handle));
 }
 
 test "statement bind step columns reset clear finalize and destructors" {

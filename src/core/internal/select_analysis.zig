@@ -1551,12 +1551,6 @@ pub fn convertCompoundSelectToSubquery(walker: *parse_types.Walker, select: *par
     return walker_api.continue_walk;
 }
 
-fn declaredColumnType(column: *const schema.Column) ?[*:0]const u8 {
-    if (column.flags & 0x0004 == 0) return null;
-    const name: [*:0]const u8 = @ptrCast(column.name_and_metadata.?);
-    return name + std.mem.len(name) + 1;
-}
-
 /// Source `columnTypeImpl()`.
 pub fn expressionColumnType(context_initial: ?*resolve_analysis.NameContext, expression_node: *parse_types.Expr) ?[*:0]const u8 {
     var context = context_initial;
@@ -1577,7 +1571,7 @@ pub fn expressionColumnType(context_initial: ?*resolve_analysis.NameContext, exp
                         return null;
                     }
                     if (column < 0) return "INTEGER";
-                    return declaredColumnType(&table.columns.?[@intCast(column)]);
+                    return schema_analysis.schemaColumnType(&table.columns.?[@intCast(column)], null);
                 }
             }
             return null;

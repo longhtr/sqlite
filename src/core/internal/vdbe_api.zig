@@ -6,6 +6,7 @@ const global = @import("../global.zig");
 const public_api = @import("../public_api.zig");
 const varint = @import("../varint.zig");
 const db_allocator = @import("db_allocator.zig");
+const error_state = @import("error_state.zig");
 const vdbe_aux = @import("vdbe_aux.zig");
 const vdbe_mem = @import("vdbe_mem.zig");
 pub const types = @import("vdbe_types.zig");
@@ -32,12 +33,7 @@ fn leaveConnection(connection: *types.Sqlite3) void {
 }
 
 fn setConnectionError(connection: *types.Sqlite3, result: c_int) void {
-    connection.errCode = result;
-    if (result != 0 or connection.pErr != null) {
-        if (connection.pErr) |error_value| vdbe_mem.setNull(error_value);
-    } else {
-        connection.errByteOffset = -1;
-    }
+    error_state.setDatabaseError(connection, result);
 }
 
 fn handleApiError(connection: *types.Sqlite3, result: c_int) c_int {

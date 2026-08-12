@@ -5,6 +5,31 @@
   "warning": "Only independently-fidelity-reviewed units count as final fidelity closure; implementers may promote no further than assurance-passed.",
   "units": [
     {
+      "id": "connection-status-32-bit-wrapper",
+      "path": "upstream/atomic-units/connection-status-32-bit-wrapper.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "get-table-result-collection-and-release",
+      "path": "upstream/atomic-units/get-table-result-collection-and-release.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "vdbe-expanded-sql-nested-execution",
+      "path": "upstream/atomic-units/vdbe-expanded-sql-nested-execution.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "schema-column-type-representation",
+      "path": "upstream/atomic-units/schema-column-type-representation.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "connection-error-state-and-fault-simulation",
+      "path": "upstream/atomic-units/connection-error-state-and-fault-simulation.json",
+      "status": "source-translated"
+    },
+    {
       "id": "vdbe-btree-and-constant-expression-value-materialization",
       "path": "upstream/atomic-units/vdbe-btree-and-constant-expression-value-materialization.json",
       "status": "source-translated"

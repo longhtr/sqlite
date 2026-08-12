@@ -557,6 +557,36 @@ pub fn collationMatch(collation: [*:0]const u8, index: *const schema.Index) bool
     return false;
 }
 
+/// Source `sqlite3ColumnType()`: resolve a custom type stored after the column
+/// name, a compact standard type code, or the caller's fallback.
+pub fn schemaColumnType(column: *const schema.Column, fallback: ?[*:0]const u8) ?[*:0]const u8 {
+    if (column.flags & 0x0004 != 0) {
+        const name: [*:0]const u8 = @ptrCast(column.name_and_metadata.?);
+        return name + std.mem.len(name) + 1;
+    }
+    const standard_types = [_][*:0]const u8{ "ANY", "BLOB", "INT", "INTEGER", "REAL", "TEXT" };
+    const standard = column.definition.declared_type;
+    if (standard != 0) {
+        std.debug.assert(standard <= standard_types.len);
+        return standard_types[standard - 1];
+    }
+    return fallback;
+}
+
+test "column type resolves custom compact standard and fallback representations" {
+    var storage = [_:0]u8{ 'x', 0, 'C', 'U', 'S', 'T', 'O', 'M', 0 };
+    var column = std.mem.zeroes(schema.Column);
+    column.name_and_metadata = &storage;
+    column.flags = 0x0004;
+    try std.testing.expectEqualStrings("CUSTOM", std.mem.span(schemaColumnType(&column, "fallback").?));
+    column.flags = 0;
+    column.definition.declared_type = 4;
+    try std.testing.expectEqualStrings("INTEGER", std.mem.span(schemaColumnType(&column, "fallback").?));
+    column.definition.declared_type = 0;
+    try std.testing.expectEqualStrings("fallback", std.mem.span(schemaColumnType(&column, "fallback").?));
+    try std.testing.expect(schemaColumnType(&column, null) == null);
+}
+
 /// Source `recomputeColumnsNotIndexed()`.
 pub fn recomputeColumnsNotIndexed(index: *schema.Index) void {
     var mask: u64 = 0;

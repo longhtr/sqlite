@@ -64,6 +64,12 @@ pub export fn sqlite3_os_end() callconv(.c) c_int {
 pub export fn zig_sqlite3_is_initialized() callconv(.c) c_int {
     return @intFromBool(memory.process_manager.started);
 }
+/// Source `sqlite3FaultSim()`: relay one stable fault-site identifier to the
+/// installed test callback, or remain a production no-op.
+pub fn faultSimulation(site: c_int) c_int {
+    return if (config_types.global_config.xTestCallback) |callback| callback(site) else 0;
+}
+
 pub export fn zig_sqlite3_test_control_no_args(operation: c_int) callconv(.c) c_int {
     return switch (operation) {
         22 => 1234,
@@ -177,6 +183,20 @@ pub export fn sqlite3_enable_shared_cache(enable: c_int) callconv(.c) c_int {
     config_types.global_config.sharedCacheEnabled = enable;
     return 0;
 }
+test "fault simulation relays installed callback and otherwise succeeds" {
+    const Harness = struct {
+        fn callback(site: c_int) callconv(.c) c_int {
+            return site + 3;
+        }
+    };
+    const original = config_types.global_config.xTestCallback;
+    defer config_types.global_config.xTestCallback = original;
+    config_types.global_config.xTestCallback = null;
+    try std.testing.expectEqual(@as(c_int, 0), faultSimulation(9));
+    config_types.global_config.xTestCallback = Harness.callback;
+    try std.testing.expectEqual(@as(c_int, 12), faultSimulation(9));
+}
+
 test "shared-cache enable stores the exact process setting" {
     const original = config_types.global_config.sharedCacheEnabled;
     defer config_types.global_config.sharedCacheEnabled = original;
