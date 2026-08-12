@@ -555,6 +555,15 @@
       "atomic_unit_id": "wal-database-size-observation",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/wal.c::function::sqlite3WalCallback::line-4439",
+      "source_sha256": "5e7010df761a496075b3dbbd0661452a602f2f27a3f83337b5821e6112186d62",
+      "zig_declaration_id": "src/core/internal/wal_core.zig::function::takeCallbackFrame",
+      "zig_declaration_sha256": "221427ec9b24ac2eb6295632b8c68794c8a35b4d4e05efeefd16a9dd7a286acf",
+      "atomic_unit_id": "wal-callback-frame-consumption",
+      "class": "short",
+      "complete": true
     }
   ]
 }

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "wal-callback-frame-consumption",
+  "title": "WAL callback frame consumption",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3WalCallback returns the frame count recorded by the most recent commit since the prior callback read and clears the pending value, while null WAL returns zero.",
+    "source_files": [{"path": "src/wal.c", "sha256": "0c0467f7c4de773512b3327b0d3973fc31d50cf74603d6aec0e3b3e1c787e217"}],
+    "source_entity_ids": ["src/wal.c::function::sqlite3WalCallback::line-4439"],
+    "behavioral_block_ids": ["src/wal.c::function::sqlite3WalCallback::behavior::if::line-4441-column-3::ordinal-0", "src/wal.c::function::sqlite3WalCallback::behavior::return::line-4445-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Connection WAL-hook invocation", "Commit frame writing", "Automatic checkpoint policy"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Successful commit publication and connection hook dispatch"], "caller_closure": "The complete consume-and-clear body is assigned; writeFrames records the committed terminal frame and public hook dispatch remains open."},
+  "contracts": {
+    "inputs": ["Nullable mutable Wal"],
+    "outputs": ["Pending callback frame number or zero"],
+    "ownership": "Mutates only the pending scalar callback value.",
+    "state_and_results": "Null returns zero. Non-null returns callback_frame exactly and clears it to zero, so repeated reads return zero until another commit.",
+    "locks_callbacks_io": "Does not invoke the hook or perform I/O; caller synchronization external.",
+    "failure_and_continuation": "No failure path; consumption is one-shot."
+  },
+  "mappings": [{"source_entity_id": "src/wal.c::function::sqlite3WalCallback::line-4439", "relation": "source-one-shot-wal-callback-frame-consumption", "zig_declaration_ids": ["src/core/internal/wal_core.zig::function::takeCallbackFrame"]}],
+  "representation_differences": ["The bounded Wal field is named callback_frame instead of iCallback; the result remains u32 until the eventual C API boundary."],
+  "oracle": {"protocol": "Observe zero for null, seed 17, observe 17, then observe zero on repeat.", "internal_observations": ["nullable Wal", "callback_frame before/after", "returned frame"], "normalization": "Frame count and zero sentinel are exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; hook dispatch synchronization external.", "malformed_input": "Null safely returns zero.", "continuation": "Repeated consumption remains zero until a later commit publishes a frame.", "performance": "Constant time.",
+    "commands": ["zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/wal_core.zig Wal commit/callback state owner", "native_call_path": "Successful bounded commit records callback_frame and typed accessor consumes it; connection hook dispatch remains pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires connection hook integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect connection WAL hook dispatch.", "Verify commit/failure publication timing against pinned C.", "Add pinned-C null/one-shot trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/wal.c:4428-4446 and commit assignment at line 4260 were reviewed", "src/core/internal/wal_core.zig writeFrames commit publication and tests were reviewed"],
+    "callers": ["Pager/connection WAL hook path", "Unit trace invokes nullable accessor directly"],
+    "callees": ["Direct Wal.callback_frame state"],
+    "assertions_branches_cleanup": ["Both generated blocks and the source clear side effect are assigned", "No allocation or cleanup", "Commit publication occurs only in the commit branch"] ,
+    "upstream_tests": ["Upstream WAL hook and transaction tests cover this one-shot value", "Project trace covers null, seeded, and repeated results"]
+  },
+  "evidence_receipts": []
+}

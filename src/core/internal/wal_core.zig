@@ -74,6 +74,7 @@ pub const Wal = struct {
     shared_locks: u64 = 0,
     exclusive_locks: u64 = 0,
     checkpoint_sequence: u32 = 0,
+    callback_frame: u32 = 0,
     rechecksum_frame: u32 = 0,
     salt: [2]u32 = .{ 0, 0 },
     backfill: u32 = 0,
@@ -109,6 +110,14 @@ pub fn databaseSize(wal: ?*const Wal) u32 {
     const value = wal orelse return 0;
     if (value.read_lock < 0) return 0;
     return value.header.database_pages;
+}
+
+/// Source `sqlite3WalCallback()`.
+pub fn takeCallbackFrame(wal: ?*Wal) u32 {
+    const value = wal orelse return 0;
+    const frame = value.callback_frame;
+    value.callback_frame = 0;
+    return frame;
 }
 
 fn headerChecksum(header: *const Header) [2]u32 {
@@ -864,6 +873,7 @@ pub fn writeFrames(wal: *Wal, page_size: usize, input_frames: []const FrameData,
         wal.header.database_pages = truncate_to;
         wal.header.change +%= 1;
         indexWriteHeader(wal);
+        wal.callback_frame = frame_number;
     }
     if (wal.maximum_size >= 0 and wal.wal_bytes.items.len > wal.maximum_size) limitSize(wal, @intCast(@max(wal.maximum_size, 0)));
 }
@@ -977,6 +987,10 @@ test "WAL index append cleanup and savepoint undo" {
     try std.testing.expectEqual(@as(u32, 0), databaseSize(&wal));
     wal.read_lock = 0;
     try std.testing.expectEqual(@as(u32, 9), databaseSize(&wal));
+    try std.testing.expectEqual(@as(u32, 0), takeCallbackFrame(null));
+    wal.callback_frame = 17;
+    try std.testing.expectEqual(@as(u32, 17), takeCallbackFrame(&wal));
+    try std.testing.expectEqual(@as(u32, 0), takeCallbackFrame(&wal));
     try indexAppend(&wal, 1, 7);
     try indexAppend(&wal, 2, 3);
     wal.header.max_frame = 2;

@@ -448,6 +448,11 @@
       "id": "wal-database-size-observation",
       "path": "upstream/atomic-units/wal-database-size-observation.json",
       "status": "source-translated"
+    },
+    {
+      "id": "wal-callback-frame-consumption",
+      "path": "upstream/atomic-units/wal-callback-frame-consumption.json",
+      "status": "source-translated"
     }
   ]
 }
