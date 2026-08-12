@@ -753,6 +753,15 @@
       "atomic_unit_id": "pager-wal-transport-support",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeClearCache::line-11565",
+      "source_sha256": "0abbb4980907a43bd43d131ca51379947bff450220c357e2955029b0dc49ac76",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::clearPagerCacheIfIdle",
+      "zig_declaration_sha256": "974e7814c1062d5e34a5f482767265fb13ca625d33774e64ffc92c0402ef8d36",
+      "atomic_unit_id": "btree-idle-pager-cache-clear",
+      "class": "short",
+      "complete": true
     }
   ]
 }

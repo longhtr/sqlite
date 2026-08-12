@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "btree-idle-pager-cache-clear",
+  "title": "B-tree idle Pager cache clear",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeClearCache delegates cache clearing to Pager only while the shared B-tree has no active transaction.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreeClearCache::line-11565"],
+    "behavioral_block_ids": ["src/btree.c::function::sqlite3BtreeClearCache::behavior::if::line-11567-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Pager temporary-database guard", "Pager cache ownership destruction", "B-tree transaction transition"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": ["pager-nontemporary-cache-clear"],
+    "external_source_responsibilities": ["Typed Pager owner supplies the cache-clear callback and enforces temporary Pager behavior"],
+    "caller_closure": "The complete B-tree transaction guard is assigned and delegates to the translated Pager cache-clear unit."
+  },
+  "contracts": {
+    "inputs": ["B-tree, optional Pager context, and Pager clear callback"],
+    "outputs": ["No value"],
+    "ownership": "B-tree and callback context are borrowed.",
+    "state_and_results": "Calls clear exactly once when shared.transaction is none; performs no call during read or write transaction.",
+    "locks_callbacks_io": "Invokes one callback only in the idle branch. Caller owns B-tree/Pager synchronization.",
+    "failure_and_continuation": "Infallible callback contract and no state mutation in the B-tree owner."
+  },
+  "mappings": [{
+    "source_entity_id": "src/btree.c::function::sqlite3BtreeClearCache::line-11565",
+    "relation": "source-btree-idle-pager-cache-clear",
+    "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::clearPagerCacheIfIdle"]
+  }],
+  "representation_differences": ["The bounded internal B-tree owner receives the Pager clear operation as a typed callback instead of storing a cross-module Pager pointer."],
+  "oracle": {
+    "protocol": "Invoke in shared transaction none and observe one callback, switch to read transaction and observe no additional callback.",
+    "internal_observations": ["shared transaction state", "callback count", "B-tree state before/after"],
+    "normalization": "Callback invocation corresponds to sqlite3PagerClearCache entry."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No direct I/O; caller owns synchronization.",
+    "malformed_input": "Typed non-null callback and B-tree only.",
+    "continuation": "Pure transaction guard; B-tree remains unchanged.",
+    "performance": "Constant time plus delegated cache clear when idle.",
+    "commands": ["zig build test", "zig build btree-differential", "zig build pager-differential"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/btree_core.zig B-tree/Pager boundary",
+    "native_call_path": "The idle guard delegates to pager-nontemporary-cache-clear at the typed owner boundary; state matrix is directly traced.",
+    "bounded_owner_retired": "No."
+  },
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires native B-tree-to-Pager integration trace, assurance closure, and independent review."},
+  "known_blockers": ["Wire direct typed Pager owner into the internal B-tree container or preserve equivalent callback seam in all callers.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:11550-11572 and B-tree clear-cache callers were reviewed", "src/core/internal/btree_core.zig transaction state and tests plus pager_core clearCache were reviewed"],
+    "callers": ["Connection-wide cache release/flush and VACUUM owners", "Unit idle/read state matrix"],
+    "callees": ["sqlite3PagerClearCache in the source", "Typed clear callback targeting pager-nontemporary-cache-clear in Zig"],
+    "assertions_branches_cleanup": ["The only generated branch is assigned", "No callback is made during active transaction", "No allocation or cleanup in this guard"],
+    "upstream_tests": ["Upstream B-tree, Pager cache, VACUUM, transaction, and temp tests exercise the guard", "Project B-tree/Pager differentials exercise both owners separately"]
+  },
+  "evidence_receipts": []
+}

@@ -528,6 +528,11 @@
       "id": "pager-wal-transport-support",
       "path": "upstream/atomic-units/pager-wal-transport-support.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-idle-pager-cache-clear",
+      "path": "upstream/atomic-units/btree-idle-pager-cache-clear.json",
+      "status": "source-translated"
     }
   ]
 }

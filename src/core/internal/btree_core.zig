@@ -1192,6 +1192,12 @@ pub fn isReadOnly(tree: *const Btree) bool {
     return tree.read_only;
 }
 
+/// Source `sqlite3BtreeClearCache()`: invoke the Pager cache reset only when
+/// no transaction is active on the shared B-tree.
+pub fn clearPagerCacheIfIdle(tree: *Btree, context: ?*anyopaque, clear: *const fn (?*anyopaque) void) void {
+    if (tree.shared.transaction == .none) clear(context);
+}
+
 /// Source `sqlite3BtreeIntegerKey()` after CellInfo has been populated.
 pub fn cursorIntegerKey(cursor: *const Cursor) u64 {
     std.debug.assert(cursor.state == .valid);
@@ -1279,6 +1285,19 @@ test "source page size and requested reserve reflect live page format" {
     try std.testing.expectEqual(Transaction.none, transactionState(null));
     try std.testing.expectEqual(Transaction.none, transactionState(&tree));
     try std.testing.expect(!isReadOnly(&tree));
+    const ClearTrace = struct {
+        var calls: usize = 0;
+        fn clear(_: ?*anyopaque) void {
+            calls += 1;
+        }
+    };
+    ClearTrace.calls = 0;
+    clearPagerCacheIfIdle(&tree, null, ClearTrace.clear);
+    try std.testing.expectEqual(@as(usize, 1), ClearTrace.calls);
+    shared.transaction = .read;
+    clearPagerCacheIfIdle(&tree, null, ClearTrace.clear);
+    try std.testing.expectEqual(@as(usize, 1), ClearTrace.calls);
+    shared.transaction = .none;
     try std.testing.expectEqual(@as(usize, 1), connectionCount(&tree));
     try std.testing.expect(!isInBackup(&tree));
     try std.testing.expect(headerSizeBtree() >= @sizeOf(Page));
