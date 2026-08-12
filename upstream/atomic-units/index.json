@@ -328,6 +328,11 @@
       "id": "btree-requested-page-reserve",
       "path": "upstream/atomic-units/btree-requested-page-reserve.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-cursor-last-page-detection",
+      "path": "upstream/atomic-units/btree-cursor-last-page-detection.json",
+      "status": "source-translated"
     }
   ]
 }

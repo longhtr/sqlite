@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "btree-cursor-last-page-detection",
+  "title": "B-tree cursor last-page detection",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "cursorOnLastPage determines whether a valid B-tree cursor descended through the rightmost child of every interior ancestor, which is the exact condition for the current leaf to be the table's last page.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::cursorOnLastPage::line-6000"],
+    "behavioral_block_ids": [
+      "src/btree.c::function::cursorOnLastPage::behavior::assert::line-6002-column-3::ordinal-0",
+      "src/btree.c::function::cursorOnLastPage::behavior::for::line-6003-column-3::ordinal-0",
+      "src/btree.c::function::cursorOnLastPage::behavior::if::line-6005-column-5::ordinal-0",
+      "src/btree.c::function::cursorOnLastPage::behavior::return::line-6005-column-39::ordinal-0",
+      "src/btree.c::function::cursorOnLastPage::behavior::return::line-6007-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Cursor movement", "Page acquisition/release", "Index seek optimization caller"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Cursor path construction and valid-state ownership"], "caller_closure": "The complete source predicate is assigned; the index-seek caller remains open."},
+  "contracts": {
+    "inputs": ["Valid cursor with paired ancestor pages and selected child indices"],
+    "outputs": ["True only when every selected ancestor child is the rightmost child"],
+    "ownership": "Cursor and ancestor pages are borrowed; no mutation or allocation.",
+    "state_and_results": "An empty ancestor path is a last-page path. The first ancestor index below its cell count returns false.",
+    "locks_callbacks_io": "Caller owns B-tree serialization; no callbacks or I/O.",
+    "failure_and_continuation": "Invalid cursor state violates the source assertion; valid state has a total boolean result."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::cursorOnLastPage::line-6000", "relation": "source-rightmost-ancestor-path-predicate", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::cursorOnLastPage"]}],
+  "representation_differences": ["The Zig Cursor stores only ancestor pages and indices, so iterating those paired arrays corresponds to C indices 0 through iPage-1.", "Page cell count is the length of the owned cells list rather than nCell."],
+  "oracle": {"protocol": "Construct a two-ancestor valid path with both indices at the rightmost child, then move one ancestor index left and compare true/false results.", "internal_observations": ["ancestor cell counts", "ancestor selected indices", "boolean result"], "normalization": "Page addresses are identity-only; path indices and counts are exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation in the production predicate.", "io_crash_concurrency": "No I/O; caller lock discipline pending integration.", "malformed_input": "Invalid state or mismatched path arrays violate source/model invariants.", "continuation": "Pure observation leaves cursor state unchanged.", "performance": "Linear in cursor depth.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig B-tree cursor owner", "native_call_path": "Typed cursor owner and both predicate branches are unit-traced; index-moveto optimization dispatch remains pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires index-seek integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect the index-seek optimization caller.", "Add pinned-C ancestor-path trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:5979-6008 was reviewed completely for the local-record optimization and last-page predicate", "src/core/internal/btree_core.zig Cursor/Page path representation and movement owners were reviewed"],
+    "callers": ["Index table moveto optimization near the requested key", "Unit trace invokes the predicate directly"],
+    "callees": ["No callees beyond ancestor path and page cell-count reads"],
+    "assertions_branches_cleanup": ["All five active behavior blocks are assigned", "First non-rightmost ancestor returns false", "No allocation, mutation, or cleanup"],
+    "upstream_tests": ["Upstream B-tree index seek, multi-level tree, and cursor movement tests cover this predicate", "Project unit trace covers all-rightmost and one-left-child paths"]
+  },
+  "evidence_receipts": []
+}

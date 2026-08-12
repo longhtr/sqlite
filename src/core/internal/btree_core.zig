@@ -132,6 +132,46 @@ pub const Cursor = struct {
     }
 };
 
+/// Source `cursorOnLastPage()`: every ancestor descent must have selected the
+/// rightmost child, represented by an index at or beyond the ancestor's cell
+/// count.
+pub fn cursorOnLastPage(cursor: *const Cursor) bool {
+    std.debug.assert(cursor.state == .valid);
+    for (cursor.ancestors.items, cursor.ancestor_indices.items) |page, index| {
+        if (index < page.cells.items.len) {
+            return false;
+        }
+    }
+    return true;
+}
+
+test "source cursor last-page check requires every rightmost ancestor" {
+    var shared = Shared.init(std.testing.allocator);
+    defer shared.deinit();
+    var tree = Btree{ .shared = &shared };
+    var first_page = Page{ .allocator = std.testing.allocator, .shared = &shared, .number = 1, .data = &.{}, .usable_size = 4096, .header_offset = 100 };
+    defer first_page.deinit();
+    var second_page = Page{ .allocator = std.testing.allocator, .shared = &shared, .number = 2, .data = &.{}, .usable_size = 4096, .header_offset = 0 };
+    defer second_page.deinit();
+    const cell_a = try std.testing.allocator.alloc(u8, 0);
+    try first_page.cells.append(std.testing.allocator, cell_a);
+    const cell_b = try std.testing.allocator.alloc(u8, 0);
+    try second_page.cells.append(std.testing.allocator, cell_b);
+    const cell_c = try std.testing.allocator.alloc(u8, 0);
+    try second_page.cells.append(std.testing.allocator, cell_c);
+    var cursor = Cursor{ .allocator = std.testing.allocator, .tree = &tree, .root = 1, .writable = false, .state = .valid };
+    defer cursor.deinit();
+    try cursor.ancestors.append(std.testing.allocator, &first_page);
+    try cursor.ancestor_indices.append(std.testing.allocator, 1);
+    try cursor.ancestors.append(std.testing.allocator, &second_page);
+    try cursor.ancestor_indices.append(std.testing.allocator, 2);
+    try std.testing.expect(cursorOnLastPage(&cursor));
+    cursor.ancestor_indices.items[0] = 0;
+    try std.testing.expect(!cursorOnLastPage(&cursor));
+    cursor.ancestors.clearRetainingCapacity();
+    cursor.ancestor_indices.clearRetainingCapacity();
+}
+
 fn findPage(shared: *Shared, number: u32) ?*Page {
     for (shared.pages.items) |page| {
         if (page.number == number) return page;

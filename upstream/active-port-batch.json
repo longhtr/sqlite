@@ -231,6 +231,15 @@
       "atomic_unit_id": "btree-requested-page-reserve",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::cursorOnLastPage::line-6000",
+      "source_sha256": "59480f0cdfcfb0f7ced4c8e1d108e433cee69d994424d61d1111a2a2affc32e3",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::cursorOnLastPage",
+      "zig_declaration_sha256": "ad3c393cefcd0c7e27b65d1b9cf6f1f02b6adfd4b2b9c9ce27e26302ba0c2f09",
+      "atomic_unit_id": "btree-cursor-last-page-detection",
+      "class": "short",
+      "complete": true
     }
   ]
 }
