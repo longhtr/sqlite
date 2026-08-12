@@ -60,6 +60,42 @@
       "atomic_unit_id": "btree-cell-size-cache-accessors",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonHexToInt::line-947",
+      "source_sha256": "0c276fe570845ab171f1f9a1f565a988dd8eb14d3beb5ed17d977b718defb2c8",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::hexToInt",
+      "zig_declaration_sha256": "3601261d7672c546144b423e5b9ee75237351ad6e2785aff47b44135ebaab5b1",
+      "atomic_unit_id": "json-hex-decode-and-prefix-validation",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonHexToInt4::line-960",
+      "source_sha256": "dcf788e8ed4398ed1b5687ec9020f91d02e71184569b6380c9f799996917420e",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::hexToInt4",
+      "zig_declaration_sha256": "e5d7359f26590cd031242409cd16555d07cf6829a6fd9fe51c7ec8fc944dc533",
+      "atomic_unit_id": "json-hex-decode-and-prefix-validation",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonIs2Hex::line-972",
+      "source_sha256": "8acf0f04fb7af312e050ae9df2a7a78b4b360443de6366baf58d3d34bafa4c22",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::is2Hex",
+      "zig_declaration_sha256": "7dead6c3ebbe34a1f9acb31f620c0892df6cdcedc5335a61a93f1ba660c3e2c9",
+      "atomic_unit_id": "json-hex-decode-and-prefix-validation",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonIs4Hex::line-979",
+      "source_sha256": "3819b3018b227035c2f9b38bfcbd938fe17dafdb9a725c13e7e7a8dd867b3492",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::is4Hex",
+      "zig_declaration_sha256": "4e5b9b73f20f86d80c2e4f4fa96b14d40e88056cbc72f2e1192a3ae293567ba8",
+      "atomic_unit_id": "json-hex-decode-and-prefix-validation",
+      "class": "short",
+      "complete": true
     }
   ]
 }

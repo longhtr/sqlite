@@ -623,6 +623,11 @@
       "id": "date-pure-keyword-guard-and-value-parse",
       "path": "upstream/atomic-units/date-pure-keyword-guard-and-value-parse.json",
       "status": "source-translated"
+    },
+    {
+      "id": "json-hex-decode-and-prefix-validation",
+      "path": "upstream/atomic-units/json-hex-decode-and-prefix-validation.json",
+      "status": "source-translated"
     }
   ]
 }

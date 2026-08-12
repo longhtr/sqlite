@@ -352,8 +352,29 @@ pub fn escapedNewlineBytes(input: []const u8) usize {
     return index;
 }
 
-fn hex(byte: u8) u32 {
-    return if (byte <= '9') byte - '0' else (byte | 0x20) - 'a' + 10;
+/// Source `jsonHexToInt()`: decode one caller-validated ASCII hex digit
+/// without asserting on other input.
+pub fn hexToInt(byte: u8) u8 {
+    const adjusted: u16 = byte + 9 * ((byte >> 6) & 1);
+    return @truncate(adjusted & 0x0f);
+}
+
+/// Source `jsonHexToInt4()`.
+pub fn hexToInt4(bytes: *const [4]u8) u32 {
+    return (@as(u32, hexToInt(bytes[0])) << 12) |
+        (@as(u32, hexToInt(bytes[1])) << 8) |
+        (@as(u32, hexToInt(bytes[2])) << 4) |
+        hexToInt(bytes[3]);
+}
+
+/// Source `jsonIs2Hex()`.
+pub fn is2Hex(bytes: *const [2]u8) bool {
+    return std.ascii.isHex(bytes[0]) and std.ascii.isHex(bytes[1]);
+}
+
+/// Source `jsonIs4Hex()`.
+pub fn is4Hex(bytes: *const [4]u8) bool {
+    return is2Hex(bytes[0..2]) and is2Hex(bytes[2..4]);
 }
 
 /// Source `jsonUnescapeOneChar()`.
@@ -369,9 +390,9 @@ pub fn unescapeOne(input: []const u8, output: *u32) usize {
                 output.* = invalid;
                 return input.len;
             }
-            var value = (hex(input[2]) << 12) | (hex(input[3]) << 8) | (hex(input[4]) << 4) | hex(input[5]);
+            var value = hexToInt4(input[2..6]);
             if (value & 0xfc00 == 0xd800 and input.len >= 12 and input[6] == '\\' and input[7] == 'u') {
-                const low = (hex(input[8]) << 12) | (hex(input[9]) << 8) | (hex(input[10]) << 4) | hex(input[11]);
+                const low = hexToInt4(input[8..12]);
                 if (low & 0xfc00 == 0xdc00) {
                     value = ((value & 0x3ff) << 10) + (low & 0x3ff) + 0x10000;
                     output.* = value;
@@ -394,7 +415,7 @@ pub fn unescapeOne(input: []const u8, output: *u32) usize {
                 output.* = invalid;
                 return input.len;
             }
-            output.* = (hex(input[2]) << 4) | hex(input[3]);
+            output.* = (@as(u32, hexToInt(input[2])) << 4) | hexToInt(input[3]);
             return 4;
         },
         '\r', '\n', 0xe2 => {
@@ -458,4 +479,18 @@ pub fn skipCursorLabel(cursor: *const JsonCursor) usize {
     const header = payloadSize(cursor.parse, cursor.index, &size);
     const result = cursor.index + header + size;
     return if (result >= cursor.parse.blob.items.len) cursor.index else result;
+}
+
+test "JSON hex accessors decode validated ASCII digits and classify prefixes" {
+    for ([_]struct { byte: u8, value: u8 }{
+        .{ .byte = '0', .value = 0 },
+        .{ .byte = '9', .value = 9 },
+        .{ .byte = 'a', .value = 10 },
+        .{ .byte = 'F', .value = 15 },
+    }) |case| try std.testing.expectEqual(case.value, hexToInt(case.byte));
+    try std.testing.expectEqual(@as(u32, 0xab9f), hexToInt4("aB9f"));
+    try std.testing.expect(is2Hex("0f"));
+    try std.testing.expect(!is2Hex("0g"));
+    try std.testing.expect(is4Hex("aB9f"));
+    try std.testing.expect(!is4Hex("abc-"));
 }

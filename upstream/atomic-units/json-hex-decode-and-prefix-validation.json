@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "id": "json-hex-decode-and-prefix-validation",
+  "title": "JSON hexadecimal decode and prefix validation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "jsonHexToInt, jsonHexToInt4, jsonIs2Hex, and jsonIs4Hex form the allocation-free ASCII hexadecimal primitive used by JSON string escape parsing. Together they preserve the distinction between caller-validated nibble decoding and explicit two/four-digit validation.",
+    "source_files": [
+      {
+        "path": "src/json.c",
+        "sha256": "25a742ea7382fd21bc3f10fc22f4cbfc97335122ba9593822d0d7eb93bb637d9"
+      }
+    ],
+    "source_entity_ids": [
+      "src/json.c::function::jsonHexToInt::line-947",
+      "src/json.c::function::jsonHexToInt4::line-960",
+      "src/json.c::function::jsonIs2Hex::line-972",
+      "src/json.c::function::jsonIs4Hex::line-979"
+    ],
+    "behavioral_block_ids": [
+      "src/json.c::function::jsonHexToInt::behavior::return::line-954-column-3::ordinal-0",
+      "src/json.c::function::jsonHexToInt4::behavior::return::line-966-column-3::ordinal-0",
+      "src/json.c::function::jsonIs2Hex::behavior::return::line-973-column-3::ordinal-0",
+      "src/json.c::function::jsonIs4Hex::behavior::return::line-980-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "JSON5 backslash-operation classification",
+      "Unicode surrogate pairing and UTF-8 encoding",
+      "JSON text tokenization and malformed-input positions"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "ASCII character classification",
+      "Callers validate escape digits before invoking the permissive nibble decoder"
+    ],
+    "caller_closure": "All four complete source bodies are assigned. jsonUnescapeOneChar consumes the four-digit and nibble decoders; JSON text parsing owns malformed escape validation."
+  },
+  "contracts": {
+    "inputs": [
+      "One byte for nibble decoding, or fixed two/four-byte ASCII prefixes"
+    ],
+    "outputs": [
+      "Low hexadecimal nibble, packed four-digit u32, or exact prefix-validity boolean"
+    ],
+    "ownership": "Pure borrowed fixed-size inputs; no state mutation.",
+    "state_and_results": "Nibble decode intentionally gives defined low-nibble behavior without asserting on nonhex input, matching source caller-precondition semantics. Prefix functions classify all required bytes.",
+    "locks_callbacks_io": "No locks, callbacks, allocation, or I/O.",
+    "failure_and_continuation": "Infallible fixed-size operations. Invalid prefixes return false; nibble validity remains a caller precondition."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/json.c::function::jsonHexToInt::line-947",
+      "relation": "source-permissive-ascii-hex-nibble-decode",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::hexToInt"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonHexToInt4::line-960",
+      "relation": "source-four-hex-digit-pack",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::hexToInt4"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonIs2Hex::line-972",
+      "relation": "source-two-hex-prefix-validation",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::is2Hex"
+      ]
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonIs4Hex::line-979",
+      "relation": "source-four-hex-prefix-validation",
+      "zig_declaration_ids": [
+        "src/core/internal/json_core.zig::function::is4Hex"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Fixed Zig array pointers encode the source requirement that two or four accessible bytes exist.",
+    "Boolean results replace source int 0/1 values."
+  ],
+  "oracle": {
+    "protocol": "Decode boundary and mixed-case validated digits, pack a mixed-case four-digit value, and validate true/false two- and four-byte prefixes. Existing JSON escape execution covers production unescape callers.",
+    "internal_observations": [
+      "decoded nibble",
+      "packed u32",
+      "two-byte prefix result",
+      "four-byte prefix result"
+    ],
+    "normalization": "Compare exact integer and boolean values."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "Pure operations with no I/O or shared state.",
+    "malformed_input": "Prefix validators reject malformed bytes; nibble decoder retains source caller-precondition behavior.",
+    "continuation": "No mutation or failure state.",
+    "performance": "Constant-time scalar operations.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/json_core.zig JSON escape owner",
+    "native_call_path": "unescapeOne uses hexToInt4 for Unicode escapes and hexToInt for JSON5 x escapes; registered JSON SQL functions consume the JSON parser.",
+    "bounded_owner_retired": "The duplicate private hex arithmetic helper is retired."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires explicit parser validation routing through is2Hex/is4Hex, pinned-C trace, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Route JSON text escape validation through is2Hex/is4Hex rather than a duplicate classifier.",
+    "Add pinned-C nibble and prefix trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/json.c:934-981 utility bodies and adjacent parse lifecycle were reviewed",
+      "upstream JSON string and JSON5 escape parser call sites were reviewed",
+      "src/core/internal/json_core.zig unescape owner and src/core/internal/json_text.zig validation paths were reviewed"
+    ],
+    "callers": [
+      "JSON text escape validation",
+      "jsonUnescapeOneChar Unicode and JSON5 x decoding",
+      "Registered JSON SQL scalar and table-valued paths"
+    ],
+    "callees": [
+      "ASCII hexadecimal classification",
+      "Nested two-byte validation for four-byte prefixes"
+    ],
+    "assertions_branches_cleanup": [
+      "All four source return blocks are assigned",
+      "Decoder has no source assertion and preserves permissive behavior",
+      "No cleanup path"
+    ],
+    "upstream_tests": [
+      "Upstream JSON, JSON5, Unicode escape, malformed escape, and path tests exercise these primitives",
+      "Project owner trace covers exact nibble, pack, and prefix boundaries; registered JSON SQL tests cover parser integration"
+    ]
+  },
+  "evidence_receipts": []
+}
