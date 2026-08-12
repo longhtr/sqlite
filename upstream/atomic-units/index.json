@@ -408,6 +408,11 @@
       "id": "btree-cursor-payload-size",
       "path": "upstream/atomic-units/btree-cursor-payload-size.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-nonnull-cursor-validity",
+      "path": "upstream/atomic-units/btree-nonnull-cursor-validity.json",
+      "status": "source-translated"
     }
   ]
 }

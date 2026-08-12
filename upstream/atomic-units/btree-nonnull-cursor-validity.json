@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "btree-nonnull-cursor-validity",
+  "title": "B-tree non-null cursor validity query",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeCursorIsValidNN verifies the non-null cursor precondition and reports whether its state is CURSOR_VALID.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreeCursorIsValidNN::line-4910"],
+    "behavioral_block_ids": ["src/btree.c::function::sqlite3BtreeCursorIsValidNN::behavior::assert::line-4911-column-3::ordinal-0", "src/btree.c::function::sqlite3BtreeCursorIsValidNN::behavior::return::line-4912-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Nullable debug-only cursor validity helper", "Cursor restoration", "Cursor movement"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Cursor state transitions"], "caller_closure": "The complete non-null validity query is assigned."},
+  "contracts": {
+    "inputs": ["Non-null Cursor"],
+    "outputs": ["True exactly for valid state"],
+    "ownership": "Borrowed Cursor; no mutation.",
+    "state_and_results": "All non-valid states report false.",
+    "locks_callbacks_io": "No callbacks or I/O; caller synchronization external.",
+    "failure_and_continuation": "Zig type system enforces the source non-null assertion."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3BtreeCursorIsValidNN::line-4910", "relation": "source-nonnull-valid-state-predicate", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::cursorIsValid"]}],
+  "representation_differences": ["A non-optional Zig pointer enforces pCur!=0 statically rather than by debug assertion."],
+  "oracle": {"protocol": "Observe false for initial invalid state and true after transition to valid.", "internal_observations": ["Cursor.state", "boolean result"], "normalization": "CursorState.valid corresponds exactly to CURSOR_VALID."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; synchronization external.", "malformed_input": "Null is unrepresentable; arbitrary enum states safely report false.", "continuation": "Pure observation.", "performance": "Constant time.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig cursor state owner", "native_call_path": "Typed predicate and invalid/valid unit trace exist; external assertion callers remain pending.", "bounded_owner_retired": "No."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires caller integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Connect assertion and execution callers.", "Add pinned-C invalid/valid trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:4900-4913 was reviewed completely for nullable/non-null variants", "src/core/internal/btree_core.zig CursorState transitions and moved query were reviewed"],
+    "callers": ["Source assert and VDBE cursor paths", "Unit trace invokes predicate directly"],
+    "callees": ["Direct Cursor.state comparison"],
+    "assertions_branches_cleanup": ["Source non-null assertion and return block are assigned", "No allocation, mutation, or cleanup"],
+    "upstream_tests": ["Upstream cursor movement and VDBE assertions cover this query", "Project unit trace covers invalid and valid results"]
+  },
+  "evidence_receipts": []
+}

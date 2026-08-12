@@ -155,6 +155,11 @@ pub fn cursorHasMoved(cursor: *const Cursor) bool {
     return cursor.state != .valid;
 }
 
+/// Source `sqlite3BtreeCursorIsValidNN()`.
+pub fn cursorIsValid(cursor: *const Cursor) bool {
+    return cursor.state == .valid;
+}
+
 /// Source `sqlite3BtreeCursorHintFlags()`.
 pub fn setCursorHintFlags(cursor: *Cursor, hints: u8) void {
     std.debug.assert(hints == 0 or hints == 1 or hints == 2);
@@ -198,8 +203,10 @@ test "source cursor moved and pin state transitions preserve exact flags" {
     var cursor = Cursor{ .allocator = std.testing.allocator, .tree = &tree, .root = 1, .writable = false };
     defer cursor.deinit();
     try std.testing.expect(cursorHasMoved(&cursor));
+    try std.testing.expect(!cursorIsValid(&cursor));
     cursor.state = .valid;
     try std.testing.expect(!cursorHasMoved(&cursor));
+    try std.testing.expect(cursorIsValid(&cursor));
     setCursorHintFlags(&cursor, 2);
     try std.testing.expect(cursorHasHint(&cursor, 2));
     try std.testing.expect(!cursorHasHint(&cursor, 1));

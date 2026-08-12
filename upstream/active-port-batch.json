@@ -465,6 +465,15 @@
       "atomic_unit_id": "btree-cursor-payload-size",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/btree.c::function::sqlite3BtreeCursorIsValidNN::line-4910",
+      "source_sha256": "956db554080e75cddcb951e5000fae12514610109cdc5194cf83ac6216a42b12",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::cursorIsValid",
+      "zig_declaration_sha256": "2b39be71adcd8920c49a6f0e48ef4a687459c6627a45c0b46354f7dd84a5f4a7",
+      "atomic_unit_id": "btree-nonnull-cursor-validity",
+      "class": "short",
+      "complete": true
     }
   ]
 }
