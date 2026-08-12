@@ -363,6 +363,11 @@
       "id": "btree-page-count-and-last-page",
       "path": "upstream/atomic-units/btree-page-count-and-last-page.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-active-backup-observation",
+      "path": "upstream/atomic-units/btree-active-backup-observation.json",
+      "status": "source-translated"
     }
   ]
 }

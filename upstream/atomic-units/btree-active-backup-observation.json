@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "btree-active-backup-observation",
+  "title": "B-tree active-backup observation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3BtreeIsInBackup reports whether the Btree handle currently has one or more backup operations attached, under the owning connection mutex.",
+    "source_files": [{"path": "src/btree.c", "sha256": "c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::sqlite3BtreeIsInBackup::line-11360"],
+    "behavioral_block_ids": [
+      "src/btree.c::function::sqlite3BtreeIsInBackup::behavior::assert::line-11361-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeIsInBackup::behavior::assert::line-11362-column-3::ordinal-0",
+      "src/btree.c::function::sqlite3BtreeIsInBackup::behavior::return::line-11363-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": ["Backup attach/detach", "Backup stepping", "Connection mutex implementation"]
+  },
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Backup-count increment/decrement and connection serialization"], "caller_closure": "The complete source observation is assigned; native backup owner integration remains open."},
+  "contracts": {
+    "inputs": ["Non-null Btree under the owning connection mutex"],
+    "outputs": ["True when backup_count is nonzero"],
+    "ownership": "Borrowed Btree; no allocation or mutation.",
+    "state_and_results": "Any positive backup count maps to true; zero maps to false.",
+    "locks_callbacks_io": "Caller holds the connection mutex; no callbacks or I/O.",
+    "failure_and_continuation": "Null or unlocked input violates source assertions; otherwise total."
+  },
+  "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3BtreeIsInBackup::line-11360", "relation": "source-nonzero-btree-backup-count-predicate", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::isInBackup"]}],
+  "representation_differences": ["The Zig Btree.backup_count usize represents source Btree.nBackup; lock ownership remains a caller contract."],
+  "oracle": {"protocol": "Observe a Btree initialized with zero backup owners and compare false; positive-count/native attach trace remains pending.", "internal_observations": ["backup_count", "boolean result"], "normalization": "Zero/nonzero predicate is exact."},
+  "assurance": {
+    "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
+    "oom": "No allocation.", "io_crash_concurrency": "No I/O; connection mutex and backup count mutation remain external.", "malformed_input": "Null/unlocked input violates source assertions.", "continuation": "Pure observation leaves backup state unchanged.", "performance": "Constant time.",
+    "commands": ["zig build btree-differential", "zig build test"]
+  },
+  "integration": {"production_owner": "src/core/internal/btree_core.zig Btree handle state", "native_call_path": "Typed predicate and zero-count trace exist; backup_core currently owns a separate backup-count model.", "bounded_owner_retired": "No; backup_core integration remains pending."},
+  "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires backup attach/detach integration, pinned-C trace, assurance closure, and independent review."},
+  "known_blockers": ["Unify backup_core backup_count with the Btree handle owner.", "Connect connection mutex discipline.", "Add zero/positive pinned-C trace.", "Independent fidelity review remains open."],
+  "context_review": {
+    "implementation_spans": ["upstream/sqlite/src/btree.c:11331-11364 was reviewed completely for checkpoint and active-backup context", "src/core/internal/backup_core.zig backup count lifetime was reviewed", "src/core/internal/btree_core.zig Btree handle ownership was reviewed"],
+    "callers": ["Backup/deserialize replacement guards", "Connection APIs requiring no active backup", "Unit trace invokes the predicate directly"],
+    "callees": ["No callees; direct count read"],
+    "assertions_branches_cleanup": ["Both source assertions and return block are assigned", "No allocation, mutation, or cleanup"],
+    "upstream_tests": ["Upstream backup init/finish and replacement-guard tests cover this predicate", "Project unit trace covers zero-count false"]
+  },
+  "evidence_receipts": []
+}

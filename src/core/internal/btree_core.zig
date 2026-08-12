@@ -102,7 +102,7 @@ pub const Shared = struct {
     }
 };
 
-pub const Btree = struct { shared: *Shared, sharable: bool = false, read_uncommitted: bool = false, read_only: bool = false, transaction: Transaction = .none, has_incrblob_cursor: bool = false, savepoint_count: usize = 0 };
+pub const Btree = struct { shared: *Shared, sharable: bool = false, read_uncommitted: bool = false, read_only: bool = false, transaction: Transaction = .none, has_incrblob_cursor: bool = false, backup_count: usize = 0, savepoint_count: usize = 0 };
 pub const Cursor = struct {
     allocator: std.mem.Allocator,
     tree: *Btree,
@@ -1033,6 +1033,11 @@ pub fn connectionCount(tree: *const Btree) usize {
     return tree.shared.references;
 }
 
+/// Source `sqlite3BtreeIsInBackup()`.
+pub fn isInBackup(tree: *const Btree) bool {
+    return tree.backup_count != 0;
+}
+
 /// Source `btreePagecount()`.
 pub fn pageCount(shared: *const Shared) usize {
     return shared.pages.items.len;
@@ -1073,6 +1078,7 @@ test "source page size and requested reserve reflect live page format" {
     try std.testing.expectEqual(Transaction.none, transactionState(&tree));
     try std.testing.expect(!isReadOnly(&tree));
     try std.testing.expectEqual(@as(usize, 1), connectionCount(&tree));
+    try std.testing.expect(!isInBackup(&tree));
     try std.testing.expectEqual(@as(usize, 0), pageCount(&shared));
     try std.testing.expectEqual(@as(usize, 0), lastPage(&tree));
     shared.requested_reserved_bytes = 8;
