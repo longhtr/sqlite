@@ -83,6 +83,13 @@ pub const Stats = struct {
     cache_spills: u64 = 0,
 };
 
+pub const CacheStatistic = enum {
+    hit,
+    miss,
+    write,
+    spill,
+};
+
 pub const OpenOptions = struct {
     extra_size: usize = 16,
     max_cached_pages: usize = 2_000,
@@ -975,6 +982,19 @@ pub const Pager = struct {
         return std.math.add(usize, with_cache, @as(usize, self.page_size)) catch std.math.maxInt(usize);
     }
 
+    /// Source `sqlite3PagerCacheStat()`: add one cache counter to an
+    /// accumulator and optionally reset only the selected counter.
+    pub fn addCacheStatistic(self: *Pager, statistic: CacheStatistic, reset: bool, total: *u64) void {
+        const counter: *u64 = switch (statistic) {
+            .hit => &self.stats.cache_hits,
+            .miss => &self.stats.cache_misses,
+            .write => &self.stats.database_writes,
+            .spill => &self.stats.cache_spills,
+        };
+        total.* +%= counter.*;
+        if (reset) counter.* = 0;
+    }
+
     /// Source `sqlite3PagerSetCachesize()`: forward the signed cache
     /// configuration to the owned PCache.
     pub fn setCacheSize(self: *Pager, pages: i64) void {
@@ -1646,6 +1666,13 @@ test "page acquisition fills cache normalizes short reads and tracks hits" {
     const page2_hit = pager.getPage(2, false);
     try std.testing.expectEqual(ResultCode.ok, page2_hit.result);
     try std.testing.expectEqual(@as(u64, 1), pager.stats.cache_hits);
+    var cache_total: u64 = 9;
+    pager.addCacheStatistic(.hit, true, &cache_total);
+    try std.testing.expectEqual(@as(u64, 10), cache_total);
+    try std.testing.expectEqual(@as(u64, 0), pager.stats.cache_hits);
+    pager.addCacheStatistic(.miss, false, &cache_total);
+    try std.testing.expectEqual(@as(u64, 12), cache_total);
+    try std.testing.expectEqual(@as(u64, 2), pager.stats.cache_misses);
     try std.testing.expectEqual(ResultCode.ok, pager.release(page2_hit.page.?));
 
     const page3 = pager.getPage(3, false);

@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "id": "pager-cache-statistics-consumption",
+  "title": "Pager cache statistics accumulation and reset",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "sqlite3PagerCacheStat selects the Pager hit, miss, write, or spill counter, adds it to a caller-owned accumulator, and optionally resets only that selected counter.",
+    "source_files": [
+      {
+        "path": "src/pager.c",
+        "sha256": "58ada0bd1f081e31c4871d4933e1aed660ae81603c215cfbac0454b5c80f8343"
+      }
+    ],
+    "source_entity_ids": [
+      "src/pager.c::function::sqlite3PagerCacheStat::line-6928"
+    ],
+    "behavioral_block_ids": [
+      "src/pager.c::function::sqlite3PagerCacheStat::behavior::assert::line-6930-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerCacheStat::behavior::assert::line-6936-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerCacheStat::behavior::assert::line-6937-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerCacheStat::behavior::assert::line-6938-column-3::ordinal-0",
+      "src/pager.c::function::sqlite3PagerCacheStat::behavior::if::line-6943-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Incrementing counters at Pager read, write, and spill sites",
+      "Connection-wide attached-database traversal",
+      "DB-status integer result bounding"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Pager read, write, and spill paths maintain the four counters",
+      "sqlite3_db_status64 maps public operation numbers and traverses every open Pager"
+    ],
+    "caller_closure": "The complete selector, accumulation, and optional reset body is assigned; sqlite3_db_status64 consumes it for main and attached runtime Pagers."
+  },
+  "contracts": {
+    "inputs": [
+      "Mutable Pager",
+      "Typed hit, miss, write, or spill selector",
+      "Reset flag",
+      "Mutable u64 accumulator"
+    ],
+    "outputs": [
+      "Accumulator incremented by the selected counter"
+    ],
+    "ownership": "No allocation or ownership transfer; only the caller accumulator and optionally one Pager counter mutate.",
+    "state_and_results": "The selected counter is added with unsigned wrapping semantics. Reset clears exactly that counter after its prior value is accumulated; all other counters are preserved.",
+    "locks_callbacks_io": "Caller owns connection/Pager synchronization; no callbacks or I/O.",
+    "failure_and_continuation": "Typed selection removes invalid-statistic runtime failure; the operation is otherwise infallible."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerCacheStat::line-6928",
+      "relation": "source-cache-counter-accumulation-and-selected-reset",
+      "zig_declaration_ids": [
+        "src/core/pager.zig::function::Pager.addCacheStatistic"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The source accepts contiguous DB-status integer values guarded by assertions; Zig uses CacheStatistic so only the four valid selectors are representable.",
+    "The write counter is stored as database_writes and the spill counter as cache_spills in the runtime Stats owner."
+  ],
+  "oracle": {
+    "protocol": "Produce two misses and one hit through live page acquisition, start an accumulator at 9, consume-and-reset hit to obtain 10 and zero the hit counter, then accumulate miss without reset to obtain 12 while preserving miss count 2.",
+    "internal_observations": [
+      "selected statistic",
+      "accumulator before and after",
+      "selected counter before and after",
+      "unselected counters"
+    ],
+    "normalization": "Counter and accumulator values compare exactly as unsigned 64-bit integers."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "No I/O; connection status callers provide serialization.",
+    "malformed_input": "Invalid selectors are unrepresentable in the typed production API.",
+    "continuation": "Repeated no-reset reads preserve counters; reset affects only the selected counter.",
+    "performance": "Constant time.",
+    "commands": [
+      "zig build test",
+      "zig build pager-differential",
+      "zig build memdb-api-differential"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/pager.zig Pager Stats and src/core/sql_frontend.zig database-status traversal",
+    "native_call_path": "sqlite3_db_status64 CACHE_HIT, CACHE_MISS, CACHE_WRITE, and CACHE_SPILL traverse main and attached databases and call Pager.addCacheStatistic with the requested reset flag.",
+    "bounded_owner_retired": "The pre-gate internal pager_core.cacheStat claim remains retired with zero credit; this post-retirement runtime method has a distinct path, name, declaration hash, typed selector, and live public caller."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Requires pinned-C DB-status counter/reset differential, assurance closure, and independent review."
+  },
+  "known_blockers": [
+    "Add exact pinned-C main/attached hit, miss, write, and spill reset differential.",
+    "Exercise u64 wrap behavior in a source-shaped internal trace.",
+    "Independent fidelity review remains open."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "upstream/sqlite/src/pager.c:6900-6950 and src/status.c cache-stat cases were reviewed",
+      "src/core/pager.zig Stats maintenance and addCacheStatistic plus src/core/sql_frontend.zig addDatabaseStatus traversal were reviewed"
+    ],
+    "callers": [
+      "sqlite3_db_status64 cache hit, miss, write, and spill cases",
+      "Runtime Pager test drives live hit/miss counters and selected reset"
+    ],
+    "callees": [
+      "Direct selected Pager Stats field",
+      "Caller-owned u64 accumulator"
+    ],
+    "assertions_branches_cleanup": [
+      "All five generated assertion/reset blocks are assigned",
+      "Typed enum preserves the four source-valid selector cases",
+      "Reset occurs after accumulation and no cleanup is required"
+    ],
+    "upstream_tests": [
+      "Upstream dbstatus and pager tests exercise hit, miss, write, spill, and reset behavior",
+      "Project Pager and public memdb API suites exercise runtime counters and connection-wide status traversal"
+    ]
+  },
+  "evidence_receipts": []
+}

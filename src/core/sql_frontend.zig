@@ -2574,26 +2574,17 @@ fn statementMemoryUsed(connection: *const Connection) i64 {
 }
 
 fn addDatabaseStatus(current: *i64, database: *btree.Database, operation: c_int, reset: bool) void {
-    const value: u64 = switch (operation) {
-        1, 11 => @intCast(database.pager.memoryUsed()),
-        7 => database.pager.stats.cache_hits,
-        8 => database.pager.stats.cache_misses,
-        9 => database.pager.stats.database_writes,
-        12 => database.pager.stats.cache_spills,
+    var value: u64 = 0;
+    switch (operation) {
+        1, 11 => value = @intCast(database.pager.memoryUsed()),
+        7 => database.pager.addCacheStatistic(.hit, reset, &value),
+        8 => database.pager.addCacheStatistic(.miss, reset, &value),
+        9 => database.pager.addCacheStatistic(.write, reset, &value),
+        12 => database.pager.addCacheStatistic(.spill, reset, &value),
         else => unreachable,
-    };
+    }
     const bounded: i64 = @intCast(@min(value, @as(u64, std.math.maxInt(i64))));
     current.* = std.math.add(i64, current.*, bounded) catch std.math.maxInt(i64);
-    if (reset) {
-        switch (operation) {
-            7 => database.pager.stats.cache_hits = 0,
-            8 => database.pager.stats.cache_misses = 0,
-            9 => database.pager.stats.database_writes = 0,
-            12 => database.pager.stats.cache_spills = 0,
-            1, 11 => {},
-            else => unreachable,
-        }
-    }
 }
 
 fn addAllDatabaseStatus(connection: *Connection, operation: c_int, reset: bool, current: *i64) void {

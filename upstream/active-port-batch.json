@@ -1014,6 +1014,15 @@
       "atomic_unit_id": "wal-callback-frame-consumption",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::sqlite3PagerCacheStat::line-6928",
+      "source_sha256": "9d430084e7cb6a0a76cbe31322ddc27f63a1f9757438243067661143c8a71c8c",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.addCacheStatistic",
+      "zig_declaration_sha256": "45639cc3cd2dd2cea8c5313cd6abc12e12e9f3356759fb07b0c04fbf300d46db",
+      "atomic_unit_id": "pager-cache-statistics-consumption",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

@@ -500,6 +500,11 @@
       "status": "source-translated"
     },
     {
+      "id": "pager-cache-statistics-consumption",
+      "path": "upstream/atomic-units/pager-cache-statistics-consumption.json",
+      "status": "source-translated"
+    },
+    {
       "id": "pager-cache-configuration-and-shrink-forwarding",
       "path": "upstream/atomic-units/pager-cache-configuration-and-shrink-forwarding.json",
       "status": "source-translated"
