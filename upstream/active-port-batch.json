@@ -861,6 +861,42 @@
       "atomic_unit_id": "virtual-table-instance-and-finalizer-wrappers",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonArrayValue::line-4886",
+      "source_sha256": "ca11965db7e81d5a702f52693d1429163ea46de7d4c25ef2d1eb70eb95948fe6",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::arrayAggregateValue",
+      "zig_declaration_sha256": "84b8fdc8a824fee6edca043b49b5c5bba99a84b24a6bfce2cbf911d75c7bb984",
+      "atomic_unit_id": "json-aggregate-value-final-wrappers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonArrayFinal::line-4889",
+      "source_sha256": "77b7b45ec7c2d4942897fcb78924f30a855ea46049318abec8d10f81cd2fd8b3",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::arrayAggregateFinal",
+      "zig_declaration_sha256": "636c87fba5f869ca5b962778b54fa63e6707cc97c990a689de72c6b6a902e668",
+      "atomic_unit_id": "json-aggregate-value-final-wrappers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonObjectValue::line-5064",
+      "source_sha256": "e028912dfd42b766de4f3027afef93b52b52209ca1c1051284eb5b3639663459",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::objectAggregateValue",
+      "zig_declaration_sha256": "141228d67f2ec2313c5625024b7f7b7ef924aac74583b563db921d652a6f8442",
+      "atomic_unit_id": "json-aggregate-value-final-wrappers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonObjectFinal::line-5067",
+      "source_sha256": "3be2922e9c8c637f8c3bd447eb1555e7b2d345b79577de5879fb586ced7c8b79",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::objectAggregateFinal",
+      "zig_declaration_sha256": "ce9f9312ac4c7598c19280d0a94a7a1b2bbd706aea43d8cdfd798dc59591f8e8",
+      "atomic_unit_id": "json-aggregate-value-final-wrappers",
+      "class": "short",
+      "complete": true
     }
   ]
 }

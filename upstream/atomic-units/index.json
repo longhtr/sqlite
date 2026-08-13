@@ -798,6 +798,11 @@
       "id": "virtual-table-instance-and-finalizer-wrappers",
       "path": "upstream/atomic-units/virtual-table-instance-and-finalizer-wrappers.json",
       "status": "source-translated"
+    },
+    {
+      "id": "json-aggregate-value-final-wrappers",
+      "path": "upstream/atomic-units/json-aggregate-value-final-wrappers.json",
+      "status": "source-translated"
     }
   ]
 }

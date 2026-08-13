@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "json-aggregate-value-final-wrappers",
+  "title": "JSON aggregate value and final wrappers",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The built-in registry's json_group_array and json_group_object window/aggregate callbacks use distinct source-shaped xValue and xFinal wrappers over their shared compute owners.",
+    "source_files": [{"path":"src/json.c","sha256":"25a742ea7382fd21bc3f10fc22f4cbfc97335122ba9593822d0d7eb93bb637d9"}],
+    "source_entity_ids": ["src/json.c::function::jsonArrayValue::line-4886","src/json.c::function::jsonArrayFinal::line-4889","src/json.c::function::jsonObjectValue::line-5064","src/json.c::function::jsonObjectFinal::line-5067"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["JSON aggregate step, inverse, and compute bodies", "Full prepared window-frame SQL execution", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["arrayAggregateCompute and objectAggregateCompute"],"caller_closure":"Canonical built-in registrations reference all four wrappers for aggregate final and window value callbacks."},
+  "contracts": {"inputs":["SQLite function context retaining JSON aggregate state"],"outputs":["Transient value snapshot or ownership-ending final result"],"ownership":"xValue preserves the aggregate buffer; xFinal deinitializes it after publishing the result.","state_and_results":"Array wrappers dispatch to array compute and object wrappers to object compute with exact final flags.","locks_callbacks_io":"No locks or I/O; callback dispatch only.","failure_and_continuation":"Compute owner publishes OOM and empty-group results; xValue permits continuation and xFinal ends ownership."},
+  "mappings": [
+    {"source_entity_id":"src/json.c::function::jsonArrayValue::line-4886","relation":"json-array-window-value-wrapper","zig_declaration_ids":["src/core/internal/json_functions.zig::function::arrayAggregateValue"]},
+    {"source_entity_id":"src/json.c::function::jsonArrayFinal::line-4889","relation":"json-array-aggregate-final-wrapper","zig_declaration_ids":["src/core/internal/json_functions.zig::function::arrayAggregateFinal"]},
+    {"source_entity_id":"src/json.c::function::jsonObjectValue::line-5064","relation":"json-object-window-value-wrapper","zig_declaration_ids":["src/core/internal/json_functions.zig::function::objectAggregateValue"]},
+    {"source_entity_id":"src/json.c::function::jsonObjectFinal::line-5067","relation":"json-object-aggregate-final-wrapper","zig_declaration_ids":["src/core/internal/json_functions.zig::function::objectAggregateFinal"]}
+  ],
+  "representation_differences": ["Typed Zig callbacks directly call a shared boolean-final compute owner rather than C static wrappers."],
+  "oracle": {"protocol":"Invoke aggregate final callbacks through prepared scalar aggregate SQL and invoke value callbacks through maintained callback-level tests; compare JSON text, subtype, continuation, and cleanup.","internal_observations":["final flag and retained aggregate buffer"],"normalization":"Compare exact JSON bytes and callback continuation state."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Shared compute owner publishes OOM and preserves callback safety.","io_crash_concurrency":"No I/O or lock state.","malformed_input":"The wrappers accept source-valid aggregate contexts; empty state is handled by compute.","continuation":"xValue trims the appended close delimiter; xFinal releases the owner.","performance":"Constant-time wrapper dispatch.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/json_functions.zig and built-in registry","native_call_path":"prepared aggregate/window callback dispatch -> value/final wrapper -> shared compute","bounded_owner_retired":"No alternative wrapper set."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Prepared window-frame integration, trace, and review remain open."},
+  "known_blockers": ["Complete prepared JSON window-value integration and independent review."],
+  "context_review": {"implementation_spans":["Complete source wrappers and surrounding compute owners","Built-in registry callback assignment"],"callers":["json_group_array and json_group_object aggregate/window dispatch"],"callees":["arrayAggregateCompute and objectAggregateCompute"],"assertions_branches_cleanup":["empty aggregate, value continuation, final ownership, OOM, text subtype reviewed"],"upstream_tests":["Project prepared JSON aggregate tests and internal JSON callback tests"]},
+  "evidence_receipts": []
+}
