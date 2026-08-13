@@ -897,6 +897,15 @@
       "atomic_unit_id": "json-aggregate-value-final-wrappers",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/select.c::function::agginfoFree::line-7110",
+      "source_sha256": "57fd69e5e32f04671101d85a4844b4d1cc3bef0fe94f43d91f208c0178ddaa8f",
+      "zig_declaration_id": "src/core/internal/aggregate_analysis.zig::function::freeAggregateInfo",
+      "zig_declaration_sha256": "0ec0719aa47f876c733cb34dcb954aa6563256478b40baa22784f11340338248",
+      "atomic_unit_id": "aggregate-info-owner-release",
+      "class": "short",
+      "complete": true
     }
   ]
 }

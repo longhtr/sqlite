@@ -18,6 +18,13 @@ pub const AggregateContext = struct {
     in_function: bool = false,
 };
 
+/// Source `agginfoFree()`.
+pub fn freeAggregateInfo(db: *types.Sqlite3, info: *parse_types.AggInfo) void {
+    db_allocator.free(db, if (info.columns) |columns| @ptrCast(columns) else null);
+    db_allocator.free(db, if (info.functions) |functions| @ptrCast(functions) else null);
+    db_allocator.freeNN(db, info);
+}
+
 fn appendColumn(db: *types.Sqlite3, info: *parse_types.AggInfo) ?c_int {
     const old_count = info.column_count;
     const raw = db_allocator.realloc(db, if (info.columns) |columns| @ptrCast(columns) else null, @as(usize, @intCast(old_count + 1)) * @sizeOf(parse_types.AggInfoColumn)) orelse return null;

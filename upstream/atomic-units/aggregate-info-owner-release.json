@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "aggregate-info-owner-release",
+  "title": "Aggregate-analysis owner release",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Aggregate rewrite and analysis now have a source-shaped destructor for the separately allocated column array, function array, and AggInfo owner.",
+    "source_files": [{"path":"src/select.c","sha256":"bdf052a30146b56afe82c5fc1affcf6a01b6417bc72ec8608139d75d910e3408"}],
+    "source_entity_ids": ["src/select.c::function::agginfoFree::line-7110"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Aggregate analysis, register assignment, and query rewrite", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Connection allocator and AggInfo layout"],"caller_closure":"The helper owns the complete AggInfo allocation topology used by aggregate analysis."},
+  "contracts": {"inputs":["Owning connection and non-null AggInfo"],"outputs":["Column array, function array, and owner released"],"ownership":"Consumes the complete AggInfo owner; nullable child arrays are accepted.","state_and_results":"Frees children before the parent with no mutation afterward.","locks_callbacks_io":"No lock, callback, or I/O.","failure_and_continuation":"Destructor allocates nothing and cannot fail."},
+  "mappings": [{"source_entity_id":"src/select.c::function::agginfoFree::line-7110","relation":"aggregate-info-owner-destructor","zig_declaration_ids":["src/core/internal/aggregate_analysis.zig::function::freeAggregateInfo"]}],
+  "representation_differences": ["The typed function receives AggInfo directly instead of a void pointer cleanup callback argument."],
+  "oracle": {"protocol":"Allocate AggInfo with zero and populated child arrays through the connection allocator, release it, and compare allocation cleanup.","internal_observations":["child-before-parent free order and zero retained allocations"],"normalization":"Compare ownership outcomes."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Destructor allocates nothing and supports cleanup after partial construction.","io_crash_concurrency":"No I/O or lock state.","malformed_input":"Requires a source-valid non-null owner; child pointers may be null.","continuation":"Caller must not reuse the consumed owner.","performance":"Constant three allocator releases.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/aggregate_analysis.zig","native_call_path":"aggregate analysis cleanup -> freeAggregateInfo","bounded_owner_retired":"No alternate AggInfo destructor."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Focused trace and independent review remain open."},
+  "known_blockers": ["Wire every future heap AggInfo cleanup site and add focused allocator trace."],
+  "context_review": {"implementation_spans":["Complete agginfoFree source body","AggInfo allocation and child growth helpers"],"callers":["Aggregate-analysis cleanup owners"],"callees":["Connection allocator free"],"assertions_branches_cleanup":["Null children, populated children, and parent release reviewed"],"upstream_tests":["Project aggregate and broad runtime tests"]},
+  "evidence_receipts": []
+}

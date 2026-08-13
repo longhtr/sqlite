@@ -803,6 +803,11 @@
       "id": "json-aggregate-value-final-wrappers",
       "path": "upstream/atomic-units/json-aggregate-value-final-wrappers.json",
       "status": "source-translated"
+    },
+    {
+      "id": "aggregate-info-owner-release",
+      "path": "upstream/atomic-units/aggregate-info-owner-release.json",
+      "status": "source-translated"
     }
   ]
 }
