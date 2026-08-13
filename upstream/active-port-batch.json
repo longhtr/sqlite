@@ -699,6 +699,24 @@
       "atomic_unit_id": "low-level-source-error-reporting",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vtab.c::function::addArgumentToVtab::line-436",
+      "source_sha256": "2182a4f9c37831333bf2fdab4f8f57acf79f5218cfe3af5c5e5721874a687062",
+      "zig_declaration_id": "src/core/internal/virtual_table_lifecycle.zig::function::addAccumulatedVirtualArgument",
+      "zig_declaration_sha256": "49091d7cd293455a547314c235b331fec05be4953c743e5b80b8c2ff40b1b2fe",
+      "atomic_unit_id": "virtual-table-parser-argument-boundaries",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vtab.c::function::sqlite3VtabArgInit::line-533",
+      "source_sha256": "64f5b64c7d80dab9564269edaa3dd2e2c51b42c9c76efdfbb6844bc5691c6ba1",
+      "zig_declaration_id": "src/core/internal/virtual_table_lifecycle.zig::function::initializeVirtualArgument",
+      "zig_declaration_sha256": "02c39fab90f182a1d52d883381c4575fe230804bd7372e5b0e2e24ad1ac4cde8",
+      "atomic_unit_id": "virtual-table-parser-argument-boundaries",
+      "class": "short",
+      "complete": true
     }
   ]
 }

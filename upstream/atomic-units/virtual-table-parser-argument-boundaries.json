@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "id": "virtual-table-parser-argument-boundaries",
+  "title": "Virtual-table parser argument boundaries",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "CREATE VIRTUAL TABLE argument parsing completes the previously accumulated argument at each new argument boundary, duplicates non-empty bytes into table ownership, and resets parser accumulation for the next argument.",
+    "source_files": [
+      {
+        "path": "src/vtab.c",
+        "sha256": "511babb71798ebebf9c3249b1388c844809349d242babaf44dee412f870508e1"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vtab.c::function::addArgumentToVtab::line-436",
+      "src/vtab.c::function::sqlite3VtabArgInit::line-533"
+    ],
+    "behavioral_block_ids": [
+      "src/vtab.c::function::addArgumentToVtab::behavior::if::line-437-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Token-span extension after the first token",
+      "Schema persistence and constructor invocation",
+      "Independent fidelity review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "addModuleArgument column-limit and ownership owner",
+      "Generated parser CREATE VIRTUAL TABLE actions"
+    ],
+    "caller_closure": "Both private parser-boundary functions are assigned together and feed the existing virtual-table construction owner."
+  },
+  "contracts": {
+    "inputs": [
+      "Virtual table under construction, accumulated argument bytes, and active column limit"
+    ],
+    "outputs": [
+      "Owned table argument or no-op for empty accumulation, followed by empty reusable accumulation"
+    ],
+    "ownership": "Input accumulation remains parser-owned and reusable. The table receives a duplicate released by Table.deinit exactly once.",
+    "state_and_results": "Empty accumulation adds nothing. Non-empty accumulation appends one argument, enforces the column limit through addModuleArgument, then clears the parser buffer only after success.",
+    "locks_callbacks_io": "No lock, callback, or I/O.",
+    "failure_and_continuation": "OOM or limit failure preserves the accumulated input for parser cleanup; successful initialization leaves it empty for the next argument."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vtab.c::function::addArgumentToVtab::line-436",
+      "relation": "source-accumulated-vtab-argument-to-table-owner",
+      "zig_declaration_ids": [
+        "src/core/internal/virtual_table_lifecycle.zig::function::addAccumulatedVirtualArgument"
+      ]
+    },
+    {
+      "source_entity_id": "src/vtab.c::function::sqlite3VtabArgInit::line-533",
+      "relation": "source-vtab-argument-boundary-and-accumulator-reset",
+      "zig_declaration_ids": [
+        "src/core/internal/virtual_table_lifecycle.zig::function::initializeVirtualArgument"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "A reusable ArrayList accumulation replaces source Token span fields while preserving boundary, duplicate, and reset semantics."
+  ],
+  "oracle": {
+    "protocol": "Accumulate empty, one-token, and multi-token arguments; cross argument boundaries; inject duplicate/append OOM and column-limit failure; compare constructor argv ordering and cleanup.",
+    "internal_observations": [
+      "table argument count and bytes",
+      "accumulation length before/after boundary",
+      "single ownership release"
+    ],
+    "normalization": "Compare argument bytes and order; pointer identities are not compared."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Duplicate and append allocation failures retain cleanup ownership and do not clear input prematurely.",
+    "io_crash_concurrency": "No I/O or shared concurrency.",
+    "malformed_input": "Empty accumulation is a no-op; column-limit excess returns Constraint.",
+    "continuation": "Successful boundaries permit subsequent argument accumulation and final constructor argv use.",
+    "performance": "One bounded duplicate and append per argument.",
+    "commands": [
+      "zig test --dep build_profile -Mroot=src/root.zig -Mbuild_profile=config/build_profile.zig -lc"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/virtual_table_lifecycle.zig Table argument owner",
+    "native_call_path": "The native parser actions and virtual-table construction owner share the typed argument lifecycle module; final SQL frontend argument grammar expansion remains bounded.",
+    "bounded_owner_retired": "The no-op parser-boundary substitute is replaced in the native lifecycle owner."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Generated parser call-path integration, pinned-C trace, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Connect full frontend CREATE VIRTUAL TABLE module-argument grammar to the lifecycle owner.",
+    "Add pinned-C parser argument trace.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned addArgumentToVtab and sqlite3VtabArgInit bodies plus adjacent extend/finish paths",
+      "Native Table argument ownership, generated parser actions, SQL frontend virtual create path, and tests"
+    ],
+    "callers": [
+      "Generated CREATE VIRTUAL TABLE parser actions"
+    ],
+    "callees": [
+      "addModuleArgument and ArrayList clearRetainingCapacity"
+    ],
+    "assertions_branches_cleanup": [
+      "Empty/non-empty accumulation, success, OOM, limit failure, ownership transfer, reset, and repeated boundaries reviewed"
+    ],
+    "upstream_tests": [
+      "Upstream virtual-table parser argument tests",
+      "Project parser and virtual-table lifecycle tests"
+    ]
+  },
+  "evidence_receipts": []
+}

@@ -90,6 +90,11 @@
       "status": "source-translated"
     },
     {
+      "id": "virtual-table-parser-argument-boundaries",
+      "path": "upstream/atomic-units/virtual-table-parser-argument-boundaries.json",
+      "status": "source-translated"
+    },
+    {
       "id": "vtab-constraint-collation-in-and-rhs",
       "path": "upstream/atomic-units/vtab-constraint-collation-in-and-rhs.json",
       "status": "source-translated"

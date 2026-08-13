@@ -156,6 +156,20 @@ pub fn finishVirtualParse(state: *State, table: *Table, statement: []const u8) E
     };
 }
 
+/// Source `addArgumentToVtab()`: append an accumulated non-empty argument to
+/// the table and transfer the duplicated bytes into table ownership.
+pub fn addAccumulatedVirtualArgument(table: *Table, argument: []const u8, column_limit: usize) Error!void {
+    if (argument.len == 0) return;
+    try addModuleArgument(table, argument, column_limit);
+}
+
+/// Source `sqlite3VtabArgInit()`: finish the prior accumulated argument before
+/// the parser begins collecting the next one.
+pub fn initializeVirtualArgument(table: *Table, accumulated: *std.ArrayList(u8), column_limit: usize) Error!void {
+    try addAccumulatedVirtualArgument(table, accumulated.items, column_limit);
+    accumulated.clearRetainingCapacity();
+}
+
 /// Source `sqlite3VtabArgExtend()`.
 pub fn extendVirtualArgument(table: *Table, tokens: []const []const u8, column_limit: usize) Error!void {
     var joined = std.ArrayList(u8).empty;
@@ -170,6 +184,22 @@ pub fn extendVirtualArgument(table: *Table, tokens: []const []const u8, column_l
 fn findTable(state: *State, name: []const u8) ?*Table {
     for (state.tables.items) |table| if (std.ascii.eqlIgnoreCase(table.name, name)) return table;
     return null;
+}
+
+test "virtual table parser accumulation transfers each argument once" {
+    const table = try beginVirtualParse(std.testing.allocator, "main", "items", "module", 32);
+    defer {
+        table.deinit();
+        std.testing.allocator.destroy(table);
+    }
+    var accumulated = std.ArrayList(u8).empty;
+    defer accumulated.deinit(std.testing.allocator);
+    try accumulated.appendSlice(std.testing.allocator, "first value");
+    try initializeVirtualArgument(table, &accumulated, 32);
+    try std.testing.expectEqual(@as(usize, 0), accumulated.items.len);
+    try std.testing.expectEqualStrings("first value", table.arguments.items[3]);
+    try initializeVirtualArgument(table, &accumulated, 32);
+    try std.testing.expectEqual(@as(usize, 4), table.arguments.items.len);
 }
 
 /// Source `vtabCallConstructor()`.
