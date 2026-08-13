@@ -710,6 +710,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/select.c::function::pushDownWindowCheck::line-5016",
+      "source_sha256": "69bbdb766a10521d75c31d1794d18761a8d98171d46707c921820de26d9a41cf",
+      "zig_declaration_id": "src/core/internal/select_analysis.zig::function::pushDownWindowCheck",
+      "zig_declaration_sha256": "ceb3ebe450a2863c43290bc6379ff4b41535a97093fb030e2d1894d27a7dda2f",
+      "atomic_unit_id": "select-window-pushdown-check",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/status.c::function::sqlite3_db_status::line-426",
       "source_sha256": "1fcfd1166c4f04aab72467b89e50ed686ffbe67f7f7fc8c2376c730cd1c67fa0",
       "zig_declaration_id": "src/core/sql_frontend.zig::function::databaseStatus",

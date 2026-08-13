@@ -1182,6 +1182,14 @@ pub fn propagateConstants(parse: *parse_types.Parse, select: *parse_types.Select
     return total_changes;
 }
 
+/// Source `pushDownWindowCheck()`.
+pub fn pushDownWindowCheck(parse: *parse_types.Parse, subquery: *parse_types.Select, expression_node: *parse_types.Expr) bool {
+    const window = subquery.pWin.?;
+    std.debug.assert(window.partition_by != null);
+    std.debug.assert(subquery.pPrior == null);
+    return expression_analysis.isConstantOrGroupBy(parse, expression_node, window.partition_by.?);
+}
+
 /// Source `havingToWhereExprCb()`.
 pub fn havingToWhereCallback(walker: *parse_types.Walker, expression_node: *parse_types.Expr) callconv(.c) c_int {
     if (expression_node.op == tokens.tk_and) return walker_api.continue_walk;

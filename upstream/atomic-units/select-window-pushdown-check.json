@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "select-window-pushdown-check",
+  "title": "SELECT window predicate pushdown check",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "SELECT analysis now has the source safety predicate for pushing constants and partition expressions into a window subquery.",
+    "source_files": [{"path":"src/select.c","sha256":"bdf052a30146b56afe82c5fc1affcf6a01b6417bc72ec8608139d75d910e3408"}],
+    "source_entity_ids": ["src/select.c::function::pushDownWindowCheck::line-5016"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Complete WHERE pushdown transformation", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Constant-or-group-by expression analysis"],"caller_closure":"The complete source safety decision is translated over source-layout Select and Window."},
+  "contracts": {"inputs":["Parse, one-window-frame subquery, candidate expression"],"outputs":["True only for constants or partition-by expressions"],"ownership":"Borrows all inputs.","state_and_results":"Asserts source preconditions: partition exists and no compound prior arm.","locks_callbacks_io":"No locks or I/O.","failure_and_continuation":"Expression analysis reports a boolean decision."},
+  "mappings": [{"source_entity_id":"src/select.c::function::pushDownWindowCheck::line-5016","relation":"window-partition-predicate-pushdown-safety","zig_declaration_ids":["src/core/internal/select_analysis.zig::function::pushDownWindowCheck"]}],
+  "representation_differences": ["Uses typed Window.partition_by and Select.pWin fields."],
+  "oracle": {"protocol":"Check constants, partition expressions, and non-partition column expressions.","internal_observations":["exact boolean decision"],"normalization":"Boolean comparison."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"No allocation in this wrapper; delegated analysis follows parser OOM state.","io_crash_concurrency":"No I/O or concurrency.","malformed_input":"Source preconditions are asserted.","continuation":"No mutation.","performance":"Linear delegated expression walk.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/select_analysis.zig","native_call_path":"SELECT predicate pushdown analysis -> pushDownWindowCheck","bounded_owner_retired":"No alternate source-identity helper."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Wire complete WHERE pushdown transform and focused differential."],
+  "context_review": {"implementation_spans":["Complete pushDownWindowCheck body", "constant-or-group-by callee and Window layout"],"callers":["SELECT WHERE pushdown"],"callees":["isConstantOrGroupBy"],"assertions_branches_cleanup":["partition present", "non-compound SELECT", "boolean decision"],"upstream_tests":["Project planner and broad runtime tests"]},
+  "evidence_receipts": []
+}

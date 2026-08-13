@@ -863,6 +863,11 @@
       "id": "json-blob-append-growth-leaves",
       "path": "upstream/atomic-units/json-blob-append-growth-leaves.json",
       "status": "source-translated"
+    },
+    {
+      "id": "select-window-pushdown-check",
+      "path": "upstream/atomic-units/select-window-pushdown-check.json",
+      "status": "source-translated"
     }
   ]
 }
