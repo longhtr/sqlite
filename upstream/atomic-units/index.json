@@ -15,6 +15,11 @@
       "status": "source-translated"
     },
     {
+      "id": "sql-completeness-state-machine",
+      "path": "upstream/atomic-units/sql-completeness-state-machine.json",
+      "status": "subsystem-integrated"
+    },
+    {
       "id": "public-statement-step-reset-finalize-lifecycle",
       "path": "upstream/atomic-units/public-statement-step-reset-finalize-lifecycle.json",
       "status": "source-translated"

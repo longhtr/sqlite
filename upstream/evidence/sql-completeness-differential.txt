@@ -1,0 +1,4 @@
+command: zig build complete-differential -j1
+result: pass
+observations: 16 comments, quotes, triggers, UTF-8, and UTF-16 observations match
+native-tests: 2 passed

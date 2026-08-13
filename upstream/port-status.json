@@ -9,7 +9,7 @@
       "scaffolded": 0,
       "source-context-reviewed": 0,
       "source-translated": 98,
-      "subsystem-integrated": 19
+      "subsystem-integrated": 20
     },
     "authoritative_process": "docs/ENGINEERING_PROCESS.md",
     "behavioral_block_inventory_complete": true,
@@ -47,7 +47,7 @@
     "canonical_vdbe_execution_cases_with_bounded_runtime_mapping": 107,
     "canonical_vdbe_execution_cases_without_bounded_runtime_mapping": 83,
     "checked_math_entities_differentially_checked": 6,
-    "complete_active_entities_differentially_checked": 10,
+    "complete_active_entities_differentially_checked": 8,
     "default_mem1_entities_differentially_checked": 10,
     "dequote_entities_differentially_checked": 5,
     "error_offset_entities_differentially_checked": 5,
@@ -94,7 +94,7 @@
     "utf_active_entities_differentially_checked": 13,
     "vdbe_opcode_coverage_warning": "A mapped case proves name-level runtime presence only, not complete SQLite semantics or fidelity.",
     "vlist_entities_differentially_checked": 0,
-    "zig_source_lines": 92506
+    "zig_source_lines": 92511
   },
   "overall_status": "incomplete-control-revalidation-and-source-port",
   "public_api": {
@@ -142,11 +142,11 @@
     "active_source_files": 85,
     "ast_resolved_legacy_target_references": 422,
     "ast_resolved_reviewed_target_references": 2097,
-    "atomic_unit_dossiers_admission_ready": 148,
-    "atomic_unit_dossiers_total": 148,
+    "atomic_unit_dossiers_admission_ready": 149,
+    "atomic_unit_dossiers_total": 149,
     "atomic_units_assurance_passed": 0,
-    "atomic_units_source_translated_or_later": 148,
-    "atomic_units_subsystem_integrated_or_later": 19,
+    "atomic_units_source_translated_or_later": 149,
+    "atomic_units_subsystem_integrated_or_later": 20,
     "behavioral_blocks_assigned_to_atomic_units": 1910,
     "behavioral_blocks_inventoried": 25930,
     "behavioral_functions_inventoried": 2457,
@@ -205,11 +205,11 @@
     "zig_declaration_inventory": 13705
   },
   "translation_tracking": {
-    "active_batch_entries": 62,
+    "active_batch_entries": 64,
     "active_batch_schema": 2,
     "active_batch_short_functions": 27,
     "active_batch_status": "active",
-    "active_batch_substantive_functions": 35,
+    "active_batch_substantive_functions": 37,
     "checkpoint_ledger": "upstream/port-checkpoints.json",
     "completion_credit": 0,
     "durable_checkpoints": 1,

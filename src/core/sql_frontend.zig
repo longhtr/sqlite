@@ -2588,13 +2588,18 @@ pub export fn sqlite3_free_table(result: ?[*]?[*:0]u8) callconv(.c) void {
     freeCollectedTable(result);
 }
 
+/// Source `sqlite3_complete16()`: initialize the process, then run the
+/// allocation-free native-code-unit form of the shared completeness scanner.
 pub export fn sqlite3_complete16(sql_pointer: ?*const anyopaque) callconv(.c) c_int {
+    const init_result = public_api.sqlite3_initialize();
+    if (init_result != ResultCode.ok.toC()) return init_result;
     const units: [*]const u16 = if (sql_pointer) |pointer| @ptrCast(@alignCast(pointer)) else return 0;
     var length: usize = 0;
     while (units[length] != 0) : (length += 1) {}
     return @intFromBool(complete.isCompleteUtf16(units[0..length]));
 }
 
+/// Source `sqlite3_complete()`: expose the trigger-aware eight-state scanner.
 pub export fn sqlite3_complete(sql_pointer: ?[*:0]const u8) callconv(.c) c_int {
     const sql = if (sql_pointer) |value| std.mem.span(value) else return 0;
     return @intFromBool(complete.isComplete(sql));

@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "id": "sql-completeness-state-machine",
+  "title": "Trigger-aware UTF-8 and UTF-16 SQL completeness",
+  "status": "subsystem-integrated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The two active completeness APIs share one trigger-aware token state machine and are directly integrated into the public UTF-8 and UTF-16 exports.",
+    "source_files": [
+      {
+        "path": "src/complete.c",
+        "sha256": "2125ef12d26d89bceded3295a7543bcf42410727b984ff51e85bcc59fe6e9eb3"
+      }
+    ],
+    "source_entity_ids": [
+      "src/complete.c::function::sqlite3_complete::line-104",
+      "src/complete.c::function::sqlite3_complete16::line-269"
+    ],
+    "behavioral_block_ids": [
+      "src/complete.c::function::sqlite3_complete::behavior::while::line-144-column-3::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::switch::line-145-column-5::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::if::line-159-column-9::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::while::line-164-column-9::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::return::line-165-column-26::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::if::line-171-column-9::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::while::line-175-column-9::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::return::line-176-column-24::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::while::line-182-column-9::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::return::line-183-column-24::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::while::line-192-column-9::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::return::line-193-column-24::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::if::line-201-column-9::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::for::line-204-column-11::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::switch::line-208-column-11::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::if::line-210-column-15::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::if::line-218-column-15::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::if::line-220-column-21::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::if::line-222-column-21::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::if::line-230-column-15::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::if::line-234-column-15::ordinal-0",
+      "src/complete.c::function::sqlite3_complete::behavior::return::line-260-column-3::ordinal-0",
+      "src/complete.c::function::sqlite3_complete16::behavior::if::line-276-column-3::ordinal-0",
+      "src/complete.c::function::sqlite3_complete16::behavior::return::line-276-column-12::ordinal-0",
+      "src/complete.c::function::sqlite3_complete16::behavior::if::line-281-column-3::ordinal-0",
+      "src/complete.c::function::sqlite3_complete16::behavior::return::line-287-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Inactive EBCDIC and OMIT_TRIGGER profiles",
+      "Independent exhaustive malformed-Unicode review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Public process initialization for the UTF-16 export"
+    ],
+    "caller_closure": "Both active source APIs and their public exports are assigned; UTF-8 and UTF-16 public callers execute the same production state machine."
+  },
+  "contracts": {
+    "inputs": [
+      "Nullable terminated UTF-8 or native UTF-16 SQL text"
+    ],
+    "outputs": [
+      "Boolean complete/incomplete result or initialization error for UTF-16"
+    ],
+    "ownership": "Input text is borrowed; the production UTF-16 scanner is allocation-free after process initialization.",
+    "state_and_results": "Whitespace, operators, quotes, bracket identifiers, comments, ordinary statements, and CREATE TRIGGER ;END; termination preserve the source eight-state transition table.",
+    "locks_callbacks_io": "Only process initialization may acquire global lifecycle locks; scanning performs no callbacks or I/O.",
+    "failure_and_continuation": "NULL and unterminated quote/comment input return incomplete; initialization failure is returned by the UTF-16 API without consuming input."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/complete.c::function::sqlite3_complete::line-104",
+      "relation": "source-state-machine-to-native-utf8-public-export",
+      "zig_declaration_ids": [
+        "src/core/complete.zig::function::isComplete",
+        "src/core/sql_frontend.zig::function::sqlite3_complete"
+      ]
+    },
+    {
+      "source_entity_id": "src/complete.c::function::sqlite3_complete16::line-269",
+      "relation": "source-utf16-wrapper-to-allocation-free-native-public-export",
+      "zig_declaration_ids": [
+        "src/core/complete.zig::function::isCompleteUtf16",
+        "src/core/sql_frontend.zig::function::sqlite3_complete16"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "A generic typed code-unit scanner eliminates the source temporary Mem allocation while retaining successful UTF-16 syntax behavior."
+  ],
+  "oracle": {
+    "protocol": "Compare UTF-8 and UTF-16 whitespace, semicolon, comment, quote, identifier, ordinary CREATE, EXPLAIN/TEMP TRIGGER, and unterminated inputs.",
+    "internal_observations": [
+      "final state and public result",
+      "process initialization result for UTF-16"
+    ],
+    "normalization": "Compare primary public integer results and completion booleans."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": true,
+    "subsystem_integrated": true,
+    "oom": "The scanner allocates nothing; UTF-16 process initialization failure is returned before scanning.",
+    "io_crash_concurrency": "No I/O or mutable scanner-global state.",
+    "malformed_input": "Unterminated comments, quoted tokens, and bracket identifiers return incomplete without over-read.",
+    "continuation": "Every call is stateless and independently reusable.",
+    "performance": "Linear scan with constant transition-table storage.",
+    "commands": [
+      "zig build complete-differential -j1"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/complete.zig and src/core/sql_frontend.zig",
+    "native_call_path": "sqlite3_complete and sqlite3_complete16 directly invoke the production typed scanner.",
+    "bounded_owner_retired": "No parallel simplified completeness implementation remains in the public path."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Assurance matrix and independent profile review remain open."
+  },
+  "known_blockers": [
+    "Complete malformed UTF-16 and inactive-profile assurance.",
+    "Complete independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned complete.c active bodies and transition table",
+      "Native generic scanner, public UTF-8/UTF-16 exports, and differential bridge"
+    ],
+    "callers": [
+      "Public sqlite3_complete and sqlite3_complete16 API clients"
+    ],
+    "callees": [
+      "Process initializer and allocation-free completeUnits scanner"
+    ],
+    "assertions_branches_cleanup": [
+      "All active tokenization branches, trigger transitions, EOF returns, and UTF-16 publication reviewed"
+    ],
+    "upstream_tests": [
+      "Pinned complete.c oracle worker",
+      "Native complete differential and public phase17 client"
+    ]
+  },
+  "evidence_receipts": [
+    {
+      "command": "zig build complete-differential -j1",
+      "result_owner": "upstream/evidence/sql-completeness-differential.txt",
+      "result_sha256": "e2f62084866a7cb110206560ce2e52eb6ebcb96d9ab12bb99d428c6ea204e904",
+      "source_scope_sha256": "9d272fa73f0fb902863e71f4ccf4bdba12c374a89669bda83116899beba32f5c",
+      "zig_scope_sha256": "67b768b2ad3beaab848ceac9852cbc7951dd376d57fd479d961e5f0c57834145"
+    }
+  ]
+}
