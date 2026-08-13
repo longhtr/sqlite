@@ -744,6 +744,87 @@
       "class": "substantive",
       "complete": true,
       "zig_declaration_sha256": "7449219a5d20a4172eea64bf3db17f596c940ac76208216b58be5952561ea9be"
+    },
+    {
+      "source_entity_id": "src/upsert.c::function::sqlite3UpsertDelete::line-33",
+      "source_sha256": "ccf8289d38a456f0d771f81f50a87bce5f17c065ee66d58e2ed459a94da3ef18",
+      "zig_declaration_id": "src/core/internal/compiler_ownership.zig::function::deleteUpsert",
+      "zig_declaration_sha256": "4c94e386622a7a367b264095dec0e332362e14a99bfd0f9408bd543c28eeb094",
+      "atomic_unit_id": "upsert-optional-delete-closure",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabConnect::line-2815",
+      "source_sha256": "f68185073f32b51c8b37c5c5e4690ed40925ba6f38ce548a3d659a203872de6f",
+      "zig_declaration_id": "src/core/internal/pragma_runtime.zig::function::connectVirtualTable",
+      "zig_declaration_sha256": "9d3cf053f72c51fa8b743efd79aef4a3be5ca9fe2a34f43d3e5fb716e90d5e7c",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabOpen::line-2928",
+      "source_sha256": "294ea23fe2fb08a2356f4b3f5d5c37c390203afa38657b3ef60a1b0605d380be",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualOpen",
+      "zig_declaration_sha256": "5781b7b24242ffbae416ff256762f5a43bb1bc94c9d7e334ccc778a27ca2d755",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabClose::line-2951",
+      "source_sha256": "8f00f81fc4462ba683b03bfe3b0766642c6fe99d6fc9a73f1eb68e5919648687",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualClose",
+      "zig_declaration_sha256": "fed93db070ba6b0cebd444319126d0d451afa35b67bbc8617e51294977246747",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabFilter::line-2977",
+      "source_sha256": "39dea4a34b93f157163773a0d7b964d0844beecd5c34ebee5d823048b5a6b42e",
+      "zig_declaration_id": "src/core/internal/pragma_runtime.zig::function::virtualFilter",
+      "zig_declaration_sha256": "19dcb8d9f934d585533d8f3422d1f3310a496bb14708d188522faa6cc3336e70",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabEof::line-3027",
+      "source_sha256": "ed437a5265dd56d1054825e820b922a1a5d7fcf090af73b8850d566a49434e84",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualEof",
+      "zig_declaration_sha256": "59a490b1d8545e2587ac4bc3374c7cc2f6bf896dffb71c930f3974b10313fded",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabColumn::line-3035",
+      "source_sha256": "da9889e2f59c77853b60d71f75b7d85226c0abf00e03c63d3287259c12b6875c",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualColumn",
+      "zig_declaration_sha256": "2ecd8ee2b3f2841948edd4b7f2b68f18e7a425e1df5f16f23e12b6829469d9c5",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabRowid::line-3053",
+      "source_sha256": "96da42ffbb74fc5137aac9eaf06e260b031bc3220d08b776e797845afeaefed9",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualRowid",
+      "zig_declaration_sha256": "63ad16de68a4dcaa782174639e1d69dd3a484a537d692673b840475cb2bdce7a",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::sqlite3PragmaVtabRegister::line-3093",
+      "source_sha256": "a9984f26a473cf0dd4a353922d3bd220ae1f350383d3f0bf1276ff64e3d6e4e0",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::compilePragmaVirtualScan",
+      "zig_declaration_sha256": "5279af9ec21226392c0315f461fbaffb065d211a3336b110c8a4f1f8a6c113ff",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "short",
+      "complete": true
     }
   ]
 }

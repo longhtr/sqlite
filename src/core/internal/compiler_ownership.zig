@@ -58,6 +58,21 @@ pub fn deleteExpressionList(db: *runtime.Sqlite3, list: ?*ast.ExprList) void {
     db_allocator.freeNN(db, @ptrCast(owned));
 }
 
+/// Source `upsertDelete()` and `sqlite3UpsertDelete()` ownership closure.
+pub fn deleteUpsert(db: *runtime.Sqlite3, first: ?*ast.Upsert) void {
+    var current = first;
+    while (current) |upsert| {
+        const next = upsert.pNextUpsert;
+        deleteExpressionList(db, upsert.pUpsertTarget);
+        deleteExpression(db, upsert.pUpsertTargetWhere);
+        deleteExpressionList(db, upsert.pUpsertSet);
+        deleteExpression(db, upsert.pUpsertWhere);
+        free(db, upsert.pToFree);
+        db_allocator.freeNN(db, @ptrCast(upsert));
+        current = next;
+    }
+}
+
 pub fn unlinkWindow(window: *ast.Window) void {
     if (window.owner_link) |link| {
         link.* = window.next;

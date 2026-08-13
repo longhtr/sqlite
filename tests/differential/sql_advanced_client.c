@@ -11,7 +11,7 @@ int main(void){sqlite3*db=0;
 #else
  if(sqlite3_open(":memory:",&db)!=0)return 1;sqlite3_exec(db,"ATTACH 'tests/fixtures/btree-mutation/none-512.db' AS src; CREATE TABLE t(id INTEGER PRIMARY KEY,v BLOB); INSERT INTO t SELECT * FROM src.t; DETACH src",0,0,0);
 #endif
- if(!db)return 1;execdone(db,"upsert","INSERT INTO t(id,v) VALUES(1,'ignored') ON CONFLICT DO NOTHING");row(db,"window","SELECT row_number() OVER ()");row(db,"pragma","PRAGMA user_version");execdone(db,"vacuum","VACUUM");
+ if(!db)return 1;execdone(db,"upsert","INSERT INTO t(id,v) VALUES(1,'ignored') ON CONFLICT DO NOTHING");row(db,"window","SELECT row_number() OVER ()");row(db,"pragma","PRAGMA user_version");row(db,"pragma-vtab","SELECT user_version FROM pragma_user_version");row(db,"pragma-vtab-schema","SELECT cache_size FROM pragma_cache_size('main')");execdone(db,"vacuum","VACUUM");
 #ifdef NATIVE_ENGINE
  return sqlite3_zig_phase13_close(db)!=0;
 #else

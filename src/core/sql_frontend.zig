@@ -170,6 +170,14 @@ const Module = extern struct {
 const VirtualTable = struct { connection: *Connection, schema_name: [:0]u8, name: [:0]u8, module: *const Module, instance: *sqlite3_vtab, columns: std.ArrayList([:0]u8) = .empty };
 const VirtualPlan = struct { table: *VirtualTable, index_number: c_int = 0, index_string: ?[:0]u8 = null };
 const VirtualHandle = struct { plan: *VirtualPlan, cursor: *sqlite3_vtab_cursor };
+const PragmaVirtualPlan = struct {
+    allocator: std.mem.Allocator,
+    table: pragma_runtime.VirtualTable,
+    state: *pragma_runtime.State,
+    argument: ?[]u8 = null,
+    schema_name: ?[]u8 = null,
+};
+const PragmaVirtualHandle = struct { plan: *PragmaVirtualPlan, cursor: pragma_runtime.VirtualCursor };
 const JsonVirtualPlan = struct {
     allocator: std.mem.Allocator,
     connection: json_vtable.Connection,
@@ -3848,6 +3856,7 @@ const Owner = struct {
     virtual_sources: []vdbe.VirtualSource = &.{},
     virtual_plan: ?*VirtualPlan = null,
     json_virtual_plan: ?*JsonVirtualPlan = null,
+    pragma_virtual_plan: ?*PragmaVirtualPlan = null,
     program: vdbe.Program,
 
     fn destroy(allocator: std.mem.Allocator, context: *anyopaque) void {
@@ -3873,6 +3882,12 @@ const Owner = struct {
         if (self.json_virtual_plan) |plan| {
             allocator.free(plan.input);
             if (plan.root) |root| allocator.free(root);
+            allocator.destroy(plan);
+        }
+        if (self.pragma_virtual_plan) |plan| {
+            if (plan.argument) |argument| allocator.free(argument);
+            if (plan.schema_name) |schema_name| allocator.free(schema_name);
+            plan.table.deinit();
             allocator.destroy(plan);
         }
         allocator.free(self.source);
@@ -8538,6 +8553,251 @@ fn decodeSqlToken(allocator: std.mem.Allocator, token: Token) ParserError!struct
     return error.Syntax;
 }
 
+fn pragmaVirtualOpen(context: ?*anyopaque, output: *?*anyopaque) ResultCode {
+    const plan: *PragmaVirtualPlan = @ptrCast(@alignCast(context orelse return .misuse));
+    const handle = plan.allocator.create(PragmaVirtualHandle) catch return .no_memory;
+    handle.* = .{ .plan = plan, .cursor = pragma_runtime.VirtualCursor.init(plan.allocator, &plan.table, plan.state) };
+    var arguments: [2][]const u8 = undefined;
+    var count: usize = 0;
+    if (plan.argument) |argument| {
+        arguments[count] = argument;
+        count += 1;
+    }
+    if (plan.schema_name) |schema_name| {
+        arguments[count] = schema_name;
+        count += 1;
+    }
+    pragma_runtime.virtualFilter(&handle.cursor, arguments[0..count]) catch |err| {
+        handle.cursor.deinit();
+        plan.allocator.destroy(handle);
+        return switch (err) {
+            error.OutOfMemory => .no_memory,
+            error.Constraint => .constraint,
+            else => .error_,
+        };
+    };
+    output.* = handle;
+    return .ok;
+}
+
+fn pragmaVirtualClose(pointer: ?*anyopaque) void {
+    const handle: *PragmaVirtualHandle = @ptrCast(@alignCast(pointer orelse return));
+    handle.cursor.deinit();
+    handle.plan.allocator.destroy(handle);
+}
+
+fn pragmaVirtualFilter(pointer: ?*anyopaque) ResultCode {
+    const handle: *PragmaVirtualHandle = @ptrCast(@alignCast(pointer orelse return .misuse));
+    _ = handle;
+    return .ok;
+}
+
+fn pragmaVirtualNext(pointer: ?*anyopaque) ResultCode {
+    const handle: *PragmaVirtualHandle = @ptrCast(@alignCast(pointer orelse return .misuse));
+    pragma_runtime.virtualNext(&handle.cursor) catch return .error_;
+    return .ok;
+}
+
+fn pragmaVirtualEof(pointer: ?*anyopaque) bool {
+    const handle: *PragmaVirtualHandle = @ptrCast(@alignCast(pointer orelse return true));
+    return handle.cursor.exhausted;
+}
+
+fn pragmaVirtualColumn(pointer: ?*anyopaque, index: usize, output: *vdbe.Mem) ResultCode {
+    const handle: *PragmaVirtualHandle = @ptrCast(@alignCast(pointer orelse return .misuse));
+    const value = pragma_runtime.virtualColumn(&handle.cursor, index) catch return .error_;
+    switch (value) {
+        .integer => |integer| vdbe.vdbe_mem.setInt64(output, integer),
+        .text => |text| if (vdbe.vdbe_mem.setStr(output, text.ptr, @intCast(text.len), 1, .transient) != 0) return .no_memory,
+    }
+    return .ok;
+}
+
+fn pragmaVirtualRowid(pointer: ?*anyopaque, output: *i64) ResultCode {
+    const handle: *PragmaVirtualHandle = @ptrCast(@alignCast(pointer orelse return .misuse));
+    output.* = handle.cursor.rowid;
+    return .ok;
+}
+
+const pragma_virtual_source_template: vdbe.VirtualSource = .{ .context = null, .open = pragmaVirtualOpen, .close = pragmaVirtualClose, .filter = pragmaVirtualFilter, .next = pragmaVirtualNext, .eof = pragmaVirtualEof, .column = pragmaVirtualColumn, .rowid = pragmaVirtualRowid };
+
+fn compilePragmaVirtualScan(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize, from_position: usize) CompileOutcome {
+    const allocator = connection.allocator;
+    const module_name = token_list[from_position + 1].text;
+    var table = pragma_runtime.connectVirtualTable(allocator, module_name) catch |err| {
+        allocator.free(source);
+        return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+    };
+    var table_live = true;
+    defer if (table_live) table.deinit();
+    var closing = from_position + 2;
+    var argument: ?[]u8 = null;
+    var schema_name: ?[]u8 = null;
+    var values_live = true;
+    defer if (values_live) {
+        if (argument) |value| allocator.free(value);
+        if (schema_name) |value| allocator.free(value);
+    };
+    if (closing < token_list.len and token_list[closing].typ == tokens.tk_lp) {
+        closing += 1;
+        if (closing >= token_list.len or token_list[closing].typ == tokens.tk_rp) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        const first = decodeSqlToken(allocator, token_list[closing]) catch |err| {
+            allocator.free(source);
+            return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+        };
+        if (first.blob) {
+            allocator.free(first.bytes);
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        if (table.definition.accepts_argument) {
+            argument = first.bytes;
+        } else if (table.definition.schema_argument) {
+            schema_name = first.bytes;
+        } else {
+            allocator.free(first.bytes);
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        closing += 1;
+        if (closing < token_list.len and token_list[closing].typ == tokens.tk_comma) {
+            closing += 1;
+            if (closing >= token_list.len) {
+                allocator.free(source);
+                return .{ .result = .error_, .consumed = consumed };
+            }
+            const second = decodeSqlToken(allocator, token_list[closing]) catch |err| {
+                allocator.free(source);
+                return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+            };
+            if (second.blob) {
+                allocator.free(second.bytes);
+                allocator.free(source);
+                return .{ .result = .error_, .consumed = consumed };
+            }
+            schema_name = second.bytes;
+            closing += 1;
+        }
+        if (closing >= token_list.len or token_list[closing].typ != tokens.tk_rp) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        closing += 1;
+    }
+    if (closing != token_list.len) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const visible_count = table.hidden_start;
+    var selected = std.ArrayList(usize).empty;
+    defer selected.deinit(allocator);
+    if (from_position == 2 and token_list[1].typ == tokens.tk_star) {
+        for (0..visible_count) |index| selected.append(allocator, index) catch {
+            allocator.free(source);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+    } else {
+        var position: usize = 1;
+        while (position < from_position) {
+            if (token_list[position].typ != tokens.tk_id) {
+                allocator.free(source);
+                return .{ .result = .error_, .consumed = consumed };
+            }
+            var found: ?usize = null;
+            for (table.definition.column_names, 0..) |name, index| if (std.ascii.eqlIgnoreCase(name, token_list[position].text)) {
+                found = index;
+                break;
+            };
+            selected.append(allocator, found orelse {
+                allocator.free(source);
+                return .{ .result = .error_, .consumed = consumed };
+            }) catch {
+                allocator.free(source);
+                return .{ .result = .no_memory, .consumed = consumed };
+            };
+            position += 1;
+            if (position == from_position) break;
+            if (token_list[position].typ != tokens.tk_comma) {
+                allocator.free(source);
+                return .{ .result = .error_, .consumed = consumed };
+            }
+            position += 1;
+        }
+    }
+    if (selected.items.len == 0) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const owner = allocator.create(Owner) catch {
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const instruction_count = selected.items.len + 5;
+    const instructions = allocator.alloc(vdbe.Instruction, instruction_count) catch {
+        allocator.destroy(owner);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const parameters = allocator.alloc(statement.ParameterMetadata, 0) catch unreachable;
+    const columns = allocator.alloc(statement.ColumnMetadata, selected.items.len) catch {
+        allocator.free(parameters);
+        allocator.free(instructions);
+        allocator.destroy(owner);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const sources = allocator.alloc(vdbe.VirtualSource, 1) catch {
+        allocator.free(columns);
+        allocator.free(parameters);
+        allocator.free(instructions);
+        allocator.destroy(owner);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const plan = allocator.create(PragmaVirtualPlan) catch {
+        allocator.free(sources);
+        allocator.free(columns);
+        allocator.free(parameters);
+        allocator.free(instructions);
+        allocator.destroy(owner);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    plan.* = .{ .allocator = allocator, .table = table, .state = &connection.pragma_state, .argument = argument, .schema_name = schema_name };
+    table_live = false;
+    values_live = false;
+    sources[0] = pragma_virtual_source_template;
+    sources[0].context = plan;
+    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .virtual_sources = sources, .pragma_virtual_plan = plan, .program = .{ .instructions = instructions, .register_count = @intCast(selected.items.len), .cursor_count = 1, .virtual_sources = sources } };
+    instructions[0] = .{ .opcode = .open_virtual, .p1 = 0, .p2 = 0 };
+    instructions[1] = .{ .opcode = .rewind, .p1 = 0, .p2 = @intCast(instruction_count - 1) };
+    for (selected.items, 0..) |column_index, index| {
+        instructions[2 + index] = .{ .opcode = .column, .p1 = 0, .p2 = @intCast(column_index), .p3 = @intCast(index + 1) };
+        const name = owner.names.addOne(allocator) catch {
+            Owner.destroy(allocator, owner);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        name.* = allocator.dupeZ(u8, table.definition.column_names[column_index]) catch {
+            _ = owner.names.pop();
+            Owner.destroy(allocator, owner);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        columns[index] = .{ .name = name.* };
+    }
+    instructions[instruction_count - 3] = .{ .opcode = .result_row, .p1 = 1, .p2 = @intCast(selected.items.len) };
+    instructions[instruction_count - 2] = .{ .opcode = .next, .p1 = 0, .p2 = 2 };
+    instructions[instruction_count - 1] = .{ .opcode = .halt };
+    const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
+        Owner.destroy(allocator, owner);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    prepared.adoptOwner(owner, Owner.destroy);
+    return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+}
+
 fn compileJsonVirtualScan(connection: *Connection, configuration: json_vtable.Connection, source: [:0]u8, token_list: []const Token, consumed: usize, from_position: usize) CompileOutcome {
     const allocator = connection.allocator;
     const argument_position = from_position + 3;
@@ -9024,6 +9284,9 @@ fn expressionAnalyzeAggregates(allocator: std.mem.Allocator, connection: *Connec
 
 fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize, from_position: usize) CompileOutcome {
     const allocator = connection.allocator;
+    if (from_position + 1 < token_list.len and std.mem.startsWith(u8, token_list[from_position + 1].text, "pragma_") and pragma_runtime.locatePragma(token_list[from_position + 1].text[7..]) != null) {
+        return compilePragmaVirtualScan(connection, source, token_list, consumed, from_position);
+    }
     if (from_position + 1 >= token_list.len or !schemaIdentifierToken(token_list[from_position + 1])) {
         allocator.free(source);
         return .{ .result = .error_, .consumed = consumed };

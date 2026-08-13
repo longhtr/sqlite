@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "upsert-optional-delete-closure",
+  "title": "Optional UPSERT ownership deletion closure",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The canonical recursive compiler owner now accepts a nullable UPSERT list and releases every target, predicate, assignment, auxiliary allocation, and list node, matching the public source wrapper and private deletion loop.",
+    "source_files": [{"path":"src/upsert.c","sha256":"4742feaca021fdbf986426bb8018eba978edcf9f51a20371f501b9f51d37f8ca"}],
+    "source_entity_ids": ["src/upsert.c::function::sqlite3UpsertDelete::line-33"],
+    "behavioral_block_ids": ["src/upsert.c::function::sqlite3UpsertDelete::behavior::if::line-34-column-3::ordinal-0"],
+    "excluded_responsibilities": ["UPSERT parsing, analysis, duplication, and execution", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Expression and expression-list recursive ownership deletion"],"caller_closure":"Trigger cleanup and UPSERT-construction failure invoke the nullable canonical owner."},
+  "contracts": {"inputs":["Nullable first UPSERT node and owning connection allocator"],"outputs":["All reachable UPSERT-owned memory released exactly once"],"ownership":"Consumes the full linked list; null is a no-op.","state_and_results":"Preserves each next pointer before freeing the current node and recursively destroys all expression owners.","locks_callbacks_io":"No lock, callback, or I/O.","failure_and_continuation":"Destructor is infallible and remains valid while allocator byte-measurement mode is active."},
+  "mappings": [{"source_entity_id":"src/upsert.c::function::sqlite3UpsertDelete::line-33","relation":"nullable-upsert-list-delete-closure","zig_declaration_ids":["src/core/internal/compiler_ownership.zig::function::deleteUpsert"]}],
+  "representation_differences": ["The public null guard and private loop are consolidated in one nullable Zig function."],
+  "oracle": {"protocol":"Construct null and multi-node UPSERT ownership trees, delete through production trigger and allocation-failure paths, and observe allocator cleanup.","internal_observations":["nullable no-op and recursive owner release"],"normalization":"Compare retained allocation count and reachable-node ownership."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Destructor allocates nothing and is used by construction OOM cleanup.","io_crash_concurrency":"No I/O or lock state.","malformed_input":"Requires source-valid owned nodes; null is explicitly accepted.","continuation":"All callers continue with the owner cleared or construction failed.","performance":"Linear in UPSERT nodes and owned expression trees.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/compiler_ownership.zig","native_call_path":"trigger cleanup or newUpsert failure -> compiler_ownership.deleteUpsert","bounded_owner_retired":"The prior non-null helper in upsert_analysis was removed."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Focused trace, assurance, and independent review remain open."},
+  "known_blockers": ["Add focused allocator trace and independent review."],
+  "context_review": {"implementation_spans":["Complete sqlite3UpsertDelete and upsertDelete bodies","Expression ownership and trigger cleanup callers"],"callers":["trigger_returning cleanup","newUpsert failure cleanup"],"callees":["deleteExpression, deleteExpressionList, and db allocator free"],"assertions_branches_cleanup":["Null, one-node, multi-node, and construction-failure ownership reviewed"],"upstream_tests":["Project internal compiler ownership tests"]},
+  "evidence_receipts": []
+}

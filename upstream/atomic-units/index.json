@@ -783,6 +783,16 @@
       "id": "upsert-target-analysis-and-update",
       "path": "upstream/atomic-units/upsert-target-analysis-and-update.json",
       "status": "source-translated"
+    },
+    {
+      "id": "pragma-eponymous-virtual-table-runtime",
+      "path": "upstream/atomic-units/pragma-eponymous-virtual-table-runtime.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "upsert-optional-delete-closure",
+      "path": "upstream/atomic-units/upsert-optional-delete-closure.json",
+      "status": "source-translated"
     }
   ]
 }

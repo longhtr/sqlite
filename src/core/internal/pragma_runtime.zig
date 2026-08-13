@@ -30,17 +30,25 @@ pub const Definition = struct {
     schema_argument: bool = false,
 };
 
-const value_column = [_][]const u8{"value"};
+const analysis_limit_columns = [_][]const u8{"analysis_limit"};
+const busy_timeout_columns = [_][]const u8{"timeout"};
+const cache_size_columns = [_][]const u8{"cache_size"};
+const cache_spill_columns = [_][]const u8{"cache_spill"};
+const foreign_keys_columns = [_][]const u8{"foreign_keys"};
+const page_count_columns = [_][]const u8{"page_count"};
+const synchronous_columns = [_][]const u8{"synchronous"};
+const temp_store_columns = [_][]const u8{"temp_store"};
+const user_version_columns = [_][]const u8{"user_version"};
 const definitions = [_]Definition{
-    .{ .name = "analysis_limit", .kind = .analysis_limit, .column_names = &value_column, .accepts_argument = true },
-    .{ .name = "busy_timeout", .kind = .busy_timeout, .column_names = &value_column, .accepts_argument = true },
-    .{ .name = "cache_size", .kind = .cache_size, .column_names = &value_column, .accepts_argument = true, .schema_argument = true },
-    .{ .name = "cache_spill", .kind = .cache_spill, .column_names = &value_column, .accepts_argument = true, .schema_argument = true },
-    .{ .name = "foreign_keys", .kind = .foreign_keys, .column_names = &value_column, .accepts_argument = true },
-    .{ .name = "page_count", .kind = .page_count, .column_names = &value_column, .schema_argument = true },
-    .{ .name = "synchronous", .kind = .synchronous, .column_names = &value_column, .accepts_argument = true, .schema_argument = true },
-    .{ .name = "temp_store", .kind = .temp_store, .column_names = &value_column, .accepts_argument = true },
-    .{ .name = "user_version", .kind = .user_version, .column_names = &value_column, .accepts_argument = true, .schema_argument = true },
+    .{ .name = "analysis_limit", .kind = .analysis_limit, .column_names = &analysis_limit_columns, .accepts_argument = true },
+    .{ .name = "busy_timeout", .kind = .busy_timeout, .column_names = &busy_timeout_columns, .accepts_argument = true },
+    .{ .name = "cache_size", .kind = .cache_size, .column_names = &cache_size_columns, .accepts_argument = true, .schema_argument = true },
+    .{ .name = "cache_spill", .kind = .cache_spill, .column_names = &cache_spill_columns, .accepts_argument = true, .schema_argument = true },
+    .{ .name = "foreign_keys", .kind = .foreign_keys, .column_names = &foreign_keys_columns, .accepts_argument = true },
+    .{ .name = "page_count", .kind = .page_count, .column_names = &page_count_columns, .schema_argument = true },
+    .{ .name = "synchronous", .kind = .synchronous, .column_names = &synchronous_columns, .accepts_argument = true, .schema_argument = true },
+    .{ .name = "temp_store", .kind = .temp_store, .column_names = &temp_store_columns, .accepts_argument = true },
+    .{ .name = "user_version", .kind = .user_version, .column_names = &user_version_columns, .accepts_argument = true, .schema_argument = true },
 };
 
 pub const State = struct {
@@ -237,7 +245,9 @@ pub fn connectVirtualTable(allocator: std.mem.Allocator, module_name: []const u8
     const names = setResultColumnNames(definition);
     for (names, 0..) |name, index| {
         if (index != 0) declaration.append(allocator, ',') catch return error.OutOfMemory;
-        declaration.writer(allocator).print("\"{s}\"", .{name}) catch return error.OutOfMemory;
+        declaration.append(allocator, '"') catch return error.OutOfMemory;
+        declaration.appendSlice(allocator, name) catch return error.OutOfMemory;
+        declaration.append(allocator, '"') catch return error.OutOfMemory;
     }
     const hidden_start = names.len;
     var hidden_count: usize = 0;
@@ -337,11 +347,19 @@ pub fn virtualNext(cursor: *VirtualCursor) Error!void {
 pub fn virtualFilter(cursor: *VirtualCursor, arguments: []const []const u8) Error!void {
     clearVirtualCursor(cursor);
     var index: usize = 0;
-    if (cursor.table.definition.accepts_argument and index < arguments.len) {
+    if (cursor.table.definition.accepts_argument and cursor.table.definition.schema_argument) {
+        if (arguments.len == 1) {
+            cursor.schema_name = cursor.allocator.dupe(u8, arguments[0]) catch return error.OutOfMemory;
+            index = 1;
+        } else if (arguments.len != 0) {
+            cursor.argument = cursor.allocator.dupe(u8, arguments[0]) catch return error.OutOfMemory;
+            index = 1;
+        }
+    } else if (cursor.table.definition.accepts_argument and index < arguments.len) {
         cursor.argument = cursor.allocator.dupe(u8, arguments[index]) catch return error.OutOfMemory;
         index += 1;
     }
-    if (cursor.table.definition.schema_argument and index < arguments.len) {
+    if (cursor.table.definition.schema_argument and cursor.schema_name == null and index < arguments.len) {
         cursor.schema_name = cursor.allocator.dupe(u8, arguments[index]) catch return error.OutOfMemory;
         index += 1;
     }

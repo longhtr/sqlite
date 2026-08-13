@@ -23,21 +23,6 @@ pub fn forIndex(upsert_initial: ?*parse_types.Upsert, index: ?*parse_types.Index
     return upsert;
 }
 
-/// Source `upsertDelete()`.
-pub fn deleteUpsertList(db: *types.Sqlite3, first: *parse_types.Upsert) void {
-    var current: ?*parse_types.Upsert = first;
-    while (current) |upsert| {
-        const next = upsert.pNextUpsert;
-        compiler_ownership.deleteExpressionList(db, upsert.pUpsertTarget);
-        compiler_ownership.deleteExpression(db, upsert.pUpsertTargetWhere);
-        compiler_ownership.deleteExpressionList(db, upsert.pUpsertSet);
-        compiler_ownership.deleteExpression(db, upsert.pUpsertWhere);
-        db_allocator.free(db, upsert.pToFree);
-        db_allocator.freeNN(db, upsert);
-        current = next;
-    }
-}
-
 /// Source `sqlite3UpsertNew()`.
 pub fn newUpsert(
     db: *types.Sqlite3,
@@ -52,7 +37,7 @@ pub fn newUpsert(
         compiler_ownership.deleteExpression(db, target_where);
         compiler_ownership.deleteExpressionList(db, assignments);
         compiler_ownership.deleteExpression(db, where);
-        if (next) |present| deleteUpsertList(db, present);
+        compiler_ownership.deleteUpsert(db, next);
         return null;
     };
     const result: *parse_types.Upsert = @ptrCast(@alignCast(raw));

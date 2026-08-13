@@ -8,7 +8,6 @@ const schema_analysis = @import("schema_analysis.zig");
 const compiler_ownership = @import("compiler_ownership.zig");
 const parse_types = @import("parse_types.zig");
 const walker_api = @import("walker.zig");
-const upsert_analysis = @import("upsert_analysis.zig");
 const schema = @import("schema_types.zig");
 const select_analysis = @import("select_analysis.zig");
 const types = @import("vdbe_types.zig");
@@ -30,7 +29,7 @@ pub fn deleteTriggerSteps(db: *types.Sqlite3, first: ?*parse_types.TriggerStep) 
         compiler_ownership.deleteExpressionList(db, step.expressions);
         compiler_ownership.deleteSelect(db, step.select);
         compiler_ownership.deleteIdentifierList(db, step.columns);
-        if (step.upsert) |upsert| upsert_analysis.deleteUpsertList(db, upsert);
+        compiler_ownership.deleteUpsert(db, step.upsert);
         compiler_ownership.deleteSourceList(db, step.sources);
         db_allocator.free(db, if (step.span) |span| @ptrCast(span) else null);
         db_allocator.freeNN(db, step);
@@ -82,7 +81,7 @@ pub fn insertTriggerStep(parse: *parse_types.Parse, table_list: *parse_types.Src
         if (upsert) |present| _ = schema_analysis.hasExplicitNulls(parse, present.pUpsertTarget);
     } else {
         compiler_ownership.deleteIdentifierList(db, columns);
-        if (upsert) |present| upsert_analysis.deleteUpsertList(db, present);
+        compiler_ownership.deleteUpsert(db, upsert);
     }
     compiler_ownership.deleteSelect(db, select);
     return result;
