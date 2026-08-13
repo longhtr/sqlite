@@ -233,6 +233,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/expr.c::function::sqlite3ExprDeleteNN::line-1387",
+      "source_sha256": "86a5cc3030faa5a0aa3a71d7be0cf8fdbf9b1c34d51158b2656510997e47c2b2",
+      "zig_declaration_id": "src/core/internal/compiler_ownership.zig::function::deleteExpressionRequired",
+      "zig_declaration_sha256": "49c91d119818514ac570c4cc980975da1179e6cc8eb51ca3f5751fc10c471871",
+      "atomic_unit_id": "expression-tree-owner-release",
+      "class": "substantive",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/insert.c::function::exprColumnFlagUnion::line-269",
       "source_sha256": "77d14847ad121ab0ee9d0414208c79c1533956ef57ba0d4d2119e507ec54964f",
       "zig_declaration_id": "src/core/internal/insert_analysis.zig::function::expressionColumnFlagUnion",

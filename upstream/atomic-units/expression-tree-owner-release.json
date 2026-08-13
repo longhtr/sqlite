@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "expression-tree-owner-release",
+  "title": "Expression-tree owner release",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The existing complete non-null expression destructor is canonically source-identified across compiler cleanup paths.",
+    "source_files": [{"path":"src/expr.c","sha256":"363e581dc939eef8ff5d2d3e8cab8454d58716ba8aaab05c09f044eaacb8deff"}],
+    "source_entity_ids": ["src/expr.c::function::sqlite3ExprDeleteNN::line-1387"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Nullable wrapper identity", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["SELECT, expression-list, and Window destructors"],"caller_closure":"All typed expression owners route non-null trees through this destructor."},
+  "contracts": {"inputs":["Connection and non-null Expr"],"outputs":["Complete owned expression topology released"],"ownership":"Consumes right/list/select/window children, then left and owner unless static flags retain them.","state_and_results":"Unary non-static left chains are iteratively consumed to avoid recursion.","locks_callbacks_io":"No I/O; caller owns compiler/schema synchronization.","failure_and_continuation":"Destructor allocates nothing and cannot fail."},
+  "mappings": [{"source_entity_id":"src/expr.c::function::sqlite3ExprDeleteNN::line-1387","relation":"expression-tree-complete-owner-destructor","zig_declaration_ids":["src/core/internal/compiler_ownership.zig::function::deleteExpressionRequired"]}],
+  "representation_differences": ["Typed flag/accessor methods replace ExprUse macros; loop preserves source tail-recursion elimination."],
+  "oracle": {"protocol":"Destroy leaf, binary, list, SELECT, window, static, SELECT_COLUMN, and long unary-chain expressions.","internal_observations":["child ownership branch", "static retention", "tail-chain iterative free"],"normalization":"Compare allocator cleanup and retained static nodes."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Destructor allocates nothing and tolerates source OOM window invariant.","io_crash_concurrency":"No I/O; synchronization external.","malformed_input":"Source union and flag invariants asserted.","continuation":"Consumed non-static tree cannot be reused.","performance":"Linear in node count with bounded stack for unary chains.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/compiler_ownership.zig","native_call_path":"all compiler AST cleanup -> deleteExpression -> deleteExpressionRequired","bounded_owner_retired":"Existing complete implementation promoted to canonical source identity."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Focused topology allocator trace and independent review."],
+  "context_review": {"implementation_spans":["Complete sqlite3ExprDeleteNN body", "nullable wrapper and child destructors"],"callers":["All parser/compiler AST ownership cleanup"],"callees":["SELECT, expression-list, Window destructors", "connection free"],"assertions_branches_cleanup":["token-only/leaf", "right/select/list/window", "static", "SELECT_COLUMN", "tail recursion elimination"],"upstream_tests":["Project parser, expression, and broad runtime tests"]},
+  "evidence_receipts": []
+}

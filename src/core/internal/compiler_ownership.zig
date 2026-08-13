@@ -15,7 +15,8 @@ pub fn deleteExpression(db: *runtime.Sqlite3, expression: ?*ast.Expr) void {
     if (expression) |owned| deleteExpressionRequired(db, owned);
 }
 
-fn deleteExpressionRequired(db: *runtime.Sqlite3, initial: *ast.Expr) void {
+/// Source `sqlite3ExprDeleteNN()`.
+pub fn deleteExpressionRequired(db: *runtime.Sqlite3, initial: *ast.Expr) void {
     var expression = initial;
     while (true) {
         std.debug.assert(!expression.has(ast.expr_flag.win_func) or expression.y.pWin != null or db.mallocFailed != 0);
