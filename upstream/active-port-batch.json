@@ -620,6 +620,24 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/resolve.c::function::incrAggDepth::line-35",
+      "source_sha256": "a6e29900ce98bdeaefb238e4468cda43fc106e92c11b91007cf8e63f1fd5e491",
+      "zig_declaration_id": "src/core/internal/resolve_analysis.zig::function::incrementAggregateDepthCallback",
+      "zig_declaration_sha256": "3ecd1792ec46e63519495cf163a14be361db39415905f19cc41922abe8fa93dc",
+      "atomic_unit_id": "resolve-aggregate-depth-adjustment",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/resolve.c::function::incrAggFunctionDepth::line-39",
+      "source_sha256": "2f793235fd39f1ec49a0e1beb1c957c908cb38e5231706283876e799bf198df8",
+      "zig_declaration_id": "src/core/internal/resolve_analysis.zig::function::incrementAggregateFunctionDepth",
+      "zig_declaration_sha256": "85f04a658e86e439d578b9e2c35e25b69a59f86b2cf9cd3a2a8c317901875491",
+      "atomic_unit_id": "resolve-aggregate-depth-adjustment",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/select.c::function::agginfoFree::line-7110",
       "source_sha256": "57fd69e5e32f04671101d85a4844b4d1cc3bef0fe94f43d91f208c0178ddaa8f",
       "zig_declaration_id": "src/core/internal/aggregate_analysis.zig::function::freeAggregateInfo",

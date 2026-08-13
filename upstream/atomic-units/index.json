@@ -903,6 +903,11 @@
       "id": "btree-page-release-wrappers",
       "path": "upstream/atomic-units/btree-page-release-wrappers.json",
       "status": "source-translated"
+    },
+    {
+      "id": "resolve-aggregate-depth-adjustment",
+      "path": "upstream/atomic-units/resolve-aggregate-depth-adjustment.json",
+      "status": "source-translated"
     }
   ]
 }

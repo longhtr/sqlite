@@ -48,18 +48,19 @@ pub const NameContext = struct {
     errors: c_int = 0,
 };
 
-fn incrementAggregateDepth(node_optional: ?*parse_types.Expr, amount: c_int) void {
-    const node = node_optional orelse return;
-    if (node.op == tokens.tk_agg_function) node.op2 +%= @intCast(amount);
-    if (node.flags & parse_types.expr_flag.token_only != 0) return;
-    incrementAggregateDepth(node.pLeft, amount);
-    incrementAggregateDepth(node.pRight, amount);
-    if (node.usesSelect()) {
-        var select = node.x.pSelect;
-        while (select) |present| : (select = present.pPrior) {
-            if (present.pEList) |list| for (list.items()) |item| incrementAggregateDepth(item.pExpr, amount);
-        }
-    } else if (node.x.pList) |list| for (list.items()) |item| incrementAggregateDepth(item.pExpr, amount);
+/// Source `incrAggDepth()`.
+pub fn incrementAggregateDepthCallback(walker: *parse_types.Walker, node: *parse_types.Expr) callconv(.c) c_int {
+    if (node.op == tokens.tk_agg_function) node.op2 +%= @intCast(walker.u.counter);
+    return walker_api.continue_walk;
+}
+
+/// Source `incrAggFunctionDepth()`.
+pub fn incrementAggregateFunctionDepth(node: ?*parse_types.Expr, amount: c_int) void {
+    if (amount <= 0) return;
+    var walker = std.mem.zeroes(parse_types.Walker);
+    walker.xExprCallback = incrementAggregateDepthCallback;
+    walker.u.counter = amount;
+    _ = walker_api.walkExpr(&walker, node);
 }
 
 /// Source `resolveAlias()`.
@@ -67,7 +68,7 @@ pub fn resolveAlias(parse: *parse_types.Parse, result_list: *parse_types.ExprLis
     if (target.pAggInfo != null) return;
     const db: *types.Sqlite3 = @ptrCast(@alignCast(parse.db.?));
     var duplicate = ast_duplication.duplicateExpression(db, result_list.items()[@intCast(column)].pExpr, false) orelse return;
-    incrementAggregateDepth(duplicate, subquery_depth);
+    incrementAggregateFunctionDepth(duplicate, subquery_depth);
     if (target.op == tokens.tk_collate) {
         var token = parse_types.Token{ .z = target.u.zToken, .n = @intCast(std.mem.len(target.u.zToken.?)) };
         duplicate = expression.addCollationToken(parse, duplicate, &token, false);

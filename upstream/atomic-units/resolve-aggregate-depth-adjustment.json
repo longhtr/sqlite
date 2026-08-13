@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "resolve-aggregate-depth-adjustment",
+  "title": "Resolver aggregate-depth adjustment",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Alias resolution now uses the source walker callback and guarded driver to increase aggregate-function nesting depth.",
+    "source_files": [{"path":"src/resolve.c","sha256":"0ab2b57900454f422de36e607c081f7eb0e64e61c0dd4e0497a65178bc663107"}],
+    "source_entity_ids": ["src/resolve.c::function::incrAggDepth::line-35", "src/resolve.c::function::incrAggFunctionDepth::line-39"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Alias expression duplication", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Expression walker"],"caller_closure":"Production resolveAlias calls the driver for duplicated aggregate expressions."},
+  "contracts": {"inputs":["Expression tree and integer depth increment"],"outputs":["Every TK_AGG_FUNCTION op2 increased by positive increment"],"ownership":"Borrows expression tree.","state_and_results":"Zero/negative increments are no-ops; walker always continues through expressions.","locks_callbacks_io":"No locks or I/O.","failure_and_continuation":"No allocation or failure."},
+  "mappings": [
+    {"source_entity_id":"src/resolve.c::function::incrAggDepth::line-35","relation":"aggregate-depth-walker-callback","zig_declaration_ids":["src/core/internal/resolve_analysis.zig::function::incrementAggregateDepthCallback"]},
+    {"source_entity_id":"src/resolve.c::function::incrAggFunctionDepth::line-39","relation":"aggregate-depth-positive-increment-driver","zig_declaration_ids":["src/core/internal/resolve_analysis.zig::function::incrementAggregateFunctionDepth"]}
+  ],
+  "representation_differences": ["Walker.u.counter stores the increment through the typed union arm."],
+  "oracle": {"protocol":"Adjust nested aggregate/non-aggregate expression trees with negative, zero, one, and larger increments.","internal_observations":["exact op2 values", "non-aggregate nodes unchanged"],"normalization":"Exact integer field comparison."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"No allocation.","io_crash_concurrency":"No I/O or concurrency.","malformed_input":"Nullable root accepted; source op2 range invariants apply.","continuation":"Tree remains owned by caller.","performance":"Linear expression walk for positive increments; constant no-op otherwise.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/resolve_analysis.zig","native_call_path":"resolveAlias -> incrementAggregateFunctionDepth -> incrementAggregateDepthCallback","bounded_owner_retired":"Manual recursive substitute replaced by source walker behavior."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Focused nested-select differential and evidence-state promotion."],
+  "context_review": {"implementation_spans":["Complete two upstream bodies", "resolveAlias caller and walker semantics"],"callers":["Alias resolution across query levels"],"callees":["Expression walker"],"assertions_branches_cleanup":["positive guard", "aggregate opcode branch", "continue traversal"],"upstream_tests":["Project resolver and broad runtime tests"]},
+  "evidence_receipts": []
+}
