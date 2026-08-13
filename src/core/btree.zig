@@ -1588,6 +1588,64 @@ pub const Database = struct {
         return writeTableLeaf(&planner, 1, cursor.entries.items);
     }
 
+    /// Rename one table and every ordinary index that names it as tbl_name.
+    /// SQL text is rewritten by the caller using the source ALTER helper.
+    pub fn renameSchemaTable(self: *Database, old_name: []const u8, new_name: []const u8, table_sql: []const u8) ResultCode {
+        if (!self.writable) return .read_only;
+        if (old_name.len == 0 or new_name.len == 0 or table_sql.len == 0) return .misuse;
+        const opened = self.openCursor(1, .table);
+        if (opened.result != .ok) return opened.result;
+        var cursor = opened.cursor.?;
+        defer cursor.deinit();
+        for (cursor.entries.items) |entry| {
+            const decoded = decodeRecord(self.allocator, entry.payload);
+            if (decoded.result != .ok) return decoded.result;
+            var record = decoded.record.?;
+            defer record.deinit();
+            if (record.values.len >= 2 and schemaTextEqual(record.values[1], new_name)) return .error_;
+        }
+        var found = false;
+        for (cursor.entries.items) |*entry| {
+            const decoded = decodeRecord(self.allocator, entry.payload);
+            if (decoded.result != .ok) return decoded.result;
+            var record = decoded.record.?;
+            defer record.deinit();
+            if (record.values.len < 5) continue;
+            const object_type = switch (record.values[0]) {
+                .text => |bytes| bytes,
+                else => return .corrupt,
+            };
+            const object_name = switch (record.values[1]) {
+                .text => |bytes| bytes,
+                else => return .corrupt,
+            };
+            const table_name = switch (record.values[2]) {
+                .text => |bytes| bytes,
+                else => return .corrupt,
+            };
+            const root_page: u32 = switch (record.values[3]) {
+                .integer => |value| if (value > 0 and value <= std.math.maxInt(u32)) @intCast(value) else return .corrupt,
+                else => return .corrupt,
+            };
+            const is_table = std.ascii.eqlIgnoreCase(object_type, "table") and std.ascii.eqlIgnoreCase(object_name, old_name);
+            const is_index = std.ascii.eqlIgnoreCase(object_type, "index") and std.ascii.eqlIgnoreCase(table_name, old_name);
+            if (!is_table and !is_index) continue;
+            const replacement = encodeSchemaRecord(self.allocator, object_type, if (is_table) new_name else object_name, new_name, root_page, if (is_table) table_sql else switch (record.values[4]) {
+                .text => |bytes| bytes,
+                else => return .corrupt,
+            }) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+            self.allocator.free(entry.payload);
+            entry.payload = replacement;
+            found = true;
+        }
+        if (!found) return .not_found;
+        const planned = RebuildPlanner.init(self, 1, .table);
+        if (planned.result != .ok) return planned.result;
+        var planner = planned.planner.?;
+        defer planner.deinit();
+        return writeTableLeaf(&planner, 1, cursor.entries.items);
+    }
+
     /// Create an empty table root and its sqlite_schema row in one pager
     /// transaction. Phase 13 deliberately bounds this path to a leaf schema
     /// table and non-auto-vacuum databases; later schema slices remove those

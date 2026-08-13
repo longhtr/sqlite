@@ -3837,6 +3837,7 @@ const ProgramAction = union(enum) {
     analyze: struct { connection: *Connection, table_name: ?[]const u8 },
     transaction: struct { connection: *Connection, operation: TransactionOperation },
     alter_add_column: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, table_name: []const u8, sql: []const u8 },
+    alter_rename_table: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, old_name: []const u8, new_name: []const u8, sql: []const u8 },
 };
 
 const Owner = struct {
@@ -10078,6 +10079,23 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             }
             break :blk .error_;
         },
+        .alter_rename_table => |action| blk: {
+            const permission = action.connection.beforeWrite();
+            if (permission != .ok) break :blk permission;
+            const enlisted = enlistTransactionDatabase(action.connection, action.database);
+            if (enlisted != .ok) break :blk enlisted;
+            const begin = action.database.beginStatementBatch();
+            if (begin != .ok) break :blk begin;
+            var batch_active = true;
+            defer {
+                if (batch_active) _ = action.database.rollbackStatementBatch();
+            }
+            const renamed = action.database.renameSchemaTable(action.old_name, action.new_name, action.sql);
+            if (renamed != .ok) break :blk renamed;
+            const committed = action.database.commitStatementBatch();
+            batch_active = false;
+            break :blk action.connection.afterWrite(committed, null, action.schema_name, action.new_name, 0);
+        },
         .alter_add_column => |action| blk: {
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
@@ -11241,6 +11259,60 @@ fn compileAlterTable(connection: *Connection, source: [:0]u8, token_list: []cons
         position += 3;
     } else {
         position += 1;
+    }
+    if (position + 2 < token_list.len and token_list[position].typ == tokens.tk_rename and token_list[position + 1].typ == tokens.tk_to and schemaIdentifierToken(token_list[position + 2]) and position + 3 == token_list.len) {
+        const new_name = token_list[position + 2].text;
+        const target_database = locateDatabase(connection, schema_name);
+        if (target_database.result != .ok) {
+            allocator.free(source);
+            return .{ .result = if (target_database.result == .not_found) .error_ else target_database.result, .consumed = consumed };
+        }
+        const target_exists = target_database.database.?.schemaTableExists(new_name);
+        if (target_exists.result != .ok or target_exists.found) {
+            allocator.free(source);
+            return .{ .result = if (target_exists.result == .ok) .error_ else target_exists.result, .consumed = consumed };
+        }
+        const located = locateTableWithDatabase(connection, table_name, schema_name);
+        if (located.result != .ok) {
+            allocator.free(source);
+            return .{ .result = if (located.result == .not_found) .error_ else located.result, .consumed = consumed };
+        }
+        var table = located.table.?;
+        defer table.deinit();
+        const updated_sql = schema_program_runtime.renameTableSql(allocator, table.sql, table_name, new_name, false) catch |err| {
+            allocator.free(source);
+            return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+        };
+        const owner = allocator.create(Owner) catch {
+            allocator.free(updated_sql);
+            allocator.free(source);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        const instructions = allocator.alloc(vdbe.Instruction, 2) catch {
+            allocator.destroy(owner);
+            allocator.free(updated_sql);
+            allocator.free(source);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        const parameters = allocator.alloc(statement.ParameterMetadata, 0) catch unreachable;
+        const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
+        instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
+        instructions[1] = .{ .opcode = .halt };
+        owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .alter_rename_table = .{ .connection = connection, .database = located.database.?, .schema_name = located.schema_name, .old_name = table_name, .new_name = new_name, .sql = updated_sql } }, .program = .{ .instructions = instructions, .register_count = 1 } };
+        owner.strings.append(allocator, updated_sql) catch {
+            allocator.free(updated_sql);
+            Owner.destroy(allocator, owner);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
+        owner.program.functions = owner.functions[0..];
+        const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
+            Owner.destroy(allocator, owner);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        prepared.adoptOwner(owner, Owner.destroy);
+        prepared.markWritable();
+        return .{ .result = .ok, .statement = prepared, .consumed = consumed };
     }
     if (position >= token_list.len or token_list[position].typ != tokens.tk_add) {
         allocator.free(source);
