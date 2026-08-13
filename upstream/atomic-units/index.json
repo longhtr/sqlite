@@ -85,6 +85,11 @@
       "status": "source-translated"
     },
     {
+      "id": "unix-vfs-device-observers",
+      "path": "upstream/atomic-units/unix-vfs-device-observers.json",
+      "status": "source-translated"
+    },
+    {
       "id": "vtab-constraint-collation-in-and-rhs",
       "path": "upstream/atomic-units/vtab-constraint-collation-in-and-rhs.json",
       "status": "source-translated"

@@ -1959,11 +1959,15 @@ fn xReserved(f: *vfs.sqlite3_file, n: *c_int) callconv(.c) c_int {
 fn xControl(file: *vfs.sqlite3_file, operation: c_int, argument: ?*anyopaque) callconv(.c) c_int {
     return unixFileControl(af(file).native.?, operation, argument);
 }
+/// Source `unixSectorSize()`: lazily discover and return the cached sector
+/// size through the active Unix sqlite3_io_methods owner.
 fn xSector(file: *vfs.sqlite3_file) callconv(.c) c_int {
     const native = af(file).native.?;
     setDeviceCharacteristics(native);
     return native.sector_size;
 }
+/// Source `unixDeviceCharacteristics()`: lazily discover and return cached
+/// device capabilities through the active Unix sqlite3_io_methods owner.
 fn xDevice(file: *vfs.sqlite3_file) callconv(.c) c_int {
     const native = af(file).native.?;
     setDeviceCharacteristics(native);

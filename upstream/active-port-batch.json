@@ -645,6 +645,24 @@
       "atomic_unit_id": "public-backup-progress-observers",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/os_unix.c::function::unixSectorSize::line-4461",
+      "source_sha256": "000beca8e47ba2c483fd6a27c85dd9ee4f28c02346af02ef80ed0a7664bd0ca1",
+      "zig_declaration_id": "src/core/unix_vfs.zig::function::xSector",
+      "zig_declaration_sha256": "b91caf5bd0e17be7e12ae07e695ecc27777b337cd210ab0ce31feba07d4e5d45",
+      "atomic_unit_id": "unix-vfs-device-observers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/os_unix.c::function::unixDeviceCharacteristics::line-4480",
+      "source_sha256": "9dcb976d88ecc4d3fd447fae7b25e0e7cad785b2d26b2614ed6f2b5870c81fdc",
+      "zig_declaration_id": "src/core/unix_vfs.zig::function::xDevice",
+      "zig_declaration_sha256": "f294b0a85a76e569539e5ff11709fffb7c0445c68fe62ae48515db1133edf676",
+      "atomic_unit_id": "unix-vfs-device-observers",
+      "class": "short",
+      "complete": true
     }
   ]
 }

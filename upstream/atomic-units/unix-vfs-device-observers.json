@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "id": "unix-vfs-device-observers",
+  "title": "Unix VFS sector size and device capability observers",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The two sqlite3_io_methods observers share lazy device-characteristic discovery and return the cached sector size or capability mask for the active Unix file owner.",
+    "source_files": [
+      {
+        "path": "src/os_unix.c",
+        "sha256": "bad02ce9e25e3842c116a9f9bb13128b74f965692c5987202103423c86f62475"
+      }
+    ],
+    "source_entity_ids": [
+      "src/os_unix.c::function::unixSectorSize::line-4461",
+      "src/os_unix.c::function::unixDeviceCharacteristics::line-4480"
+    ],
+    "behavioral_block_ids": [
+      "src/os_unix.c::function::unixSectorSize::behavior::return::line-4464-column-3::ordinal-0",
+      "src/os_unix.c::function::unixDeviceCharacteristics::behavior::return::line-4483-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "QNX and platform-specific device probing outside the pinned profile",
+      "Independent fidelity review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Pinned-profile setDeviceCharacteristics lazy cache owner"
+    ],
+    "caller_closure": "Both assigned callbacks are installed in every active Unix sqlite3_io_methods table."
+  },
+  "contracts": {
+    "inputs": [
+      "Open Unix sqlite3_file with native UnixFile owner"
+    ],
+    "outputs": [
+      "Cached positive sector size or device capability bit mask"
+    ],
+    "ownership": "Borrowed file owner; only lazy cache fields are mutated.",
+    "state_and_results": "First access establishes the pinned-profile 4096-byte sector and powersafe-overwrite/immutable-compatible capability mask; subsequent access returns the cache.",
+    "locks_callbacks_io": "No VFS I/O callback recursion or allocation. Discovery is local to the open file owner.",
+    "failure_and_continuation": "Pinned-profile discovery cannot fail; repeated calls are stable."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/os_unix.c::function::unixSectorSize::line-4461",
+      "relation": "source-unix-sector-size-io-method-observer",
+      "zig_declaration_ids": [
+        "src/core/unix_vfs.zig::function::xSector"
+      ]
+    },
+    {
+      "source_entity_id": "src/os_unix.c::function::unixDeviceCharacteristics::line-4480",
+      "relation": "source-unix-device-capability-io-method-observer",
+      "zig_declaration_ids": [
+        "src/core/unix_vfs.zig::function::xDevice"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The pinned Linux profile uses explicit UnixFile cache fields and a typed shared initializer rather than source preprocessor branches."
+  ],
+  "oracle": {
+    "protocol": "Open ordinary, no-lock, dot-lock, and exclusive Unix files and call both io-method observers before and after file-control cache invalidation.",
+    "internal_observations": [
+      "sector-size cache",
+      "powersafe-overwrite and immutable capability bits",
+      "method-table callback identity"
+    ],
+    "normalization": "Compare exact integer values and stable repeated observations."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "Pure file-owner cache observation; no direct I/O or crash boundary.",
+    "malformed_input": "Only valid open sqlite3_file owners reach io-method callbacks.",
+    "continuation": "Observation leaves all file operations available.",
+    "performance": "Constant time after one local lazy initialization.",
+    "commands": [
+      "zig build unix-vfs-test -j1"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/unix_vfs.zig active sqlite3_io_methods tables",
+    "native_call_path": "Pager and public VFS consumers invoke these callbacks through the production Unix file method table.",
+    "bounded_owner_retired": "Yes. All active Unix locking modes use the same source-shaped observers."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Pinned-C trace, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Add focused pinned-C device observer trace.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned os_unix.c observer bodies and setDeviceCharacteristics context",
+      "Native UnixFile cache owner, file-control reset path, method tables, and tests"
+    ],
+    "callers": [
+      "Pager and external sqlite3_io_methods consumers"
+    ],
+    "callees": [
+      "setDeviceCharacteristics"
+    ],
+    "assertions_branches_cleanup": [
+      "First-call initialization, stable repeated calls, cache invalidation, and every active method table reviewed"
+    ],
+    "upstream_tests": [
+      "Upstream Unix VFS device capability tests",
+      "Project Unix VFS native tests"
+    ]
+  },
+  "evidence_receipts": []
+}
