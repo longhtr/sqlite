@@ -96,7 +96,8 @@ pub fn gatherSelectWindowsCallback(walker: *parse_types.Walker, expression: *par
     return walker_api.continue_walk;
 }
 
-fn gatherSelectWindowsSelectCallback(walker: *parse_types.Walker, select: *parse_types.Select) callconv(.c) c_int {
+/// Source `gatherSelectWindowsSelectCallback()`.
+pub fn gatherSelectWindowsSelectCallback(walker: *parse_types.Walker, select: *parse_types.Select) callconv(.c) c_int {
     return if (select == @as(*parse_types.Select, @ptrCast(@alignCast(walker.u.pointer.?)))) walker_api.continue_walk else walker_api.prune;
 }
 

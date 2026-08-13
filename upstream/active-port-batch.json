@@ -206,6 +206,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/expr.c::function::gatherSelectWindowsSelectCallback::line-1795",
+      "source_sha256": "b06e6e3e488c66e3ae46e9f41a3a77decc0c1feb04d37ea2142a3c5e0a569c0e",
+      "zig_declaration_id": "src/core/internal/ast_duplication.zig::function::gatherSelectWindowsSelectCallback",
+      "zig_declaration_sha256": "f962cd65314bad0694b54b456e21cb2faf368db55d2c25c871ac680eee355ecf",
+      "atomic_unit_id": "select-window-gather-prune-callback",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/insert.c::function::exprColumnFlagUnion::line-269",
       "source_sha256": "77d14847ad121ab0ee9d0414208c79c1533956ef57ba0d4d2119e507ec54964f",
       "zig_declaration_id": "src/core/internal/insert_analysis.zig::function::expressionColumnFlagUnion",

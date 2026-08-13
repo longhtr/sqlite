@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "id": "select-window-gather-prune-callback",
+  "title": "SELECT window-gather prune callback",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The SELECT duplication window-gather walk exposes and directly consumes the source callback that prunes nested SELECTs.",
+    "source_files": [
+      {
+        "path": "src/expr.c",
+        "sha256": "363e581dc939eef8ff5d2d3e8cab8454d58716ba8aaab05c09f044eaacb8deff"
+      }
+    ],
+    "source_entity_ids": [
+      "src/expr.c::function::gatherSelectWindowsSelectCallback::line-1795"
+    ],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": [
+      "Window expression linking callback",
+      "Independent fidelity review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "SELECT walker and window gather owner"
+    ],
+    "caller_closure": "The production gatherSelectWindows walk installs this callback."
+  },
+  "contracts": {
+    "inputs": [
+      "Walker containing root SELECT and visited SELECT"
+    ],
+    "outputs": [
+      "Continue for root, prune for every nested SELECT"
+    ],
+    "ownership": "Borrows both SELECTs.",
+    "state_and_results": "Pure identity comparison determines walker control.",
+    "locks_callbacks_io": "No locks or I/O.",
+    "failure_and_continuation": "Cannot fail."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/expr.c::function::gatherSelectWindowsSelectCallback::line-1795",
+      "relation": "window-gather-nested-select-prune",
+      "zig_declaration_ids": [
+        "src/core/internal/ast_duplication.zig::function::gatherSelectWindowsSelectCallback"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The root SELECT is stored in Walker.u.pointer's typed generic arm."
+  ],
+  "oracle": {
+    "protocol": "Walk a duplicated root SELECT with nested subqueries and window expressions.",
+    "internal_observations": [
+      "root continue",
+      "nested prune",
+      "root-only linked windows"
+    ],
+    "normalization": "Compare walker controls and linked window identities."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation in callback.",
+    "io_crash_concurrency": "No I/O or concurrency.",
+    "malformed_input": "Requires a source-valid root pointer.",
+    "continuation": "No mutation.",
+    "performance": "Constant time per SELECT node.",
+    "commands": [
+      "zig build test -j1"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/ast_duplication.zig",
+    "native_call_path": "duplicateSelect -> gatherSelectWindows -> gatherSelectWindowsSelectCallback",
+    "bounded_owner_retired": "The existing private callback is now canonical and source-identified."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Independent review remains open."
+  },
+  "known_blockers": [
+    "Durable focused trace receipt and independent review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete callback body",
+      "gatherSelectWindows caller and duplicateSelect integration"
+    ],
+    "callers": [
+      "Window relinking after SELECT duplication"
+    ],
+    "callees": [
+      "None"
+    ],
+    "assertions_branches_cleanup": [
+      "root identity and nested branch"
+    ],
+    "upstream_tests": [
+      "Project broad AST duplication/runtime tests"
+    ]
+  },
+  "evidence_receipts": []
+}
