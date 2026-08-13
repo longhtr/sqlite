@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "btree-cached-page-lookup",
+  "title": "B-tree cached page lookup",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The B-tree core now has the source cache-only lookup that returns null on absence and retains a present page.",
+    "source_files": [{"path":"src/btree.c","sha256":"c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::btreePageLookup::line-2354"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Pager cache implementation", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Typed B-tree page cache and retain operation"],"caller_closure":"The complete cache-only lookup responsibility is translated."},
+  "contracts": {"inputs":["Shared B-tree and page number"],"outputs":["Retained cached page or null"],"ownership":"Caller receives one retained reference on success.","state_and_results":"Does not allocate or fetch missing page content.","locks_callbacks_io":"Caller holds the shared B-tree mutex; no I/O.","failure_and_continuation":"Null means cache miss; state is unchanged on miss."},
+  "mappings": [{"source_entity_id":"src/btree.c::function::btreePageLookup::line-2354","relation":"btree-cache-only-page-lookup","zig_declaration_ids":["src/core/internal/btree_core.zig::function::lookupPage"]}],
+  "representation_differences": ["The typed B-tree cache directly stores Page owners instead of converting a pager DbPage extra area."],
+  "oracle": {"protocol":"Look up present and absent page numbers and observe reference counts.","internal_observations":["returned identity", "reference-count increment", "miss no-op"],"normalization":"Compare page number and reference delta."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"No allocation.","io_crash_concurrency":"No I/O; mutex is a caller invariant.","malformed_input":"Unknown page numbers return null.","continuation":"Retained page must be released by caller.","performance":"Linear in current typed page list; pager hash optimization remains separate.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/btree_core.zig","native_call_path":"B-tree cache lookup -> lookupPage","bounded_owner_retired":"No alternate source-identity helper."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Wire every cache-only caller and focused trace."],
+  "context_review": {"implementation_spans":["Complete btreePageLookup body", "pageFromData/getPage and retain/release helpers"],"callers":["B-tree cache-only page consumers"],"callees":["Typed page lookup and retain"],"assertions_branches_cleanup":["present and absent branches", "retained-reference ownership"],"upstream_tests":["B-tree and pager differentials"]},
+  "evidence_receipts": []
+}

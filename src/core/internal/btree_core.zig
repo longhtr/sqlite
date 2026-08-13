@@ -469,6 +469,13 @@ pub fn getPage(shared: *Shared, page_number: u32, readonly: bool) Error!*Page {
     return page;
 }
 
+/// Source `btreePageLookup()`.
+pub fn lookupPage(shared: *Shared, page_number: u32) ?*Page {
+    const page = findPage(shared, page_number) orelse return null;
+    retainPage(page);
+    return page;
+}
+
 /// Source `releasePageOne()`.
 pub fn releasePageOne(page: *Page) void {
     std.debug.assert(page.ref_count > 0);

@@ -134,6 +134,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/btree.c::function::btreePageLookup::line-2354",
+      "source_sha256": "84d40e757ae98434de04eb334f8f1f6ffb6b03854f83263ba65f6958ee69a8df",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::lookupPage",
+      "zig_declaration_sha256": "a1d7eb9c8ce12e44bd65642ea81796ae01e94bdc8e73b4c37fa8f940024b8bc4",
+      "atomic_unit_id": "btree-cached-page-lookup",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/btree.c::function::cachedCellSize::line-7625",
       "source_sha256": "a88fa0dc4d93df1edd28e671b8c0aaf018f2706b36393df8cb1452946a149f68",
       "zig_declaration_id": "src/core/internal/btree_core.zig::function::cachedCellSize",
