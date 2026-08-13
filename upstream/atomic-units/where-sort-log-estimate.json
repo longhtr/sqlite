@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "id": "where-sort-log-estimate",
+  "title": "WHERE sorting logarithm estimate",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The source logarithm helper is translated and consumed by the production WHERE sorting-cost path.",
+    "source_files": [
+      {
+        "path": "src/where.c",
+        "sha256": "e96a8fea366c785acbdc19ef4bd31f1d4cbe5a2aa7661a1286a1f4e491ae547c"
+      }
+    ],
+    "source_entity_ids": [
+      "src/where.c::function::estLog::line-700"
+    ],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": [
+      "Broader WHERE cost model",
+      "Independent fidelity review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Canonical LogEst conversion"
+    ],
+    "caller_closure": "The helper is directly called by production sortingCost for its source role."
+  },
+  "contracts": {
+    "inputs": [
+      "LogEst input"
+    ],
+    "outputs": [
+      "Zero through ten, otherwise sqlite3LogEst(input)-33"
+    ],
+    "ownership": "Value-only.",
+    "state_and_results": "Pure deterministic estimate.",
+    "locks_callbacks_io": "None.",
+    "failure_and_continuation": "Cannot fail."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/where.c::function::estLog::line-700",
+      "relation": "where-sort-logarithm-estimate",
+      "zig_declaration_ids": [
+        "src/core/internal/where_planner.zig::function::estimateLog"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Uses the typed LogEst alias and canonical Zig conversion helper."
+  ],
+  "oracle": {
+    "protocol": "Exercise boundary and representative values through LogEst and index-planner differentials.",
+    "internal_observations": [
+      "exact LogEst result",
+      "sorting cost use"
+    ],
+    "normalization": "Exact integer comparison."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "Pure function.",
+    "malformed_input": "All LogEst values are defined.",
+    "continuation": "No state.",
+    "performance": "Constant time.",
+    "commands": [
+      "zig build test -j1"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/where_planner.zig",
+    "native_call_path": "whereSortingCost -> estimateLog (compiled caller integration; evidence-state promotion pending)",
+    "bounded_owner_retired": "Inline duplicate in sortingCost replaced by the source-shaped helper."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Independent review remains open."
+  },
+  "known_blockers": [
+    "Independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete estLog body",
+      "whereSortingCost caller"
+    ],
+    "callers": [
+      "WHERE sorting cost"
+    ],
+    "callees": [
+      "Canonical LogEst integer conversion"
+    ],
+    "assertions_branches_cleanup": [
+      "N<=10 boundary and subtraction branch"
+    ],
+    "upstream_tests": [
+      "LogEst and SQL index planner differentials"
+    ]
+  },
+  "evidence_receipts": []
+}

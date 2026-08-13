@@ -828,6 +828,11 @@
       "id": "backup-truncate-and-update-entrypoint",
       "path": "upstream/atomic-units/backup-truncate-and-update-entrypoint.json",
       "status": "source-translated"
+    },
+    {
+      "id": "where-sort-log-estimate",
+      "path": "upstream/atomic-units/where-sort-log-estimate.json",
+      "status": "source-translated"
     }
   ]
 }

@@ -726,6 +726,11 @@ pub fn loopIsNoBetter(candidate: *const WhereLoop, baseline: *const WhereLoop) b
     return candidate.choice.btree.index.?.row_size_estimate >= baseline.choice.btree.index.?.row_size_estimate;
 }
 
+/// Source `estLog()`.
+pub fn estimateLog(input: log_est.LogEst) log_est.LogEst {
+    return if (input <= 10) 0 else log_est.fromInt(@intCast(input)) - 33;
+}
+
 /// Source `whereSortingCost()`.
 pub fn sortingCost(info: *WhereInfo, rows_initial: i16, order_count: c_int, sorted_count: c_int) i16 {
     const result_count = info.select.?.pEList.?.nExpr;
@@ -737,7 +742,7 @@ pub fn sortingCost(info: *WhereInfo, rows_initial: i16, order_count: c_int, sort
         if (sorted_count != 0) result += 6;
         rows = @min(rows, info.limit_estimate);
     } else if (info.control_flags & 0x0100 != 0 and rows > 10) rows -= 10;
-    result += if (rows <= 10) 0 else log_est.fromInt(@intCast(rows)) - 33;
+    result += estimateLog(rows);
     return result;
 }
 

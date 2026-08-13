@@ -944,6 +944,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/where.c::function::estLog::line-700",
+      "source_sha256": "1dc20699c5f2a67a29e661f03533df95d7f1931b17607a546bcbdb7fe25c96ed",
+      "zig_declaration_id": "src/core/internal/where_planner.zig::function::estimateLog",
+      "zig_declaration_sha256": "30348fafba031b5c536e75d8980d6eebf1d699768bb4135504fbd607aa77f770",
+      "atomic_unit_id": "where-sort-log-estimate",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/where.c::function::exprIsCoveredByIndex::line-3735",
       "source_sha256": "a90ce05384e1ee5540805ef06120159801c83c06919670ff4716b8a36bd795ab",
       "zig_declaration_id": "src/core/internal/where_planner.zig::function::expressionCoveredByIndex",
