@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "source-list-owner-release",
+  "title": "Source-list owner release",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The existing complete SrcList destructor is canonically source-identified across SELECT, trigger, and foreign-key cleanup paths.",
+    "source_files": [{"path":"src/build.c","sha256":"c71549801eb2f56dcba062a6ce1c347d93203e43deb05c08ba4ad71a2c08d867"}],
+    "source_entity_ids": ["src/build.c::function::sqlite3SrcListDelete::line-4971"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["SrcList construction", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["SELECT, expression-list, table, IdList, and expression destructors"],"caller_closure":"All typed SrcList owners use this destructor."},
+  "contracts": {"inputs":["Connection and nullable SrcList"],"outputs":["Every owned SrcItem child and list allocation released"],"ownership":"Consumes names, aliases, subqueries/database names, INDEXED BY/function arguments, table references, USING/ON owners, then list.","state_and_results":"Flag invariants select mutually exclusive union owners.","locks_callbacks_io":"No I/O; caller owns schema synchronization.","failure_and_continuation":"Destructor allocates nothing and null is a no-op."},
+  "mappings": [{"source_entity_id":"src/build.c::function::sqlite3SrcListDelete::line-4971","relation":"source-list-complete-owner-destructor","zig_declaration_ids":["src/core/internal/compiler_ownership.zig::function::deleteSourceList"]}],
+  "representation_differences": ["Typed flag accessors and slices replace C flexible-array iteration."],
+  "oracle": {"protocol":"Destroy source items spanning ordinary, subquery, fixed-schema, indexed-by, table-function, USING, and ON variants.","internal_observations":["variant-specific child cleanup", "table reference release", "final list free"],"normalization":"Compare allocator ownership and child destructor observations."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Destructor allocates nothing.","io_crash_concurrency":"No I/O; schema synchronization external.","malformed_input":"Source flag invariants asserted.","continuation":"Consumed list cannot be reused.","performance":"Linear in source count and owned child sizes.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/compiler_ownership.zig","native_call_path":"SELECT/trigger/FK/compiler cleanup -> deleteSourceList","bounded_owner_retired":"Existing complete implementation promoted to canonical source identity."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Focused variant allocator trace and independent review."],
+  "context_review": {"implementation_spans":["Complete sqlite3SrcListDelete body", "all typed cleanup callers and child destructors"],"callers":["SELECT deletion", "trigger cleanup", "foreign-key cleanup", "parser append failures"],"callees":["SELECT/table/expression-list/IdList/expression destructors", "connection free"],"assertions_branches_cleanup":["all source flag invariants and union-owner branches"],"upstream_tests":["Project parser, schema, trigger, and broad runtime tests"]},
+  "evidence_receipts": []
+}

@@ -143,6 +143,7 @@ pub fn deleteSelect(db: *runtime.Sqlite3, select_optional: ?*ast.Select) void {
     }
 }
 
+/// Source `sqlite3SrcListDelete()`.
 pub fn deleteSourceList(db: *runtime.Sqlite3, list_optional: ?*ast.SrcList) void {
     const list = list_optional orelse return;
     for (list.items()) |*item| {

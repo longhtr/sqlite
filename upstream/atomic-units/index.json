@@ -888,6 +888,11 @@
       "id": "table-column-name-owner-release",
       "path": "upstream/atomic-units/table-column-name-owner-release.json",
       "status": "source-translated"
+    },
+    {
+      "id": "source-list-owner-release",
+      "path": "upstream/atomic-units/source-list-owner-release.json",
+      "status": "source-translated"
     }
   ]
 }
