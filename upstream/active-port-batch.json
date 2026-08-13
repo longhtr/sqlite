@@ -717,6 +717,15 @@
       "atomic_unit_id": "virtual-table-parser-argument-boundaries",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/where.c::function::exprIsCoveredByIndex::line-3735",
+      "source_sha256": "a90ce05384e1ee5540805ef06120159801c83c06919670ff4716b8a36bd795ab",
+      "zig_declaration_id": "src/core/internal/where_planner.zig::function::expressionCoveredByIndex",
+      "zig_declaration_sha256": "10abee3c7dd3c56dd146d1e1a58ec8a28d29339de5052483128bcc943547aa72",
+      "atomic_unit_id": "where-expression-index-coverage-match",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

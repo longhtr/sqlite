@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "id": "where-expression-index-coverage-match",
+  "title": "WHERE expression-index coverage match",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Covering-index analysis must recognize a query expression that exactly matches any expression-bearing index column, using the table cursor to normalize column references.",
+    "source_files": [
+      {
+        "path": "src/where.c",
+        "sha256": "e96a8fea366c785acbdc19ef4bd31f1d4cbe5a2aa7661a1286a1f4e491ae547c"
+      }
+    ],
+    "source_entity_ids": [
+      "src/where.c::function::exprIsCoveredByIndex::line-3735"
+    ],
+    "behavioral_block_ids": [
+      "src/where.c::function::exprIsCoveredByIndex::behavior::for::line-3741-column-3::ordinal-0",
+      "src/where.c::function::exprIsCoveredByIndex::behavior::if::line-3742-column-5::ordinal-0",
+      "src/where.c::function::exprIsCoveredByIndex::behavior::return::line-3745-column-7::ordinal-0",
+      "src/where.c::function::exprIsCoveredByIndex::behavior::return::line-3748-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Full covering-index Select walk and scoring",
+      "Independent fidelity review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Expression comparison and source-layout Index column metadata"
+    ],
+    "caller_closure": "The complete private match helper is assigned and invoked by production covering-index analysis."
+  },
+  "contracts": {
+    "inputs": [
+      "Query expression, index with optional expression list, and table cursor"
+    ],
+    "outputs": [
+      "True only when an XN_EXPR index column's expression compares equal"
+    ],
+    "ownership": "All expression and index objects are borrowed; no allocation or mutation.",
+    "state_and_results": "Ordinary columns and missing expression lists do not match. Every expression column is checked in index order; first exact comparison returns true.",
+    "locks_callbacks_io": "No lock, callback, or I/O.",
+    "failure_and_continuation": "Malformed missing expression metadata returns false at the typed boundary rather than dereferencing absent storage."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/where.c::function::exprIsCoveredByIndex::line-3735",
+      "relation": "source-expression-index-column-coverage-match",
+      "zig_declaration_ids": [
+        "src/core/internal/where_planner.zig::function::expressionCoveredByIndex"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Optional typed expression-list storage protects malformed native metadata while source assertions require it for expression indexes."
+  ],
+  "oracle": {
+    "protocol": "Construct mixed ordinary/expression indexes and compare matching, nonmatching, collated, cursor-remapped, and absent-expression-list query nodes through covering-index analysis.",
+    "internal_observations": [
+      "examined index-column positions",
+      "expression comparison result",
+      "covering walker prune flag"
+    ],
+    "normalization": "Compare boolean match and covering-index walker result."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation.",
+    "io_crash_concurrency": "Pure planner analysis.",
+    "malformed_input": "Absent column-expression storage returns false; production schema owners provide synchronized arrays.",
+    "continuation": "No planner state is changed directly; the caller marks/prunes only on true.",
+    "performance": "Linear in index column count, matching source.",
+    "commands": [
+      "zig test --dep build_profile -Mroot=src/root.zig -Mbuild_profile=config/build_profile.zig -lc"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/where_planner.zig covering-index analysis",
+    "native_call_path": "The production covering walker invokes the helper and marks expression-index coverage before selecting index-only or expression-index execution.",
+    "bounded_owner_retired": "Yes. The production planner owns the exact comparison path."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Pinned-C trace, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Add focused pinned-C covering-index trace.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned exprIsCoveredByIndex body and surrounding covering-index walker",
+      "Native schema Index layout, expression comparison, covering walker, and execution integration"
+    ],
+    "callers": [
+      "whereIsCoveringIndexWalkCallback equivalent"
+    ],
+    "callees": [
+      "expression.compareExpressions"
+    ],
+    "assertions_branches_cleanup": [
+      "Ordinary columns, all expression positions, exact match, no match, absent metadata, and cursor remapping reviewed"
+    ],
+    "upstream_tests": [
+      "Upstream expression-index covering tests",
+      "Project expression-index and planner differentials"
+    ]
+  },
+  "evidence_receipts": []
+}

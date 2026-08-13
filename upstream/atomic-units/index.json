@@ -770,6 +770,11 @@
       "status": "source-translated"
     },
     {
+      "id": "where-expression-index-coverage-match",
+      "path": "upstream/atomic-units/where-expression-index-coverage-match.json",
+      "status": "source-translated"
+    },
+    {
       "id": "backup-source-notification-attachment",
       "path": "upstream/atomic-units/backup-source-notification-attachment.json",
       "status": "source-translated"

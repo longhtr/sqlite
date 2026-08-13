@@ -918,7 +918,9 @@ pub const CoveringIndexCheck = struct {
     uses_unindexed: bool = false,
 };
 
-fn expressionCoveredByIndex(node: *parse_types.Expr, index: *schema.Index, cursor: c_int) bool {
+/// Source `exprIsCoveredByIndex()`: match one expression against every
+/// expression-bearing index column using the table cursor for remapping.
+pub fn expressionCoveredByIndex(node: *parse_types.Expr, index: *schema.Index, cursor: c_int) bool {
     const list: *parse_types.ExprList = if (index.column_expressions) |present| @ptrCast(@alignCast(present)) else return false;
     for (index.columns.?[0..index.column_count], 0..) |column, position| if (column == -2 and expression.compareExpressions(null, node, list.items()[position].pExpr, cursor) == 0) return true;
     return false;
