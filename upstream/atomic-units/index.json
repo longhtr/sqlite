@@ -838,6 +838,11 @@
       "id": "insert-expression-column-flag-union",
       "path": "upstream/atomic-units/insert-expression-column-flag-union.json",
       "status": "source-translated"
+    },
+    {
+      "id": "expression-real-literal-codegen",
+      "path": "upstream/atomic-units/expression-real-literal-codegen.json",
+      "status": "source-translated"
     }
   ]
 }

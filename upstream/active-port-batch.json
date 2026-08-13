@@ -161,6 +161,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/expr.c::function::codeReal::line-4312",
+      "source_sha256": "3999d0d5b3da38366f7a580601ca11292e80fc0e89a31ccd36cd1446b3fd8c71",
+      "zig_declaration_id": "src/core/internal/expression_analysis.zig::function::codeReal",
+      "zig_declaration_sha256": "8eee33cfb163777aaeca5d59f09a97e37de2f5f4ccc9eff0e3d682f4992ec0dd",
+      "atomic_unit_id": "expression-real-literal-codegen",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/insert.c::function::exprColumnFlagUnion::line-269",
       "source_sha256": "77d14847ad121ab0ee9d0414208c79c1533956ef57ba0d4d2119e507ec54964f",
       "zig_declaration_id": "src/core/internal/insert_analysis.zig::function::expressionColumnFlagUnion",

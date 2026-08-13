@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "expression-real-literal-codegen",
+  "title": "Expression real-literal code generation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Expression compilation now routes floating integer fallback through the source-shaped real-literal opcode helper.",
+    "source_files": [{"path":"src/expr.c","sha256":"363e581dc939eef8ff5d2d3e8cab8454d58716ba8aaab05c09f044eaacb8deff"}],
+    "source_entity_ids": ["src/expr.c::function::codeReal::line-4312"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["General expression code generation", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["SQLite floating parser and VDBE operation builder"],"caller_closure":"The helper is called by production integer literal fallback for out-of-range real values."},
+  "contracts": {"inputs":["VDBE, zero-terminated numeric text, negation flag, destination register"],"outputs":["OP_Real with duplicated eight-byte payload"],"ownership":"VDBE owns duplicated P4 real payload.","state_and_results":"Parses, optionally negates, rejects NaN by invariant, and appends one operation.","locks_callbacks_io":"No locks or I/O.","failure_and_continuation":"Operation builder owns sticky OOM behavior."},
+  "mappings": [{"source_entity_id":"src/expr.c::function::codeReal::line-4312","relation":"real-literal-vdbe-codegen","zig_declaration_ids":["src/core/internal/expression_analysis.zig::function::codeReal"]}],
+  "representation_differences": ["Uses the typed SQLite float parser and canonical VDBE P4 helper."],
+  "oracle": {"protocol":"Compile representative positive, negative, boundary, and integer-overflow literals.","internal_observations":["OP_Real opcode", "destination", "exact floating payload"],"normalization":"Compare decoded IEEE-754 value and opcode operands."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Inherited sticky VDBE builder behavior.","io_crash_concurrency":"No I/O or concurrency.","malformed_input":"Caller supplies parser-recognized numeric text.","continuation":"One opcode appended on source-valid input.","performance":"Linear numeric parse plus constant opcode append.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/expression_analysis.zig","native_call_path":"codeInteger overflow fallback -> codeReal -> VDBE builder","bounded_owner_retired":"Inline real fallback replaced by source-shaped helper."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Focused pinned-C opcode trace and evidence-state promotion."],
+  "context_review": {"implementation_spans":["Complete codeReal body", "codeInteger caller", "VDBE P4 duplication helper"],"callers":["Integer and real literal expression compilation"],"callees":["SQLite float parser", "VDBE operation builder"],"assertions_branches_cleanup":["non-null input invariant", "NaN assertion", "negation branch"],"upstream_tests":["Float decode, VDBE builder, and broad runtime differentials"]},
+  "evidence_receipts": []
+}

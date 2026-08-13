@@ -197,6 +197,14 @@ pub fn setHeightAndFlags(parse: *parse_types.Parse, expression: *parse_types.Exp
     _ = checkHeight(parse, expression.nHeight);
 }
 
+/// Source `codeReal()`.
+pub fn codeReal(machine: *types.Vdbe, text: [*:0]const u8, negate: bool, destination: c_int) void {
+    var value = sqlite_float.parse(text).value;
+    std.debug.assert(!std.math.isNan(value));
+    if (negate) value = -value;
+    _ = vdbe_aux.addOperation4Duplicate8(machine, .Real, 0, destination, 0, std.mem.asBytes(&value), types.p4.real);
+}
+
 /// Source `codeInteger()`.
 pub fn codeInteger(parse: *parse_types.Parse, expression_node: *parse_types.Expr, negate: bool, destination: c_int) void {
     const machine: *types.Vdbe = @ptrCast(@alignCast(parse.pVdbe.?));
@@ -208,9 +216,7 @@ pub fn codeInteger(parse: *parse_types.Parse, expression_node: *parse_types.Expr
     const text = expression_node.u.zToken.?;
     const parsed = numeric.parseDecimalOrHex(text);
     if (parsed.code == 2 or (parsed.code == 3 and !negate) or (negate and parsed.value == std.math.minInt(i64))) {
-        var real = sqlite_float.parse(text).value;
-        if (negate) real = -real;
-        _ = vdbe_aux.addOperation4Duplicate8(machine, .Real, 0, destination, 0, std.mem.asBytes(&real), types.p4.real);
+        codeReal(machine, text, negate, destination);
         return;
     }
     const value: i64 = if (negate) if (parsed.code == 3) std.math.minInt(i64) else -parsed.value else parsed.value;
