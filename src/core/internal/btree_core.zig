@@ -476,6 +476,17 @@ pub fn lookupPage(shared: *Shared, page_number: u32) ?*Page {
     return page;
 }
 
+/// Source `releasePageNotNull()`.
+pub fn releasePageNotNull(page: *Page) void {
+    std.debug.assert(page.data.len > 0);
+    releasePageOne(page);
+}
+
+/// Source `releasePage()`.
+pub fn releasePage(page: ?*Page) void {
+    if (page) |present| releasePageNotNull(present);
+}
+
 /// Source `releasePageOne()`.
 pub fn releasePageOne(page: *Page) void {
     std.debug.assert(page.ref_count > 0);

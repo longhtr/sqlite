@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "btree-page-release-wrappers",
+  "title": "B-tree page release wrappers",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The B-tree core now has source-shaped non-null and nullable page release wrappers over the typed retained-page owner.",
+    "source_files": [{"path":"src/btree.c","sha256":"c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::releasePageNotNull::line-2421", "src/btree.c::function::releasePage::line-2430"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Page-one special release behavior", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Typed page reference decrement"],"caller_closure":"Both complete wrappers delegate to the existing reference owner."},
+  "contracts": {"inputs":["Non-null Page or nullable Page"],"outputs":["One retained reference released when present"],"ownership":"Consumes one caller-held page reference.","state_and_results":"Non-null wrapper asserts initialized data; nullable wrapper is a null no-op.","locks_callbacks_io":"No direct I/O; shared B-tree synchronization is a caller invariant.","failure_and_continuation":"No allocation or failure."},
+  "mappings": [
+    {"source_entity_id":"src/btree.c::function::releasePageNotNull::line-2421","relation":"btree-nonnull-page-reference-release","zig_declaration_ids":["src/core/internal/btree_core.zig::function::releasePageNotNull"]},
+    {"source_entity_id":"src/btree.c::function::releasePage::line-2430","relation":"btree-nullable-page-reference-release","zig_declaration_ids":["src/core/internal/btree_core.zig::function::releasePage"]}
+  ],
+  "representation_differences": ["Typed Page directly owns its data and reference count instead of wrapping pager DbPage extra storage."],
+  "oracle": {"protocol":"Release present and null pages and observe exact reference-count changes.","internal_observations":["one decrement", "null no-op", "data invariant"],"normalization":"Compare reference counts."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"No allocation.","io_crash_concurrency":"No direct I/O; synchronization external.","malformed_input":"Non-null page requires a retained reference and data.","continuation":"Caller must not release beyond reference ownership.","performance":"Constant time.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/btree_core.zig","native_call_path":"B-tree page consumers -> releasePage/releasePageNotNull -> releasePageOne","bounded_owner_retired":"No alternate source-identity wrappers."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Route suitable callers through wrappers and focused reference trace."],
+  "context_review": {"implementation_spans":["Complete two upstream bodies", "typed retain/release owner"],"callers":["B-tree page consumers"],"callees":["releasePageOne"],"assertions_branches_cleanup":["nonnull data invariant", "nullable branch"],"upstream_tests":["B-tree and pager differentials"]},
+  "evidence_receipts": []
+}

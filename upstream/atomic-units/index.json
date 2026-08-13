@@ -898,6 +898,11 @@
       "id": "expression-tree-owner-release",
       "path": "upstream/atomic-units/expression-tree-owner-release.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-page-release-wrappers",
+      "path": "upstream/atomic-units/btree-page-release-wrappers.json",
+      "status": "source-translated"
     }
   ]
 }
