@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "id": "public-incremental-blob-read-write-size",
+  "title": "Public incremental blob read write and size wrappers",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The public read and write wrappers select the checked native payload operation, while the size observer exposes the fixed byte count only until the blob handle has been invalidated.",
+    "source_files": [
+      {
+        "path": "src/vdbeblob.c",
+        "sha256": "edf52b0371add3b0454b4dd1a54c8e6177af86efc2af905d5e8c5cf5c635e826"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeblob.c::function::sqlite3_blob_read::line-471",
+      "src/vdbeblob.c::function::sqlite3_blob_write::line-478",
+      "src/vdbeblob.c::function::sqlite3_blob_bytes::line-488"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeblob.c::function::sqlite3_blob_read::behavior::return::line-472-column-3::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_write::behavior::return::line-479-column-3::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_bytes::behavior::return::line-490-column-3::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_bytes::behavior::conditional::line-490-column-10::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Blob open close seek and reopen ownership",
+      "Independent fidelity review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Native Blob handle and shared checked read/write operation",
+      "Native Btree cursor payload get and put"
+    ],
+    "caller_closure": "All three assigned public APIs invoke the production incremental-blob owner used by canonical C clients."
+  },
+  "contracts": {
+    "inputs": [
+      "Nullable blob handle, nullable data buffer, signed amount, and signed offset"
+    ],
+    "outputs": [
+      "Exact public result code for read/write or current fixed byte length"
+    ],
+    "ownership": "Blob handle and buffers are borrowed. Reads and writes retain the handle; terminal seek/write failure invalidates its cursor without freeing the public handle.",
+    "state_and_results": "Negative or out-of-range requests, null non-empty buffers, read-only writes, invalidated handles, and storage failures retain the shared blobReadWrite result policy. Invalidated size is zero.",
+    "locks_callbacks_io": "The shared owner acquires the connection lock and reads or writes through the positioned native Btree cursor.",
+    "failure_and_continuation": "Transient range failures preserve the handle. A failed seek permanently invalidates read, write, and reopen until close."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_read::line-471",
+      "relation": "source-public-blob-read-wrapper-to-native-checked-payload-owner",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::sqlite3_blob_read"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_write::line-478",
+      "relation": "source-public-blob-write-wrapper-to-native-checked-payload-owner",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::sqlite3_blob_write"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_bytes::line-488",
+      "relation": "source-public-blob-fixed-size-observer-to-native-handle",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::sqlite3_blob_bytes"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "A Zig Blob invalidated flag and optional cursor represent source pStmt validity; both expose zero bytes and ABORT after permanent invalidation."
+  ],
+  "oracle": {
+    "protocol": "Open a writable and read-only incremental blob, inspect size, read exact content, write replacement content, reject read-only writes, exercise range failures, invalidate with failed reopen, and close safely.",
+    "internal_observations": [
+      "fixed byte count and cursor validity",
+      "payload bytes and writable flag",
+      "permanent invalidation continuation"
+    ],
+    "normalization": "Compare public result codes, byte length, payload content, and post-failure continuation."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No wrapper allocation; cursor storage errors propagate from the shared owner.",
+    "io_crash_concurrency": "Connection lock and Pager/Btree behavior are delegated to the integrated native owner.",
+    "malformed_input": "Null handles and buffers, negative values, range overflow, read-only writes, and invalidated handles are covered.",
+    "continuation": "Range errors preserve validity; permanent seek invalidation returns ABORT until close.",
+    "performance": "Constant-time wrapper selection and size observation around direct cursor payload access.",
+    "commands": [
+      "zig build phase17-connection-client -j1",
+      "zig build memdb-api-differential -j1"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/sql_frontend.zig Blob and blobReadWrite owners",
+    "native_call_path": "Canonical public C exports reach selected schema/table native Btree cursor content through the shared connection-locked owner.",
+    "bounded_owner_retired": "Yes. No separate read/write/size substitute remains."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Pinned-C internal trace, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Add focused pinned-C internal cursor trace.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned vdbeblob.c public read/write/size bodies and shared blobReadWrite context",
+      "Native Blob owner, Btree cursor read/write path, and public API tests"
+    ],
+    "callers": [
+      "Canonical incremental-blob C clients"
+    ],
+    "callees": [
+      "blobReadWrite and native cursor get/put payload methods"
+    ],
+    "assertions_branches_cleanup": [
+      "Null, invalidated, read-only, negative, range, storage failure, and exact success paths reviewed"
+    ],
+    "upstream_tests": [
+      "Upstream incrblob API tests",
+      "Project phase17 and memdb public API differentials"
+    ]
+  },
+  "evidence_receipts": []
+}

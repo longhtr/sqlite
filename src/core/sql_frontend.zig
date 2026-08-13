@@ -3272,6 +3272,8 @@ pub export fn sqlite3_blob_close(pointer: ?*sqlite3_blob) callconv(.c) c_int {
     return ResultCode.ok.toC();
 }
 
+/// Source `sqlite3_blob_bytes()`: report the fixed byte length only while the
+/// incremental-blob statement/cursor remains valid.
 pub export fn sqlite3_blob_bytes(pointer: ?*sqlite3_blob) callconv(.c) c_int {
     const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return 0;
     if (blob.invalidated) return 0;
@@ -3339,11 +3341,15 @@ fn blobReadWrite(blob: *Blob, buffer: ?*anyopaque, amount: c_int, offset: c_int,
     return blobSeekToRow(blob, blob.rowid);
 }
 
+/// Source `sqlite3_blob_read()`: select the checked native payload reader over
+/// the shared blob range, lock, invalidation, and result-code owner.
 pub export fn sqlite3_blob_read(pointer: ?*sqlite3_blob, output: ?*anyopaque, amount: c_int, offset: c_int) callconv(.c) c_int {
     const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
     return blobReadWrite(blob, output, amount, offset, false).toC();
 }
 
+/// Source `sqlite3_blob_write()`: select the checked native payload writer
+/// over the shared blob range, read-only, lock, and invalidation owner.
 pub export fn sqlite3_blob_write(pointer: ?*sqlite3_blob, input: ?*const anyopaque, amount: c_int, offset: c_int) callconv(.c) c_int {
     const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
     return blobReadWrite(blob, @constCast(input), amount, offset, true).toC();
