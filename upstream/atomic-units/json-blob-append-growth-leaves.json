@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "json-blob-append-growth-leaves",
+  "title": "JSON blob append growth leaves",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "JSONB construction now has source-shaped fast/slow byte append and grow-then-node append helpers.",
+    "source_files": [{"path":"src/json.c","sha256":"25a742ea7382fd21bc3f10fc22f4cbfc97335122ba9593822d0d7eb93bb637d9"}],
+    "source_entity_ids": ["src/json.c::function::jsonBlobAppendOneByte::line-1211", "src/json.c::function::jsonBlobExpandAndAppendNode::line-1223"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["JSONB node encoding beyond append dispatch", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["JSON blob growth and node encoding"],"caller_closure":"The normal append paths dispatch to these slow growth leaves on capacity exhaustion."},
+  "contracts": {"inputs":["Mutable JsonParse, byte or node type/payload"],"outputs":["Byte or encoded node appended when capacity/growth permits"],"ownership":"JsonParse retains blob ownership; payload is borrowed and copied.","state_and_results":"Fast byte append avoids growth; slow node path reserves payload plus maximum header before calling encoder.","locks_callbacks_io":"No locks or I/O.","failure_and_continuation":"Growth failure sets sticky OOM and leaves a valid prefix."},
+  "mappings": [
+    {"source_entity_id":"src/json.c::function::jsonBlobAppendOneByte::line-1211","relation":"json-blob-single-byte-fast-slow-append","zig_declaration_ids":["src/core/internal/json_core.zig::function::appendBlobByte"]},
+    {"source_entity_id":"src/json.c::function::jsonBlobExpandAndAppendNode::line-1223","relation":"json-blob-grow-then-node-append","zig_declaration_ids":["src/core/internal/json_core.zig::function::expandAndAppendNode"]}
+  ],
+  "representation_differences": ["ArrayList capacity and item length replace separate C allocation and used counters."],
+  "oracle": {"protocol":"Append at available and exhausted capacities with payload-size header boundaries and injected OOM.","internal_observations":["exact blob bytes", "capacity branch", "sticky OOM and valid prefix"],"normalization":"Byte-exact blob comparison."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Growth failure preserves prefix and sets sticky OOM.","io_crash_concurrency":"No I/O or concurrency.","malformed_input":"Payload size must fit the typed usize domain.","continuation":"Sticky OOM suppresses successful future growth.","performance":"Amortized constant byte append and linear payload copy.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/json_core.zig","native_call_path":"appendBlobByte/appendNode -> growth leaves","bounded_owner_retired":"Normal appendNode now dispatches to the source-shaped growth leaf."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Focused JSONB growth/OOM trace and evidence-state promotion."],
+  "context_review": {"implementation_spans":["Complete two upstream bodies", "Adjacent blob grow and node encoder"],"callers":["JSONB construction"],"callees":["Blob growth", "node encoding"],"assertions_branches_cleanup":["capacity fast path", "growth failure", "payload plus nine-byte reserve"],"upstream_tests":["Project JSON and broad runtime tests"]},
+  "evidence_receipts": []
+}

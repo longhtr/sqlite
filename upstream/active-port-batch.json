@@ -224,6 +224,24 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/json.c::function::jsonBlobAppendOneByte::line-1211",
+      "source_sha256": "1c75196f6ad52cdedf0f81711b938a123b8ee2d313ae1cc6d3bb51d5ddebc90c",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::appendBlobByte",
+      "zig_declaration_sha256": "177150f32cf1fc2eee8061aa1db67a7a954f787d07eac2662c0ce8bf0b37976b",
+      "atomic_unit_id": "json-blob-append-growth-leaves",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonBlobExpandAndAppendNode::line-1223",
+      "source_sha256": "f7bc6d91116df450025038309a63f5e170c4f85330d9ca3ac60f29df92857204",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::expandAndAppendNode",
+      "zig_declaration_sha256": "368c34b6672cd84be476faf4dff1d3bb8360fd298cb0ac2f4f3ae520183a8978",
+      "atomic_unit_id": "json-blob-append-growth-leaves",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/json.c::function::jsonCacheDeleteGeneric::line-428",
       "source_sha256": "4d2eaf765429aec4ddcc41a405fd2aa7d2248cce0172064bb35bac222058d9bf",
       "zig_declaration_id": "src/core/internal/json_functions.zig::function::cacheDeleteGeneric",

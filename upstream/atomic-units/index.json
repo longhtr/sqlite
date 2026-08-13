@@ -858,6 +858,11 @@
       "id": "json-pretty-indent",
       "path": "upstream/atomic-units/json-pretty-indent.json",
       "status": "source-translated"
+    },
+    {
+      "id": "json-blob-append-growth-leaves",
+      "path": "upstream/atomic-units/json-blob-append-growth-leaves.json",
+      "status": "source-translated"
     }
   ]
 }

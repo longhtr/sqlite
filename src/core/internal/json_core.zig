@@ -252,9 +252,25 @@ pub fn expandAndAppendByte(parse: *JsonParse, byte: u8) void {
     parse.blob.appendAssumeCapacity(byte);
 }
 
+/// Source `jsonBlobAppendOneByte()`.
+pub fn appendBlobByte(parse: *JsonParse, byte: u8) void {
+    if (parse.blob.items.len >= parse.blob.capacity) {
+        expandAndAppendByte(parse, byte);
+    } else parse.blob.appendAssumeCapacity(byte);
+}
+
+/// Source `jsonBlobExpandAndAppendNode()`.
+pub fn expandAndAppendNode(parse: *JsonParse, node_type: u8, payload: ?[]const u8, payload_size: u64) void {
+    if (!expandBlob(parse, parse.blob.items.len + @as(usize, @intCast(payload_size)) + 9)) return;
+    appendNode(parse, node_type, payload, payload_size);
+}
+
 /// Source `jsonBlobAppendNode()`.
 pub fn appendNode(parse: *JsonParse, node_type: u8, payload: ?[]const u8, payload_size: u64) void {
-    if (!expandBlob(parse, parse.blob.items.len + @as(usize, @intCast(payload_size)) + 9)) return;
+    if (parse.blob.items.len + @as(usize, @intCast(payload_size)) + 9 > parse.blob.capacity) {
+        expandAndAppendNode(parse, node_type, payload, payload_size);
+        return;
+    }
     if (payload_size <= 11) parse.blob.appendAssumeCapacity(node_type | @as(u8, @intCast(payload_size << 4))) else if (payload_size <= 0xff) {
         parse.blob.appendSliceAssumeCapacity(&.{ node_type | 0xc0, @intCast(payload_size) });
     } else if (payload_size <= 0xffff) {
