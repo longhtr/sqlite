@@ -86,6 +86,8 @@ pub const Statement = struct {
     profile_emitted: bool = false,
     profile_start_ms: i64 = 0,
     variable_mask: u64 = 0,
+    expired: bool = false,
+    status_counters: [9]u32 = [_]u32{0} ** 9,
     execution_depth: ?*usize = null,
 
     pub fn create(
@@ -140,6 +142,10 @@ pub const Statement = struct {
     pub fn setSql(self: *Statement, sql: []const u8) !void {
         if (self.sql_copy) |old| self.allocator.free(old);
         self.sql_copy = try self.allocator.dupeZ(u8, sql);
+    }
+
+    pub fn setVariableSensitive(self: *Statement, index: usize) void {
+        self.setVariableMask(index);
     }
 
     pub fn setEventCallback(self: *Statement, context: ?*anyopaque, callback: *const fn (?*anyopaque, *Statement, c_uint) void) void {
@@ -217,8 +223,11 @@ pub const Statement = struct {
                 return result;
             }
             self.started = true;
+            self.status_counters[6] +%= 1;
         }
+        const executed_before = self.vm.executed;
         const outcome = self.vm.step();
+        self.status_counters[4] +%= @truncate(self.vm.executed - executed_before);
         self.last_result = outcome.result;
         if (outcome.result == .row) {
             if (self.event_callback) |callback| callback(self.event_context, self, 4);
@@ -252,6 +261,12 @@ pub const Statement = struct {
         }
     }
 
+    fn variableAffectsPlan(self: *const Statement, index: usize) bool {
+        if (index == 0 or self.variable_mask == 0) return false;
+        if (index > 64) return self.variable_mask == std.math.maxInt(u64);
+        return self.variable_mask & (@as(u64, 1) << @intCast(index - 1)) != 0;
+    }
+
     fn bindMem(self: *Statement, index_value: c_int, value: *vdbe_types.Mem) ResultCode {
         if (self.in_api or self.started) {
             vdbe_mem.release(value);
@@ -264,7 +279,9 @@ pub const Statement = struct {
             return .range;
         }
         const index: usize = @intCast(index_value - 1);
-        self.setVariableMask(index + 1);
+        if (self.variableAffectsPlan(index + 1)) {
+            self.expired = true;
+        }
         vdbe_mem.move(&self.bindings[index].value, value);
         self.bindings[index].value.flags |= vdbe_types.mem_flag.from_bind;
         return .ok;
@@ -734,16 +751,30 @@ pub export fn sqlite3_result_subtype(pointer: ?*sqlite3_context, subtype: c_uint
     if (asContext(pointer)) |context| vdbe_mem.resultSubtype(context, subtype);
 }
 
+/// Source `sqlite3_step()`: reject invalid handles, auto-reset a halted native
+/// statement, consume variable-sensitive reprepare state, execute it, and
+/// preserve the connection's primary/extended mask.
 pub export fn sqlite3_step(pointer: ?*sqlite3_stmt) callconv(.c) c_int {
     const statement = asStatement(pointer) orelse return ResultCode.misuse.toC();
+    if (statement.vm.state == .halted or statement.vm.state == .failed) {
+        _ = statement.reset();
+    }
+    if (statement.expired) {
+        statement.expired = false;
+        statement.status_counters[5] +%= 1;
+    }
     return statement.step().toC() & statement.resultMask();
 }
 
+/// Source `sqlite3_reset()`: NULL is a successful no-op; a valid statement
+/// returns its prior execution result and rewinds for reuse.
 pub export fn sqlite3_reset(pointer: ?*sqlite3_stmt) callconv(.c) c_int {
-    const statement = asStatement(pointer) orelse return ResultCode.misuse.toC();
+    const statement = asStatement(pointer) orelse return ResultCode.ok.toC();
     return statement.reset().toC() & statement.resultMask();
 }
 
+/// Source `sqlite3_finalize()`: NULL is harmless; a live statement publishes
+/// its final execution result after releasing all VM and connection ownership.
 pub export fn sqlite3_finalize(pointer: ?*sqlite3_stmt) callconv(.c) c_int {
     const statement = asStatement(pointer) orelse return ResultCode.ok.toC();
     if (statement.in_api) return ResultCode.misuse.toC();
@@ -752,12 +783,17 @@ pub export fn sqlite3_finalize(pointer: ?*sqlite3_stmt) callconv(.c) c_int {
     return statement.destroy().toC() & result_mask;
 }
 
+/// Source `sqlite3_clear_bindings()`: release every parameter, replace each
+/// with NULL, and expire variable-sensitive plans without resetting counters.
 pub export fn sqlite3_clear_bindings(pointer: ?*sqlite3_stmt) callconv(.c) c_int {
     const statement = asStatement(pointer) orelse return ResultCode.misuse.toC();
     if (statement.started or statement.in_api) return ResultCode.misuse.toC();
     statement.in_api = true;
     defer statement.in_api = false;
     for (statement.bindings) |*binding| binding.clear();
+    if (statement.variable_mask != 0) {
+        statement.expired = true;
+    }
     return ResultCode.ok.toC();
 }
 
@@ -1179,16 +1215,28 @@ pub export fn sqlite3_expanded_sql(pointer: ?*sqlite3_stmt) callconv(.c) ?[*:0]u
     return expandSql(prepared, sql);
 }
 
-pub export fn sqlite3_expired(_: ?*sqlite3_stmt) callconv(.c) c_int {
-    return 0;
+/// Source `sqlite3_expired()`: NULL is conservatively expired; valid native
+/// statements report whether a variable-sensitive plan needs recompilation.
+pub export fn sqlite3_expired(pointer: ?*sqlite3_stmt) callconv(.c) c_int {
+    const statement = asStatement(pointer) orelse return 1;
+    return @intFromBool(statement.expired);
 }
+/// Source `sqlite3TransferBindings()` and deprecated
+/// `sqlite3_transfer_bindings()`: move binding ownership without allocation
+/// and expire either variable-sensitive plan.
 pub export fn sqlite3_transfer_bindings(source_pointer: ?*sqlite3_stmt, destination_pointer: ?*sqlite3_stmt) callconv(.c) c_int {
     const source = asStatement(source_pointer) orelse return ResultCode.misuse.toC();
     const destination = asStatement(destination_pointer) orelse return ResultCode.misuse.toC();
     if (source.bindings.len != destination.bindings.len or source.started or destination.started) return ResultCode.error_.toC();
     for (source.bindings, destination.bindings) |*from, *to| {
-        if (vdbe_mem.copy(&to.value, &from.value) != 0) return ResultCode.no_memory.toC();
-        from.clear();
+        vdbe_mem.move(&to.value, &from.value);
+        from.init();
+    }
+    if (destination.variable_mask != 0) {
+        destination.expired = true;
+    }
+    if (source.variable_mask != 0) {
+        source.expired = true;
     }
     return ResultCode.ok.toC();
 }
@@ -1197,10 +1245,19 @@ pub export fn sqlite3_stmt_explain(pointer: ?*sqlite3_stmt, mode: c_int) callcon
     return if (mode == 0) ResultCode.ok.toC() else ResultCode.error_.toC();
 }
 
+/// Source `sqlite3_stmt_status()`: return and optionally reset the bounded
+/// statement counters maintained by the native VM. MEMUSED remains zero until
+/// the statement allocator exposes allocation-size accounting.
 pub export fn sqlite3_stmt_status(pointer: ?*sqlite3_stmt, operation: c_int, reset: c_int) callconv(.c) c_int {
-    _ = operation;
-    _ = reset;
-    return if (asStatement(pointer) != null) 0 else 0;
+    const statement = asStatement(pointer) orelse return 0;
+    if (operation == 99) return 0;
+    if (operation < 0 or operation >= statement.status_counters.len) return 0;
+    const index: usize = @intCast(operation);
+    const value: c_int = @bitCast(statement.status_counters[index]);
+    if (reset != 0) {
+        statement.status_counters[index] = 0;
+    }
+    return value;
 }
 
 pub export fn sqlite3_stmt_isexplain(_: ?*sqlite3_stmt) callconv(.c) c_int {
@@ -1224,6 +1281,85 @@ fn testDestructor(_: ?*anyopaque) callconv(.c) void {
 }
 fn transientDestructor() Destructor {
     return @ptrFromInt(std.math.maxInt(usize));
+}
+
+test "finalize reset and NULL lifecycle semantics" {
+    const operations = [_]vdbe.Instruction{
+        .{ .opcode = .integer, .p1 = 7, .p2 = 1 },
+        .{ .opcode = .result_row, .p1 = 1, .p2 = 1 },
+        .{ .opcode = .halt },
+    };
+    const program = vdbe.Program{ .instructions = &operations, .register_count = 1 };
+    const parameters: [0]ParameterMetadata = .{};
+    const columns = [_]ColumnMetadata{.{ .name = "value" }};
+    const prepared = try Statement.create(std.testing.allocator, &program, &parameters, &columns);
+    const handle = toOpaque(prepared);
+
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_reset(null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_finalize(null));
+    try std.testing.expectEqual(ResultCode.row.toC(), sqlite3_step(handle));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_reset(handle));
+    try std.testing.expectEqual(ResultCode.row.toC(), sqlite3_step(handle));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_finalize(handle));
+}
+
+test "statement status counts runs and VM steps with reset semantics" {
+    const operations = [_]vdbe.Instruction{
+        .{ .opcode = .integer, .p1 = 42, .p2 = 1 },
+        .{ .opcode = .result_row, .p1 = 1, .p2 = 1 },
+        .{ .opcode = .halt },
+    };
+    const program = vdbe.Program{ .instructions = &operations, .register_count = 1 };
+    const parameters: [0]ParameterMetadata = .{};
+    const columns = [_]ColumnMetadata{.{ .name = "value" }};
+    const prepared = try Statement.create(std.testing.allocator, &program, &parameters, &columns);
+    defer _ = prepared.destroy();
+
+    const handle = toOpaque(prepared);
+    try std.testing.expectEqual(ResultCode.row.toC(), sqlite3_step(handle));
+    try std.testing.expectEqual(@as(c_int, 1), sqlite3_stmt_status(handle, 6, 0));
+    try std.testing.expectEqual(@as(c_int, 2), sqlite3_stmt_status(handle, 4, 1));
+    try std.testing.expectEqual(@as(c_int, 0), sqlite3_stmt_status(handle, 4, 0));
+    try std.testing.expectEqual(ResultCode.done.toC(), sqlite3_step(handle));
+    try std.testing.expectEqual(@as(c_int, 1), sqlite3_stmt_status(handle, 6, 1));
+    try std.testing.expectEqual(@as(c_int, 1), sqlite3_stmt_status(handle, 4, 0));
+    try std.testing.expectEqual(ResultCode.row.toC(), sqlite3_step(handle));
+    try std.testing.expectEqual(@as(c_int, 1), sqlite3_stmt_status(handle, 6, 0));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_reset(handle));
+    try std.testing.expectEqual(ResultCode.row.toC(), sqlite3_step(handle));
+    try std.testing.expectEqual(@as(c_int, 2), sqlite3_stmt_status(handle, 6, 0));
+    try std.testing.expectEqual(@as(c_int, 0), sqlite3_stmt_status(handle, 99, 0));
+}
+
+test "clear and transfer bindings expire variable-sensitive statements" {
+    const parameters = [_]ParameterMetadata{.{ .name = "?1" }};
+    const columns = [_]ColumnMetadata{.{ .name = "value" }};
+    const operations = [_]vdbe.Instruction{
+        .{ .opcode = .result_row, .p1 = 1, .p2 = 1 },
+        .{ .opcode = .halt },
+    };
+    const program = vdbe.Program{ .instructions = &operations, .register_count = 1 };
+    const source = try Statement.create(std.testing.allocator, &program, &parameters, &columns);
+    defer _ = source.destroy();
+    const destination = try Statement.create(std.testing.allocator, &program, &parameters, &columns);
+    defer _ = destination.destroy();
+    source.setVariableSensitive(1);
+    destination.setVariableSensitive(1);
+
+    const source_opaque = toOpaque(source);
+    const destination_opaque = toOpaque(destination);
+    try std.testing.expectEqual(@as(c_int, 0), sqlite3_expired(source_opaque));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_bind_int(source_opaque, 1, 42));
+    try std.testing.expectEqual(@as(c_int, 1), sqlite3_expired(source_opaque));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_transfer_bindings(source_opaque, destination_opaque));
+    try std.testing.expectEqual(@as(c_int, 1), sqlite3_expired(destination_opaque));
+    try std.testing.expectEqual(ResultCode.row.toC(), sqlite3_step(destination_opaque));
+    try std.testing.expectEqual(@as(c_int, 42), sqlite3_column_int(destination_opaque, 0));
+    try std.testing.expectEqual(@as(c_int, 1), sqlite3_stmt_status(destination_opaque, 5, 0));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_reset(destination_opaque));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_clear_bindings(destination_opaque));
+    try std.testing.expectEqual(@as(c_int, 1), sqlite3_expired(destination_opaque));
+    try std.testing.expectEqual(@as(c_int, 1), sqlite3_expired(null));
 }
 
 test "source host parameter scan skips quoted text and comments" {
@@ -1350,7 +1486,7 @@ test "result APIs destroy rejected owned inputs" {
 
 test "statement misuse range negative lengths and error lifecycle return exact codes" {
     try std.testing.expectEqual(ResultCode.misuse.toC(), sqlite3_step(null));
-    try std.testing.expectEqual(ResultCode.misuse.toC(), sqlite3_reset(null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_reset(null));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_finalize(null));
     const statement = try Statement.create(std.testing.allocator, &test_statement_program, &test_parameters, &test_columns);
     const handle = toOpaque(statement);

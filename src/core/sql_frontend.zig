@@ -11955,6 +11955,9 @@ fn prepareUtf8(
             connection.last_result = .no_memory;
             return ResultCode.no_memory.toC();
         };
+        for (prepared.parameters, 1..) |_, index| {
+            prepared.setVariableSensitive(index);
+        }
         if (connection.progress_callback != null) prepared.vm.setProgressHandler(connection.progress_interval, Connection.vmProgress, connection);
         if (connection.legacy_trace_callback != null or connection.legacy_profile_callback != null or connection.trace_v2_callback != null) prepared.setEventCallback(connection, Connection.statementEvent);
         prepared.connection_next = connection.statement_head;
@@ -13373,6 +13376,26 @@ test "incremental blob APIs publish errors invalidate failed seeks and finish de
     try std.testing.expectEqual(ResultCode.abort.toC(), sqlite3_errcode(database));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_close_v2(database));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_blob_close(blob));
+}
+
+test "prepared parameter rebinding expires and reparses before execution" {
+    var database: ?*sqlite3 = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &database));
+    defer _ = sqlite3_close(database);
+    var prepared: ?*statement.sqlite3_stmt = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_prepare_v2(database, "SELECT ?1", -1, &prepared, null));
+    defer _ = statement.sqlite3_finalize(prepared);
+
+    try std.testing.expectEqual(@as(c_int, 0), statement.sqlite3_expired(prepared));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_bind_int(prepared, 1, 42));
+    try std.testing.expectEqual(@as(c_int, 1), statement.sqlite3_expired(prepared));
+    try std.testing.expectEqual(ResultCode.row.toC(), statement.sqlite3_step(prepared));
+    try std.testing.expectEqual(@as(c_int, 42), statement.sqlite3_column_int(prepared, 0));
+    try std.testing.expectEqual(@as(c_int, 0), statement.sqlite3_expired(prepared));
+    try std.testing.expectEqual(@as(c_int, 1), statement.sqlite3_stmt_status(prepared, 5, 0));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_reset(prepared));
+    try std.testing.expectEqual(ResultCode.ok.toC(), statement.sqlite3_clear_bindings(prepared));
+    try std.testing.expectEqual(@as(c_int, 1), statement.sqlite3_expired(prepared));
 }
 
 test "public open close error and deferred statement lifecycle" {

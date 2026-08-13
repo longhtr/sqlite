@@ -15,6 +15,11 @@
       "status": "source-translated"
     },
     {
+      "id": "public-statement-step-reset-finalize-lifecycle",
+      "path": "upstream/atomic-units/public-statement-step-reset-finalize-lifecycle.json",
+      "status": "source-translated"
+    },
+    {
       "id": "incremental-blob-open-reopen-and-close",
       "path": "upstream/atomic-units/incremental-blob-open-reopen-and-close.json",
       "status": "source-translated"

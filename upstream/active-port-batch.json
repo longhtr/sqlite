@@ -537,6 +537,33 @@
       "atomic_unit_id": "utf16-prepare-conversion-and-tail-mapping",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_finalize::line-105",
+      "source_sha256": "ab3d3a417539489656be01f0f85b7544fc3ff83698768cbc3c1d6ae5f3a366e3",
+      "zig_declaration_id": "src/core/statement.zig::function::sqlite3_finalize",
+      "zig_declaration_sha256": "b9e4d91b807070a3edeeb179da226f6be00b2df4997314d0b504a3efc511a4db",
+      "atomic_unit_id": "public-statement-step-reset-finalize-lifecycle",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_reset::line-134",
+      "source_sha256": "9f5732ddcb3a67a70940b6dd6594e863c2493bf3c60a4a134cc03474c825c511",
+      "zig_declaration_id": "src/core/statement.zig::function::sqlite3_reset",
+      "zig_declaration_sha256": "13fd7f8bed354ae1afa749bd3030e26be58395907b917fa90d5d6e478bd41bf9",
+      "atomic_unit_id": "public-statement-step-reset-finalize-lifecycle",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_step::line-919",
+      "source_sha256": "4a7c09f4fed306daafa689069a0367e0fe38a8f3bc3872b33e5885ddeffc83d5",
+      "zig_declaration_id": "src/core/statement.zig::function::sqlite3_step",
+      "zig_declaration_sha256": "1f3e9f03c9d0fe97f941765c058fbdef56fb00aae528ab673f811cbbe3304e04",
+      "atomic_unit_id": "public-statement-step-reset-finalize-lifecycle",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "id": "public-statement-step-reset-finalize-lifecycle",
+  "title": "Public statement step, reset, and finalize lifecycle",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "These public VDBE lifecycle functions form one dependency-closed unit around execution, automatic restart, prior-result publication, and final ownership release.",
+    "source_files": [
+      {
+        "path": "src/vdbeapi.c",
+        "sha256": "233846129dc649ec3d1ae321612ee8833c937ee775766eb8e39deda07a6b19a6"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeapi.c::function::sqlite3_finalize::line-105",
+      "src/vdbeapi.c::function::sqlite3_reset::line-134",
+      "src/vdbeapi.c::function::sqlite3_step::line-919"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeapi.c::function::sqlite3_finalize::behavior::if::line-107-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_finalize::behavior::if::line-114-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_finalize::behavior::return::line-114-column-25::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_finalize::behavior::if::line-116-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_finalize::behavior::assert::line-117-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_finalize::behavior::return::line-123-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_reset::behavior::if::line-136-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_reset::behavior::if::line-142-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_reset::behavior::assert::line-145-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_reset::behavior::return::line-149-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_step::behavior::if::line-925-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_step::behavior::return::line-926-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_step::behavior::while::line-930-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_step::behavior::if::line-934-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_step::behavior::if::line-945-column-7::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_step::behavior::break::line-952-column-7::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_step::behavior::if::line-955-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_step::behavior::assert::line-962-column-5::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_step::behavior::return::line-965-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Full schema bytecode recompilation beyond the bounded native prepared-program owner",
+      "Independent pinned-C trace and assurance review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Native VM execution and reset",
+      "Connection statement linkage and deferred zombie close"
+    ],
+    "caller_closure": "All public callers route directly through the mapped statement exports; the native VM and connection finalizer own their lower-level state transitions."
+  },
+  "contracts": {
+    "inputs": [
+      "Nullable or live native prepared-statement handle"
+    ],
+    "outputs": [
+      "Masked step result, prior reset result, or final execution result"
+    ],
+    "ownership": "Step and reset borrow the statement. Finalize releases VM, bindings, SQL, owned compile context, and connection linkage exactly once.",
+    "state_and_results": "Step auto-resets halted statements, consumes bounded variable-sensitive reprepare state, and preserves the live result-code mask. Reset rewinds without clearing counters. NULL reset/finalize are successful no-ops.",
+    "locks_callbacks_io": "Connection event/profile/finalize callbacks remain delegated to the existing native statement and connection owners; no direct I/O is introduced.",
+    "failure_and_continuation": "Interrupt, OOM, and execution errors remain resettable or finalizable; finalize publishes the retained prior result while completing deferred close."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_finalize::line-105",
+      "relation": "source-public-finalize-to-native-statement-owner",
+      "zig_declaration_ids": [
+        "src/core/statement.zig::function::sqlite3_finalize"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_reset::line-134",
+      "relation": "source-public-reset-to-native-statement-owner",
+      "zig_declaration_ids": [
+        "src/core/statement.zig::function::sqlite3_reset"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_step::line-919",
+      "relation": "source-public-step-to-native-statement-owner",
+      "zig_declaration_ids": [
+        "src/core/statement.zig::function::sqlite3_step"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Typed Zig statement and VM owners replace raw Vdbe casts; bounded native reprepare keeps the compiled program while consuming the expiration marker and counting the event."
+  ],
+  "oracle": {
+    "protocol": "Prepare, bind, step through ROW and DONE, repeat step for automatic reset, reset after success/error, finalize live and NULL handles, and exercise deferred connection close.",
+    "internal_observations": [
+      "statement state, prior result, counters, result mask, and connection linkage",
+      "binding and owned compile-context destruction"
+    ],
+    "normalization": "Compare primary/extended result codes, row values, run/reprepare counts, and post-finalize connection continuation."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Existing VM and owner cleanup releases every allocation on execution or finalization failure.",
+    "io_crash_concurrency": "No new persistent mutation; statement execution delegates transactions and I/O to native owners.",
+    "malformed_input": "NULL handles preserve source reset/finalize no-op and step misuse behavior.",
+    "continuation": "Halted and failed statements can auto-reset or explicitly reset; finalization remains valid after all result paths.",
+    "performance": "Constant lifecycle overhead around native VM execution.",
+    "commands": [
+      "zig build test -j1"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/statement.zig",
+    "native_call_path": "Public C API callers invoke the mapped exports, which execute and release the production native VM and connection-owned statement chain.",
+    "bounded_owner_retired": "Prior wrappers that returned MISUSE for NULL reset and rejected repeated step after halt are replaced."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Pinned-C trace, full schema recompile closure, and independent review remain open."
+  },
+  "known_blockers": [
+    "Add pinned-C internal trace for complete schema reprepare loops.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned sqlite3_finalize(), sqlite3_reset(), and sqlite3_step() bodies",
+      "Native statement execution, reset, destruction, result-mask, event, and connection-finalization owners"
+    ],
+    "callers": [
+      "Public C statement API, sqlite3_exec(), prepared SQL tests, and deferred connection close"
+    ],
+    "callees": [
+      "Statement.step/reset/destroy, Vm.step/reset/deinit, and connection finalize callback"
+    ],
+    "assertions_branches_cleanup": [
+      "NULL handling, halted auto-reset, expiration consumption, prior-result publication, ownership release, and result masking reviewed"
+    ],
+    "upstream_tests": [
+      "Upstream statement API lifecycle tests",
+      "Native statement and public frontend lifecycle tests"
+    ]
+  },
+  "evidence_receipts": []
+}
