@@ -5,6 +5,31 @@
   "warning": "Only independently-fidelity-reviewed units count as final fidelity closure; implementers may promote no further than assurance-passed.",
   "units": [
     {
+      "id": "connection-open-initialization-and-flag-normalization",
+      "path": "upstream/atomic-units/connection-open-initialization-and-flag-normalization.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "connection-close-and-deferred-zombie-release",
+      "path": "upstream/atomic-units/connection-close-and-deferred-zombie-release.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "incremental-blob-open-reopen-and-close",
+      "path": "upstream/atomic-units/incremental-blob-open-reopen-and-close.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "utf16-function-and-collation-registration",
+      "path": "upstream/atomic-units/utf16-function-and-collation-registration.json",
+      "status": "source-translated"
+    },
+    {
+      "id": "utf16-prepare-conversion-and-tail-mapping",
+      "path": "upstream/atomic-units/utf16-prepare-conversion-and-tail-mapping.json",
+      "status": "source-translated"
+    },
+    {
       "id": "connection-status-32-bit-wrapper",
       "path": "upstream/atomic-units/connection-status-32-bit-wrapper.json",
       "status": "source-translated"

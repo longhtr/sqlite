@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "id": "connection-open-initialization-and-flag-normalization",
+  "title": "Connection Open Initialization And Flag Normalization",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Dependency-closed source translation of connection open initialization and flag normalization.",
+    "source_files": [
+      {
+        "path": "src/main.c",
+        "sha256": "318f5b725d7c1403a442e59cd1565672a6fe0c6b24c4c5d06a9c74c32b17f1de"
+      }
+    ],
+    "source_entity_ids": [
+      "src/main.c::function::openDatabase::line-3360"
+    ],
+    "behavioral_block_ids": [
+      "src/main.c::function::openDatabase::behavior::if::line-3379-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::return::line-3379-column-12::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3382-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3384-column-9::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3386-column-9::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3392-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3394-column-9::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3423-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::goto::line-3423-column-15::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3424-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3430-column-5::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::goto::line-3433-column-7::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3435-column-5::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::conditional::line-3440-column-17::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::assert::line-3448-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3556-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::goto::line-3557-column-5::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::assert::line-3586-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::assert::line-3587-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::assert::line-3588-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3592-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3595-column-5::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3598-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3599-column-5::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::conditional::line-3600-column-33::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::goto::line-3602-column-5::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::assert::line-3604-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3614-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3615-column-5::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::goto::line-3619-column-5::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3623-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3638-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::goto::line-3639-column-5::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::for::line-3652-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3659-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3662-column-5::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::goto::line-3663-column-7::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3684-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::label::line-3692-column-1::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3693-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::assert::line-3694-column-5::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::assert::line-3699-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3700-column-3::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::if::line-3703-column-9::ordinal-0",
+      "src/main.c::function::openDatabase::behavior::return::line-3715-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Unassigned adjacent source functions",
+      "Pinned-C internal trace, assurance, and independent review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Existing typed allocator, mutex, B-tree, statement, VFS, function registry, collation registry, and error owners"
+    ],
+    "caller_closure": "Mapped functions retain their public and connection-owned production callers."
+  },
+  "contracts": {
+    "inputs": [
+      "Validated connection or object owner and source API parameters"
+    ],
+    "outputs": [
+      "Source-compatible result, state, and transferred owner"
+    ],
+    "ownership": "Connection objects retain subordinate owners until close; blob and UTF conversion allocations have one allocator domain.",
+    "state_and_results": "Connection error state, busy counts, deferred close state, and output pointers follow source transitions.",
+    "locks_callbacks_io": "Public state mutation is serialized by the recursive connection mutex; persistent work routes through the native B-tree/VFS owner.",
+    "failure_and_continuation": "Failures publish exact bounded result state and preserve legal close, retry, or invalidation behavior."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/main.c::function::openDatabase::line-3360",
+      "relation": "source-opendatabase",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::openConnection"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Typed Zig optionals and owned slices replace raw C pointers while preserving source lifetime and state transitions."
+  ],
+  "oracle": {
+    "protocol": "Exercise success, invalid input, busy/deferred ownership, UTF conversion or row lookup failure, and continuation.",
+    "internal_observations": [
+      "result code and connection error state",
+      "mutex-balanced owner lifecycle",
+      "output pointer and subordinate owner lifetime"
+    ],
+    "normalization": "Compare primary codes, output nullability, bytes, counters, and continuation."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Partial allocations are released and NOMEM is published.",
+    "io_crash_concurrency": "Connection mutex serialization and delegated B-tree/VFS behavior are retained.",
+    "malformed_input": "Invalid owners and bounds publish misuse/error without fabricated outputs.",
+    "continuation": "Owners remain closable and reusable exactly where the source allows.",
+    "performance": "No unbounded work beyond source-sized SQL, registry, schema, row, or owner traversal.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/sql_frontend.zig",
+    "native_call_path": "Public exports and connection object callbacks invoke mapped production helpers.",
+    "bounded_owner_retired": "Prior unledgered bounded substitute behavior is replaced by source-shaped ownership and state publication."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Pinned-C trace, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Add pinned-C internal trace for this unit.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned source body and adjacent owner cleanup",
+      "Mapped Zig body, public callers, tests, allocator and mutex owners"
+    ],
+    "callers": [
+      "Public SQLite API exports and connection-owned finalize/close callbacks"
+    ],
+    "callees": [
+      "Typed connection mutex, allocator, B-tree, VFS, registry, statement, and error owners"
+    ],
+    "assertions_branches_cleanup": [
+      "All source branches, ownership transfer, cleanup, and result publication were reviewed."
+    ],
+    "upstream_tests": [
+      "Pinned upstream API tests and native focused/aggregate tests"
+    ]
+  },
+  "evidence_receipts": []
+}

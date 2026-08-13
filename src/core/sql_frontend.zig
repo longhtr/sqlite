@@ -494,6 +494,19 @@ pub const Connection = struct {
         return .ok;
     }
 
+    /// Source `sqlite3LeaveMutexAndCloseZombie()`: every connection-owned
+    /// object calls this while holding the recursive mutex after dropping its
+    /// busy count. It either leaves the live connection unlocked or destroys
+    /// a now-unreferenced deferred-close owner after unlocking.
+    fn leaveMutexAndCloseZombie(self: *Connection) void {
+        if (!self.deferred_close or connectionIsBusy(self)) {
+            self.connection_mutex.leave();
+            return;
+        }
+        self.connection_mutex.leave();
+        _ = self.finishClose();
+    }
+
     fn statementEvent(context: ?*anyopaque, prepared: *statement.Statement, event: c_uint) void {
         const self: *Connection = @ptrCast(@alignCast(context orelse return));
         const sql = if (prepared.sql_copy) |text| text.ptr else "";
@@ -559,14 +572,19 @@ pub const Connection = struct {
 
     fn statementFinalized(context: ?*anyopaque, prepared: *statement.Statement) void {
         const self: *Connection = @ptrCast(@alignCast(context orelse return));
-        if (prepared.connection_previous) |previous| previous.connection_next = prepared.connection_next else self.statement_head = prepared.connection_next;
-        if (prepared.connection_next) |next| next.connection_previous = prepared.connection_previous;
+        self.connection_mutex.enter();
+        if (prepared.connection_previous) |previous| {
+            previous.connection_next = prepared.connection_next;
+        } else {
+            self.statement_head = prepared.connection_next;
+        }
+        if (prepared.connection_next) |next| {
+            next.connection_previous = prepared.connection_previous;
+        }
         std.debug.assert(self.active_statements > 0);
         self.active_statements -= 1;
         if (self.active_statements == 0) self.interrupted = false;
-        if (!connectionIsBusy(self) and self.deferred_close) {
-            _ = self.finishClose();
-        }
+        self.leaveMutexAndCloseZombie();
     }
 };
 
@@ -859,6 +877,9 @@ fn parseUri(allocator: std.mem.Allocator, filename: []const u8, initial_flags: c
     return .{ .result = .ok, .parsed = .{ .allocator = allocator, .path = path, .flags = flags, .vfs_name = vfs_copy } };
 }
 
+/// Source `openDatabase()`: initialize a connection, normalize public open
+/// flags, publish a usable error handle after allocation, and open its B-tree
+/// through the selected native VFS.
 fn openConnection(filename: []const u8, flags_initial: c_int, vfs_name_initial: ?[]const u8, output: ?*?*sqlite3) c_int {
     const init_result = public_api.sqlite3_initialize();
     if (init_result != 0) return init_result;
@@ -870,11 +891,12 @@ fn openConnection(filename: []const u8, flags_initial: c_int, vfs_name_initial: 
     if (parsed_result.result != .ok) return parsed_result.result.toC();
     var parsed = parsed_result.parsed.?;
     defer parsed.deinit();
-    const flags = parsed.flags;
+    const harmful_flags: c_int = 0x0000_0008 | 0x0000_0010 | 0x0000_0100 | 0x0000_0200 | 0x0000_0400 | 0x0000_0800 | 0x0000_1000 | 0x0000_2000 | 0x0000_4000 | 0x0000_8000 | 0x0001_0000 | 0x0008_0000;
+    const flags = parsed.flags & ~harmful_flags;
     const vfs_name: ?[]const u8 = parsed.vfs_name;
     const open_filename: []const u8 = parsed.path;
     const connection = allocator.create(Connection) catch return ResultCode.no_memory.toC();
-    connection.* = .{ .allocator = allocator, .owned_database = true, .schema_model = schema_initialization.Schema.init(allocator, "main") };
+    connection.* = .{ .allocator = allocator, .owned_database = true, .schema_model = schema_initialization.Schema.init(allocator, "main"), .error_mask = if (flags & 0x0200_0000 != 0) std.math.maxInt(c_int) else 0xff };
     connection.registerBuiltinFunctions();
     connection.filename = allocator.dupeZ(u8, open_filename) catch {
         allocator.destroy(connection);
@@ -1040,19 +1062,34 @@ fn rollbackAll(connection: *Connection, trip_code: ResultCode) void {
     }
 }
 
+/// Source `sqlite3Close()`: serialize close admission, leave ordinary busy
+/// handles live, and turn force-close owners into deferred-close zombies.
+fn closeConnection(connection: *Connection, force: bool) c_int {
+    connection.connection_mutex.enter();
+    disconnectAllVirtualTables(connection);
+    if (connectionIsBusy(connection)) {
+        if (!force) {
+            connection.last_result = .busy;
+            connection.connection_mutex.leave();
+            return ResultCode.busy.toC();
+        }
+        connection.deferred_close = true;
+        connection.connection_mutex.leave();
+        return ResultCode.ok.toC();
+    }
+    connection.deferred_close = true;
+    connection.connection_mutex.leave();
+    return connection.finishClose().toC();
+}
+
 pub export fn sqlite3_close(pointer: ?*sqlite3) callconv(.c) c_int {
     const connection = asConnection(pointer) orelse return ResultCode.ok.toC();
-    if (connectionIsBusy(connection)) return ResultCode.busy.toC();
-    return connection.finishClose().toC();
+    return closeConnection(connection, false);
 }
 
 pub export fn sqlite3_close_v2(pointer: ?*sqlite3) callconv(.c) c_int {
     const connection = asConnection(pointer) orelse return ResultCode.ok.toC();
-    if (connectionIsBusy(connection)) {
-        connection.deferred_close = true;
-        return ResultCode.ok.toC();
-    }
-    return connection.finishClose().toC();
+    return closeConnection(connection, true);
 }
 
 const ExtensionEntry = *const fn (?*sqlite3, *?[*:0]u8, ?*const anyopaque) callconv(.c) c_int;
@@ -1655,15 +1692,30 @@ pub export fn sqlite3_create_function_v2(pointer: ?*sqlite3, name_pointer: ?[*:0
 pub export fn sqlite3_create_function(pointer: ?*sqlite3, name: ?[*:0]const u8, argument_count: c_int, encoding: c_int, user_data: ?*anyopaque, callback: ?ScalarCallback, step_callback: ?ScalarCallback, final_callback: ?FinalCallback) callconv(.c) c_int {
     return sqlite3_create_function_v2(pointer, name, argument_count, encoding, user_data, callback, step_callback, final_callback, null);
 }
+fn utf16NativeToUtf8Alloc(allocator: std.mem.Allocator, units: []const u16) ![]u8 {
+    if (builtin.target.cpu.arch.endian() == .little) return std.unicode.utf16LeToUtf8Alloc(allocator, units);
+    const little_endian = try allocator.alloc(u16, units.len);
+    defer allocator.free(little_endian);
+    for (units, little_endian) |unit, *converted| {
+        converted.* = @byteSwap(unit);
+    }
+    return std.unicode.utf16LeToUtf8Alloc(allocator, little_endian);
+}
+
+/// Source `sqlite3_create_function16()`: validate the connection before
+/// conversion, convert UTF-16-native input in its allocator domain, and mutate
+/// the registry while holding the connection mutex.
 pub export fn sqlite3_create_function16(pointer: ?*sqlite3, name_pointer: ?*const anyopaque, argument_count: c_int, encoding: c_int, user_data: ?*anyopaque, callback: ?ScalarCallback, step_callback: ?ScalarCallback, final_callback: ?FinalCallback) callconv(.c) c_int {
-    const units: [*]const u16 = if (name_pointer) |name| @ptrCast(@alignCast(name)) else return ResultCode.misuse.toC();
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    const units: [*]const u16 = if (name_pointer) |name| @ptrCast(@alignCast(name)) else return publishBlobResult(connection, .misuse);
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
     var length: usize = 0;
     while (units[length] != 0) : (length += 1) {}
-    const utf8 = std.unicode.utf16LeToUtf8Alloc(std.heap.c_allocator, units[0..length]) catch return ResultCode.no_memory.toC();
-    defer std.heap.c_allocator.free(utf8);
-    const name = std.heap.c_allocator.dupeZ(u8, utf8) catch return ResultCode.no_memory.toC();
-    defer std.heap.c_allocator.free(name);
-    return sqlite3_create_function(pointer, name.ptr, argument_count, encoding, user_data, callback, step_callback, final_callback);
+    const utf8 = utf16NativeToUtf8Alloc(connection.allocator, units[0..length]) catch return publishBlobResult(connection, .no_memory);
+    defer connection.allocator.free(utf8);
+    const result = createFunction(connection, utf8, argument_count, encoding, user_data, callback, step_callback, final_callback, null, null, null);
+    return publishBlobResult(connection, result);
 }
 
 pub export fn sqlite3_create_window_function(pointer: ?*sqlite3, name_pointer: ?[*:0]const u8, argument_count: c_int, encoding: c_int, user_data: ?*anyopaque, step_callback: ?ScalarCallback, final_callback: ?FinalCallback, value_callback: ?FinalCallback, inverse_callback: ?ScalarCallback, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) callconv(.c) c_int {
@@ -1728,15 +1780,18 @@ pub export fn sqlite3_create_collation_v2(pointer: ?*sqlite3, name_pointer: ?[*:
 pub export fn sqlite3_create_collation(pointer: ?*sqlite3, name: ?[*:0]const u8, encoding: c_int, auxiliary: ?*anyopaque, compare: ?CollationCallback) callconv(.c) c_int {
     return sqlite3_create_collation_v2(pointer, name, encoding, auxiliary, compare, null);
 }
+/// Source `sqlite3_create_collation16()`: convert UTF-16-native input and
+/// install the collation while retaining the connection mutex and allocator.
 pub export fn sqlite3_create_collation16(pointer: ?*sqlite3, name_pointer: ?*const anyopaque, encoding: c_int, auxiliary: ?*anyopaque, compare: ?CollationCallback) callconv(.c) c_int {
-    const units: [*]const u16 = if (name_pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
+    const connection = safetyCheckOk(pointer) orelse return ResultCode.misuse.toC();
+    const units: [*]const u16 = if (name_pointer) |value| @ptrCast(@alignCast(value)) else return publishBlobResult(connection, .misuse);
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
     var length: usize = 0;
     while (units[length] != 0) : (length += 1) {}
-    const utf8 = std.unicode.utf16LeToUtf8Alloc(std.heap.c_allocator, units[0..length]) catch return ResultCode.no_memory.toC();
-    defer std.heap.c_allocator.free(utf8);
-    const name = std.heap.c_allocator.dupeZ(u8, utf8) catch return ResultCode.no_memory.toC();
-    defer std.heap.c_allocator.free(name);
-    return sqlite3_create_collation(pointer, name.ptr, encoding, auxiliary, compare);
+    const utf8 = utf16NativeToUtf8Alloc(connection.allocator, units[0..length]) catch return publishBlobResult(connection, .no_memory);
+    defer connection.allocator.free(utf8);
+    return publishBlobResult(connection, createCollation(connection, utf8, encoding, auxiliary, compare, null));
 }
 /// Source `sqlite3_collation_needed()`: atomically replace the UTF-8 factory
 /// and disable the mutually exclusive UTF-16 factory.
@@ -3123,24 +3178,32 @@ fn secondaryIndexContainsColumn(connection: *Connection, database: *btree.Databa
     return .{ .result = .ok };
 }
 
+fn publishBlobResult(connection: *Connection, result: ResultCode) c_int {
+    connection.last_result = result;
+    return result.toC();
+}
+
+/// Source `sqlite3_blob_open()`: validate and resolve the selected database,
+/// table, column, and row under the connection mutex, publish every result on
+/// the database handle, and transfer a positioned cursor to the blob owner.
 pub export fn sqlite3_blob_open(database_pointer: ?*sqlite3, database_name: ?[*:0]const u8, table_name: ?[*:0]const u8, column_name: ?[*:0]const u8, rowid: i64, flags: c_int, output: ?*?*sqlite3_blob) callconv(.c) c_int {
     const connection = asConnection(database_pointer) orelse return ResultCode.misuse.toC();
     connection.connection_mutex.enter();
     defer connection.connection_mutex.leave();
-    const out = output orelse return ResultCode.misuse.toC();
+    const out = output orelse return publishBlobResult(connection, .misuse);
     out.* = null;
     const requested_database = if (database_name) |name| std.mem.span(name) else "main";
     const located_database = locateDatabase(connection, if (schemaNameMatches(connection, database_name)) null else requested_database);
-    if (located_database.result != .ok) return (if (located_database.result == .not_found) ResultCode.error_ else located_database.result).toC();
+    if (located_database.result != .ok) return publishBlobResult(connection, if (located_database.result == .not_found) .error_ else located_database.result);
     const database = located_database.database.?;
-    const attached = if (schemaNameMatches(connection, database_name)) null else attachedDatabaseByName(connection, database_name) orelse return ResultCode.error_.toC();
-    const table = if (table_name) |name| std.mem.span(name) else return ResultCode.misuse.toC();
-    const column = if (column_name) |name| std.mem.span(name) else return ResultCode.misuse.toC();
+    const attached = if (schemaNameMatches(connection, database_name)) null else attachedDatabaseByName(connection, database_name) orelse return publishBlobResult(connection, .error_);
+    const table = if (table_name) |name| std.mem.span(name) else return publishBlobResult(connection, .misuse);
+    const column = if (column_name) |name| std.mem.span(name) else return publishBlobResult(connection, .misuse);
     const schema_outcome = database.schemaTable(table);
-    if (schema_outcome.result != .ok) return schema_outcome.result.toC();
+    if (schema_outcome.result != .ok) return publishBlobResult(connection, schema_outcome.result);
     var schema = schema_outcome.table.?;
     defer schema.deinit();
-    const resolved = resolveColumns(connection.allocator, schema.sql) catch return ResultCode.no_memory.toC();
+    const resolved = resolveColumns(connection.allocator, schema.sql) catch return publishBlobResult(connection, .no_memory);
     defer {
         connection.allocator.free(resolved.columns);
         connection.allocator.free(resolved.tokens);
@@ -3157,41 +3220,49 @@ pub export fn sqlite3_blob_open(database_pointer: ?*sqlite3, database_name: ?[*:
     }
     if (flags != 0 and declared_column != null) {
         const indexed = secondaryIndexContainsColumn(connection, database, table, column);
-        if (indexed.result != .ok) return indexed.result.toC();
-        if (indexed.found) return ResultCode.error_.toC();
-        const foreign_keys = resolveForeignKeys(connection.allocator, schema.sql, resolved.columns) catch |err| return (if (err == error.OutOfMemory) ResultCode.no_memory else ResultCode.error_).toC();
+        if (indexed.result != .ok) return publishBlobResult(connection, indexed.result);
+        if (indexed.found) return publishBlobResult(connection, .error_);
+        const foreign_keys = resolveForeignKeys(connection.allocator, schema.sql, resolved.columns) catch |err| return publishBlobResult(connection, if (err == error.OutOfMemory) .no_memory else .error_);
         var keys = foreign_keys;
         defer keys.deinit();
         for (keys.mappings) |mapping| {
-            if (mapping.child_column == declared_column.?) return ResultCode.error_.toC();
+            if (mapping.child_column == declared_column.?) return publishBlobResult(connection, .error_);
         }
     }
-    const blob = connection.allocator.create(Blob) catch return ResultCode.no_memory.toC();
+    const blob = connection.allocator.create(Blob) catch return publishBlobResult(connection, .no_memory);
     blob.* = .{ .connection = connection, .database = database, .attached = attached, .root_page = schema.root_page, .column = record_column orelse {
         connection.allocator.destroy(blob);
-        return ResultCode.error_.toC();
+        return publishBlobResult(connection, .error_);
     }, .rowid = rowid, .writable = flags != 0 };
-    const rc = blobSeekToRow(blob, rowid);
-    if (rc != .ok) {
+    const result = blobSeekToRow(blob, rowid);
+    if (result != .ok) {
         connection.allocator.destroy(blob);
-        return rc.toC();
+        return publishBlobResult(connection, result);
     }
     connection.active_blobs += 1;
-    if (attached) |owner| owner.active_blobs += 1;
+    if (attached) |owner| {
+        owner.active_blobs += 1;
+    }
     out.* = @ptrCast(blob);
-    return ResultCode.ok.toC();
+    return publishBlobResult(connection, .ok);
 }
 
+/// Source `sqlite3_blob_reopen()`: reject an invalidated owner, seek the new
+/// row under the connection mutex, and publish the seek result.
 pub export fn sqlite3_blob_reopen(pointer: ?*sqlite3_blob, rowid: i64) callconv(.c) c_int {
     const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.misuse.toC();
-    blob.connection.connection_mutex.enter();
-    defer blob.connection.connection_mutex.leave();
-    return blobSeekToRow(blob, rowid).toC();
+    const connection = blob.connection;
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    return publishBlobResult(connection, blobSeekToRow(blob, rowid));
 }
 
+/// Source `sqlite3_blob_close()`: release the blob owner while serialized by
+/// its connection, then finish a deferred zombie close after leaving the mutex.
 pub export fn sqlite3_blob_close(pointer: ?*sqlite3_blob) callconv(.c) c_int {
     const blob: *Blob = if (pointer) |value| @ptrCast(@alignCast(value)) else return ResultCode.ok.toC();
     const connection = blob.connection;
+    connection.connection_mutex.enter();
     if (blob.cursor) |*cursor| cursor.deinit();
     if (blob.attached) |owner| {
         std.debug.assert(owner.active_blobs > 0);
@@ -3200,9 +3271,7 @@ pub export fn sqlite3_blob_close(pointer: ?*sqlite3_blob) callconv(.c) c_int {
     connection.allocator.destroy(blob);
     std.debug.assert(connection.active_blobs > 0);
     connection.active_blobs -= 1;
-    if (!connectionIsBusy(connection) and connection.deferred_close) {
-        _ = connection.finishClose();
-    }
+    connection.leaveMutexAndCloseZombie();
     return ResultCode.ok.toC();
 }
 
@@ -11913,19 +11982,24 @@ pub export fn sqlite3_prepare_v3(database: ?*sqlite3, sql: ?[*:0]const u8, byte_
     return prepareUtf8(database, sql, byte_count, output, tail);
 }
 
+/// Source `sqlite3Prepare16()`: normalize the byte bound, convert native UTF-16
+/// while serialized by the connection, prepare UTF-8, and map the consumed
+/// UTF-8 tail back to the original UTF-16 buffer.
 fn prepareUtf16(database: ?*sqlite3, sql_pointer: ?*const anyopaque, byte_count: c_int, output: ?*?*statement.sqlite3_stmt, tail_output: ?*?*const anyopaque, flags: u32) c_int {
     const connection = asConnection(database) orelse return ResultCode.misuse.toC();
-    const statement_pointer = output orelse return ResultCode.misuse.toC();
+    connection.connection_mutex.enter();
+    defer connection.connection_mutex.leave();
+    const statement_pointer = output orelse return publishBlobResult(connection, .misuse);
     statement_pointer.* = null;
-    const raw = sql_pointer orelse return ResultCode.misuse.toC();
+    const raw = sql_pointer orelse return publishBlobResult(connection, .misuse);
     const bytes: [*]const u8 = @ptrCast(@alignCast(raw));
     const maximum: ?usize = if (byte_count < 0) null else @intCast(byte_count & ~@as(c_int, 1));
     var length: usize = 0;
     while ((maximum == null or length < maximum.?) and (bytes[length] != 0 or bytes[length + 1] != 0)) : (length += 2) {}
-    const utf8 = utf16NativeToUtf8(connection.allocator, bytes[0..length]) catch return ResultCode.no_memory.toC();
+    const utf8 = utf16NativeToUtf8(connection.allocator, bytes[0..length]) catch return publishBlobResult(connection, .no_memory);
     defer connection.allocator.free(utf8);
-    if (flags & ~@as(u32, 0x0f) != 0) return ResultCode.misuse.toC();
-    const source = connection.allocator.dupeZ(u8, utf8) catch return ResultCode.no_memory.toC();
+    if (flags & ~@as(u32, 0x0f) != 0) return publishBlobResult(connection, .misuse);
+    const source = connection.allocator.dupeZ(u8, utf8) catch return publishBlobResult(connection, .no_memory);
     defer connection.allocator.free(source);
     var utf8_tail: ?[*:0]const u8 = null;
     const rc = prepareUtf8(database, source.ptr, @intCast(source.len), output, &utf8_tail);
@@ -13255,6 +13329,50 @@ test "get table permits nullable counts and returns a freeable empty result" {
     try std.testing.expect(result != null);
     sqlite3_free_table(result);
     try std.testing.expectEqual(ResultCode.misuse.toC(), sqlite3_get_table(database, "SELECT 1", null, null, null, null));
+}
+
+fn testUtf16Scalar(context: ?*statement.sqlite3_context, _: c_int, _: [*]?*statement.sqlite3_value) callconv(.c) void {
+    statement.sqlite3_result_int(context, 42);
+}
+
+fn testUtf16Collation(_: ?*anyopaque, left_count: c_int, left_pointer: ?*const anyopaque, right_count: c_int, right_pointer: ?*const anyopaque) callconv(.c) c_int {
+    if (left_count < 0 or right_count < 0) return 0;
+    const left: [*]const u8 = @ptrCast(left_pointer orelse return -1);
+    const right: [*]const u8 = @ptrCast(right_pointer orelse return 1);
+    return switch (std.mem.order(u8, left[0..@intCast(left_count)], right[0..@intCast(right_count)])) {
+        .lt => -1,
+        .eq => 0,
+        .gt => 1,
+    };
+}
+
+test "UTF-16 function and collation registration use the connection registry" {
+    const connection = try Connection.create(std.testing.allocator);
+    defer connection.destroy();
+    const function_name = [_:0]u16{ 'u', '1', '6', '_', 'f', 'n', 0 };
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_create_function16(toOpaque(connection), &function_name, 0, 4, null, testUtf16Scalar, null, null));
+    const collation_name = [_:0]u16{ 'u', '1', '6', '_', 'c', 'o', 'l', 'l', 0 };
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_create_collation16(toOpaque(connection), &collation_name, 4, null, testUtf16Collation));
+    try std.testing.expect(connection.findScalar("u16_fn", 0) != null);
+    try std.testing.expectEqual(@as(usize, 1), connection.collations.items.len);
+    try std.testing.expectEqualStrings("u16_coll", connection.collations.items[0].name);
+}
+
+test "incremental blob APIs publish errors invalidate failed seeks and finish deferred close" {
+    var database: ?*sqlite3 = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_open(":memory:", &database));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(database, "CREATE TABLE blob_rows(id INTEGER PRIMARY KEY, payload BLOB)", null, null, null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_exec(database, "INSERT INTO blob_rows VALUES(1, x'0000000000000000')", null, null, null));
+
+    var blob: ?*sqlite3_blob = null;
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_blob_open(database, "main", "blob_rows", "payload", 1, 0, &blob));
+    try std.testing.expectEqual(@as(c_int, 8), sqlite3_blob_bytes(blob));
+    try std.testing.expectEqual(ResultCode.error_.toC(), sqlite3_blob_reopen(blob, 99));
+    try std.testing.expectEqual(ResultCode.error_.toC(), sqlite3_errcode(database));
+    try std.testing.expectEqual(ResultCode.abort.toC(), sqlite3_blob_reopen(blob, 1));
+    try std.testing.expectEqual(ResultCode.abort.toC(), sqlite3_errcode(database));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_close_v2(database));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_blob_close(blob));
 }
 
 test "public open close error and deferred statement lifecycle" {

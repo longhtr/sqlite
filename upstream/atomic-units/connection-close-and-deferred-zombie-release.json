@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "id": "connection-close-and-deferred-zombie-release",
+  "title": "Connection Close And Deferred Zombie Release",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Dependency-closed source translation of connection close and deferred zombie release.",
+    "source_files": [
+      {
+        "path": "src/main.c",
+        "sha256": "318f5b725d7c1403a442e59cd1565672a6fe0c6b24c4c5d06a9c74c32b17f1de"
+      }
+    ],
+    "source_entity_ids": [
+      "src/main.c::function::sqlite3Close::line-1266",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::line-1375"
+    ],
+    "behavioral_block_ids": [
+      "src/main.c::function::sqlite3Close::behavior::if::line-1267-column-3::ordinal-0",
+      "src/main.c::function::sqlite3Close::behavior::return::line-1270-column-5::ordinal-0",
+      "src/main.c::function::sqlite3Close::behavior::if::line-1272-column-3::ordinal-0",
+      "src/main.c::function::sqlite3Close::behavior::return::line-1273-column-5::ordinal-0",
+      "src/main.c::function::sqlite3Close::behavior::if::line-1276-column-3::ordinal-0",
+      "src/main.c::function::sqlite3Close::behavior::if::line-1295-column-3::ordinal-0",
+      "src/main.c::function::sqlite3Close::behavior::return::line-1299-column-5::ordinal-0",
+      "src/main.c::function::sqlite3Close::behavior::while::line-1309-column-3::ordinal-0",
+      "src/main.c::function::sqlite3Close::behavior::assert::line-1312-column-5::ordinal-0",
+      "src/main.c::function::sqlite3Close::behavior::if::line-1313-column-5::ordinal-0",
+      "src/main.c::function::sqlite3Close::behavior::return::line-1321-column-3::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::if::line-1383-column-3::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::return::line-1385-column-5::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::for::line-1404-column-3::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::if::line-1406-column-5::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::if::line-1409-column-7::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::if::line-1415-column-3::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::assert::line-1417-column-5::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::assert::line-1423-column-3::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::assert::line-1424-column-3::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::for::line-1431-column-3::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::do::line-1434-column-5::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::for::line-1442-column-3::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::for::line-1445-column-5::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::if::line-1446-column-7::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::for::line-1454-column-3::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::if::line-1475-column-3::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::assert::line-1481-column-3::ordinal-0",
+      "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::behavior::if::line-1482-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Unassigned adjacent source functions",
+      "Pinned-C internal trace, assurance, and independent review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Existing typed allocator, mutex, B-tree, statement, VFS, function registry, collation registry, and error owners"
+    ],
+    "caller_closure": "Mapped functions retain their public and connection-owned production callers."
+  },
+  "contracts": {
+    "inputs": [
+      "Validated connection or object owner and source API parameters"
+    ],
+    "outputs": [
+      "Source-compatible result, state, and transferred owner"
+    ],
+    "ownership": "Connection objects retain subordinate owners until close; blob and UTF conversion allocations have one allocator domain.",
+    "state_and_results": "Connection error state, busy counts, deferred close state, and output pointers follow source transitions.",
+    "locks_callbacks_io": "Public state mutation is serialized by the recursive connection mutex; persistent work routes through the native B-tree/VFS owner.",
+    "failure_and_continuation": "Failures publish exact bounded result state and preserve legal close, retry, or invalidation behavior."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/main.c::function::sqlite3Close::line-1266",
+      "relation": "source-sqlite3close",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::closeConnection"
+      ]
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::line-1375",
+      "relation": "source-sqlite3leavemutexandclosezombie",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::Connection.leaveMutexAndCloseZombie"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Typed Zig optionals and owned slices replace raw C pointers while preserving source lifetime and state transitions."
+  ],
+  "oracle": {
+    "protocol": "Exercise success, invalid input, busy/deferred ownership, UTF conversion or row lookup failure, and continuation.",
+    "internal_observations": [
+      "result code and connection error state",
+      "mutex-balanced owner lifecycle",
+      "output pointer and subordinate owner lifetime"
+    ],
+    "normalization": "Compare primary codes, output nullability, bytes, counters, and continuation."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Partial allocations are released and NOMEM is published.",
+    "io_crash_concurrency": "Connection mutex serialization and delegated B-tree/VFS behavior are retained.",
+    "malformed_input": "Invalid owners and bounds publish misuse/error without fabricated outputs.",
+    "continuation": "Owners remain closable and reusable exactly where the source allows.",
+    "performance": "No unbounded work beyond source-sized SQL, registry, schema, row, or owner traversal.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/sql_frontend.zig",
+    "native_call_path": "Public exports and connection object callbacks invoke mapped production helpers.",
+    "bounded_owner_retired": "Prior unledgered bounded substitute behavior is replaced by source-shaped ownership and state publication."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Pinned-C trace, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Add pinned-C internal trace for this unit.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned source body and adjacent owner cleanup",
+      "Mapped Zig body, public callers, tests, allocator and mutex owners"
+    ],
+    "callers": [
+      "Public SQLite API exports and connection-owned finalize/close callbacks"
+    ],
+    "callees": [
+      "Typed connection mutex, allocator, B-tree, VFS, registry, statement, and error owners"
+    ],
+    "assertions_branches_cleanup": [
+      "All source branches, ownership transfer, cleanup, and result publication were reviewed."
+    ],
+    "upstream_tests": [
+      "Pinned upstream API tests and native focused/aggregate tests"
+    ]
+  },
+  "evidence_receipts": []
+}

@@ -456,6 +456,87 @@
       "atomic_unit_id": "connection-error-state-and-fault-simulation",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::openDatabase::line-3360",
+      "source_sha256": "a0661a5033fa811d8f8e9817ad81da27a5f4b4e32d29e28e87df50df9c4c7dd1",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::openConnection",
+      "zig_declaration_sha256": "6ee33830b408d7d0cd01dc3b121e39b2a414a627bd8928eb2cd39bee195d18f1",
+      "atomic_unit_id": "connection-open-initialization-and-flag-normalization",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3Close::line-1266",
+      "source_sha256": "2a9d34ee268dc96cfdbc9cb050ca4cb56dee8400a1aa419ef8954b2f5965145a",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::closeConnection",
+      "zig_declaration_sha256": "df28ce2a4570a2d218c8d3043e9cbe9e315dffcf5bdeb5fd1a5e429b8d1ef321",
+      "atomic_unit_id": "connection-close-and-deferred-zombie-release",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::line-1375",
+      "source_sha256": "9d843ef67a7fa437b03cbfe224f08ef8e3d629dd245f7050d600cfb017b59d4b",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::Connection.leaveMutexAndCloseZombie",
+      "zig_declaration_sha256": "6391f667311bad1d2e5a6bea8755ee82db8857b269df0a3c5be8a779aeb7e493",
+      "atomic_unit_id": "connection-close-and-deferred-zombie-release",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_open::line-121",
+      "source_sha256": "64b2edc516d7a3c052c9f62781e6ccc7e6bec5bf57c34019792555e19e8016d8",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_blob_open",
+      "zig_declaration_sha256": "bd7d59adf43944d07bbea97f4aab2bc549b9e8fba4aced6247b2fb9e938b84a8",
+      "atomic_unit_id": "incremental-blob-open-reopen-and-close",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_reopen::line-503",
+      "source_sha256": "5dd41a7e782320f380e8552725a83a906dc3a0f7f567946a18721920e96f3ae3",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_blob_reopen",
+      "zig_declaration_sha256": "be304eb54cccfbd4693443e6309375f2bd11870517d0908614cbce4952abc15c",
+      "atomic_unit_id": "incremental-blob-open-reopen-and-close",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_close::line-360",
+      "source_sha256": "1aedca151649ab0a32c382ac0aeccb697fd69fa2d631c1d917e3e1b9561f0d29",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_blob_close",
+      "zig_declaration_sha256": "f1c1c2e854d79987f467bc900289b70dfe8b7e21888849436bfbb59446f4c602",
+      "atomic_unit_id": "incremental-blob-open-reopen-and-close",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3_create_function16::line-2175",
+      "source_sha256": "4771b0a411f3b1cf2ab6680ab780d1d7b7ca02623c303c421ac2bd0ebad1a747",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_create_function16",
+      "zig_declaration_sha256": "850d4dfd2d38a75fcc3905e29fdddac3f8b1f468e17c7f98e3a287959bf2c8ae",
+      "atomic_unit_id": "utf16-function-and-collation-registration",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3_create_collation16::line-3819",
+      "source_sha256": "df9034cc17a8a15523629a1e3bda43da94e86163e43a45cfee6fdd7d3d0bf7aa",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_create_collation16",
+      "zig_declaration_sha256": "6a880385e61d7ca16b306bb6cf201d9c0117524bd941dc6d6f33bda413bcedd7",
+      "atomic_unit_id": "utf16-function-and-collation-registration",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/prepare.c::function::sqlite3Prepare16::line-983",
+      "source_sha256": "318bd2e1b720cfe158334fd424d6f3c2b5d944f1963522c1f7e63bac2481e3d9",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::prepareUtf16",
+      "zig_declaration_sha256": "77bcd48f1c53ed9e76be1113afbd2715827189cb767fe8c20ca83bd0e6d479b1",
+      "atomic_unit_id": "utf16-prepare-conversion-and-tail-mapping",
+      "class": "substantive",
+      "complete": true
     }
   ]
 }

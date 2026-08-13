@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "id": "utf16-prepare-conversion-and-tail-mapping",
+  "title": "Utf16 Prepare Conversion And Tail Mapping",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Dependency-closed source translation of utf16 prepare conversion and tail mapping.",
+    "source_files": [
+      {
+        "path": "src/prepare.c",
+        "sha256": "bf077b16c691e81824700915c1e85a512d85b05c623b2d0ae1136937e0e3dad7"
+      }
+    ],
+    "source_entity_ids": [
+      "src/prepare.c::function::sqlite3Prepare16::line-983"
+    ],
+    "behavioral_block_ids": [
+      "src/prepare.c::function::sqlite3Prepare16::behavior::if::line-1003-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3Prepare16::behavior::return::line-1004-column-5::ordinal-0",
+      "src/prepare.c::function::sqlite3Prepare16::behavior::if::line-1012-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3Prepare16::behavior::for::line-1015-column-5::ordinal-0",
+      "src/prepare.c::function::sqlite3Prepare16::behavior::for::line-1020-column-5::ordinal-0",
+      "src/prepare.c::function::sqlite3Prepare16::behavior::if::line-1026-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3Prepare16::behavior::if::line-1030-column-3::ordinal-0",
+      "src/prepare.c::function::sqlite3Prepare16::behavior::return::line-1042-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Unassigned adjacent source functions",
+      "Pinned-C internal trace, assurance, and independent review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Existing typed allocator, mutex, B-tree, statement, VFS, function registry, collation registry, and error owners"
+    ],
+    "caller_closure": "Mapped functions retain their public and connection-owned production callers."
+  },
+  "contracts": {
+    "inputs": [
+      "Validated connection or object owner and source API parameters"
+    ],
+    "outputs": [
+      "Source-compatible result, state, and transferred owner"
+    ],
+    "ownership": "Connection objects retain subordinate owners until close; blob and UTF conversion allocations have one allocator domain.",
+    "state_and_results": "Connection error state, busy counts, deferred close state, and output pointers follow source transitions.",
+    "locks_callbacks_io": "Public state mutation is serialized by the recursive connection mutex; persistent work routes through the native B-tree/VFS owner.",
+    "failure_and_continuation": "Failures publish exact bounded result state and preserve legal close, retry, or invalidation behavior."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/prepare.c::function::sqlite3Prepare16::line-983",
+      "relation": "source-sqlite3prepare16",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::prepareUtf16"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Typed Zig optionals and owned slices replace raw C pointers while preserving source lifetime and state transitions."
+  ],
+  "oracle": {
+    "protocol": "Exercise success, invalid input, busy/deferred ownership, UTF conversion or row lookup failure, and continuation.",
+    "internal_observations": [
+      "result code and connection error state",
+      "mutex-balanced owner lifecycle",
+      "output pointer and subordinate owner lifetime"
+    ],
+    "normalization": "Compare primary codes, output nullability, bytes, counters, and continuation."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Partial allocations are released and NOMEM is published.",
+    "io_crash_concurrency": "Connection mutex serialization and delegated B-tree/VFS behavior are retained.",
+    "malformed_input": "Invalid owners and bounds publish misuse/error without fabricated outputs.",
+    "continuation": "Owners remain closable and reusable exactly where the source allows.",
+    "performance": "No unbounded work beyond source-sized SQL, registry, schema, row, or owner traversal.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/sql_frontend.zig",
+    "native_call_path": "Public exports and connection object callbacks invoke mapped production helpers.",
+    "bounded_owner_retired": "Prior unledgered bounded substitute behavior is replaced by source-shaped ownership and state publication."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Pinned-C trace, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Add pinned-C internal trace for this unit.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned source body and adjacent owner cleanup",
+      "Mapped Zig body, public callers, tests, allocator and mutex owners"
+    ],
+    "callers": [
+      "Public SQLite API exports and connection-owned finalize/close callbacks"
+    ],
+    "callees": [
+      "Typed connection mutex, allocator, B-tree, VFS, registry, statement, and error owners"
+    ],
+    "assertions_branches_cleanup": [
+      "All source branches, ownership transfer, cleanup, and result publication were reviewed."
+    ],
+    "upstream_tests": [
+      "Pinned upstream API tests and native focused/aggregate tests"
+    ]
+  },
+  "evidence_receipts": []
+}

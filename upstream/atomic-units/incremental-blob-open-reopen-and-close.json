@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "id": "incremental-blob-open-reopen-and-close",
+  "title": "Incremental Blob Open Reopen And Close",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Dependency-closed source translation of incremental blob open reopen and close.",
+    "source_files": [
+      {
+        "path": "src/vdbeblob.c",
+        "sha256": "edf52b0371add3b0454b4dd1a54c8e6177af86efc2af905d5e8c5cf5c635e826"
+      }
+    ],
+    "source_entity_ids": [
+      "src/vdbeblob.c::function::sqlite3_blob_open::line-121",
+      "src/vdbeblob.c::function::sqlite3_blob_reopen::line-503",
+      "src/vdbeblob.c::function::sqlite3_blob_close::line-360"
+    ],
+    "behavioral_block_ids": [
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::while::line-155-column-3::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-157-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::goto::line-157-column-18::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-163-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-167-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-171-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-177-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-182-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-186-column-7::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::goto::line-193-column-7::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-200-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::goto::line-205-column-7::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-211-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-215-column-7::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::assert::line-221-column-9::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::for::line-222-column-9::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::for::line-224-column-11::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-225-column-13::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::for::line-232-column-7::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::for::line-234-column-9::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-236-column-11::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-241-column-7::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::goto::line-246-column-9::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::assert::line-251-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-252-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::assert::line-286-column-7::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-292-column-7::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::assert::line-293-column-9::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-303-column-7::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-308-column-9::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-333-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::goto::line-334-column-7::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-337-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::break::line-337-column-70::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::label::line-341-column-1::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-342-column-3::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::if::line-345-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::conditional::line-348-column-32::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_open::behavior::return::line-353-column-3::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_reopen::behavior::if::line-508-column-3::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_reopen::behavior::return::line-508-column-14::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_reopen::behavior::if::line-512-column-3::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_reopen::behavior::if::line-521-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_reopen::behavior::conditional::line-522-column-36::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_reopen::behavior::assert::line-525-column-5::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_reopen::behavior::assert::line-529-column-3::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_reopen::behavior::return::line-531-column-3::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_close::behavior::if::line-365-column-3::ordinal-0",
+      "src/vdbeblob.c::function::sqlite3_blob_close::behavior::return::line-375-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Unassigned adjacent source functions",
+      "Pinned-C internal trace, assurance, and independent review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "connection-close-and-deferred-zombie-release"
+    ],
+    "external_source_responsibilities": [
+      "Existing typed allocator, mutex, B-tree, statement, VFS, function registry, collation registry, and error owners"
+    ],
+    "caller_closure": "Mapped functions retain their public and connection-owned production callers."
+  },
+  "contracts": {
+    "inputs": [
+      "Validated connection or object owner and source API parameters"
+    ],
+    "outputs": [
+      "Source-compatible result, state, and transferred owner"
+    ],
+    "ownership": "Connection objects retain subordinate owners until close; blob and UTF conversion allocations have one allocator domain.",
+    "state_and_results": "Connection error state, busy counts, deferred close state, and output pointers follow source transitions.",
+    "locks_callbacks_io": "Public state mutation is serialized by the recursive connection mutex; persistent work routes through the native B-tree/VFS owner.",
+    "failure_and_continuation": "Failures publish exact bounded result state and preserve legal close, retry, or invalidation behavior."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_open::line-121",
+      "relation": "source-sqlite3-blob-open",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::sqlite3_blob_open"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_reopen::line-503",
+      "relation": "source-sqlite3-blob-reopen",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::sqlite3_blob_reopen"
+      ]
+    },
+    {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_close::line-360",
+      "relation": "source-sqlite3-blob-close",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::sqlite3_blob_close"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Typed Zig optionals and owned slices replace raw C pointers while preserving source lifetime and state transitions."
+  ],
+  "oracle": {
+    "protocol": "Exercise success, invalid input, busy/deferred ownership, UTF conversion or row lookup failure, and continuation.",
+    "internal_observations": [
+      "result code and connection error state",
+      "mutex-balanced owner lifecycle",
+      "output pointer and subordinate owner lifetime"
+    ],
+    "normalization": "Compare primary codes, output nullability, bytes, counters, and continuation."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Partial allocations are released and NOMEM is published.",
+    "io_crash_concurrency": "Connection mutex serialization and delegated B-tree/VFS behavior are retained.",
+    "malformed_input": "Invalid owners and bounds publish misuse/error without fabricated outputs.",
+    "continuation": "Owners remain closable and reusable exactly where the source allows.",
+    "performance": "No unbounded work beyond source-sized SQL, registry, schema, row, or owner traversal.",
+    "commands": [
+      "zig build test"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/sql_frontend.zig",
+    "native_call_path": "Public exports and connection object callbacks invoke mapped production helpers.",
+    "bounded_owner_retired": "Prior unledgered bounded substitute behavior is replaced by source-shaped ownership and state publication."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Pinned-C trace, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Add pinned-C internal trace for this unit.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned source body and adjacent owner cleanup",
+      "Mapped Zig body, public callers, tests, allocator and mutex owners"
+    ],
+    "callers": [
+      "Public SQLite API exports and connection-owned finalize/close callbacks"
+    ],
+    "callees": [
+      "Typed connection mutex, allocator, B-tree, VFS, registry, statement, and error owners"
+    ],
+    "assertions_branches_cleanup": [
+      "All source branches, ownership transfer, cleanup, and result publication were reviewed."
+    ],
+    "upstream_tests": [
+      "Pinned upstream API tests and native focused/aggregate tests"
+    ]
+  },
+  "evidence_receipts": []
+}
