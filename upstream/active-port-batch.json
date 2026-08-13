@@ -179,6 +179,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/build.c::function::sqlite3FindDb::line-951",
+      "source_sha256": "526f6d9e095fa41eccc7892f33a3258caba72484de12a1c976eb32a49f36b459",
+      "zig_declaration_id": "src/core/internal/connection_names.zig::function::findDatabase",
+      "zig_declaration_sha256": "7e4ce2820add223aebb28c0e54f7351cffa9dee6ad76977e4807ae2798b43168",
+      "atomic_unit_id": "connection-find-database-token",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/complete.c::function::sqlite3_complete16::line-269",
       "source_sha256": "e1778e89eceeef4e69df1436511712e0f0c9ba8f8df751f548576b921c42b0b1",
       "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_complete16",

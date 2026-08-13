@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "connection-find-database-token",
+  "title": "Connection database-token lookup",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Attached-database lookup now has the source token-to-owned-name wrapper with guaranteed cleanup.",
+    "source_files": [{"path":"src/build.c","sha256":"c71549801eb2f56dcba062a6ce1c347d93203e43deb05c08ba4ad71a2c08d867"}],
+    "source_entity_ids": ["src/build.c::function::sqlite3FindDb::line-951"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Database-name search implementation", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Name-from-token and database-name lookup"],"caller_closure":"The complete allocation, lookup, and cleanup wrapper is translated."},
+  "contracts": {"inputs":["Connection and database-name token"],"outputs":["Database index or -1"],"ownership":"Temporary dequoted name is always freed after lookup.","state_and_results":"OOM name conversion falls through to not-found while connection OOM state remains sticky.","locks_callbacks_io":"No I/O; caller owns schema synchronization.","failure_and_continuation":"Returns -1 for absent or allocation-failed name."},
+  "mappings": [{"source_entity_id":"src/build.c::function::sqlite3FindDb::line-951","relation":"database-token-to-index-lookup","zig_declaration_ids":["src/core/internal/connection_names.zig::function::findDatabase"]}],
+  "representation_differences": ["Typed nullable name is passed directly to findDatabaseName."],
+  "oracle": {"protocol":"Look up quoted main, temp, attached, renamed-main alias, missing, and OOM token names.","internal_observations":["exact index", "temporary allocation cleanup", "sticky OOM"],"normalization":"Compare integer index and ownership state."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Temporary name allocation failure returns -1 and preserves connection OOM state.","io_crash_concurrency":"No I/O or concurrency.","malformed_input":"Token bytes are duplicated and dequoted by canonical helper.","continuation":"No retained temporary allocation.","performance":"Linear attached-database name search.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/connection_names.zig","native_call_path":"database token resolution -> findDatabase","bounded_owner_retired":"No alternate source-identity wrapper."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Wire all token-based schema callers and focused OOM trace."],
+  "context_review": {"implementation_spans":["Complete sqlite3FindDb body", "nameFromToken and findDatabaseName helpers"],"callers":["Schema-qualified parser resolution"],"callees":["nameFromToken", "findDatabaseName", "connection allocator free"],"assertions_branches_cleanup":["found/missing", "quoted token", "temporary cleanup"],"upstream_tests":["Project schema and broad runtime tests"]},
+  "evidence_receipts": []
+}

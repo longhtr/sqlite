@@ -3,6 +3,9 @@
 const std = @import("std");
 const sqlite_string = @import("../string.zig");
 const schema = @import("schema_types.zig");
+const schema_analysis = @import("schema_analysis.zig");
+const db_allocator = @import("db_allocator.zig");
+const parse_types = @import("parse_types.zig");
 const types = @import("vdbe_types.zig");
 
 /// Source `databaseName()`.
@@ -31,6 +34,13 @@ pub fn findDatabaseName(db: *types.Sqlite3, name_optional: ?[*:0]const u8) c_int
             (index == 0 and sqlite_string.compare("main", name) == 0)) return index;
     }
     return -1;
+}
+
+/// Source `sqlite3FindDb()`.
+pub fn findDatabase(db: *types.Sqlite3, token: *const parse_types.Token) c_int {
+    const name = schema_analysis.nameFromToken(db, token);
+    defer db_allocator.free(db, if (name) |present| present else null);
+    return findDatabaseName(db, name);
 }
 
 /// Source `sqlite3SchemaToIndex()`.
