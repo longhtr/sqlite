@@ -1588,6 +1588,35 @@ pub const Database = struct {
         return writeTableLeaf(&planner, 1, cursor.entries.items);
     }
 
+    /// Drop one record column from every row in a table root. The caller owns
+    /// schema SQL validation and updates the sqlite_schema text separately.
+    pub fn dropTableColumn(self: *Database, root_page: u32, column_index: usize) ResultCode {
+        if (!self.writable) return .read_only;
+        const opened = self.openCursor(root_page, .table);
+        if (opened.result != .ok) return opened.result;
+        var cursor = opened.cursor.?;
+        defer cursor.deinit();
+        for (cursor.entries.items) |*entry| {
+            const decoded = decodeRecord(self.allocator, entry.payload);
+            if (decoded.result != .ok) return decoded.result;
+            var record = decoded.record.?;
+            defer record.deinit();
+            if (record.values.len <= 1 or column_index >= record.values.len) return .error_;
+            const values = self.allocator.alloc(Value, record.values.len - 1) catch return .no_memory;
+            defer self.allocator.free(values);
+            @memcpy(values[0..column_index], record.values[0..column_index]);
+            @memcpy(values[column_index..], record.values[column_index + 1 ..]);
+            const replacement = encodeRecord(self.allocator, values) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+            self.allocator.free(entry.payload);
+            entry.payload = replacement;
+        }
+        const planned = RebuildPlanner.init(self, root_page, .table);
+        if (planned.result != .ok) return planned.result;
+        var planner = planned.planner.?;
+        defer planner.deinit();
+        return writeTableLeaf(&planner, root_page, cursor.entries.items);
+    }
+
     /// Rename one table and every ordinary index that names it as tbl_name.
     /// SQL text is rewritten by the caller using the source ALTER helper.
     pub fn renameSchemaTable(self: *Database, old_name: []const u8, new_name: []const u8, table_sql: []const u8) ResultCode {

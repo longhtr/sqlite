@@ -3838,6 +3838,7 @@ const ProgramAction = union(enum) {
     transaction: struct { connection: *Connection, operation: TransactionOperation },
     alter_add_column: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, table_name: []const u8, sql: []const u8 },
     alter_rename_table: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, old_name: []const u8, new_name: []const u8, sql: []const u8 },
+    alter_drop_column: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, table_name: []const u8, root_page: u32, column_index: usize, sql: []const u8 },
 };
 
 const Owner = struct {
@@ -10079,6 +10080,25 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             }
             break :blk .error_;
         },
+        .alter_drop_column => |action| blk: {
+            const permission = action.connection.beforeWrite();
+            if (permission != .ok) break :blk permission;
+            const enlisted = enlistTransactionDatabase(action.connection, action.database);
+            if (enlisted != .ok) break :blk enlisted;
+            const begin = action.database.beginStatementBatch();
+            if (begin != .ok) break :blk begin;
+            var batch_active = true;
+            defer {
+                if (batch_active) _ = action.database.rollbackStatementBatch();
+            }
+            const changed = action.database.dropTableColumn(action.root_page, action.column_index);
+            if (changed != .ok) break :blk changed;
+            const updated = action.database.updateSchemaSql("table", action.table_name, action.sql);
+            if (updated != .ok) break :blk updated;
+            const committed = action.database.commitStatementBatch();
+            batch_active = false;
+            break :blk action.connection.afterWrite(committed, null, action.schema_name, action.table_name, 0);
+        },
         .alter_rename_table => |action| blk: {
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
@@ -11299,6 +11319,74 @@ fn compileAlterTable(connection: *Connection, source: [:0]u8, token_list: []cons
         instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
         instructions[1] = .{ .opcode = .halt };
         owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .alter_rename_table = .{ .connection = connection, .database = located.database.?, .schema_name = located.schema_name, .old_name = table_name, .new_name = new_name, .sql = updated_sql } }, .program = .{ .instructions = instructions, .register_count = 1 } };
+        owner.strings.append(allocator, updated_sql) catch {
+            allocator.free(updated_sql);
+            Owner.destroy(allocator, owner);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
+        owner.program.functions = owner.functions[0..];
+        const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
+            Owner.destroy(allocator, owner);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        prepared.adoptOwner(owner, Owner.destroy);
+        prepared.markWritable();
+        return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+    }
+    if (position + 1 < token_list.len and std.ascii.eqlIgnoreCase(token_list[position].text, "drop")) {
+        position += 1;
+        if (position < token_list.len and (token_list[position].typ == tokens.tk_column or token_list[position].typ == tokens.tk_columnkw)) position += 1;
+        if (position + 1 != token_list.len or token_list[position].typ != tokens.tk_id) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        const dropped_column_name = token_list[position].text;
+        position += 1;
+        const located = locateTableWithDatabase(connection, table_name, schema_name);
+        if (located.result != .ok) {
+            allocator.free(source);
+            return .{ .result = if (located.result == .not_found) .error_ else located.result, .consumed = consumed };
+        }
+        var table = located.table.?;
+        defer table.deinit();
+        const resolved = resolveColumns(allocator, table.sql) catch |err| {
+            allocator.free(source);
+            return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+        };
+        defer {
+            allocator.free(resolved.columns);
+            allocator.free(resolved.tokens);
+            allocator.free(resolved.source);
+        }
+        const column_index = resolvedColumnIndex(resolved.columns, dropped_column_name) orelse {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        };
+        if (resolved.columns.len <= 1) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+        const updated_sql = schema_program_runtime.dropColumnSql(allocator, table.sql, column_index) catch |err| {
+            allocator.free(source);
+            return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+        };
+        const owner = allocator.create(Owner) catch {
+            allocator.free(updated_sql);
+            allocator.free(source);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        const instructions = allocator.alloc(vdbe.Instruction, 2) catch {
+            allocator.destroy(owner);
+            allocator.free(updated_sql);
+            allocator.free(source);
+            return .{ .result = .no_memory, .consumed = consumed };
+        };
+        const parameters = allocator.alloc(statement.ParameterMetadata, 0) catch unreachable;
+        const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
+        instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
+        instructions[1] = .{ .opcode = .halt };
+        owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .alter_drop_column = .{ .connection = connection, .database = located.database.?, .schema_name = located.schema_name, .table_name = table_name, .root_page = table.root_page, .column_index = column_index, .sql = updated_sql } }, .program = .{ .instructions = instructions, .register_count = 1 } };
         owner.strings.append(allocator, updated_sql) catch {
             allocator.free(updated_sql);
             Owner.destroy(allocator, owner);
