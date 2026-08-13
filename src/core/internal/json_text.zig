@@ -378,6 +378,12 @@ pub fn translateBlobToText(parse: *core.JsonParse, root: usize, output: *core.Js
     return root + header + size;
 }
 
+/// Source `jsonPrettyIndent()`.
+pub fn appendPrettyIndent(output: *core.JsonString, indent: []const u8, level: usize) Error!void {
+    var amount: usize = 0;
+    while (amount < level) : (amount += 1) try appendRaw(output, indent);
+}
+
 /// Source `jsonTranslateBlobToPrettyText()`.
 pub fn translateBlobToPrettyText(parse: *core.JsonParse, root: usize, output: *core.JsonString, indent: []const u8, level: usize) Error!usize {
     var size: u32 = 0;
@@ -395,8 +401,7 @@ pub fn translateBlobToPrettyText(parse: *core.JsonParse, root: usize, output: *c
     var count: usize = 0;
     if (index < end) try appendByte(output, '\n');
     while (index < end) : (count += 1) {
-        var amount: usize = 0;
-        while (amount < level + 1) : (amount += 1) try appendRaw(output, indent);
+        try appendPrettyIndent(output, indent, level + 1);
         if (node_type == core.kind.object) {
             index = try translateBlobToText(parse, index, output);
             if (index >= end) return error.Malformed;
@@ -408,8 +413,7 @@ pub fn translateBlobToPrettyText(parse: *core.JsonParse, root: usize, output: *c
     if (index != end) return error.Malformed;
     if (size > 0) {
         try appendByte(output, '\n');
-        var amount: usize = 0;
-        while (amount < level) : (amount += 1) try appendRaw(output, indent);
+        try appendPrettyIndent(output, indent, level);
     }
     try appendByte(output, if (node_type == core.kind.array) ']' else '}');
     return end;

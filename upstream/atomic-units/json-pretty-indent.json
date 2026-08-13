@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "json-pretty-indent",
+  "title": "JSON pretty indentation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "JSON pretty rendering now uses the source-shaped indentation loop for both child and closing levels.",
+    "source_files": [{"path":"src/json.c","sha256":"25a742ea7382fd21bc3f10fc22f4cbfc97335122ba9593822d0d7eb93bb637d9"}],
+    "source_entity_ids": ["src/json.c::function::jsonPrettyIndent::line-2430"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["JSONB traversal", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["JSON string append and pretty traversal"],"caller_closure":"Both production indentation loops call the helper."},
+  "contracts": {"inputs":["JSON output, indentation bytes, nesting level"],"outputs":["Indentation text appended level times"],"ownership":"Borrows output and indentation.","state_and_results":"Zero level is a no-op; append errors preserve sticky output state.","locks_callbacks_io":"No locks or I/O.","failure_and_continuation":"Propagates JSON output allocation errors."},
+  "mappings": [{"source_entity_id":"src/json.c::function::jsonPrettyIndent::line-2430","relation":"json-pretty-level-indentation","zig_declaration_ids":["src/core/internal/json_text.zig::function::appendPrettyIndent"]}],
+  "representation_differences": ["Arguments are passed directly instead of through the C JsonPretty context struct."],
+  "oracle": {"protocol":"Pretty-print nested arrays and objects with empty and multibyte indentation strings.","internal_observations":["exact emitted whitespace", "OOM propagation"],"normalization":"Byte-exact text comparison."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Propagates sticky JSON string OOM.","io_crash_concurrency":"No I/O or concurrency.","malformed_input":"Any indentation byte sequence is copied verbatim.","continuation":"Output remains owned and sticky after error.","performance":"Linear in level times indentation length.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/json_text.zig","native_call_path":"translateBlobToPrettyText -> appendPrettyIndent","bounded_owner_retired":"Both inline indentation loops replaced by helper."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Focused pinned-C pretty JSON differential and evidence-state promotion."],
+  "context_review": {"implementation_spans":["Complete jsonPrettyIndent body", "child and closing indentation callers"],"callers":["JSONB pretty text translation"],"callees":["JSON raw append"],"assertions_branches_cleanup":["zero and positive levels", "append failure propagation"],"upstream_tests":["Project JSON and broad runtime tests"]},
+  "evidence_receipts": []
+}

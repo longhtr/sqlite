@@ -305,6 +305,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/json.c::function::jsonPrettyIndent::line-2430",
+      "source_sha256": "cb65b4005df2b8ac2710ea98c4ca5e1bd0a2c2b7c738c247306080e81435ee5e",
+      "zig_declaration_id": "src/core/internal/json_text.zig::function::appendPrettyIndent",
+      "zig_declaration_sha256": "9470675fd468eeb19e253dfce2a3897162e217c263a3844824859b32b7c3c653",
+      "atomic_unit_id": "json-pretty-indent",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/json.c::function::jsonReplaceFunc::line-4523",
       "source_sha256": "898e855c1f0110996dde3998dd8606ea2344d93a090240df58368be60b8bb040",
       "zig_declaration_id": "src/core/internal/json_functions.zig::function::replaceFunction",
