@@ -263,6 +263,7 @@ fn clearVirtualTable(db: *runtime.Sqlite3, table: *schema.Table) void {
     }
 }
 
+/// Source `sqlite3DeleteColumnNames()`.
 pub fn deleteColumnNames(db: *runtime.Sqlite3, table: *schema.Table) void {
     if (table.columns) |columns| {
         for (columns[0..@intCast(table.column_count)]) |column| free(db, column.name_and_metadata);

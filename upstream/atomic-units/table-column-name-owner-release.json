@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "table-column-name-owner-release",
+  "title": "Table column-name owner release",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The existing complete table column-array destructor is now canonically source-identified and used by table/view cleanup paths.",
+    "source_files": [{"path":"src/build.c","sha256":"c71549801eb2f56dcba062a6ce1c347d93203e43deb05c08ba4ad71a2c08d867"}],
+    "source_entity_ids": ["src/build.c::function::sqlite3DeleteColumnNames::line-760"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Complete Table destruction", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Connection allocator and expression-list destructor"],"caller_closure":"Table and schema lifecycle owners call this complete column-array destructor."},
+  "contracts": {"inputs":["Connection and non-null Table"],"outputs":["Column names, column array, and ordinary-table defaults released"],"ownership":"Consumes all column-name strings and the column array; default list is consumed for ordinary tables.","state_and_results":"Normal mode clears pointers/count; bytes-freed accounting mode preserves inspected fields per source.","locks_callbacks_io":"No I/O; caller owns schema synchronization.","failure_and_continuation":"Destructor allocates nothing and cannot fail."},
+  "mappings": [{"source_entity_id":"src/build.c::function::sqlite3DeleteColumnNames::line-760","relation":"table-column-array-and-default-owner-release","zig_declaration_ids":["src/core/internal/compiler_ownership.zig::function::deleteColumnNames"]}],
+  "representation_differences": ["Typed column slices and table-kind union replace C pointer arithmetic and IsOrdinaryTable macro."],
+  "oracle": {"protocol":"Release null/populated view and ordinary-table columns in normal and bytes-freed modes.","internal_observations":["child-before-array free", "default-list cleanup", "pointer/count clearing policy"],"normalization":"Compare ownership and retained accounting fields."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Destructor allocates nothing.","io_crash_concurrency":"No I/O; schema lock external.","malformed_input":"Requires source-valid column count and pointers.","continuation":"Normal caller must not reuse consumed columns.","performance":"Linear in column count.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/compiler_ownership.zig","native_call_path":"table/schema lifecycle -> deleteColumnNames","bounded_owner_retired":"Existing complete implementation promoted to canonical source identity."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Focused allocator trace and evidence-state promotion."],
+  "context_review": {"implementation_spans":["Complete sqlite3DeleteColumnNames body", "table and schema lifecycle callers"],"callers":["Table destruction", "view schema reset"],"callees":["Connection free", "expression-list deletion"],"assertions_branches_cleanup":["null columns", "ordinary/view branch", "bytes-freed accounting branch"],"upstream_tests":["Project schema and broad runtime tests"]},
+  "evidence_receipts": []
+}

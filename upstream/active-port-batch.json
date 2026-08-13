@@ -179,6 +179,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/build.c::function::sqlite3DeleteColumnNames::line-760",
+      "source_sha256": "3582593ab8a61d65564daad1c7d0a489c49f0ac7a9ecd394f4a3bed59bf99654",
+      "zig_declaration_id": "src/core/internal/compiler_ownership.zig::function::deleteColumnNames",
+      "zig_declaration_sha256": "437faae6d535c3c6c454da93574a6e7e8c732117a1a72f0500938a26cfc56aca",
+      "atomic_unit_id": "table-column-name-owner-release",
+      "class": "substantive",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/build.c::function::sqlite3FindDb::line-951",
       "source_sha256": "526f6d9e095fa41eccc7892f33a3258caba72484de12a1c976eb32a49f36b459",
       "zig_declaration_id": "src/core/internal/connection_names.zig::function::findDatabase",

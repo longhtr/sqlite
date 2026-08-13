@@ -883,6 +883,11 @@
       "id": "select-window-gather-prune-callback",
       "path": "upstream/atomic-units/select-window-gather-prune-callback.json",
       "status": "source-translated"
+    },
+    {
+      "id": "table-column-name-owner-release",
+      "path": "upstream/atomic-units/table-column-name-owner-release.json",
+      "status": "source-translated"
     }
   ]
 }
