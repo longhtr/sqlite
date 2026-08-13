@@ -152,6 +152,24 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/expr.c::function::sqlite3ClearOnOrUsing::line-1448",
+      "source_sha256": "9e920a0e1d15e0ca173f24f37930f2a38cce39cb98dc90c61bd5646168934be6",
+      "zig_declaration_id": "src/core/internal/compiler_ownership.zig::function::clearOnOrUsing",
+      "zig_declaration_sha256": "0852fe2772830418e8e71699e096c5000e165373377a055433ccf27118dd9d58",
+      "atomic_unit_id": "expression-generic-and-join-owner-release",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/expr.c::function::sqlite3ExprDeleteGeneric::line-1441",
+      "source_sha256": "3fce9e4677544e59879a379462b7cb0795557e2d10b93877b264cb9eb9c86a35",
+      "zig_declaration_id": "src/core/internal/compiler_ownership.zig::function::deleteExpressionGeneric",
+      "zig_declaration_sha256": "034e96f039923439c39a7f0d8a2248bb4630d15ae515a2852e2a2d5ca5bfe18c",
+      "atomic_unit_id": "expression-generic-and-join-owner-release",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/insert.c::function::exprColumnFlagUnion::line-269",
       "source_sha256": "77d14847ad121ab0ee9d0414208c79c1533956ef57ba0d4d2119e507ec54964f",
       "zig_declaration_id": "src/core/internal/insert_analysis.zig::function::expressionColumnFlagUnion",

@@ -913,6 +913,11 @@
       "id": "where-term-child-link",
       "path": "upstream/atomic-units/where-term-child-link.json",
       "status": "source-translated"
+    },
+    {
+      "id": "expression-generic-and-join-owner-release",
+      "path": "upstream/atomic-units/expression-generic-and-join-owner-release.json",
+      "status": "source-translated"
     }
   ]
 }

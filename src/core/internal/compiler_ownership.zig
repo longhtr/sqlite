@@ -49,6 +49,19 @@ pub fn deleteExpressionRequired(db: *runtime.Sqlite3, initial: *ast.Expr) void {
     }
 }
 
+/// Source `sqlite3ExprDeleteGeneric()`.
+pub fn deleteExpressionGeneric(db: *runtime.Sqlite3, pointer: ?*anyopaque) void {
+    if (pointer) |present| deleteExpressionRequired(db, @ptrCast(@alignCast(present)));
+}
+
+/// Source `sqlite3ClearOnOrUsing()`.
+pub fn clearOnOrUsing(db: *runtime.Sqlite3, owner: ?*ast.OnOrUsing) void {
+    const present = owner orelse return;
+    if (present.pOn) |on| {
+        deleteExpressionRequired(db, on);
+    } else if (present.pUsing) |using| deleteIdentifierList(db, using);
+}
+
 pub fn deleteExpressionList(db: *runtime.Sqlite3, list: ?*ast.ExprList) void {
     const owned = list orelse return;
     std.debug.assert(owned.nExpr > 0);

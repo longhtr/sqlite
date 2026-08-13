@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "expression-generic-and-join-owner-release",
+  "title": "Expression generic and join owner release",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Compiler ownership now has source-shaped generic expression cleanup and mutually exclusive ON/USING cleanup wrappers.",
+    "source_files": [{"path":"src/expr.c","sha256":"363e581dc939eef8ff5d2d3e8cab8454d58716ba8aaab05c09f044eaacb8deff"}],
+    "source_entity_ids": ["src/expr.c::function::sqlite3ExprDeleteGeneric::line-1441", "src/expr.c::function::sqlite3ClearOnOrUsing::line-1448"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Expression destructor internals", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Expression-tree and identifier-list destructors"],"caller_closure":"Both complete cleanup wrappers are translated over source-layout owners."},
+  "contracts": {"inputs":["Connection plus nullable generic expression pointer or OnOrUsing owner"],"outputs":["Present expression or mutually exclusive ON/USING child consumed"],"ownership":"Consumes one represented child; ON takes precedence exactly as source.","state_and_results":"Null is a no-op.","locks_callbacks_io":"No I/O; caller owns parser synchronization.","failure_and_continuation":"No allocation or failure."},
+  "mappings": [
+    {"source_entity_id":"src/expr.c::function::sqlite3ExprDeleteGeneric::line-1441","relation":"generic-expression-cleanup-callback","zig_declaration_ids":["src/core/internal/compiler_ownership.zig::function::deleteExpressionGeneric"]},
+    {"source_entity_id":"src/expr.c::function::sqlite3ClearOnOrUsing::line-1448","relation":"join-on-or-using-owner-cleanup","zig_declaration_ids":["src/core/internal/compiler_ownership.zig::function::clearOnOrUsing"]}
+  ],
+  "representation_differences": ["Typed alignment cast converts the generic cleanup pointer; OnOrUsing fields are explicit optionals."],
+  "oracle": {"protocol":"Release null/generic expression and null/ON/USING join owners.","internal_observations":["selected child destructor", "null no-op", "ON precedence"],"normalization":"Compare allocator ownership."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Destructors allocate nothing.","io_crash_concurrency":"No I/O or concurrency.","malformed_input":"Generic pointer must reference aligned Expr; source ON/USING exclusivity applies.","continuation":"Consumed child cannot be reused.","performance":"Wrapper constant time plus child destruction.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/compiler_ownership.zig","native_call_path":"parser cleanup/join owner cleanup -> generic or ON/USING destructor","bounded_owner_retired":"No alternate source-identity wrappers."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Wire cleanup callback and join parser callers with focused allocator trace."],
+  "context_review": {"implementation_spans":["Complete two upstream bodies", "expression and IdList destructors"],"callers":["Parser cleanup", "join-source ownership"],"callees":["deleteExpressionRequired", "deleteIdentifierList"],"assertions_branches_cleanup":["null", "ON", "USING", "generic pointer"],"upstream_tests":["Project parser and broad runtime tests"]},
+  "evidence_receipts": []
+}
