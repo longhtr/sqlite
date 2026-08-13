@@ -48,6 +48,7 @@ pub const internal_parse_error = @import("core/internal/parse_error.zig");
 pub const internal_btree_api = @import("core/internal/btree_api.zig");
 pub const internal_vdbe_mem = @import("core/internal/vdbe_mem.zig");
 pub const internal_vdbe_api = @import("core/internal/vdbe_api.zig");
+pub const internal_error_state = @import("core/internal/error_state.zig");
 pub const internal_vdbe_lifecycle = @import("core/internal/vdbe_lifecycle.zig");
 pub const internal_collation = @import("core/internal/collation.zig");
 pub const internal_collation_registry = @import("core/internal/collation_registry.zig");

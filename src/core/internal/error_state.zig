@@ -1,6 +1,9 @@
 //! Connection error-state publication from `util.c`.
 
 const std = @import("std");
+const build_profile = @import("build_profile");
+const public_api = @import("../public_api.zig");
+const formatter = @import("../formatter.zig");
 const vfs = @import("../vfs.zig");
 const vdbe_mem = @import("vdbe_mem.zig");
 pub const types = @import("vdbe_types.zig");
@@ -9,6 +12,35 @@ const result_ok: c_int = 0;
 const result_io_error: c_int = 10;
 const result_cannot_open: c_int = 14;
 const result_io_error_no_memory: c_int = result_io_error | (12 << 8);
+
+/// Source `sqlite3ReportError()`: log the primary code, descriptive category,
+/// source line, and pinned source check-in prefix before returning the code.
+pub fn reportSourceError(result: c_int, line: c_int, category: []const u8) c_int {
+    const source_id = build_profile.sqlite_source_id;
+    const checkin = if (source_id.len > 20) source_id[20..@min(source_id.len, 30)] else source_id;
+    const arguments = [_]formatter.FormatArgument{
+        .{ .string = category },
+        .{ .signed = line },
+        .{ .string = checkin },
+    };
+    public_api.logFormat(result, "%s at line %d of [%.10s]", &arguments);
+    return result;
+}
+
+/// Source `sqlite3CorruptError()`.
+pub fn corruptError(line: c_int) c_int {
+    return reportSourceError(11, line, "database corruption");
+}
+
+/// Source `sqlite3MisuseError()`.
+pub fn misuseError(line: c_int) c_int {
+    return reportSourceError(21, line, "misuse");
+}
+
+/// Source `sqlite3CantopenError()`.
+pub fn cannotOpenError(line: c_int) c_int {
+    return reportSourceError(14, line, "cannot open file");
+}
 
 fn updateSystemError(db: *types.Sqlite3, result: c_int) void {
     if (result == result_io_error_no_memory) return;
@@ -41,6 +73,30 @@ pub fn clearDatabaseError(db: *types.Sqlite3) void {
     db.errCode = result_ok;
     db.errByteOffset = -1;
     if (db.pErr) |value| vdbe_mem.setNull(value);
+}
+
+test "source low-level error helpers log location and return exact codes" {
+    const Harness = struct {
+        var code: c_int = 0;
+        var text: [160]u8 = undefined;
+        var length: usize = 0;
+
+        fn callback(_: ?*anyopaque, result: c_int, message: [*:0]const u8) callconv(.c) void {
+            code = result;
+            const bytes = std.mem.span(message);
+            length = @min(bytes.len, text.len);
+            @memcpy(text[0..length], bytes[0..length]);
+        }
+    };
+    Harness.code = 0;
+    Harness.length = 0;
+    _ = public_api.zig_sqlite3_config_log(Harness.callback, null);
+    defer _ = public_api.zig_sqlite3_config_log(null, null);
+    try std.testing.expectEqual(@as(c_int, 11), corruptError(42));
+    try std.testing.expectEqual(@as(c_int, 11), Harness.code);
+    try std.testing.expect(std.mem.indexOf(u8, Harness.text[0..Harness.length], "database corruption at line 42") != null);
+    try std.testing.expectEqual(@as(c_int, 21), misuseError(7));
+    try std.testing.expectEqual(@as(c_int, 14), cannotOpenError(9));
 }
 
 test "database error publication clears messages offsets and captures VFS errno" {

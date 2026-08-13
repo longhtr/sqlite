@@ -655,6 +655,11 @@
       "status": "source-translated"
     },
     {
+      "id": "low-level-source-error-reporting",
+      "path": "upstream/atomic-units/low-level-source-error-reporting.json",
+      "status": "source-translated"
+    },
+    {
       "id": "pager-rollback-journal-checksum",
       "path": "upstream/atomic-units/pager-rollback-journal-checksum.json",
       "status": "source-translated"

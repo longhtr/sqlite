@@ -663,6 +663,42 @@
       "atomic_unit_id": "unix-vfs-device-observers",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3ReportError::line-3997",
+      "source_sha256": "5280a46f7980fa52174a7212000e862ce4e14012c76cb1761baf5e59998c29bc",
+      "zig_declaration_id": "src/core/internal/error_state.zig::function::reportSourceError",
+      "zig_declaration_sha256": "60541b002bcb61e9bf3553635fae632cccb508495e89b9c18eaccd5e7cbddc3c",
+      "atomic_unit_id": "low-level-source-error-reporting",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3CorruptError::line-4002",
+      "source_sha256": "b5aa3479d5458701679e6c8e3e79db8c06317bc6933acc6d1c02178581cdad13",
+      "zig_declaration_id": "src/core/internal/error_state.zig::function::corruptError",
+      "zig_declaration_sha256": "cb51b11431ba3b0ca37bcee480ea65c7df5f521ee6a4937505cf93059caf8b23",
+      "atomic_unit_id": "low-level-source-error-reporting",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3MisuseError::line-4006",
+      "source_sha256": "f6ba1c87d939c40b702f38ca6f4304ccac038fb5969310b33cd137a332fb6c76",
+      "zig_declaration_id": "src/core/internal/error_state.zig::function::misuseError",
+      "zig_declaration_sha256": "28217cc3bfea338c042e6a00b18c90d90dabea0678459246621537af5a96fd48",
+      "atomic_unit_id": "low-level-source-error-reporting",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3CantopenError::line-4010",
+      "source_sha256": "43f962ee7da7729aee11a3f777d81c6e6d0cd0e1843c29cfb8429c43148daa07",
+      "zig_declaration_id": "src/core/internal/error_state.zig::function::cannotOpenError",
+      "zig_declaration_sha256": "e897576c9590bb0fdec4d4ae9969f255a43a081f3d55f4f35d492fd3af85cef0",
+      "atomic_unit_id": "low-level-source-error-reporting",
+      "class": "short",
+      "complete": true
     }
   ]
 }

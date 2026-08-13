@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "id": "low-level-source-error-reporting",
+  "title": "Low-level source error reporting helpers",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The low-level corruption, misuse, and cannot-open helpers share one source-location logger and return the unchanged primary result code for propagation.",
+    "source_files": [
+      {
+        "path": "src/main.c",
+        "sha256": "318f5b725d7c1403a442e59cd1565672a6fe0c6b24c4c5d06a9c74c32b17f1de"
+      }
+    ],
+    "source_entity_ids": [
+      "src/main.c::function::sqlite3ReportError::line-3997",
+      "src/main.c::function::sqlite3CorruptError::line-4002",
+      "src/main.c::function::sqlite3MisuseError::line-4006",
+      "src/main.c::function::sqlite3CantopenError::line-4010"
+    ],
+    "behavioral_block_ids": [
+      "src/main.c::function::sqlite3ReportError::behavior::return::line-4000-column-3::ordinal-0",
+      "src/main.c::function::sqlite3CorruptError::behavior::return::line-4004-column-3::ordinal-0",
+      "src/main.c::function::sqlite3MisuseError::behavior::return::line-4008-column-3::ordinal-0",
+      "src/main.c::function::sqlite3CantopenError::behavior::return::line-4012-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Debug-only no-memory and corrupt-page-number variants",
+      "Independent fidelity review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Process log callback and pinned source ID"
+    ],
+    "caller_closure": "The common reporter and all three active-profile convenience helpers are assigned together."
+  },
+  "contracts": {
+    "inputs": [
+      "Primary result code, source line, and static error category"
+    ],
+    "outputs": [
+      "Unchanged primary result code after optional log delivery"
+    ],
+    "ownership": "Borrowed category and pinned source-ID slices; formatter owns only transient rendering storage.",
+    "state_and_results": "With or without an installed log callback, return codes remain CORRUPT, MISUSE, or CANTOPEN exactly. The log includes category, source line, and ten-character check-in prefix.",
+    "locks_callbacks_io": "May invoke the process log callback through the native formatter; no database lock or I/O.",
+    "failure_and_continuation": "Absent callback or log formatting allocation failure does not change the propagated result code."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/main.c::function::sqlite3ReportError::line-3997",
+      "relation": "source-low-level-location-logger-and-code-identity",
+      "zig_declaration_ids": [
+        "src/core/internal/error_state.zig::function::reportSourceError"
+      ]
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3CorruptError::line-4002",
+      "relation": "source-corruption-error-report-helper",
+      "zig_declaration_ids": [
+        "src/core/internal/error_state.zig::function::corruptError"
+      ]
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3MisuseError::line-4006",
+      "relation": "source-misuse-error-report-helper",
+      "zig_declaration_ids": [
+        "src/core/internal/error_state.zig::function::misuseError"
+      ]
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3CantopenError::line-4010",
+      "relation": "source-cannot-open-error-report-helper",
+      "zig_declaration_ids": [
+        "src/core/internal/error_state.zig::function::cannotOpenError"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Typed formatter arguments replace source variadic sqlite3_log while preserving the rendered message fields."
+  ],
+  "oracle": {
+    "protocol": "Install a process log callback, invoke each helper at fixed lines, compare result code and rendered category/line/check-in prefix, then repeat with logging disabled.",
+    "internal_observations": [
+      "callback result code and message",
+      "unchanged helper return code"
+    ],
+    "normalization": "Compare exact primary codes and stable message fields; the pinned check-in prefix is exact."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Formatter OOM may suppress a log but never changes the returned code.",
+    "io_crash_concurrency": "No I/O; process logging synchronization is delegated to the existing callback owner.",
+    "malformed_input": "Internal helpers require a valid static category; line and result are passed through as signed C integers.",
+    "continuation": "Logging has no connection error-state mutation and callers continue propagating the returned code.",
+    "performance": "One bounded formatter invocation only when a callback is installed.",
+    "commands": [
+      "zig test --dep build_profile -Mroot=src/root.zig -Mbuild_profile=config/build_profile.zig -lc"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/error_state.zig and process logging owner",
+    "native_call_path": "Native low-level owners can invoke the helpers through the exported root module and receive exact result identity.",
+    "bounded_owner_retired": "Yes. No no-op low-level reporting substitute remains."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Pinned-C differential, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Connect additional low-level call sites as their source owners are ported.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned main.c reporter and three active convenience bodies",
+      "Native logging formatter, process callback owner, pinned source ID, and error-state tests"
+    ],
+    "callers": [
+      "Low-level corruption, misuse, and cannot-open detection sites"
+    ],
+    "callees": [
+      "public_api.logFormat and process logging callback"
+    ],
+    "assertions_branches_cleanup": [
+      "Installed/absent callback, all categories, source line, check-in prefix, and exact result identity reviewed"
+    ],
+    "upstream_tests": [
+      "Upstream log callback and error breakpoint tests",
+      "Project native error-state tests"
+    ]
+  },
+  "evidence_receipts": []
+}
