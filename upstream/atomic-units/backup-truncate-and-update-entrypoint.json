@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "backup-truncate-and-update-entrypoint",
+  "title": "Backup truncate and update entrypoint",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The typed backup owner now exposes the source no-growth truncation helper and nullable public update forwarding entrypoint.",
+    "source_files": [{"path":"src/backup.c","sha256":"2304c4f820c977aa009ceb464d9b774942cd7b4686156a5ed28d50a3e50f861e"}],
+    "source_entity_ids": ["src/backup.c::function::backupTruncateFile::line-298", "src/backup.c::function::sqlite3BackupUpdate::line-713"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Raw VFS file-size querying", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Typed backup page update owner"],"caller_closure":"Both complete leaf responsibilities are represented; the in-memory Btree image supplies an already-known file size."},
+  "contracts": {"inputs":["Mutable destination image and target size", "Nullable backup, page number, and page bytes"],"outputs":["Image shrunk only when oversized", "Non-null backup forwarded to update owner"],"ownership":"Borrows image and backup; retains backing capacity like source truncation retains file ownership.","state_and_results":"Never extends an image and treats a null backup as a no-op.","locks_callbacks_io":"Typed image truncation performs no raw I/O; update inherits caller locking invariants.","failure_and_continuation":"No allocation; update records failures through the backup owner."},
+  "mappings": [
+    {"source_entity_id":"src/backup.c::function::backupTruncateFile::line-298","relation":"backup-no-growth-destination-truncation","zig_declaration_ids":["src/core/internal/backup_core.zig::function::truncateBackupFile"]},
+    {"source_entity_id":"src/backup.c::function::sqlite3BackupUpdate::line-713","relation":"nullable-backup-update-forwarder","zig_declaration_ids":["src/core/internal/backup_core.zig::function::notifyBackupUpdate"]}
+  ],
+  "representation_differences": ["The typed in-memory backup Btree exposes image length directly instead of issuing xFileSize before xTruncate."],
+  "oracle": {"protocol":"Exercise smaller/equal/larger target sizes and null/non-null update owners through backup tests.","internal_observations":["final image length", "copied-page replacement", "stored backup error"],"normalization":"Compare image and backup state."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"No allocation.","io_crash_concurrency":"Typed owner has no direct I/O; source mutex remains a caller invariant.","malformed_input":"Page update inherits backupOnePage bounds and state checks.","continuation":"No-op truncation and null update leave state unchanged.","performance":"Constant-time forwarding or list length change.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/backup_core.zig","native_call_path":"backup completion/update notification -> truncate or update forwarding","bounded_owner_retired":"No duplicate source-identity implementations."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Focused native trace and full public backup integration."],
+  "context_review": {"implementation_spans":["Complete two upstream bodies", "Adjacent backup update and completion paths"],"callers":["Backup completion and pager notification"],"callees":["Typed image shrink and backup update"],"assertions_branches_cleanup":["oversize-only branch", "nullable backup branch"],"upstream_tests":["Project backup and broad runtime tests"]},
+  "evidence_receipts": []
+}

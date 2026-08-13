@@ -62,6 +62,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/backup.c::function::backupTruncateFile::line-298",
+      "source_sha256": "18fc447c2aa01e0ca048eb6f7b494e9aa91bc1b8ead9b26f5c83c3166d95f06f",
+      "zig_declaration_id": "src/core/internal/backup_core.zig::function::truncateBackupFile",
+      "zig_declaration_sha256": "19be258c055b96bf21b9097c321f14862a106f99cea3cf4632edba836d41a6c1",
+      "atomic_unit_id": "backup-truncate-and-update-entrypoint",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/backup.c::function::checkReadTransaction::line-123",
       "source_sha256": "55ab28416836c96079c627af004ea967d4417532431d72ac67ce4e4965abcdfa",
       "zig_declaration_id": "src/core/internal/backup_core.zig::function::checkReadTransaction",
@@ -94,6 +103,15 @@
       "zig_declaration_id": "src/core/sql_frontend.zig::function::backupRestartOwner",
       "zig_declaration_sha256": "e6eb3fa05f2a0d333914f6a7cb3ec3ef4de0e01eb6ec69b3eeb3c4a5efff4476",
       "atomic_unit_id": "backup-restart-on-pager-data-version",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::sqlite3BackupUpdate::line-713",
+      "source_sha256": "e0f6d4e57104fb2873ef4d70d07e6111f9f98c4a10d580dc4e5b1e31d3ea0c29",
+      "zig_declaration_id": "src/core/internal/backup_core.zig::function::notifyBackupUpdate",
+      "zig_declaration_sha256": "1f6687e8bbad60d8e632a7ba3d4757200cda2dbae6adabb6adaad74d09ddbc54",
+      "atomic_unit_id": "backup-truncate-and-update-entrypoint",
       "class": "short",
       "complete": true
     },

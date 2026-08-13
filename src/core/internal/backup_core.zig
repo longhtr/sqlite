@@ -129,6 +129,11 @@ pub fn initialize(destination_connection: *Connection, destination_name: []const
     return backup;
 }
 
+/// Source `backupTruncateFile()`.
+pub fn truncateBackupFile(data: *std.ArrayList(u8), size: usize) Error!void {
+    if (data.items.len > size) data.shrinkRetainingCapacity(size);
+}
+
 /// Source `attachBackupObject()`: publish one partially copied owner for
 /// source-page update and restart notifications.
 pub fn attachBackupObject(backup: *Backup) void {
@@ -241,6 +246,11 @@ pub fn update(backup: ?*Backup, page: usize, data: []const u8) void {
         }
         current = null;
     }
+}
+
+/// Source `sqlite3BackupUpdate()`.
+pub fn notifyBackupUpdate(backup: ?*Backup, page: usize, data: []const u8) void {
+    if (backup != null) update(backup, page, data);
 }
 
 /// Source `sqlite3BtreeCopyFile()`.

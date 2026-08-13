@@ -823,6 +823,11 @@
       "id": "aggregate-indexed-reference-and-register-finalization",
       "path": "upstream/atomic-units/aggregate-indexed-reference-and-register-finalization.json",
       "status": "source-translated"
+    },
+    {
+      "id": "backup-truncate-and-update-entrypoint",
+      "path": "upstream/atomic-units/backup-truncate-and-update-entrypoint.json",
+      "status": "source-translated"
     }
   ]
 }
