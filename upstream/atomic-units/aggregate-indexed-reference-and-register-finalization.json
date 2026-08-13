@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "aggregate-indexed-reference-and-register-finalization",
+  "title": "Aggregate indexed-reference and register finalization",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Aggregate analysis now owns the complete indexed-expression conversion walk and one-time contiguous register assignment routines.",
+    "source_files": [{"path":"src/select.c","sha256":"bdf052a30146b56afe82c5fc1affcf6a01b6417bc72ec8608139d75d910e3408"}],
+    "source_entity_ids": ["src/select.c::function::aggregateConvertIndexedExprRefToColumn::line-6624", "src/select.c::function::assignAggregateRegisters::line-6652"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Full aggregate query compilation", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Expression walker and aggregate indexed-reference callback"],"caller_closure":"Both complete finalization routines are represented as typed operations over source-layout AggInfo."},
+  "contracts": {"inputs":["Populated AggInfo and owning Parse"],"outputs":["Function expression references converted and contiguous register range reserved"],"ownership":"Borrows expression trees and AggInfo arrays.","state_and_results":"Walks every aggregate function expression; register assignment requires an unassigned owner and advances Parse.nMem once.","locks_callbacks_io":"No locks or I/O; invokes the expression walker callback.","failure_and_continuation":"No allocations or errors; source invariants are asserted."},
+  "mappings": [
+    {"source_entity_id":"src/select.c::function::aggregateConvertIndexedExprRefToColumn::line-6624","relation":"aggregate-function-expression-reference-conversion","zig_declaration_ids":["src/core/internal/aggregate_analysis.zig::function::convertAggregateIndexedExpressionReferences"]},
+    {"source_entity_id":"src/select.c::function::assignAggregateRegisters::line-6652","relation":"aggregate-contiguous-register-assignment","zig_declaration_ids":["src/core/internal/aggregate_analysis.zig::function::assignAggregateRegisters"]}
+  ],
+  "representation_differences": ["Typed slices replace indexed C loops while preserving order and callback behavior."],
+  "oracle": {"protocol":"Construct populated AggInfo values and exercise conversion and assignment through repository aggregate tests.","internal_observations":["function walk order", "first register", "final Parse.nMem"],"normalization":"Compare aggregate node fields and integer register boundaries."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"No allocations.","io_crash_concurrency":"No I/O or concurrency.","malformed_input":"Requires source-valid function arrays and one-time assignment precondition.","continuation":"AggInfo arrays are fixed after register assignment.","performance":"Linear in aggregate function count.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/aggregate_analysis.zig","native_call_path":"aggregate analysis finalization -> conversion walk and register assignment","bounded_owner_retired":"No alternate source-identity implementations."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Wire complete aggregate SELECT compiler path and focused trace."],
+  "context_review": {"implementation_spans":["Complete two upstream bodies", "Adjacent aggregate conversion callback and AggInfo layout"],"callers":["Aggregate SELECT compilation"],"callees":["Expression walker", "aggregate indexed-expression callback"],"assertions_branches_cleanup":["All functions walked", "first-register zero assertion", "column plus function register count"],"upstream_tests":["Project aggregate and broad runtime tests"]},
+  "evidence_receipts": []
+}

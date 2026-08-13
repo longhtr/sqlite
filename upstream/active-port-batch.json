@@ -611,6 +611,24 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/select.c::function::aggregateConvertIndexedExprRefToColumn::line-6624",
+      "source_sha256": "6eea8929ecbfb11fa0a19a2718b45730847405a01354baf054e3a4975ae398d8",
+      "zig_declaration_id": "src/core/internal/aggregate_analysis.zig::function::convertAggregateIndexedExpressionReferences",
+      "zig_declaration_sha256": "410516522e9500f8ef989a6628b6134a38f46f60e297524a5e03ff918782e137",
+      "atomic_unit_id": "aggregate-indexed-reference-and-register-finalization",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/select.c::function::assignAggregateRegisters::line-6652",
+      "source_sha256": "50e6ba3f3e4b8cdac86aafa52530df75a54496701fbc618cfe9c31e5ee6931b3",
+      "zig_declaration_id": "src/core/internal/aggregate_analysis.zig::function::assignAggregateRegisters",
+      "zig_declaration_sha256": "2741a9773f1e202326f3114dc6acb2c6586e9add2541bb3675869ddefb00965d",
+      "atomic_unit_id": "aggregate-indexed-reference-and-register-finalization",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/status.c::function::sqlite3_db_status::line-426",
       "source_sha256": "1fcfd1166c4f04aab72467b89e50ed686ffbe67f7f7fc8c2376c730cd1c67fa0",
       "zig_declaration_id": "src/core/sql_frontend.zig::function::databaseStatus",

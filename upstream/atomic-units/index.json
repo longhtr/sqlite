@@ -818,6 +818,11 @@
       "id": "alter-rename-callback-and-schema-reload",
       "path": "upstream/atomic-units/alter-rename-callback-and-schema-reload.json",
       "status": "source-translated"
+    },
+    {
+      "id": "aggregate-indexed-reference-and-register-finalization",
+      "path": "upstream/atomic-units/aggregate-indexed-reference-and-register-finalization.json",
+      "status": "source-translated"
     }
   ]
 }

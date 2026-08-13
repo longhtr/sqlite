@@ -203,6 +203,22 @@ pub fn aggregateIndexedExpressionToColumn(_: *parse_types.Walker, node: *parse_t
     return walker_api.prune;
 }
 
+/// Source `aggregateConvertIndexedExprRefToColumn()`.
+pub fn convertAggregateIndexedExpressionReferences(info: *parse_types.AggInfo) void {
+    var walker = std.mem.zeroes(parse_types.Walker);
+    walker.xExprCallback = aggregateIndexedExpressionToColumn;
+    for (info.functions.?[0..@intCast(info.function_count)]) |function| {
+        _ = walker_api.walkExpr(&walker, function.expression);
+    }
+}
+
+/// Source `assignAggregateRegisters()`.
+pub fn assignAggregateRegisters(parse: *parse_types.Parse, info: *parse_types.AggInfo) void {
+    std.debug.assert(info.first_register == 0);
+    info.first_register = parse.nMem + 1;
+    parse.nMem += info.column_count + info.function_count;
+}
+
 /// Source `optimizeAggregateUseOfIndexedExpr()`.
 pub fn optimizeAggregateIndexedExpressions(parse: *parse_types.Parse, select: *parse_types.Select, info: *parse_types.AggInfo, context: *AggregateContext) void {
     info.column_count = info.accumulator_count;
