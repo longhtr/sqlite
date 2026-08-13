@@ -566,15 +566,6 @@
       "complete": true
     },
     {
-      "source_entity_id": "src/complete.c::function::sqlite3_complete::line-104",
-      "source_sha256": "bf9b7cf5f656c730ff38f7bede34eefa15b4285ea392806729a373d6cdfe2802",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_complete",
-      "zig_declaration_sha256": "163bf1e04ca416a1854a0804971d481193e58f9876c3f5f96fd540ee1abc76d7",
-      "atomic_unit_id": "sql-completeness-state-machine",
-      "class": "substantive",
-      "complete": true
-    },
-    {
       "source_entity_id": "src/complete.c::function::sqlite3_complete16::line-269",
       "source_sha256": "e1778e89eceeef4e69df1436511712e0f0c9ba8f8df751f548576b921c42b0b1",
       "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_complete16",

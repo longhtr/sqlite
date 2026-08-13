@@ -205,11 +205,11 @@
     "zig_declaration_inventory": 13705
   },
   "translation_tracking": {
-    "active_batch_entries": 64,
+    "active_batch_entries": 63,
     "active_batch_schema": 2,
     "active_batch_short_functions": 27,
     "active_batch_status": "active",
-    "active_batch_substantive_functions": 37,
+    "active_batch_substantive_functions": 36,
     "checkpoint_ledger": "upstream/port-checkpoints.json",
     "completion_credit": 0,
     "durable_checkpoints": 1,
