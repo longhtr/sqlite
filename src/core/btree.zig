@@ -2397,6 +2397,10 @@ fn indexValueEqual(left: Value, right: Value, collation: IndexCollation) bool {
     return compareIndexValues(left, right, collation) == .eq;
 }
 
+pub fn indexValuesEqual(left: Value, right: Value, collation: IndexCollation) bool {
+    return indexValueEqual(left, right, collation);
+}
+
 fn compareIndexRecordPayloads(allocator: std.mem.Allocator, left_payload: []const u8, right_payload: []const u8, collations: []const IndexCollation, sort_orders: []const IndexSortOrder) CompareOutcome {
     const left_outcome = decodeRecord(allocator, left_payload);
     if (left_outcome.result != .ok) return .{ .result = left_outcome.result };

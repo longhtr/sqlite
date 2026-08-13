@@ -4853,7 +4853,7 @@
       "c_transport_disposition": "c-symbol-and-calling-convention-not-product-required",
       "behavior_disposition": "must-remain-in-zig-product",
       "current_zig_candidates": [
-        "src/core/sql_frontend.zig::function::sqlite3_vtab_in_first"
+        "src/core/statement.zig::function::sqlite3_vtab_in_first"
       ],
       "non_variadic_behavior_targets": [],
       "implementation_status": "provisional-bounded-transitional-c-shaped",
@@ -4870,7 +4870,7 @@
       "c_transport_disposition": "c-symbol-and-calling-convention-not-product-required",
       "behavior_disposition": "must-remain-in-zig-product",
       "current_zig_candidates": [
-        "src/core/sql_frontend.zig::function::sqlite3_vtab_in_next"
+        "src/core/statement.zig::function::sqlite3_vtab_in_next"
       ],
       "non_variadic_behavior_targets": [],
       "implementation_status": "provisional-bounded-transitional-c-shaped",

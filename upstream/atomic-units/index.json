@@ -778,6 +778,11 @@
       "id": "backup-source-notification-attachment",
       "path": "upstream/atomic-units/backup-source-notification-attachment.json",
       "status": "source-translated"
+    },
+    {
+      "id": "upsert-target-analysis-and-update",
+      "path": "upstream/atomic-units/upsert-target-analysis-and-update.json",
+      "status": "source-translated"
     }
   ]
 }

@@ -726,6 +726,24 @@
       "atomic_unit_id": "where-expression-index-coverage-match",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/upsert.c::function::sqlite3UpsertAnalyzeTarget::line-90",
+      "source_sha256": "c0fbbb4d1b2257095ac97beee5a8b858d1c9a783a5021975473218a8db0ece01",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::findUpsertConflict",
+      "atomic_unit_id": "upsert-target-analysis-and-update",
+      "class": "substantive",
+      "complete": true,
+      "zig_declaration_sha256": "537c525991ff06339edcd6d04219c5fe31e0ef322762d78b287a5c90ee0ce40c"
+    },
+    {
+      "source_entity_id": "src/upsert.c::function::sqlite3UpsertDoUpdate::line-267",
+      "source_sha256": "9c31dcad6a97295f7bfaa265bb56db0594a57cd2707434aa6231b1d7c9317789",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::executeUpsertUpdate",
+      "atomic_unit_id": "upsert-target-analysis-and-update",
+      "class": "substantive",
+      "complete": true,
+      "zig_declaration_sha256": "7449219a5d20a4172eea64bf3db17f596c940ac76208216b58be5952561ea9be"
     }
   ]
 }

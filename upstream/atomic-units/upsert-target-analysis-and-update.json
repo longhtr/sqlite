@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "id": "upsert-target-analysis-and-update",
+  "title": "UPSERT conflict-target analysis and excluded-row update",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Bounded INSERT now resolves a one-column INTEGER PRIMARY KEY, column UNIQUE, or ordinary UNIQUE-index conflict target and executes one excluded-column assignment against the conflicting row.",
+    "source_files": [
+      {
+        "path": "src/upsert.c",
+        "sha256": "4742feaca021fdbf986426bb8018eba978edcf9f51a20371f501b9f51d37f8ca"
+      }
+    ],
+    "source_entity_ids": [
+      "src/upsert.c::function::sqlite3UpsertAnalyzeTarget::line-90",
+      "src/upsert.c::function::sqlite3UpsertDoUpdate::line-267"
+    ],
+    "behavioral_block_ids": [
+      "src/upsert.c::function::sqlite3UpsertAnalyzeTarget::behavior::if::line-129-column-5::ordinal-0",
+      "src/upsert.c::function::sqlite3UpsertAnalyzeTarget::behavior::for::line-152-column-5::ordinal-0",
+      "src/upsert.c::function::sqlite3UpsertAnalyzeTarget::behavior::if::line-154-column-7::ordinal-0",
+      "src/upsert.c::function::sqlite3UpsertAnalyzeTarget::behavior::if::line-155-column-7::ordinal-0",
+      "src/upsert.c::function::sqlite3UpsertAnalyzeTarget::behavior::if::line-197-column-7::ordinal-0",
+      "src/upsert.c::function::sqlite3UpsertAnalyzeTarget::behavior::if::line-207-column-5::ordinal-0",
+      "src/upsert.c::function::sqlite3UpsertAnalyzeTarget::behavior::return::line-219-column-3::ordinal-0",
+      "src/upsert.c::function::sqlite3UpsertDoUpdate::behavior::if::line-286-column-3::ordinal-0",
+      "src/upsert.c::function::sqlite3UpsertDoUpdate::behavior::if::line-287-column-5::ordinal-0",
+      "src/upsert.c::function::sqlite3UpsertDoUpdate::behavior::for::line-319-column-3::ordinal-0",
+      "src/upsert.c::function::sqlite3UpsertDoUpdate::behavior::if::line-320-column-5::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Composite, expression, partial-index, and multiple conflict targets",
+      "General assignment expressions or UPSERT WHERE clauses",
+      "Full secondary-index maintenance when the conflict-target index itself changes",
+      "Independent fidelity review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": [
+      "Bounded INSERT expression compilation, table mutation batches, foreign-key actions, and ordinary index maintenance"
+    ],
+    "caller_closure": "The production INSERT compiler and action callback resolve and execute the bounded UPSERT path directly."
+  },
+  "contracts": {
+    "inputs": [
+      "INSERT VALUES with optional one-column ON CONFLICT target",
+      "DO NOTHING or DO UPDATE SET column=excluded.column"
+    ],
+    "outputs": [
+      "Inserted row, unchanged conflicting row, or one updated conflicting row"
+    ],
+    "ownership": "Prepared-statement owner retains target metadata; decoded conflicting records and temporary updated values are released on every result path.",
+    "state_and_results": "Unknown or non-unique targets fail preparation. A matching target runs update behavior under the INSERT statement batch and publishes UPDATE hooks and change counts.",
+    "locks_callbacks_io": "Uses the selected database cursor and existing write, transaction-enlistment, update-hook, foreign-key, and index-maintenance paths.",
+    "failure_and_continuation": "OOM, malformed records, constraints, and I/O failures roll back the statement batch; a missed target continues as an ordinary insert."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/upsert.c::function::sqlite3UpsertAnalyzeTarget::line-90",
+      "relation": "bounded-one-column-conflict-target-analysis-and-row-lookup",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::findUpsertConflict"
+      ]
+    },
+    {
+      "source_entity_id": "src/upsert.c::function::sqlite3UpsertDoUpdate::line-267",
+      "relation": "bounded-excluded-column-conflict-update",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::executeUpsertUpdate"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "The bounded frontend stores resolved column indexes and a typed collation rather than retaining the C Upsert and Index parse-tree objects.",
+    "The native runtime locates an ordinary UNIQUE conflict by a table scan in this bounded path; the canonical secondary index remains the schema-level uniqueness owner."
+  ],
+  "oracle": {
+    "protocol": "Create the bounded table and UNIQUE index, then compare duplicate IPK update, missed IPK insert, targeted DO NOTHING, ordinary UNIQUE-target update, return codes, row counts, maximum rowid, and payload hash.",
+    "internal_observations": [
+      "prepare, step, and finalize primary codes",
+      "resulting table row count, maximum rowid, and payload hash"
+    ],
+    "normalization": "Compare exact C-oracle and native observations after each statement."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "Target schema decoding, prepared metadata, decoded records, and updated payload allocation map OOM to SQLITE_NOMEM and retain statement rollback.",
+    "io_crash_concurrency": "Uses existing Pager-backed cursor and statement-batch ownership; no new lock protocol.",
+    "malformed_input": "Unrecognized targets and assignment shapes fail preparation; corrupt records fail execution.",
+    "continuation": "A missed conflict executes the insert, while a failed update rolls back only the current statement batch.",
+    "performance": "INTEGER PRIMARY KEY conflicts seek directly. Ordinary one-column UNIQUE targets use a bounded table scan pending broader index-cursor integration.",
+    "commands": [
+      "zig build sql-insert-differential -j1",
+      "zig build test -j1"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/sql_frontend.zig bounded INSERT compiler and runtime action",
+    "native_call_path": "sqlite3_prepare_v2 -> compileInsert -> buildInsert -> programActionCallback -> findUpsertConflict/executeUpsertUpdate",
+    "bounded_owner_retired": "No separate test-only UPSERT model exists."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Broader conflict-target forms, internal trace equivalence, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Add composite, expression, partial, and multiple conflict-target support.",
+    "Generalize DO UPDATE assignment expressions and WHERE filtering.",
+    "Complete secondary-index conflict-cursor integration and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete sqlite3UpsertAnalyzeTarget and sqlite3UpsertDoUpdate source bodies",
+      "Production bounded INSERT parser, action callback, foreign-key actions, and index maintenance"
+    ],
+    "callers": [
+      "Canonical sqlite3_prepare_v2/sqlite3_step INSERT path"
+    ],
+    "callees": [
+      "B-tree table cursors and mutation APIs",
+      "Foreign-key checks/actions and secondary-index maintenance"
+    ],
+    "assertions_branches_cleanup": [
+      "Target uniqueness validation, IPK seek, collation-aware UNIQUE lookup, missed target, update, rollback, record cleanup, and hook publication reviewed"
+    ],
+    "upstream_tests": [
+      "Project sql-insert-differential C-oracle comparison"
+    ]
+  },
+  "evidence_receipts": []
+}

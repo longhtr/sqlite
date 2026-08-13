@@ -3800,6 +3800,18 @@ const json_virtual_source_template: vdbe.VirtualSource = .{ .context = null, .op
 const TransactionOperation = enum { begin, commit, rollback };
 const ReindexTarget = enum { index, table, collation, expressions, all };
 
+const InsertUpsertUpdate = struct {
+    conflict_column: usize,
+    target_column: usize,
+    source_column: usize,
+    conflict_collation: btree.IndexCollation,
+};
+
+const UpsertUpdateOutcome = struct {
+    result: ResultCode,
+    rowid: i64,
+};
+
 const ProgramAction = union(enum) {
     attach_database: struct { connection: *Connection, filename: []const u8, name: []const u8 },
     detach_database: struct { connection: *Connection, name: []const u8 },
@@ -3810,7 +3822,7 @@ const ProgramAction = union(enum) {
     drop: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
     drop_index: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, if_exists: bool },
     reindex: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, name: []const u8, target: ReindexTarget },
-    insert: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, column_count: usize, integer_primary_key: ?usize, replace: bool, conflict_ignore: bool },
+    insert: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, column_count: usize, integer_primary_key: ?usize, replace: bool, conflict_ignore: bool, upsert_update: ?InsertUpsertUpdate },
     update: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, target_column: usize, target_integer_primary_key: bool, foreign_key_old_mask: u32 },
     delete: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, root_page: u32, table_name: []const u8, foreign_key_old_mask: u32 },
     vacuum: struct { connection: *Connection },
@@ -6892,7 +6904,7 @@ fn indexPredicateRowMatches(predicate: ?btree.IndexPredicate, row: IndexMutation
 
 /// Bounded source `sqlite3GenerateIndexKey()` mutation owner for ordinary
 /// indexes created by `compileIndexSchema()`.
-fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, table_name: []const u8, old_row: ?IndexMutationRow, new_row: ?IndexMutationRow) ResultCode {
+fn maintainSecondaryIndexesExcept(connection: *Connection, database: *btree.Database, table_name: []const u8, old_row: ?IndexMutationRow, new_row: ?IndexMutationRow, excluded_column: ?usize) ResultCode {
     const table_outcome = database.schemaTable(table_name);
     if (table_outcome.result != .ok) return table_outcome.result;
     var table = table_outcome.table.?;
@@ -6925,6 +6937,9 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
             connection.allocator.free(index_columns.source);
         }
         if (index_columns.columns.len == 0) continue;
+        if (excluded_column) |column_index| {
+            if (index_columns.columns.len == 1 and std.ascii.eqlIgnoreCase(index_columns.columns[0].name, table_columns.columns[column_index].name)) continue;
+        }
         const predicate = resolveIndexPredicate(index_columns.tokens, table_columns.columns) catch return .corrupt;
         const unique = index_columns.tokens.len > 1 and index_columns.tokens[0].typ == tokens.tk_create and index_columns.tokens[1].typ == tokens.tk_unique;
         const selected = connection.allocator.alloc(usize, index_columns.columns.len) catch return .no_memory;
@@ -6986,6 +7001,10 @@ fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, 
         }
     }
     return .ok;
+}
+
+fn maintainSecondaryIndexes(connection: *Connection, database: *btree.Database, table_name: []const u8, old_row: ?IndexMutationRow, new_row: ?IndexMutationRow) ResultCode {
+    return maintainSecondaryIndexesExcept(connection, database, table_name, old_row, new_row, null);
 }
 
 fn reindexSecondaryIndex(connection: *Connection, database: *btree.Database, name: []const u8) ResultCode {
@@ -9306,6 +9325,87 @@ fn compileTableScan(connection: *Connection, source: [:0]u8, token_list: []const
     return compilePlannedTableScan(connection, database, source, consumed, schema.root_page, cursor_is_index, selected.items, resolved.columns, resolved.tokens, token_list, located.qualifier, .{});
 }
 
+/// Bounded runtime counterpart of source `sqlite3UpsertDoUpdate()`: apply one
+/// excluded-column assignment to the conflicting row under the caller's batch.
+fn executeUpsertUpdate(connection: *Connection, database: *btree.Database, schema_name: []const u8, table_name: []const u8, root_page: u32, integer_primary_key: ?usize, upsert: InsertUpsertUpdate, excluded_rowid: i64, existing_rowid: i64, old_record: *btree.RecordView, excluded_values: []const btree.Value) UpsertUpdateOutcome {
+    const allocator = connection.allocator;
+    if (upsert.target_column >= excluded_values.len or upsert.source_column >= excluded_values.len or upsert.target_column >= old_record.values.len) return .{ .result = .corrupt, .rowid = existing_rowid };
+    const updated_values = allocator.dupe(btree.Value, old_record.values) catch return .{ .result = .no_memory, .rowid = existing_rowid };
+    defer allocator.free(updated_values);
+    var updated_rowid = existing_rowid;
+    if (integer_primary_key == upsert.target_column) {
+        updated_rowid = if (integer_primary_key == upsert.source_column)
+            excluded_rowid
+        else switch (excluded_values[upsert.source_column]) {
+            .integer => |value| value,
+            else => return .{ .result = .mismatch, .rowid = existing_rowid },
+        };
+    } else {
+        updated_values[upsert.target_column] = if (integer_primary_key == upsert.source_column) .{ .integer = excluded_rowid } else excluded_values[upsert.source_column];
+    }
+    const parent_check = checkForeignKeys(connection, database, schema_name, table_name, existing_rowid, .{ .parent_update = .{ .old_values = old_record.values, .new_rowid = updated_rowid, .new_values = updated_values } });
+    if (parent_check != .ok) return .{ .result = parent_check, .rowid = existing_rowid };
+    const actions = applyForeignKeyActions(connection, database, schema_name, table_name, existing_rowid, updated_rowid, old_record.values, updated_values, null);
+    if (actions != .ok) return .{ .result = actions, .rowid = existing_rowid };
+    const child_check = checkForeignKeys(connection, database, schema_name, table_name, updated_rowid, .{ .child_insert = .{ .values = updated_values } });
+    if (child_check != .ok) return .{ .result = child_check, .rowid = existing_rowid };
+    const payload = btree.encodeRecord(allocator, updated_values) catch |err| return .{ .result = if (err == error.OutOfMemory) .no_memory else .too_big, .rowid = existing_rowid };
+    defer allocator.free(payload);
+    const maintained = maintainSecondaryIndexesExcept(connection, database, table_name, .{ .rowid = existing_rowid, .values = old_record.values }, null, upsert.conflict_column);
+    if (maintained != .ok) return .{ .result = maintained, .rowid = existing_rowid };
+    if (updated_rowid != existing_rowid) {
+        const deleted = database.deleteTable(root_page, existing_rowid);
+        if (deleted != .ok) return .{ .result = deleted, .rowid = existing_rowid };
+    }
+    const updated = database.insertTable(root_page, updated_rowid, payload, updated_rowid == existing_rowid);
+    if (updated != .ok) return .{ .result = updated, .rowid = existing_rowid };
+    const indexed = maintainSecondaryIndexesExcept(connection, database, table_name, null, .{ .rowid = updated_rowid, .values = updated_values }, upsert.conflict_column);
+    return .{ .result = indexed, .rowid = updated_rowid };
+}
+
+const UpsertConflictOutcome = struct {
+    result: ResultCode,
+    rowid: ?i64 = null,
+    record: ?btree.RecordView = null,
+};
+
+/// Bounded runtime counterpart of source `sqlite3UpsertAnalyzeTarget()`: find
+/// the row selected by a one-column INTEGER PRIMARY KEY or UNIQUE target.
+fn findUpsertConflict(database: *btree.Database, root_page: u32, integer_primary_key: ?usize, conflict_column: usize, conflict_collation: btree.IndexCollation, rowid: i64, values: []const btree.Value) UpsertConflictOutcome {
+    if (conflict_column >= values.len) return .{ .result = .corrupt };
+    const conflict_value: btree.Value = if (integer_primary_key == conflict_column) .{ .integer = rowid } else values[conflict_column];
+    const existing = database.openCursor(root_page, .table);
+    if (existing.result != .ok) return .{ .result = existing.result };
+    var cursor = existing.cursor.?;
+    defer cursor.deinit();
+    if (integer_primary_key == conflict_column) {
+        if (!cursor.seekTable(rowid)) return .{ .result = .ok };
+        const decoded = cursor.record();
+        if (decoded.result != .ok) return .{ .result = decoded.result };
+        return .{ .result = .ok, .rowid = rowid, .record = decoded.record.? };
+    }
+    if (!cursor.first()) return .{ .result = .ok };
+    while (true) {
+        const entry = cursor.current() orelse return .{ .result = .corrupt };
+        const decoded = cursor.record();
+        if (decoded.result != .ok) return .{ .result = decoded.result };
+        var record = decoded.record.?;
+        if (conflict_column >= record.values.len) {
+            record.deinit();
+            return .{ .result = .corrupt };
+        }
+        if (btree.indexValuesEqual(record.values[conflict_column], conflict_value, conflict_collation)) {
+            const existing_rowid = entry.rowid orelse {
+                record.deinit();
+                return .{ .result = .corrupt };
+            };
+            return .{ .result = .ok, .rowid = existing_rowid, .record = record };
+        }
+        record.deinit();
+        if (!cursor.next()) return .{ .result = .ok };
+    }
+}
+
 fn memToBtreeValue(value: *vdbe.Mem) ?btree.Value {
     return switch (vdbe.vdbe_mem.valueType(value)) {
         1 => .{ .integer = vdbe.vdbe_mem.valueInt64(value) },
@@ -9978,6 +10078,15 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 if (next.result != .ok) break :blk next.result;
                 rowid = next.rowid;
             }
+            var upsert_rowid: ?i64 = null;
+            var upsert_old_record: ?btree.RecordView = null;
+            defer if (upsert_old_record) |*record| record.deinit();
+            if (action.upsert_update) |upsert| {
+                const found = findUpsertConflict(database, action.root_page, action.integer_primary_key, upsert.conflict_column, upsert.conflict_collation, rowid, values);
+                if (found.result != .ok) break :blk found.result;
+                upsert_rowid = found.rowid;
+                upsert_old_record = found.record;
+            }
             const permission = action.connection.beforeWrite();
             if (permission != .ok) break :blk permission;
             const enlisted = enlistTransactionDatabase(action.connection, database);
@@ -10010,6 +10119,18 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
                 } else {
                     existing_cursor.deinit();
                 }
+            }
+            if (upsert_rowid) |existing_rowid| {
+                const upsert = action.upsert_update.?;
+                const updated = executeUpsertUpdate(action.connection, database, action.schema_name, action.table_name, action.root_page, action.integer_primary_key, upsert, rowid, existing_rowid, &upsert_old_record.?, values);
+                if (updated.result != .ok) break :blk updated.result;
+                const committed = database.commitStatementBatch();
+                batch_active = false;
+                if (committed == .ok) {
+                    action.connection.changes = 1;
+                    action.connection.total_changes += 1;
+                }
+                break :blk action.connection.afterWrite(committed, 23, action.schema_name, action.table_name, updated.rowid);
             }
             const foreign_key_result = checkForeignKeys(action.connection, database, action.schema_name, action.table_name, rowid, .{ .child_insert = .{ .values = values } });
             if (foreign_key_result != .ok) break :blk foreign_key_result;
@@ -11101,9 +11222,60 @@ fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Toke
         break;
     }
     var conflict_ignore = false;
+    var upsert_update: ?InsertUpsertUpdate = null;
     if (parser.position != token_list.len) {
-        if (parser.position + 4 != token_list.len or token_list[parser.position].typ != tokens.tk_on or token_list[parser.position + 1].typ != tokens.tk_conflict or token_list[parser.position + 2].typ != tokens.tk_do or token_list[parser.position + 3].typ != tokens.tk_nothing) return error.Syntax;
-        conflict_ignore = true;
+        if (token_list[parser.position].typ != tokens.tk_on or parser.position + 2 >= token_list.len or token_list[parser.position + 1].typ != tokens.tk_conflict) return error.Syntax;
+        var upsert_position = parser.position + 2;
+        var conflict_column: ?usize = null;
+        if (upsert_position < token_list.len and token_list[upsert_position].typ == tokens.tk_lp) {
+            if (upsert_position + 2 >= token_list.len or token_list[upsert_position + 1].typ != tokens.tk_id or token_list[upsert_position + 2].typ != tokens.tk_rp) return error.Syntax;
+            conflict_column = resolvedColumnIndex(resolved.columns, token_list[upsert_position + 1].text) orelse return error.Syntax;
+            const conflict_definition = resolved.columns[conflict_column.?];
+            if (!conflict_definition.integer_primary_key and !conflict_definition.unique) {
+                const schema_cursor_outcome = database.openCursor(1, .table);
+                if (schema_cursor_outcome.result == .no_memory) return error.OutOfMemory;
+                if (schema_cursor_outcome.result != .ok) return error.Syntax;
+                var schema_cursor = schema_cursor_outcome.cursor.?;
+                defer schema_cursor.deinit();
+                var matched_unique_index = false;
+                for (schema_cursor.entries.items) |entry| {
+                    const decoded = btree.decodeRecord(allocator, entry.payload);
+                    if (decoded.result == .no_memory) return error.OutOfMemory;
+                    if (decoded.result != .ok) return error.Syntax;
+                    var schema_record = decoded.record.?;
+                    defer schema_record.deinit();
+                    if (schema_record.values.len < 5 or !std.mem.eql(u8, schemaEntryText(schema_record.values[0]) orelse continue, "index") or !std.ascii.eqlIgnoreCase(schemaEntryText(schema_record.values[2]) orelse continue, table_name)) continue;
+                    const index_sql = schemaEntryText(schema_record.values[4]) orelse continue;
+                    const index_columns = try resolveColumns(allocator, index_sql);
+                    defer {
+                        allocator.free(index_columns.columns);
+                        allocator.free(index_columns.tokens);
+                        allocator.free(index_columns.source);
+                    }
+                    if (index_columns.tokens.len > 1 and index_columns.tokens[1].typ == tokens.tk_unique and index_columns.columns.len == 1 and std.ascii.eqlIgnoreCase(index_columns.columns[0].name, conflict_definition.name)) {
+                        matched_unique_index = true;
+                        break;
+                    }
+                }
+                if (!matched_unique_index) return error.Syntax;
+            }
+            upsert_position += 3;
+        }
+        if (upsert_position >= token_list.len or token_list[upsert_position].typ != tokens.tk_do) return error.Syntax;
+        upsert_position += 1;
+        if (upsert_position < token_list.len and token_list[upsert_position].typ == tokens.tk_nothing) {
+            if (upsert_position + 1 != token_list.len) return error.Syntax;
+            conflict_ignore = true;
+        } else {
+            if (conflict_column == null or upsert_position >= token_list.len or token_list[upsert_position].typ != tokens.tk_update) return error.Syntax;
+            upsert_position += 1;
+            if (upsert_position >= token_list.len or token_list[upsert_position].typ != tokens.tk_set) return error.Syntax;
+            upsert_position += 1;
+            if (upsert_position + 4 >= token_list.len or token_list[upsert_position].typ != tokens.tk_id or token_list[upsert_position + 1].typ != tokens.tk_eq or token_list[upsert_position + 2].typ != tokens.tk_id or !std.ascii.eqlIgnoreCase(token_list[upsert_position + 2].text, "excluded") or token_list[upsert_position + 3].typ != tokens.tk_dot or token_list[upsert_position + 4].typ != tokens.tk_id or upsert_position + 5 != token_list.len) return error.Syntax;
+            const target_column = resolvedColumnIndex(resolved.columns, token_list[upsert_position].text) orelse return error.Syntax;
+            const source_column = resolvedColumnIndex(resolved.columns, token_list[upsert_position + 4].text) orelse return error.Syntax;
+            upsert_update = .{ .conflict_column = conflict_column.?, .target_column = target_column, .source_column = source_column, .conflict_collation = indexCollation(connection, resolved.columns[conflict_column.?].collation) orelse return error.Syntax };
+        }
         parser.position = token_list.len;
     }
     if (value_registers.items.len != mappings.items.len) return error.Syntax;
@@ -11147,7 +11319,7 @@ fn buildInsert(connection: *Connection, source: [:0]u8, token_list: []const Toke
         .columns = columns,
         .strings = parser.strings,
         .names = parser.names,
-        .action = .{ .insert = .{ .connection = connection, .database = database, .schema_name = schema_name, .root_page = schema.root_page, .table_name = table_name, .column_count = resolved.columns.len, .integer_primary_key = integer_primary_key, .replace = replace, .conflict_ignore = conflict_ignore } },
+        .action = .{ .insert = .{ .connection = connection, .database = database, .schema_name = schema_name, .root_page = schema.root_page, .table_name = table_name, .column_count = resolved.columns.len, .integer_primary_key = integer_primary_key, .replace = replace, .conflict_ignore = conflict_ignore, .upsert_update = upsert_update } },
         .indices = indices,
         .program = .{ .instructions = instructions, .register_count = parser.next_register - 1 },
     };

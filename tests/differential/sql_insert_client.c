@@ -12,7 +12,7 @@ int main(void){sqlite3*db=0;
 #else
  if(sqlite3_open(":memory:",&db)!=SQLITE_OK)return 1;sqlite3_exec(db,"ATTACH 'tests/fixtures/btree-mutation/none-512.db' AS src; CREATE TABLE t(id INTEGER PRIMARY KEY,v BLOB); INSERT INTO t SELECT * FROM src.t; DETACH src",0,0,0);
 #endif
- if(!db)return 1;state(db,"initial");run(db,"insert","INSERT INTO t(id,v) VALUES(1000,x'aabb')",0);run(db,"duplicate","INSERT INTO t(id,v) VALUES(1000,x'cc')",0);run(db,"replace","INSERT OR REPLACE INTO t(id,v) VALUES(1000,x'cc')",0);run(db,"bound","INSERT INTO t(v) VALUES(?1)",1);
+ if(!db)return 1;state(db,"initial");run(db,"insert","INSERT INTO t(id,v) VALUES(1000,x'aabb')",0);run(db,"duplicate","INSERT INTO t(id,v) VALUES(1000,x'cc')",0);run(db,"replace","INSERT OR REPLACE INTO t(id,v) VALUES(1000,x'cc')",0);run(db,"bound","INSERT INTO t(v) VALUES(?1)",1);run(db,"upsert-ipk","INSERT INTO t(id,v) VALUES(1000,x'dd') ON CONFLICT(id) DO UPDATE SET v=excluded.v",0);run(db,"upsert-miss","INSERT INTO t(id,v) VALUES(2000,x'ee') ON CONFLICT(id) DO UPDATE SET v=excluded.v",0);run(db,"ignore-target","INSERT INTO t(id,v) VALUES(2000,x'ff') ON CONFLICT(id) DO NOTHING",0);run(db,"unique-schema","CREATE UNIQUE INDEX t_v_unique ON t(v)",0);run(db,"upsert-unique","INSERT INTO t(id,v) VALUES(3000,x'ee') ON CONFLICT(v) DO UPDATE SET v=excluded.v",0);
 #ifdef NATIVE_ENGINE
  return sqlite3_zig_phase13_close(db)!=SQLITE_OK;
 #else
