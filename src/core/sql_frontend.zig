@@ -3836,6 +3836,7 @@ const ProgramAction = union(enum) {
     vacuum: struct { connection: *Connection },
     analyze: struct { connection: *Connection, table_name: ?[]const u8 },
     transaction: struct { connection: *Connection, operation: TransactionOperation },
+    alter_add_column: struct { connection: *Connection, database: *btree.Database, schema_name: []const u8, table_name: []const u8, sql: []const u8 },
 };
 
 const Owner = struct {
@@ -10077,6 +10078,23 @@ fn programActionCallback(context: ?*anyopaque, arguments: []vdbe.Mem, output: *v
             }
             break :blk .error_;
         },
+        .alter_add_column => |action| blk: {
+            const permission = action.connection.beforeWrite();
+            if (permission != .ok) break :blk permission;
+            const enlisted = enlistTransactionDatabase(action.connection, action.database);
+            if (enlisted != .ok) break :blk enlisted;
+            const begin = action.database.beginStatementBatch();
+            if (begin != .ok) break :blk begin;
+            var batch_active = true;
+            defer {
+                if (batch_active) _ = action.database.rollbackStatementBatch();
+            }
+            const updated = action.database.updateSchemaSql("table", action.table_name, action.sql);
+            if (updated != .ok) break :blk updated;
+            const committed = action.database.commitStatementBatch();
+            batch_active = false;
+            break :blk action.connection.afterWrite(committed, null, action.schema_name, action.table_name, 0);
+        },
         .create => |action| blk: {
             const database = action.database;
             const permission = action.connection.beforeWrite();
@@ -11204,6 +11222,105 @@ fn compileDropIndex(connection: *Connection, source: [:0]u8, token_list: []const
     return .{ .result = .ok, .statement = prepared, .consumed = consumed };
 }
 
+fn compileAlterTable(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
+    const allocator = connection.allocator;
+    if (token_list.len < 6 or token_list[0].typ != tokens.tk_alter or token_list[1].typ != tokens.tk_table) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    var position: usize = 2;
+    var schema_name: []const u8 = "main";
+    var table_name = token_list[position].text;
+    if (!schemaIdentifierToken(token_list[position])) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    if (position + 2 < token_list.len and token_list[position + 1].typ == tokens.tk_dot and token_list[position + 2].typ == tokens.tk_id) {
+        schema_name = table_name;
+        table_name = token_list[position + 2].text;
+        position += 3;
+    } else {
+        position += 1;
+    }
+    if (position >= token_list.len or token_list[position].typ != tokens.tk_add) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    position += 1;
+    if (position < token_list.len and (token_list[position].typ == tokens.tk_column or std.ascii.eqlIgnoreCase(token_list[position].text, "column"))) position += 1;
+    if (position >= token_list.len or !schemaIdentifierToken(token_list[position]) or position + 1 >= token_list.len) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const located = locateTableWithDatabase(connection, table_name, schema_name);
+    if (located.result != .ok) {
+        allocator.free(source);
+        return .{ .result = if (located.result == .not_found) .error_ else located.result, .consumed = consumed };
+    }
+    var table = located.table.?;
+    defer table.deinit();
+    const definition_start = token_list[position].start;
+    const definition_end = token_list[token_list.len - 1].end;
+    const trimmed_definition = std.mem.trim(u8, source[definition_start..definition_end], " \t\r\n");
+    const resolved = resolveColumns(allocator, table.sql) catch |err| {
+        allocator.free(source);
+        return .{ .result = if (err == error.OutOfMemory) .no_memory else .error_, .consumed = consumed };
+    };
+    defer {
+        allocator.free(resolved.columns);
+        allocator.free(resolved.tokens);
+        allocator.free(resolved.source);
+    }
+    for (resolved.columns) |column| {
+        if (std.ascii.eqlIgnoreCase(column.name, token_list[position].text)) {
+            allocator.free(source);
+            return .{ .result = .error_, .consumed = consumed };
+        }
+    }
+    if (std.ascii.indexOfIgnoreCase(trimmed_definition, "PRIMARY KEY") != null or std.ascii.indexOfIgnoreCase(trimmed_definition, " UNIQUE") != null) {
+        allocator.free(source);
+        return .{ .result = .error_, .consumed = consumed };
+    }
+    const close = std.mem.lastIndexOfScalar(u8, table.sql, ')') orelse {
+        allocator.free(source);
+        return .{ .result = .corrupt, .consumed = consumed };
+    };
+    const updated_sql = std.fmt.allocPrint(allocator, "{s}, {s}{s}", .{ table.sql[0..close], trimmed_definition, table.sql[close..] }) catch {
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const owner = allocator.create(Owner) catch {
+        allocator.free(updated_sql);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const instructions = allocator.alloc(vdbe.Instruction, 2) catch {
+        allocator.destroy(owner);
+        allocator.free(updated_sql);
+        allocator.free(source);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    const parameters = allocator.alloc(statement.ParameterMetadata, 0) catch unreachable;
+    const columns = allocator.alloc(statement.ColumnMetadata, 0) catch unreachable;
+    instructions[0] = .{ .opcode = .function, .p1 = 0, .p2 = 1, .p3 = 1, .p4 = .{ .index = 0 } };
+    instructions[1] = .{ .opcode = .halt };
+    owner.* = .{ .source = source, .instructions = instructions, .parameters = parameters, .columns = columns, .action = .{ .alter_add_column = .{ .connection = connection, .database = located.database.?, .schema_name = located.schema_name, .table_name = table_name, .sql = updated_sql } }, .program = .{ .instructions = instructions, .register_count = 1 } };
+    owner.strings.append(allocator, updated_sql) catch {
+        allocator.free(updated_sql);
+        Owner.destroy(allocator, owner);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    owner.functions[0] = .{ .callback = programActionCallback, .context = owner };
+    owner.program.functions = owner.functions[0..];
+    const prepared = statement.Statement.create(allocator, &owner.program, parameters, columns) catch {
+        Owner.destroy(allocator, owner);
+        return .{ .result = .no_memory, .consumed = consumed };
+    };
+    prepared.adoptOwner(owner, Owner.destroy);
+    prepared.markWritable();
+    return .{ .result = .ok, .statement = prepared, .consumed = consumed };
+}
+
 fn compileSchema(connection: *Connection, source: [:0]u8, token_list: []const Token, consumed: usize) CompileOutcome {
     const allocator = connection.allocator;
     if (token_list.len > 1 and token_list[0].typ == tokens.tk_create and token_list[1].typ == tokens.tk_virtual) return compileVirtualSchema(connection, source, token_list, consumed);
@@ -12174,6 +12291,8 @@ fn compile(connection: *Connection, source_bytes: []const u8) CompileOutcome {
     if (tokenized.tokens[0].typ == tokens.tk_pragma or tokenized.tokens[0].typ == tokens.tk_vacuum or
         (tokenized.tokens[0].typ == tokens.tk_select and tokenized.tokens.len > 1 and tokenized.tokens[1].typ == tokens.tk_id and schema_program_runtime.singleRowWindowValue(tokenized.tokens[1].text) != null))
         return compileAdvanced(connection, source, tokenized.tokens, tokenized.consumed);
+    if (tokenized.tokens[0].typ == tokens.tk_alter)
+        return compileAlterTable(connection, source, tokenized.tokens, tokenized.consumed);
     if (tokenized.tokens[0].typ == tokens.tk_create or tokenized.tokens[0].typ == tokens.tk_drop or tokenized.tokens[0].typ == tokens.tk_reindex)
         return compileSchema(connection, source, tokenized.tokens, tokenized.consumed);
     if (tokenized.tokens[0].typ == tokens.tk_insert)

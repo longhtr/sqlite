@@ -1550,6 +1550,44 @@ pub const Database = struct {
         return .{ .result = .ok };
     }
 
+    /// Replace the canonical SQL text for one sqlite_schema object while
+    /// preserving its type, names, root page, rowid, and sibling entries.
+    pub fn updateSchemaSql(self: *Database, object_type: []const u8, name: []const u8, sql: []const u8) ResultCode {
+        if (!self.writable) return .read_only;
+        if (object_type.len == 0 or name.len == 0 or sql.len == 0) return .misuse;
+        const opened = self.openCursor(1, .table);
+        if (opened.result != .ok) return opened.result;
+        var cursor = opened.cursor.?;
+        defer cursor.deinit();
+        var found = false;
+        for (cursor.entries.items) |*entry| {
+            const decoded = decodeRecord(self.allocator, entry.payload);
+            if (decoded.result != .ok) return decoded.result;
+            var record = decoded.record.?;
+            defer record.deinit();
+            if (record.values.len < 5 or !schemaTextEqual(record.values[0], object_type) or !schemaTextEqual(record.values[1], name)) continue;
+            const table_name = switch (record.values[2]) {
+                .text => |bytes| bytes,
+                else => return .corrupt,
+            };
+            const root_page: u32 = switch (record.values[3]) {
+                .integer => |value| if (value > 0 and value <= std.math.maxInt(u32)) @intCast(value) else return .corrupt,
+                else => return .corrupt,
+            };
+            const replacement = encodeSchemaRecord(self.allocator, object_type, name, table_name, root_page, sql) catch |err| return if (err == error.OutOfMemory) .no_memory else .too_big;
+            self.allocator.free(entry.payload);
+            entry.payload = replacement;
+            found = true;
+            break;
+        }
+        if (!found) return .not_found;
+        const planned = RebuildPlanner.init(self, 1, .table);
+        if (planned.result != .ok) return planned.result;
+        var planner = planned.planner.?;
+        defer planner.deinit();
+        return writeTableLeaf(&planner, 1, cursor.entries.items);
+    }
+
     /// Create an empty table root and its sqlite_schema row in one pager
     /// transaction. Phase 13 deliberately bounds this path to a leaf schema
     /// table and non-auto-vacuum databases; later schema slices remove those

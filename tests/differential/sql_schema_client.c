@@ -19,7 +19,7 @@ int main(void){sqlite3*db=0;
 #else
  if(sqlite3_open(":memory:",&db)!=SQLITE_OK)return 1;sqlite3_exec(db,"CREATE TABLE t(id INTEGER)",0,0,0);
 #endif
- if(!db)return 1;printf("initial\t%d\n",count_schema(db));execute(db,"create","CREATE TABLE created(x INTEGER, y TEXT)");execute(db,"duplicate","CREATE TABLE created(x)");execute(db,"if-not-exists","CREATE TABLE IF NOT EXISTS created(x)");execute(db,"drop","DROP TABLE created");execute(db,"missing","DROP TABLE created");execute(db,"if-exists","DROP TABLE IF EXISTS created");execute(db,"malformed","CREATE TABLE broken(");
+ if(!db)return 1;printf("initial\t%d\n",count_schema(db));execute(db,"create","CREATE TABLE created(x INTEGER, y TEXT)");execute(db,"duplicate","CREATE TABLE created(x)");execute(db,"if-not-exists","CREATE TABLE IF NOT EXISTS created(x)");execute(db,"alter-add","ALTER TABLE created ADD COLUMN z INTEGER");execute(db,"alter-duplicate","ALTER TABLE created ADD COLUMN z INTEGER");execute(db,"drop","DROP TABLE created");execute(db,"missing","DROP TABLE created");execute(db,"if-exists","DROP TABLE IF EXISTS created");execute(db,"malformed","CREATE TABLE broken(");
 #ifdef NATIVE_ENGINE
  return sqlite3_zig_phase13_close(db)!=SQLITE_OK;
 #else
