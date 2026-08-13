@@ -80,6 +80,7 @@ pub const Statement = struct {
     connection_next: ?*Statement = null,
     interrupt_flag: ?*const bool = null,
     result_mask: ?*const c_int = null,
+    length_limit: ?*const c_int = null,
     sql_copy: ?[:0]u8 = null,
     event_context: ?*anyopaque = null,
     event_callback: ?*const fn (?*anyopaque, *Statement, c_uint) void = null,
@@ -161,6 +162,10 @@ pub const Statement = struct {
 
     pub fn setResultMask(self: *Statement, result_mask: *const c_int) void {
         self.result_mask = result_mask;
+    }
+
+    pub fn setLengthLimit(self: *Statement, length_limit: *const c_int) void {
+        self.length_limit = length_limit;
     }
 
     pub fn setExecutionDepth(self: *Statement, depth: *usize) void {
@@ -818,6 +823,8 @@ pub export fn sqlite3_bind_parameter_index(pointer: ?*sqlite3_stmt, name_pointer
     return 0;
 }
 
+/// Source `sqlite3_bind_pointer()`: transfer pointer/destructor ownership into
+/// one ready statement binding or destroy it immediately on rejection.
 pub export fn sqlite3_bind_pointer(pointer: ?*sqlite3_stmt, index: c_int, value: ?*anyopaque, type_pointer: ?[*:0]const u8, destructor: ?*const fn (?*anyopaque) callconv(.c) void) callconv(.c) c_int {
     const prepared = asStatement(pointer) orelse {
         if (destructor) |destroy| destroy(value);
@@ -940,18 +947,23 @@ pub export fn sqlite3_bind_text16(pointer: ?*sqlite3_stmt, index: c_int, input: 
     return statement.bindMem(index, &mem).toC();
 }
 
+/// Source `sqlite3_bind_zeroblob()`: bind a logical zero-blob, clamping a
+/// negative active-profile length to zero in the Mem owner.
 pub export fn sqlite3_bind_zeroblob(pointer: ?*sqlite3_stmt, index: c_int, length: c_int) callconv(.c) c_int {
-    if (length < 0) return ResultCode.misuse.toC();
-    return sqlite3_bind_zeroblob64(pointer, index, @intCast(length));
-}
-
-pub export fn sqlite3_bind_zeroblob64(pointer: ?*sqlite3_stmt, index: c_int, length: u64) callconv(.c) c_int {
     const statement = asStatement(pointer) orelse return ResultCode.misuse.toC();
-    if (length > std.math.maxInt(c_int)) return ResultCode.too_big.toC();
     var mem = std.mem.zeroes(vdbe_types.Mem);
     vdbe_mem.init(&mem, null, vdbe_types.mem_flag.null_);
-    vdbe_mem.setZeroBlob(&mem, @intCast(length));
+    vdbe_mem.setZeroBlob(&mem, length);
     return statement.bindMem(index, &mem).toC();
+}
+
+/// Source `sqlite3_bind_zeroblob64()`: enforce the owning connection's live
+/// length limit before narrowing and delegating to the logical-blob binder.
+pub export fn sqlite3_bind_zeroblob64(pointer: ?*sqlite3_stmt, index: c_int, length: u64) callconv(.c) c_int {
+    const statement = asStatement(pointer) orelse return ResultCode.misuse.toC();
+    const limit: u64 = if (statement.length_limit) |value| @intCast(@max(value.*, 0)) else std.math.maxInt(c_int);
+    if (length > limit or length > std.math.maxInt(c_int)) return ResultCode.too_big.toC();
+    return sqlite3_bind_zeroblob(pointer, index, @intCast(length));
 }
 
 pub export fn sqlite3_column_value(pointer: ?*sqlite3_stmt, index: c_int) callconv(.c) ?*sqlite3_value {
@@ -1484,6 +1496,32 @@ test "result APIs destroy rejected owned inputs" {
     try std.testing.expectEqual(@as(usize, 2), test_destructor_calls);
 }
 
+test "pointer and zero-blob bindings preserve rejection ownership and live limits" {
+    test_destructor_calls = 0;
+    const parameters = [_]ParameterMetadata{.{ .name = "?1" }};
+    const columns = [_]ColumnMetadata{.{ .name = "value" }};
+    const operations = [_]vdbe.Instruction{
+        .{ .opcode = .result_row, .p1 = 1, .p2 = 1 },
+        .{ .opcode = .halt },
+    };
+    const program = vdbe.Program{ .instructions = &operations, .register_count = 1 };
+    const prepared = try Statement.create(std.testing.allocator, &program, &parameters, &columns);
+    defer _ = prepared.destroy();
+    const handle = toOpaque(prepared);
+
+    try std.testing.expectEqual(ResultCode.range.toC(), sqlite3_bind_pointer(handle, 2, prepared, "test", testDestructor));
+    try std.testing.expectEqual(@as(usize, 1), test_destructor_calls);
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_bind_pointer(handle, 1, prepared, "test", null));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_bind_zeroblob(handle, 1, 4));
+    try std.testing.expectEqual(ResultCode.row.toC(), sqlite3_step(handle));
+    try std.testing.expectEqual(@as(c_int, 4), sqlite3_column_bytes(handle, 0));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_reset(handle));
+    var length_limit: c_int = 3;
+    prepared.setLengthLimit(&length_limit);
+    try std.testing.expectEqual(ResultCode.too_big.toC(), sqlite3_bind_zeroblob64(handle, 1, 4));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_bind_zeroblob64(handle, 1, 3));
+}
+
 test "statement misuse range negative lengths and error lifecycle return exact codes" {
     try std.testing.expectEqual(ResultCode.misuse.toC(), sqlite3_step(null));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_reset(null));
@@ -1494,7 +1532,7 @@ test "statement misuse range negative lengths and error lifecycle return exact c
     try std.testing.expectEqual(ResultCode.range.toC(), sqlite3_bind_int(handle, 5, 1));
     const byte: u8 = 1;
     try std.testing.expectEqual(ResultCode.misuse.toC(), sqlite3_bind_blob(handle, 1, &byte, -1, null));
-    try std.testing.expectEqual(ResultCode.misuse.toC(), sqlite3_bind_zeroblob(handle, 1, -1));
+    try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_bind_zeroblob(handle, 1, -1));
     try std.testing.expectEqual(ResultCode.row.toC(), sqlite3_step(handle));
     try std.testing.expectEqual(ResultCode.misuse.toC(), sqlite3_bind_int(handle, 1, 2));
     try std.testing.expectEqual(ResultCode.ok.toC(), sqlite3_finalize(handle));

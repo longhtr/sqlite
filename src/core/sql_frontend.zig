@@ -11971,6 +11971,7 @@ fn prepareUtf8(
         connection.active_statements += 1;
         prepared.onFinalize(connection, Connection.statementFinalized, &connection.interrupted);
         prepared.setResultMask(&connection.error_mask);
+        prepared.setLengthLimit(&connection.limits[0]);
         prepared.setExecutionDepth(&connection.executing_statements);
         output.* = statement.toOpaque(prepared);
     }

@@ -23,7 +23,7 @@ int main(void){
  char rejected[]="rejected";CHECK(sqlite3_bind_text(s,2,rejected,-1,destroy_text)==SQLITE_MISUSE);CHECK(g_destructors==1);CHECK(g_reentrant_rc==SQLITE_MISUSE);
  CHECK(sqlite3_step(s)==SQLITE_DONE);CHECK(sqlite3_stmt_busy(s)==0);CHECK(sqlite3_data_count(s)==0);CHECK(sqlite3_reset(s)==SQLITE_OK);
  CHECK(sqlite3_bind_text(s,2,"again",5,SQLITE_STATIC)==SQLITE_OK);CHECK(g_destructors==2);CHECK(g_reentrant_rc==SQLITE_MISUSE);
- CHECK(sqlite3_bind_int(s,0,1)==SQLITE_RANGE);CHECK(sqlite3_bind_blob(s,3,blob,-1,SQLITE_STATIC)==SQLITE_MISUSE);CHECK(sqlite3_bind_zeroblob(s,3,-1)==SQLITE_MISUSE);CHECK(sqlite3_bind_zeroblob(s,3,2)==SQLITE_OK);CHECK(sqlite3_bind_null(s,4)==SQLITE_OK);
+ CHECK(sqlite3_bind_int(s,0,1)==SQLITE_RANGE);CHECK(sqlite3_bind_blob(s,3,blob,-1,SQLITE_STATIC)==SQLITE_MISUSE);CHECK(sqlite3_bind_zeroblob(s,3,-1)==SQLITE_OK);CHECK(sqlite3_bind_zeroblob(s,3,2)==SQLITE_OK);CHECK(sqlite3_bind_null(s,4)==SQLITE_OK);
  CHECK(sqlite3_clear_bindings(s)==SQLITE_OK);CHECK(sqlite3_step(s)==SQLITE_ROW);for(int i=0;i<4;i++)CHECK(sqlite3_column_type(s,i)==SQLITE_NULL);CHECK(sqlite3_finalize(s)==SQLITE_OK);CHECK(sqlite3_finalize(0)==SQLITE_OK);
  sqlite3_stmt*e=sqlite3_zig_phase12_fixture("error");CHECK(e!=0);CHECK(sqlite3_step(e)==SQLITE_CONSTRAINT_UNIQUE);CHECK(sqlite3_finalize(e)==SQLITE_CONSTRAINT_UNIQUE);
  CHECK(sqlite3_step(0)==SQLITE_MISUSE);CHECK(sqlite3_reset(0)==SQLITE_OK);
