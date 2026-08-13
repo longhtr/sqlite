@@ -250,6 +250,8 @@ comptime {
     _ = &statement.sqlite3_value_subtype;
     _ = &statement.sqlite3_value_dup;
     _ = &statement.sqlite3_value_free;
+    _ = &statement.sqlite3_vtab_in_first;
+    _ = &statement.sqlite3_vtab_in_next;
     _ = &statement.sqlite3_user_data;
     _ = &statement.sqlite3_context_db_handle;
     _ = &statement.sqlite3_aggregate_count;
@@ -339,8 +341,7 @@ comptime {
     _ = &sql_frontend.sqlite3_vtab_collation;
     _ = &sql_frontend.sqlite3_vtab_in;
     _ = &sql_frontend.sqlite3_vtab_rhs_value;
-    _ = &sql_frontend.sqlite3_vtab_in_first;
-    _ = &sql_frontend.sqlite3_vtab_in_next;
+
     _ = &sql_frontend.sqlite3_prepare;
     _ = &sql_frontend.sqlite3_prepare_v2;
     _ = &sql_frontend.sqlite3_prepare_v3;

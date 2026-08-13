@@ -243,6 +243,7 @@ test "source cursor last-page check requires every rightmost ancestor" {
     try cursor.ancestor_indices.append(std.testing.allocator, 2);
     try std.testing.expect(cursorOnLastPage(&cursor));
     cursor.page = &second_page;
+    cursor.info.size = 30;
     cursor.info.payload_offset = 7;
     cursor.info.payload_size = 23;
     cursor.info.key = 41;
@@ -659,6 +660,53 @@ pub fn accessPayloadChecked(cursor: *Cursor, offset: usize, buffer: []u8) Error!
     @memcpy(buffer, cell[offset..][0..buffer.len]);
 }
 
+pub fn readCursorPayload(cursor: *Cursor, offset: usize, buffer: []u8) Error!void {
+    try populateCursorCellInfo(cursor);
+    if (offset > cursor.info.payload_size or buffer.len > cursor.info.payload_size - offset) return error.Range;
+    const page = cursor.page.?;
+    const cell = page.cells.items[cursor.index];
+    const local_amount = if (offset < cursor.info.local_size) @min(buffer.len, cursor.info.local_size - offset) else 0;
+    if (local_amount != 0) {
+        const local_offset = cursor.info.payload_offset + offset;
+        if (local_offset > cell.len or local_amount > cell.len - local_offset) return error.Corrupt;
+        @memcpy(buffer[0..local_amount], cell[local_offset..][0..local_amount]);
+    }
+    if (local_amount == buffer.len) return;
+    if (cursor.info.size < 4 or cursor.info.size > cell.len) return error.Corrupt;
+    var overflow_number = readU32(cell[cursor.info.size - 4 ..]);
+    if (page.shared.usable_size <= 4) return error.Corrupt;
+    const payload_per_page = page.shared.usable_size - 4;
+    var overflow_offset = offset + local_amount - cursor.info.local_size;
+    while (overflow_offset >= payload_per_page) {
+        if (overflow_number == 0) return error.Corrupt;
+        const overflow = try getOverflowPage(page.shared, overflow_number, true);
+        overflow_number = overflow.next;
+        releasePageOne(overflow.page.?);
+        overflow_offset -= payload_per_page;
+    }
+    var copied = local_amount;
+    while (copied < buffer.len) {
+        if (overflow_number == 0) return error.Corrupt;
+        const overflow = try getOverflowPage(page.shared, overflow_number, true);
+        const overflow_page = overflow.page.?;
+        if (overflow_offset > payload_per_page or copied > buffer.len) {
+            releasePageOne(overflow_page);
+            return error.Corrupt;
+        }
+        const amount = @min(buffer.len - copied, payload_per_page - overflow_offset);
+        if (4 + overflow_offset > overflow_page.data.len or amount > overflow_page.data.len - 4 - overflow_offset) {
+            releasePageOne(overflow_page);
+            return error.Corrupt;
+        }
+        @memcpy(buffer[copied..][0..amount], overflow_page.data[4 + overflow_offset ..][0..amount]);
+        const next_overflow = overflow.next;
+        releasePageOne(overflow_page);
+        copied += amount;
+        overflow_offset = 0;
+        overflow_number = next_overflow;
+    }
+}
+
 fn moveToChild(cursor: *Cursor, page_number: u32) Error!void {
     const current = cursor.page orelse return error.NotFound;
     const child = try getPage(cursor.tree.shared, page_number, false);
@@ -720,6 +768,16 @@ fn moveToRoot(cursor: *Cursor) Error!void {
     cursor.index = 0;
     cursor.state = if (root.cells.items.len == 0 and root.children.items.len == 0) .invalid else .valid;
     if (cursor.state != .valid) return error.Empty;
+}
+
+fn populateCursorCellInfo(cursor: *Cursor) Error!void {
+    if (cursor.info.size != 0) return;
+    const page = cursor.page orelse return error.NotFound;
+    if (cursor.index >= page.cells.items.len) return error.Corrupt;
+    cursor.info = if (page.integer_key)
+        try parseTableLeafCell(page, page.cells.items[cursor.index])
+    else
+        try parseIndexCell(page, page.cells.items[cursor.index]);
 }
 
 /// Source `sqlite3BtreeFirst()`.
@@ -1194,9 +1252,10 @@ pub fn cursorIntegerKey(cursor: *const Cursor) u64 {
     return cursor.info.key;
 }
 
-/// Source `sqlite3BtreePayloadSize()` after CellInfo has been populated.
-pub fn cursorPayloadSize(cursor: *const Cursor) usize {
-    std.debug.assert(cursor.state == .valid);
+/// Source `sqlite3BtreePayloadSize()` with lazy CellInfo population.
+pub fn cursorPayloadSize(cursor: *Cursor) Error!usize {
+    if (cursor.state != .valid) return error.Abort;
+    try populateCursorCellInfo(cursor);
     return cursor.info.payload_size;
 }
 

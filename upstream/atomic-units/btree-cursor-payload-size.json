@@ -13,28 +13,28 @@
       "src/btree.c::function::sqlite3BtreePayloadSize::behavior::assert::line-4964-column-3::ordinal-0",
       "src/btree.c::function::sqlite3BtreePayloadSize::behavior::return::line-4966-column-3::ordinal-0"
     ],
-    "excluded_responsibilities": ["CellInfo lazy parsing", "Payload fetching", "Overflow traversal"]
+    "excluded_responsibilities": ["Pinned-C payload consumer trace", "Independent review"]
   },
-  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Caller-held cursor mutex and populated CellInfo"], "caller_closure": "The complete observation after CellInfo population is assigned; lazy getCellInfo integration remains open."},
+  "dependencies": {"atomic_unit_ids": [], "external_source_responsibilities": ["Caller-held cursor mutex and native page-cell storage"], "caller_closure": "The observation lazily parses current table/index CellInfo and is consumed by the public virtual-table ValueList iteration path."},
   "contracts": {
-    "inputs": ["Valid Cursor under B-tree mutex with CellInfo populated"],
+    "inputs": ["Valid Cursor under B-tree mutex with current page/cell storage"],
     "outputs": ["Current entry payload byte count"],
-    "ownership": "Borrowed Cursor; no allocation or mutation.",
+    "ownership": "Borrowed Cursor; lazy parsing mutates only its cached CellInfo.",
     "state_and_results": "Returns CellInfo.payload_size exactly for table data or index key payload.",
     "locks_callbacks_io": "Caller holds cursor mutex; no callbacks or I/O.",
-    "failure_and_continuation": "Invalid/unpopulated cursor violates source/model precondition."
+    "failure_and_continuation": "Invalid or malformed current cells return a typed local error before a payload consumer reads bytes."
   },
   "mappings": [{"source_entity_id": "src/btree.c::function::sqlite3BtreePayloadSize::line-4962", "relation": "source-current-cell-payload-byte-count", "zig_declaration_ids": ["src/core/internal/btree_core.zig::function::cursorPayloadSize"]}],
-  "representation_differences": ["The Zig owner requires CellInfo already populated instead of invoking a lazy getCellInfo macro path; that integration remains explicit."],
+  "representation_differences": ["The Zig owner returns its bounded typed error set while source relies on valid-cursor assertions and database corruption propagation around getCellInfo()."],
   "oracle": {"protocol": "Populate a valid cursor CellInfo with payload size 23 and compare exact result.", "internal_observations": ["cursor valid state", "CellInfo.payload_size", "returned size"], "normalization": "Payload bytes are exact."},
   "assurance": {
     "source_context_reviewed": true, "source_translated": true, "internal_trace_equivalent": false, "subsystem_integrated": false,
     "oom": "No allocation; lazy parse allocation is not part of this body.", "io_crash_concurrency": "No I/O; caller mutex external.", "malformed_input": "Invalid or stale CellInfo violates precondition.", "continuation": "Pure observation leaves cursor state unchanged.", "performance": "Constant time after CellInfo population.",
     "commands": ["zig build btree-differential", "zig build test"]
   },
-  "integration": {"production_owner": "src/core/internal/btree_core.zig cursor CellInfo owner", "native_call_path": "Typed observation and nonzero trace exist; lazy CellInfo population/callers remain pending.", "bounded_owner_retired": "No."},
+  "integration": {"production_owner": "src/core/internal/btree_core.zig cursor CellInfo owner", "native_call_path": "Public virtual-table IN iteration reaches lazy table/index CellInfo and native local/overflow payload reads.", "bounded_owner_retired": "Yes. The populated-CellInfo-only substitute is retired."},
   "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires lazy CellInfo/caller integration, pinned-C trace, assurance closure, and independent review."},
-  "known_blockers": ["Connect source-shaped lazy getCellInfo.", "Connect payload consumers.", "Add table/index pinned-C trace.", "Independent fidelity review remains open."],
+  "known_blockers": ["Add table/index pinned-C trace.", "Independent fidelity review remains open."],
   "context_review": {
     "implementation_spans": ["upstream/sqlite/src/btree.c:4953-4967 was reviewed completely", "src/core/internal/btree_core.zig CellInfo parse and cursor state owners were reviewed"],
     "callers": ["VDBE payload reads, incremental blob, and ValueList paths", "Unit trace invokes the owner directly"],

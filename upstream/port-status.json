@@ -94,7 +94,7 @@
     "utf_active_entities_differentially_checked": 13,
     "vdbe_opcode_coverage_warning": "A mapped case proves name-level runtime presence only, not complete SQLite semantics or fidelity.",
     "vlist_entities_differentially_checked": 0,
-    "zig_source_lines": 92550
+    "zig_source_lines": 92778
   },
   "overall_status": "incomplete-control-revalidation-and-source-port",
   "public_api": {
@@ -133,15 +133,15 @@
   ],
   "schema_version": 3,
   "source": {
-    "active_entities_context_reviewed_or_later": 2310,
+    "active_entities_context_reviewed_or_later": 2312,
     "active_entities_initially_classified": 6752,
     "active_entities_inventoried": 0,
-    "active_entities_unmapped": 3712,
+    "active_entities_unmapped": 3710,
     "active_entities_with_legacy_candidates": 730,
     "active_profile_entities": 6752,
     "active_source_files": 85,
     "ast_resolved_legacy_target_references": 422,
-    "ast_resolved_reviewed_target_references": 2097,
+    "ast_resolved_reviewed_target_references": 2099,
     "atomic_unit_dossiers_admission_ready": 149,
     "atomic_unit_dossiers_total": 149,
     "atomic_units_assurance_passed": 0,
@@ -155,7 +155,7 @@
         "active": 2588,
         "inventoried": 0,
         "legacy_candidates": 548,
-        "reviewed": 698
+        "reviewed": 700
       },
       "macro": {
         "active": 1484,
@@ -199,15 +199,15 @@
     "mapping_status": "working-classification-with-inventoried-unpromoted-atomic-units",
     "mapping_warning": "Inventoried mappings, AST resolution, and legacy candidates are planning facts only, not semantic review, promotion, or fidelity evidence.",
     "reviewed_coverage_is_completion_metric": false,
-    "reviewed_coverage_percent": 34.21,
+    "reviewed_coverage_percent": 34.24,
     "source_dependency_file_units": 85,
     "unresolved_legacy_target_references": 400,
-    "zig_declaration_inventory": 13707
+    "zig_declaration_inventory": 13723
   },
   "translation_tracking": {
-    "active_batch_entries": 63,
+    "active_batch_entries": 65,
     "active_batch_schema": 2,
-    "active_batch_short_functions": 27,
+    "active_batch_short_functions": 29,
     "active_batch_status": "active",
     "active_batch_substantive_functions": 36,
     "checkpoint_ledger": "upstream/port-checkpoints.json",

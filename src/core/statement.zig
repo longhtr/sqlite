@@ -3,11 +3,13 @@
 //! are migration paths, not the final Zig-native public surface.
 
 const std = @import("std");
+const builtin = @import("builtin");
 pub const vdbe = @import("vdbe.zig");
 const ResultCode = @import("result_code.zig").ResultCode;
 pub const public_api = @import("public_api.zig");
 const tokenizer = @import("tokenizer.zig");
 const vdbe_mem = @import("internal/vdbe_mem.zig");
+const vdbe_api = @import("internal/vdbe_api.zig");
 const collation = @import("internal/collation.zig");
 const vdbe_types = vdbe_mem.types;
 pub const sqlite3_stmt = opaque {};
@@ -397,11 +399,15 @@ pub export fn sqlite3_value_double(pointer: ?*const sqlite3_value) callconv(.c) 
 pub export fn sqlite3_value_text(pointer: ?*const sqlite3_value) callconv(.c) ?[*:0]const u8 {
     return if (vdbe_mem.valueText(asValue(pointer), 1)) |text| @ptrCast(text) else null;
 }
+fn nativeUtf16Encoding() u8 {
+    return if (builtin.target.cpu.arch.endian() == .little) 2 else 3;
+}
+
 pub export fn sqlite3_value_text16(pointer: ?*const sqlite3_value) callconv(.c) ?*const anyopaque {
-    return if (vdbe_mem.valueText(asValue(pointer), 2)) |text| @ptrCast(text) else null;
+    return if (vdbe_mem.valueText(asValue(pointer), nativeUtf16Encoding())) |text| @ptrCast(text) else null;
 }
 pub export fn sqlite3_value_text16le(pointer: ?*const sqlite3_value) callconv(.c) ?*const anyopaque {
-    return sqlite3_value_text16(pointer);
+    return if (vdbe_mem.valueText(asValue(pointer), 2)) |text| @ptrCast(text) else null;
 }
 pub export fn sqlite3_value_text16be(pointer: ?*const sqlite3_value) callconv(.c) ?*const anyopaque {
     return if (vdbe_mem.valueText(asValue(pointer), 3)) |text| @ptrCast(text) else null;
@@ -438,6 +444,20 @@ pub export fn sqlite3_value_dup(pointer: ?*const sqlite3_value) callconv(.c) ?*s
 }
 pub export fn sqlite3_value_free(pointer: ?*sqlite3_value) callconv(.c) void {
     vdbe_mem.valueFree(if (pointer) |value| @ptrCast(@alignCast(value)) else null);
+}
+
+/// Source `sqlite3_vtab_in_first()`: position and decode the protected
+/// planner-created ValueList iterator.
+pub export fn sqlite3_vtab_in_first(input: ?*sqlite3_value, output: ?*?*sqlite3_value) callconv(.c) c_int {
+    const result = output orelse return ResultCode.misuse.toC();
+    return vdbe_api.valueListFirst(asValue(input), @ptrCast(@alignCast(result)));
+}
+
+/// Source `sqlite3_vtab_in_next()`: advance and decode the protected ValueList
+/// iterator while preserving DONE and storage errors.
+pub export fn sqlite3_vtab_in_next(input: ?*sqlite3_value, output: ?*?*sqlite3_value) callconv(.c) c_int {
+    const result = output orelse return ResultCode.misuse.toC();
+    return vdbe_api.valueListNext(asValue(input), @ptrCast(@alignCast(result)));
 }
 
 fn ownership(destructor: Destructor) vdbe_mem.StringOwnership {
@@ -638,7 +658,9 @@ pub export fn sqlite3_user_data(pointer: ?*sqlite3_context) callconv(.c) ?*anyop
     return vdbe_mem.userData(asContext(pointer) orelse return null);
 }
 pub export fn sqlite3_context_db_handle(pointer: ?*sqlite3_context) callconv(.c) ?*anyopaque {
-    return definitionFromContext(asContext(pointer) orelse return null).database;
+    const context = asContext(pointer) orelse return null;
+    if (vdbe_mem.contextDatabase(context)) |database| return @ptrCast(database);
+    return definitionFromContext(context).database;
 }
 pub export fn sqlite3_aggregate_count(pointer: ?*sqlite3_context) callconv(.c) c_int {
     return vdbe_mem.aggregateCount(asContext(pointer) orelse return 0);
@@ -690,14 +712,22 @@ pub export fn sqlite3_result_text(pointer: ?*sqlite3_context, input: ?[*:0]const
     };
     vdbe_mem.resultText(context, input, length, ownership(destructor));
 }
+fn resultText16(pointer: ?*sqlite3_context, input: ?*const anyopaque, length: c_int, destructor: Destructor, encoding: u8) void {
+    const context = asContext(pointer) orelse {
+        if (input != null) invokeRejectedDestructor(destructor, @constCast(input));
+        return;
+    };
+    vdbe_mem.resultText16(context, if (input) |value| @ptrCast(value) else null, length, encoding, ownership(destructor));
+}
+
 pub export fn sqlite3_result_text16(pointer: ?*sqlite3_context, input: ?*const anyopaque, length: c_int, destructor: Destructor) callconv(.c) void {
-    if (asContext(pointer)) |context| vdbe_mem.resultText16(context, if (input) |value| @ptrCast(value) else null, length, 2, ownership(destructor));
+    resultText16(pointer, input, length, destructor, nativeUtf16Encoding());
 }
 pub export fn sqlite3_result_text16le(pointer: ?*sqlite3_context, input: ?*const anyopaque, length: c_int, destructor: Destructor) callconv(.c) void {
-    sqlite3_result_text16(pointer, input, length, destructor);
+    resultText16(pointer, input, length, destructor, 2);
 }
 pub export fn sqlite3_result_text16be(pointer: ?*sqlite3_context, input: ?*const anyopaque, length: c_int, destructor: Destructor) callconv(.c) void {
-    if (asContext(pointer)) |context| vdbe_mem.resultText16(context, if (input) |value| @ptrCast(value) else null, length, 3, ownership(destructor));
+    resultText16(pointer, input, length, destructor, 3);
 }
 
 pub export fn sqlite3_result_text64(pointer: ?*sqlite3_context, input: ?[*:0]const u8, length: u64, destructor: Destructor, encoding: u8) callconv(.c) void {

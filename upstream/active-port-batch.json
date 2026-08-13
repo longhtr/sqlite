@@ -573,6 +573,24 @@
       "atomic_unit_id": "sql-completeness-state-machine",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_vtab_in_first::line-1093",
+      "source_sha256": "4d1d4a2e5068bf95038df0d7027d127a01f9a6ca6aa5547f1f0719f392bf8690",
+      "zig_declaration_id": "src/core/statement.zig::function::sqlite3_vtab_in_first",
+      "zig_declaration_sha256": "00157d059e62986f2da6db8e7872b00cd23c67b9a0c6a04aeda82f8eef512f32",
+      "atomic_unit_id": "vdbe-virtual-table-value-list-iteration",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_vtab_in_next::line-1101",
+      "source_sha256": "6a7567d9e91272837726d32479884165446f905214f13e4b942226f129eac33b",
+      "zig_declaration_id": "src/core/statement.zig::function::sqlite3_vtab_in_next",
+      "zig_declaration_sha256": "07f1ac1f075f698f15667e7328d6b069a845a1d6c26ac29662c43ddf39846d1e",
+      "atomic_unit_id": "vdbe-virtual-table-value-list-iteration",
+      "class": "short",
+      "complete": true
     }
   ]
 }

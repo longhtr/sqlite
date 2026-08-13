@@ -7,7 +7,11 @@
   "scope": {
     "rationale": "valueFromValueList is the protected source boundary behind sqlite3_vtab_in_first/next: it rejects forged values, positions a Btree cursor, decodes a one-column record into reusable Mem output, and stabilizes ephemeral payloads.",
     "source_files": [{"path": "src/vdbeapi.c", "sha256": "233846129dc649ec3d1ae321612ee8833c937ee775766eb8e39deda07a6b19a6"}],
-    "source_entity_ids": ["src/vdbeapi.c::function::valueFromValueList::line-1038"],
+    "source_entity_ids": [
+      "src/vdbeapi.c::function::valueFromValueList::line-1038",
+      "src/vdbeapi.c::function::sqlite3_vtab_in_first::line-1093",
+      "src/vdbeapi.c::function::sqlite3_vtab_in_next::line-1101"
+    ],
     "behavioral_block_ids": [
       "src/vdbeapi.c::function::valueFromValueList::behavior::if::line-1047-column-3::ordinal-0",
       "src/vdbeapi.c::function::valueFromValueList::behavior::return::line-1047-column-17::ordinal-0",
@@ -23,12 +27,14 @@
       "src/vdbeapi.c::function::valueFromValueList::behavior::if::line-1071-column-5::ordinal-0",
       "src/vdbeapi.c::function::valueFromValueList::behavior::conditional::line-1075-column-22::ordinal-0",
       "src/vdbeapi.c::function::valueFromValueList::behavior::if::line-1078-column-7::ordinal-0",
-      "src/vdbeapi.c::function::valueFromValueList::behavior::return::line-1086-column-3::ordinal-0"
+      "src/vdbeapi.c::function::valueFromValueList::behavior::return::line-1086-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_vtab_in_first::behavior::return::line-1094-column-3::ordinal-0",
+      "src/vdbeapi.c::function::sqlite3_vtab_in_next::behavior::return::line-1102-column-3::ordinal-0"
     ],
-    "excluded_responsibilities": ["ValueList construction in virtual-table IN planning", "Public sqlite3_vtab_in_first/next wrappers", "Concrete source-layout Btree cursor and pager ownership"]
+    "excluded_responsibilities": ["ValueList construction in virtual-table IN planning", "Pinned-C end-to-end planner-produced IN iteration differential"]
   },
   "dependencies": {
-    "atomic_unit_ids": ["vdbe-record-serial-type-length-and-value-decode", "vdbe-unpacked-record-allocation-and-decode", "vdbe-statement-metadata-columns-bindings-and-vlist"],
+    "atomic_unit_ids": ["btree-cursor-payload-size", "vdbe-record-serial-type-length-and-value-decode", "vdbe-unpacked-record-allocation-and-decode", "vdbe-statement-metadata-columns-bindings-and-vlist"],
     "external_source_responsibilities": ["sqlite3BtreeFirst/Next/Eof/PayloadSize and sqlite3VdbeMemFromBtreeZeroOffset over the exact source-layout cursor"],
     "caller_closure": "The complete private iterator body is assigned. Named cursor operations preserve the exact Btree boundary until native source-layout Btree integration."
   },
@@ -40,13 +46,25 @@
     "locks_callbacks_io": "Caller owns required connection/Btree locks. Cursor operations may read Btree payload; this unit performs no direct VFS calls.",
     "failure_and_continuation": "Forged values are rejected without dereference. Cursor/read/OOM errors leave output null and release temporary record ownership. DONE permits normal iteration completion."
   },
-  "mappings": [{
-    "source_entity_id": "src/vdbeapi.c::function::valueFromValueList::line-1038",
-    "relation": "source-protected-value-list-iterator-to-native-operation",
-    "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::valueFromValueList"]
-  }],
+  "mappings": [
+    {
+      "source_entity_id": "src/vdbeapi.c::function::valueFromValueList::line-1038",
+      "relation": "source-protected-value-list-iterator-to-native-operation",
+      "zig_declaration_ids": ["src/core/internal/vdbe_api.zig::function::valueFromValueList"]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_vtab_in_first::line-1093",
+      "relation": "source-public-value-list-first-wrapper-to-native-statement-export",
+      "zig_declaration_ids": ["src/core/statement.zig::function::sqlite3_vtab_in_first"]
+    },
+    {
+      "source_entity_id": "src/vdbeapi.c::function::sqlite3_vtab_in_next::line-1101",
+      "relation": "source-public-value-list-next-wrapper-to-native-statement-export",
+      "zig_declaration_ids": ["src/core/statement.zig::function::sqlite3_vtab_in_next"]
+    }
+  ],
   "representation_differences": [
-    "Five source Btree/Mem-from-payload calls are grouped into a named ValueListCursorOperations value until the exact cursor owner is connected.",
+    "Source Btree calls are grouped into a typed ValueListCursorOperations value backed by the production native Btree cursor and payload owner.",
     "The private destructor identity remains the source-shaped vdbe_mem.valueListFree function pointer rather than a public tag."
   ],
   "oracle": {
@@ -68,11 +86,11 @@
   },
   "integration": {
     "production_owner": "src/core/internal/vdbe_api.zig source-layout virtual-table value API layer",
-    "native_call_path": "The protected iterator and native unit path are implemented; concrete Btree and exported wrapper integration remain pending.",
-    "bounded_owner_retired": "No. The bounded frontend retains separate sqlite3_vtab_in_first/next behavior."
+    "native_call_path": "Public statement exports invoke the protected iterator through production native Btree first/next/EOF, lazy CellInfo, and local/overflow payload reads.",
+    "bounded_owner_retired": "Yes. The frontend's unconditional ERROR substitutes were removed."
   },
   "independent_review": {"status": "pending", "reviewer": null, "review_commit": null, "notes": "Requires pinned-C/Btree trace, wrapper integration, assurance closure, and independent review."},
-  "known_blockers": ["Connect exact source-layout Btree cursor operations and virtual-table IN construction.", "Port/export sqlite3_vtab_in_first/next against source-layout Mem.", "Add pinned-C malformed/OOM/iteration trace.", "Independent fidelity review remains open."],
+  "known_blockers": ["Connect planner-produced ValueList construction to ordinary virtual-table IN scans.", "Add pinned-C malformed/OOM/iteration trace.", "Independent fidelity review remains open."],
   "context_review": {
     "implementation_spans": [
       "upstream/sqlite/src/vdbeapi.c:1020-1107 was reviewed completely for private destructor identity, ValueList validation, cursor first/next/EOF flow, payload ownership, record decode, encoding, ephemeral stabilization, and wrappers",

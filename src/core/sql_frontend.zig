@@ -1937,14 +1937,6 @@ pub export fn sqlite3_vtab_rhs_value(pointer: ?*IndexInfo, constraint: c_int, ou
     const context = planningContext(pointer) orelse return ResultCode.misuse.toC();
     return planningRhsValue(context, constraint, value);
 }
-pub export fn sqlite3_vtab_in_first(input: ?*statement.sqlite3_value, output: ?*?*statement.sqlite3_value) callconv(.c) c_int {
-    if (output) |value| value.* = null;
-    return if (input == null) ResultCode.misuse.toC() else ResultCode.error_.toC();
-}
-pub export fn sqlite3_vtab_in_next(input: ?*statement.sqlite3_value, output: ?*?*statement.sqlite3_value) callconv(.c) c_int {
-    if (output) |value| value.* = null;
-    return if (input == null) ResultCode.misuse.toC() else ResultCode.error_.toC();
-}
 
 pub export fn sqlite3_create_module_v2(pointer: ?*sqlite3, name_pointer: ?[*:0]const u8, module: ?*const anyopaque, auxiliary: ?*anyopaque, destroy_callback: ?*const fn (?*anyopaque) callconv(.c) void) callconv(.c) c_int {
     const connection = asConnection(pointer) orelse {

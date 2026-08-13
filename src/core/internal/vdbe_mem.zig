@@ -1264,18 +1264,25 @@ pub fn resultText64(context: *types.Context, source: ?[*]const u8, length_argume
     _ = zeroTerminateIfAble(context.pOut.?);
 }
 
+/// Source UTF-16 result setters, including even-byte truncation before the
+/// shared result conversion and limit path.
 pub fn resultText16(context: *types.Context, source: ?[*]const u8, length: c_int, encoding: u8, ownership: StringOwnership) void {
     setResultStrOrError(context, source, length & ~@as(c_int, 1), encoding, ownership);
 }
 
+/// Source `sqlite3_result_error()`: copy a UTF-8 error value and publish its
+/// positive SQLITE_ERROR code through the function context.
 pub fn resultError(context: *types.Context, source: ?[*]const u8, length: c_int) void {
     context.isError = 1;
     _ = setStr(context.pOut.?, source, length, 1, .transient);
 }
 
+/// Source `sqlite3_result_error16()`: copy a native UTF-16 error value and
+/// publish SQLITE_ERROR through the function context.
 pub fn resultError16(context: *types.Context, source: ?[*]const u8, length: c_int) void {
     context.isError = 1;
-    _ = setStr(context.pOut.?, source, length, 2, .transient);
+    const native_encoding: u8 = if (@import("builtin").target.cpu.arch.endian() == .little) 2 else 3;
+    _ = setStr(context.pOut.?, source, length, native_encoding, .transient);
 }
 
 pub fn resultPointer(
@@ -1290,10 +1297,12 @@ pub fn resultPointer(
     setPointer(output, pointer, pointer_type, destructor);
 }
 
+/// Source `sqlite3_user_data()`.
 pub fn userData(context: *types.Context) ?*anyopaque {
     return context.pFunc.?.pUserData;
 }
 
+/// Source `sqlite3_context_db_handle()`.
 pub fn contextDatabase(context: *types.Context) ?*types.Sqlite3 {
     return context.pOut.?.db;
 }
@@ -1322,6 +1331,7 @@ pub fn aggregateContext(context: *types.Context, byte_count: c_int) ?*anyopaque 
     return if (context.pMem.?.z) |pointer| @ptrCast(pointer) else null;
 }
 
+/// Source deprecated `sqlite3_aggregate_count()`.
 pub fn aggregateCount(context: *types.Context) c_int {
     return context.pMem.?.n;
 }
@@ -1413,6 +1423,8 @@ pub fn errorString(code_argument: c_int) [:0]const u8 {
     };
 }
 
+/// Source `sqlite3_result_error_code()`: retain the requested positive result
+/// code and ensure an error text value exists.
 pub fn resultErrorCode(context: *types.Context, code: c_int) void {
     context.isError = if (code != 0) code else -1;
     if (context.pOut.?.flags & types.mem_flag.null_ != 0) {
@@ -1421,6 +1433,7 @@ pub fn resultErrorCode(context: *types.Context, code: c_int) void {
     }
 }
 
+/// Source `sqlite3_result_error_toobig()`.
 pub fn resultErrorTooBig(context: *types.Context) void {
     context.isError = 18;
     _ = setStr(context.pOut.?, "string or blob too big", -1, 1, .static);
@@ -1431,6 +1444,7 @@ pub fn valueListFree(pointer: ?*anyopaque) callconv(.c) void {
     if (pointer) |value| memory.processManager().free(value);
 }
 
+/// Source `sqlite3_result_error_nomem()`.
 pub fn resultErrorNoMem(context: *types.Context) void {
     setNull(context.pOut.?);
     context.isError = 7;
@@ -1445,18 +1459,22 @@ pub fn resultIntReal(context: *types.Context) void {
     }
 }
 
+/// Source `sqlite3_result_double()`.
 pub fn resultDouble(context: *types.Context, value: f64) void {
     setDouble(context.pOut.?, value);
 }
 
+/// Source `sqlite3_result_int()`.
 pub fn resultInt(context: *types.Context, value: c_int) void {
     setInt64(context.pOut.?, value);
 }
 
+/// Source `sqlite3_result_int64()`.
 pub fn resultInt64(context: *types.Context, value: i64) void {
     setInt64(context.pOut.?, value);
 }
 
+/// Source `sqlite3_result_null()`.
 pub fn resultNull(context: *types.Context) void {
     setNull(context.pOut.?);
 }
@@ -1488,10 +1506,13 @@ pub fn resultZeroBlob64(context: *types.Context, length: u64) c_int {
     return 0;
 }
 
+/// Source `sqlite3_result_zeroblob()`; the Mem setter clamps negative lengths.
 pub fn resultZeroBlob(context: *types.Context, length: c_int) void {
     _ = resultZeroBlob64(context, @intCast(@max(length, 0)));
 }
 
+/// Source `sqlite3_value_blob()` including zero-blob expansion and NULL/empty
+/// pointer behavior.
 pub fn valueBlob(value: *types.Mem) ?[*]const u8 {
     if (value.flags & (types.mem_flag.blob | types.mem_flag.string) != 0) {
         if (value.flags & types.mem_flag.zero != 0 and expandBlob(value) != 0) return null;
@@ -1501,22 +1522,28 @@ pub fn valueBlob(value: *types.Mem) ?[*]const u8 {
     return valueText(value, 1);
 }
 
+/// Source `sqlite3_value_double()`.
 pub fn valueDouble(value: *types.Mem) f64 {
     return realValue(value);
 }
 
+/// Source `sqlite3_value_int()`.
 pub fn valueInt(value: *types.Mem) c_int {
     return @truncate(intValue(value));
 }
 
+/// Source `sqlite3_value_int64()`.
 pub fn valueInt64(value: *types.Mem) i64 {
     return intValue(value);
 }
 
+/// Source `sqlite3_value_subtype()`.
 pub fn valueSubtype(value: *types.Mem) c_uint {
     return if (value.flags & types.mem_flag.subtype != 0) value.eSubtype else 0;
 }
 
+/// Source `sqlite3_value_pointer()`; only the pointer subtype and exact type
+/// tag reveal the otherwise SQL-NULL payload.
 pub fn valuePointer(value: *types.Mem, pointer_type: ?[*:0]const u8) ?*anyopaque {
     const requested = pointer_type orelse return null;
     if (value.flags & (types.mem_flag.type_mask | types.mem_flag.terminated | types.mem_flag.subtype) ==
@@ -1529,6 +1556,7 @@ pub fn valuePointer(value: *types.Mem, pointer_type: ?[*:0]const u8) ?*anyopaque
     return null;
 }
 
+/// Source UTF text value accessors after selecting the requested encoding.
 pub fn valueText(value_optional: ?*types.Mem, encoding: u8) ?[*]const u8 {
     const value = value_optional orelse return null;
     if (value.flags & (types.mem_flag.string | types.mem_flag.terminated) ==
@@ -1540,6 +1568,7 @@ pub fn valueText(value_optional: ?*types.Mem, encoding: u8) ?[*]const u8 {
     return valueToText(value, encoding);
 }
 
+/// Source `sqlite3_value_type()` storage-class projection.
 pub fn valueType(value: *const types.Mem) c_int {
     if (value.flags & types.mem_flag.null_ != 0) return 5;
     if (value.flags & (types.mem_flag.real | types.mem_flag.integer_real) != 0) return 2;
@@ -1548,6 +1577,7 @@ pub fn valueType(value: *const types.Mem) c_int {
     return 4;
 }
 
+/// Source `sqlite3_value_encoding()` with UTF-8 fallback for non-strings.
 pub fn valueEncoding(value: *const types.Mem) c_int {
     return value.enc;
 }
@@ -1566,10 +1596,12 @@ pub fn utf16To8(db: *types.Sqlite3, source: *const anyopaque, byte_count: c_int,
     return if (value.z) |text| @ptrCast(text) else null;
 }
 
+/// Source `sqlite3_value_nochange()`.
 pub fn valueNoChange(value: *const types.Mem) bool {
     return value.flags & (types.mem_flag.null_ | types.mem_flag.zero) == (types.mem_flag.null_ | types.mem_flag.zero);
 }
 
+/// Source `sqlite3_value_frombind()`.
 pub fn valueFromBind(value: *const types.Mem) bool {
     return value.flags & types.mem_flag.from_bind != 0;
 }
@@ -1805,6 +1837,7 @@ pub fn valueSetStr(value: ?*types.Mem, length: c_int, source: ?[*]const u8, enco
     if (value) |mem| _ = setStr(mem, source, length, encoding, ownership);
 }
 
+/// Source `sqlite3_value_free()`.
 pub fn valueFree(value: ?*types.Mem) void {
     const mem = value orelse return;
     release(mem);
@@ -1815,6 +1848,7 @@ fn valueBytesSlow(value: *types.Mem, encoding: u8) c_int {
     return if (valueToText(value, encoding) != null) value.n else 0;
 }
 
+/// Source UTF-8/UTF-16 byte-count accessors after value conversion.
 pub fn valueBytes(value: *types.Mem, encoding: u8) c_int {
     std.debug.assert(encoding >= 1 and encoding <= 3);
     if (value.flags & types.mem_flag.string != 0 and value.enc == encoding) return @max(value.n, 0);

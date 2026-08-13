@@ -6,6 +6,7 @@ const global = @import("../global.zig");
 const public_api = @import("../public_api.zig");
 const varint = @import("../varint.zig");
 const db_allocator = @import("db_allocator.zig");
+const btree_core = @import("btree_core.zig");
 const error_state = @import("error_state.zig");
 const vdbe_aux = @import("vdbe_aux.zig");
 const vdbe_mem = @import("vdbe_mem.zig");
@@ -98,6 +99,117 @@ pub const ValueListCursorOperations = struct {
     payload_size: *const fn (*types.BtCursor) u32,
     payload_to_mem: *const fn (*types.BtCursor, u32, *types.Mem) c_int,
 };
+
+fn btreeFailureResult(failure: btree_core.Error) c_int {
+    return switch (failure) {
+        error.NoMemory => result_no_memory,
+        error.Abort => 4,
+        error.Locked => 6,
+        error.ReadOnly => 8,
+        error.Corrupt, error.Empty, error.NotFound, error.Range => 11,
+    };
+}
+
+fn valueListCursorFirst(cursor: *types.BtCursor, empty: *c_int) c_int {
+    const native: *btree_core.Cursor = @ptrCast(@alignCast(cursor));
+    const is_empty = btree_core.first(native) catch |failure| return btreeFailureResult(failure);
+    empty.* = @intFromBool(is_empty);
+    return 0;
+}
+
+fn valueListCursorNext(cursor: *types.BtCursor, _: c_int) c_int {
+    const native: *btree_core.Cursor = @ptrCast(@alignCast(cursor));
+    const done = btree_core.next(native) catch |failure| return btreeFailureResult(failure);
+    return if (done) result_done else 0;
+}
+
+fn valueListEof(cursor: *types.BtCursor) bool {
+    const native: *btree_core.Cursor = @ptrCast(@alignCast(cursor));
+    return native.state != .valid;
+}
+
+fn valueListPayloadSize(cursor: *types.BtCursor) u32 {
+    const native: *btree_core.Cursor = @ptrCast(@alignCast(cursor));
+    const size = btree_core.cursorPayloadSize(native) catch return 0;
+    return @intCast(@min(size, std.math.maxInt(u32)));
+}
+
+fn valueListPayloadToMem(cursor: *types.BtCursor, size: u32, output: *types.Mem) c_int {
+    const native: *btree_core.Cursor = @ptrCast(@alignCast(cursor));
+    if (size == 0) return result_error;
+    if (size > std.math.maxInt(c_int)) return result_no_memory;
+    vdbe_mem.release(output);
+    const allocation = db_allocator.mallocRaw(output.db, @max(size, 1)) orelse return result_no_memory;
+    output.zMalloc = @ptrCast(allocation);
+    output.z = output.zMalloc;
+    output.szMalloc = @intCast(db_allocator.allocationSize(output.db, allocation));
+    output.n = @intCast(size);
+    output.enc = 1;
+    output.flags = types.mem_flag.blob;
+    btree_core.readCursorPayload(native, 0, output.z.?[0..size]) catch |failure| {
+        vdbe_mem.release(output);
+        return btreeFailureResult(failure);
+    };
+    return 0;
+}
+
+pub fn productionValueListCursorOperations() ValueListCursorOperations {
+    return .{
+        .first = valueListCursorFirst,
+        .next = valueListCursorNext,
+        .eof = valueListEof,
+        .payload_size = valueListPayloadSize,
+        .payload_to_mem = valueListPayloadToMem,
+    };
+}
+
+pub fn valueListFirst(value: ?*types.Mem, output: *?*types.Mem) c_int {
+    return valueFromValueList(value, output, false, productionValueListCursorOperations());
+}
+
+pub fn valueListNext(value: ?*types.Mem, output: *?*types.Mem) c_int {
+    return valueFromValueList(value, output, true, productionValueListCursorOperations());
+}
+
+test "production ValueList cursor operations decode native Btree records" {
+    var shared = btree_core.Shared.init(std.testing.allocator);
+    defer shared.deinit();
+    var tree = btree_core.Btree{ .shared = &shared, .transaction = .read };
+    const page_data = try std.testing.allocator.alloc(u8, 4096);
+    @memset(page_data, 0);
+    const page = try btree_core.pageFromData(&shared, 2, page_data);
+    page.initialized = true;
+    page.leaf = true;
+    page.integer_key = false;
+    page.min_local = 8;
+    page.max_local = 100;
+    const cell = try std.testing.allocator.dupe(u8, &[_]u8{ 3, 2, 1, 42 });
+    try page.cells.append(std.testing.allocator, cell);
+    shared.database_pages = 2;
+    const cursor = try btree_core.createCursor(&tree, 2, false);
+    defer btree_core.closeCursor(cursor);
+
+    var output_mem = std.mem.zeroes(types.Mem);
+    var connection = std.mem.zeroes(types.Sqlite3);
+    connection.enc = 1;
+    vdbe_mem.init(&output_mem, &connection, types.mem_flag.null_);
+    defer vdbe_mem.release(&output_mem);
+    var list = types.ValueList{ .pCsr = @ptrCast(cursor), .pOut = &output_mem };
+    var protected = std.mem.zeroes(types.Mem);
+    protected.flags = types.mem_flag.null_ | types.mem_flag.terminated | types.mem_flag.subtype | types.mem_flag.dynamic;
+    protected.eSubtype = 'p';
+    protected.u.zPType = "ValueList";
+    protected.z = @ptrCast(&list);
+    protected.xDel = vdbe_mem.valueListFree;
+    var output: ?*types.Mem = null;
+    try std.testing.expectEqual(@as(c_int, 0), valueListFirst(&protected, &output));
+    try std.testing.expect(output == &output_mem);
+    try std.testing.expectEqual(types.mem_flag.integer, output_mem.flags);
+    try std.testing.expectEqual(@as(i64, 42), output_mem.u.i);
+    try std.testing.expectEqual(result_done, valueListNext(&protected, &output));
+    try std.testing.expect(output == null);
+    protected.xDel = null;
+}
 
 /// Source `valueFromValueList()`: validate the protected ValueList marker,
 /// advance its Btree cursor, decode the single-column record, and stabilize
