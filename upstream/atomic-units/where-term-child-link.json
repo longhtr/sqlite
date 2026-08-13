@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "where-term-child-link",
+  "title": "WHERE term child link",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "WHERE analysis now has the source helper that links a derived term to its parent and inherits truth probability.",
+    "source_files": [{"path":"src/whereexpr.c","sha256":"a6dc7d0fe5e325f3a028882251c38be07d7e779ec6d222e58eb7d0568827d309"}],
+    "source_entity_ids": ["src/whereexpr.c::function::markTermAsChild::line-515"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Derived-term construction", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["WHERE clause term storage"],"caller_closure":"The complete parent/child metadata operation is translated."},
+  "contracts": {"inputs":["WHERE clause and child/parent indices"],"outputs":["Child parent index/probability set; parent child count incremented"],"ownership":"Borrows clause terms.","state_and_results":"Asserts child-count capacity before increment.","locks_callbacks_io":"No locks or I/O.","failure_and_continuation":"No allocation or failure."},
+  "mappings": [{"source_entity_id":"src/whereexpr.c::function::markTermAsChild::line-515","relation":"where-derived-term-parent-link","zig_declaration_ids":["src/core/internal/where_planner.zig::function::markTermAsChild"]}],
+  "representation_differences": ["Typed terms slice and u8 maximum replace C array and UMXV macro."],
+  "oracle": {"protocol":"Link terms with distinct initial probability/count values.","internal_observations":["parent index", "inherited truth probability", "one child-count increment"],"normalization":"Exact field comparison."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"No allocation.","io_crash_concurrency":"No I/O or concurrency.","malformed_input":"Indices and child-count capacity are source invariants.","continuation":"Clause remains mutable for later analysis.","performance":"Constant time.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/where_planner.zig","native_call_path":"WHERE derived-term analysis -> markTermAsChild","bounded_owner_retired":"No alternate source-identity helper."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Wire every derived-term constructor and focused trace."],
+  "context_review": {"implementation_spans":["Complete markTermAsChild body", "WhereTerm/WhereClause storage"],"callers":["WHERE derived-term analysis"],"callees":["None"],"assertions_branches_cleanup":["child count upper bound and metadata assignments"],"upstream_tests":["Project planner and broad runtime tests"]},
+  "evidence_receipts": []
+}

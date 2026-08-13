@@ -908,6 +908,11 @@
       "id": "resolve-aggregate-depth-adjustment",
       "path": "upstream/atomic-units/resolve-aggregate-depth-adjustment.json",
       "status": "source-translated"
+    },
+    {
+      "id": "where-term-child-link",
+      "path": "upstream/atomic-units/where-term-child-link.json",
+      "status": "source-translated"
     }
   ]
 }

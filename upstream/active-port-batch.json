@@ -1007,6 +1007,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/whereexpr.c::function::markTermAsChild::line-515",
+      "source_sha256": "5ef23f66a346d1983de3124f9114a0fafde45c503044ca389fee150145e35b4b",
+      "zig_declaration_id": "src/core/internal/where_planner.zig::function::markTermAsChild",
+      "zig_declaration_sha256": "6c81431b4f16a5eea17132f30a4e847ed5c9076bd1916f0bc9a4b91fe65afdd8",
+      "atomic_unit_id": "where-term-child-link",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/whereexpr.c::function::whereCombineDisjuncts::line-559",
       "source_sha256": "210c6e946ed9b0961edb65ecde83c7ee4d93cbd774a4aaf5c6527325f2101e41",
       "zig_declaration_id": "src/core/internal/where_planner.zig::function::combineDisjuncts",

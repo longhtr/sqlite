@@ -274,6 +274,16 @@ pub fn insertClauseTerm(clause: *WhereClause, expression_node: ?*parse_types.Exp
     return index;
 }
 
+/// Source `markTermAsChild()`.
+pub fn markTermAsChild(clause: *WhereClause, child_index: c_int, parent_index: c_int) void {
+    const child = &clause.terms[@intCast(child_index)];
+    const parent = &clause.terms[@intCast(parent_index)];
+    child.parent_index = parent_index;
+    child.truth_probability = parent.truth_probability;
+    std.debug.assert(parent.child_count < std.math.maxInt(u8));
+    parent.child_count += 1;
+}
+
 pub const AnalyzeInsertedTerm = *const fn (*parse_types.SrcList, *WhereClause, c_int) void;
 
 /// Source `whereCombineDisjuncts()`: combine compatible equal-left/equal-right

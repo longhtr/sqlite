@@ -8,7 +8,7 @@
       "inventoried": 0,
       "scaffolded": 0,
       "source-context-reviewed": 0,
-      "source-translated": 130,
+      "source-translated": 131,
       "subsystem-integrated": 20
     },
     "authoritative_process": "docs/ENGINEERING_PROCESS.md",
@@ -94,7 +94,7 @@
     "utf_active_entities_differentially_checked": 13,
     "vdbe_opcode_coverage_warning": "A mapped case proves name-level runtime presence only, not complete SQLite semantics or fidelity.",
     "vlist_entities_differentially_checked": 0,
-    "zig_source_lines": 93941
+    "zig_source_lines": 93951
   },
   "overall_status": "incomplete-control-revalidation-and-source-port",
   "public_api": {
@@ -133,19 +133,19 @@
   ],
   "schema_version": 3,
   "source": {
-    "active_entities_context_reviewed_or_later": 2379,
+    "active_entities_context_reviewed_or_later": 2380,
     "active_entities_initially_classified": 6752,
     "active_entities_inventoried": 0,
-    "active_entities_unmapped": 3645,
+    "active_entities_unmapped": 3644,
     "active_entities_with_legacy_candidates": 728,
     "active_profile_entities": 6752,
     "active_source_files": 85,
     "ast_resolved_legacy_target_references": 420,
-    "ast_resolved_reviewed_target_references": 2166,
-    "atomic_unit_dossiers_admission_ready": 181,
-    "atomic_unit_dossiers_total": 181,
+    "ast_resolved_reviewed_target_references": 2167,
+    "atomic_unit_dossiers_admission_ready": 182,
+    "atomic_unit_dossiers_total": 182,
     "atomic_units_assurance_passed": 0,
-    "atomic_units_source_translated_or_later": 181,
+    "atomic_units_source_translated_or_later": 182,
     "atomic_units_subsystem_integrated_or_later": 20,
     "behavioral_blocks_assigned_to_atomic_units": 1988,
     "behavioral_blocks_inventoried": 25930,
@@ -155,7 +155,7 @@
         "active": 2588,
         "inventoried": 0,
         "legacy_candidates": 546,
-        "reviewed": 767
+        "reviewed": 768
       },
       "macro": {
         "active": 1484,
@@ -199,15 +199,15 @@
     "mapping_status": "working-classification-with-inventoried-unpromoted-atomic-units",
     "mapping_warning": "Inventoried mappings, AST resolution, and legacy candidates are planning facts only, not semantic review, promotion, or fidelity evidence.",
     "reviewed_coverage_is_completion_metric": false,
-    "reviewed_coverage_percent": 35.23,
+    "reviewed_coverage_percent": 35.25,
     "source_dependency_file_units": 85,
     "unresolved_legacy_target_references": 400,
-    "zig_declaration_inventory": 13817
+    "zig_declaration_inventory": 13818
   },
   "translation_tracking": {
-    "active_batch_entries": 112,
+    "active_batch_entries": 113,
     "active_batch_schema": 2,
-    "active_batch_short_functions": 70,
+    "active_batch_short_functions": 71,
     "active_batch_status": "active",
     "active_batch_substantive_functions": 42,
     "checkpoint_ledger": "upstream/port-checkpoints.json",
