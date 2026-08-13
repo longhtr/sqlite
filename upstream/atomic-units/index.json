@@ -848,6 +848,11 @@
       "id": "btree-cached-page-lookup",
       "path": "upstream/atomic-units/btree-cached-page-lookup.json",
       "status": "source-translated"
+    },
+    {
+      "id": "btree-temporary-space-release",
+      "path": "upstream/atomic-units/btree-temporary-space-release.json",
+      "status": "source-translated"
     }
   ]
 }

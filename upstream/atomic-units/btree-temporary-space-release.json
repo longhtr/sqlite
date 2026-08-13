@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "btree-temporary-space-release",
+  "title": "B-tree temporary-space release",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The B-tree shared owner now has the source destructor for its offset temporary cell buffer, consumed when page size changes.",
+    "source_files": [{"path":"src/btree.c","sha256":"c0982890bcd01b479c66066030e32d15b88a2dce2dd9fd67fa301211555f7a94"}],
+    "source_entity_ids": ["src/btree.c::function::freeTempSpace::line-2910"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["B-tree close integration", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["B-tree shared allocator and temporary-space allocation"],"caller_closure":"The complete nullable destructor is translated and called by page-size replacement."},
+  "contracts": {"inputs":["Shared B-tree"],"outputs":["Temporary allocation released and nullable owner cleared"],"ownership":"Consumes the complete backing allocation, including the four-byte prefix represented by the owning slice.","state_and_results":"Null is a no-op; non-null is freed exactly once.","locks_callbacks_io":"No I/O; caller owns B-tree synchronization.","failure_and_continuation":"Destructor allocates nothing and cannot fail."},
+  "mappings": [{"source_entity_id":"src/btree.c::function::freeTempSpace::line-2910","relation":"btree-temporary-cell-buffer-destructor","zig_declaration_ids":["src/core/internal/btree_core.zig::function::freeTemporarySpace"]}],
+  "representation_differences": ["The owning Zig slice retains the original allocation base, so no pointer subtraction is needed before free."],
+  "oracle": {"protocol":"Allocate temporary space, release twice, and replace page size.","internal_observations":["null owner", "no retained allocation", "idempotent null branch"],"normalization":"Compare ownership state."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Destructor allocates nothing.","io_crash_concurrency":"No I/O; synchronization is external.","malformed_input":"Nullable owner is accepted.","continuation":"A later allocation may recreate the buffer.","performance":"Constant time.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/btree_core.zig","native_call_path":"setPageSize -> freeTemporarySpace","bounded_owner_retired":"Inline page-size cleanup replaced by the source-shaped helper."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Route final B-tree close through helper and focused allocator trace."],
+  "context_review": {"implementation_spans":["Complete freeTempSpace body", "allocateTemporarySpace and setPageSize caller"],"callers":["B-tree page-size replacement and future close"],"callees":["Shared allocator free"],"assertions_branches_cleanup":["null branch", "base allocation release", "owner clear"],"upstream_tests":["B-tree and broad runtime tests"]},
+  "evidence_receipts": []
+}

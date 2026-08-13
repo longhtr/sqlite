@@ -1210,6 +1210,14 @@ pub fn allocateTemporarySpace(shared: *Shared) Error![]u8 {
     }
     return shared.temporary_space.?[4..];
 }
+/// Source `freeTempSpace()`.
+pub fn freeTemporarySpace(shared: *Shared) void {
+    if (shared.temporary_space) |space| {
+        shared.allocator.free(space);
+        shared.temporary_space = null;
+    }
+}
+
 /// Source `sqlite3BtreeClose()`.
 pub fn closeBtree(tree: *Btree) void {
     rollback(tree, false) catch {};
@@ -1223,10 +1231,7 @@ pub fn setPageSize(tree: *Btree, page_size: u32, reserved: u8, fixed: bool) Erro
     if (page_size >= 512 and page_size <= 65536 and std.math.isPowerOfTwo(page_size)) {
         tree.shared.usable_size = page_size - reserved;
         tree.shared.reserved_bytes = reserved;
-        if (tree.shared.temporary_space) |space| {
-            tree.shared.allocator.free(space);
-            tree.shared.temporary_space = null;
-        }
+        freeTemporarySpace(tree.shared);
     }
     if (fixed) tree.shared.page_size_fixed = true;
 }
