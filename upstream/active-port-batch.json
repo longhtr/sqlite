@@ -618,6 +618,15 @@
       "atomic_unit_id": "public-incremental-blob-read-write-size",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/where.c::function::sqlite3_vtab_distinct::line-4629",
+      "source_sha256": "22a8ff1880c623c37a5b9d38be207231d198111d264c48deea9ca6c432af793e",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_vtab_distinct",
+      "zig_declaration_sha256": "28bd8850c96aa1ba4bb0b6040ad3a499beb094eb079fd7d6609b32e9ec5b19fe",
+      "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
+      "class": "short",
+      "complete": true
     }
   ]
 }

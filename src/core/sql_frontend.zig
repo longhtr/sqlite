@@ -1881,6 +1881,8 @@ fn planningContext(pointer: ?*IndexInfo) ?*PlanningContext {
     const context: *PlanningContext = @fieldParentPtr("public", info);
     return if (context.magic == planning_magic) context else null;
 }
+/// Source `sqlite3_vtab_distinct()`: expose the planner's bounded DISTINCT
+/// mode only for its protected xBestIndex context.
 pub export fn sqlite3_vtab_distinct(pointer: ?*IndexInfo) callconv(.c) c_int {
     return if (planningContext(pointer)) |context| context.distinct else 0;
 }
