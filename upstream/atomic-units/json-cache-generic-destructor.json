@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "json-cache-generic-destructor",
+  "title": "JSON cache generic destructor callback",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "VDBE auxiliary-data ownership now installs a source-shaped generic JSON cache destructor that releases copied input, parsed JSON owners, the entries array, and the cache object.",
+    "source_files": [{"path":"src/json.c","sha256":"25a742ea7382fd21bc3f10fc22f4cbfc97335122ba9593822d0d7eb93bb637d9"}],
+    "source_entity_ids": ["src/json.c::function::jsonCacheDeleteGeneric::line-428"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["JSON cache insertion, lookup, and eviction", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["JSON parse release and VDBE auxiliary-data destructor invocation"],"caller_closure":"cacheInsert installs this exact callback on the production auxiliary-data slot."},
+  "contracts": {"inputs":["Nullable opaque JSON cache pointer"],"outputs":["All cache-owned memory released or null no-op"],"ownership":"Consumes the cache and every entry's copied source and parse owner.","state_and_results":"Entries are released before the array and parent cache.","locks_callbacks_io":"Called by VDBE auxiliary-data cleanup; no direct I/O or lock.","failure_and_continuation":"Destructor allocates nothing and cannot fail."},
+  "mappings": [{"source_entity_id":"src/json.c::function::jsonCacheDeleteGeneric::line-428","relation":"json-cache-generic-auxdata-destructor","zig_declaration_ids":["src/core/internal/json_functions.zig::function::cacheDeleteGeneric"]}],
+  "representation_differences": ["The generic wrapper and typed cache deletion loop are consolidated in one nullable Zig callback."],
+  "oracle": {"protocol":"Populate auxiliary JSON cache entries, replace or finalize the statement slot, and compare all copied-source and parse-owner releases.","internal_observations":["entry and cache allocation ownership"],"normalization":"Compare zero retained cache allocations."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"The destructor allocates nothing and runs after partial cache population.","io_crash_concurrency":"No I/O or lock state.","malformed_input":"Null is accepted; non-null requires the installed cache type.","continuation":"Auxiliary-data slot cleanup completes without callback error.","performance":"Linear in at most four cache entries.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/json_functions.zig","native_call_path":"cacheInsert -> setAuxData -> statement auxiliary cleanup -> cacheDeleteGeneric","bounded_owner_retired":"No separate private destructor remains."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Focused allocator trace and review remain open."},
+  "known_blockers": ["Add focused auxiliary-data replacement/finalize differential and independent review."],
+  "context_review": {"implementation_spans":["Complete source jsonCacheDelete and generic wrapper region","Production cache insertion and auxiliary-data owner"],"callers":["VDBE auxiliary-data cleanup"],"callees":["process allocator free and jsonParseFree"],"assertions_branches_cleanup":["Null, empty cache, populated cache, replacement, and finalize cleanup reviewed"],"upstream_tests":["Project JSON and broad runtime tests"]},
+  "evidence_receipts": []
+}

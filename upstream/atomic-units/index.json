@@ -808,6 +808,11 @@
       "id": "aggregate-info-owner-release",
       "path": "upstream/atomic-units/aggregate-info-owner-release.json",
       "status": "source-translated"
+    },
+    {
+      "id": "json-cache-generic-destructor",
+      "path": "upstream/atomic-units/json-cache-generic-destructor.json",
+      "status": "source-translated"
     }
   ]
 }

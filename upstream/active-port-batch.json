@@ -906,6 +906,15 @@
       "atomic_unit_id": "aggregate-info-owner-release",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonCacheDeleteGeneric::line-428",
+      "source_sha256": "4d2eaf765429aec4ddcc41a405fd2aa7d2248cce0172064bb35bac222058d9bf",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::cacheDeleteGeneric",
+      "zig_declaration_sha256": "1a723a51fc9dc1e61d4151a998ac82b941898293a5e8b5997544ebee19f4c3c1",
+      "atomic_unit_id": "json-cache-generic-destructor",
+      "class": "short",
+      "complete": true
     }
   ]
 }

@@ -62,8 +62,8 @@ fn operationError(context: *types.Context, err: anyerror) void {
     if (err == error.OutOfMemory) mem.resultErrorNoMem(context) else resultError(context, if (err == error.TooDeep) "JSON nested too deep" else "malformed JSON");
 }
 
-/// Source `jsonCacheDelete()`.
-fn cacheDelete(pointer: ?*anyopaque) callconv(.c) void {
+/// Source `jsonCacheDelete()` and its generic destructor callback wrapper.
+pub fn cacheDeleteGeneric(pointer: ?*anyopaque) callconv(.c) void {
     const cache: *JsonCache = @ptrCast(@alignCast(pointer orelse return));
     const process_allocator = allocator();
     for (cache.entries.items) |*entry| {
@@ -79,7 +79,7 @@ pub fn cacheInsert(context: *types.Context, source: []const u8, parse: *const co
     const cache: *JsonCache = if (mem.getAuxData(context, json_cache_id)) |raw| @ptrCast(@alignCast(raw)) else create: {
         const created = allocator().create(JsonCache) catch return error.OutOfMemory;
         created.* = .{};
-        mem.setAuxData(context, json_cache_id, created, cacheDelete);
+        mem.setAuxData(context, json_cache_id, created, cacheDeleteGeneric);
         const installed = mem.getAuxData(context, json_cache_id) orelse return error.OutOfMemory;
         break :create @ptrCast(@alignCast(installed));
     };
