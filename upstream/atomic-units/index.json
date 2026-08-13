@@ -868,6 +868,11 @@
       "id": "select-window-pushdown-check",
       "path": "upstream/atomic-units/select-window-pushdown-check.json",
       "status": "source-translated"
+    },
+    {
+      "id": "mutation-begin-write-operation",
+      "path": "upstream/atomic-units/mutation-begin-write-operation.json",
+      "status": "source-translated"
     }
   ]
 }

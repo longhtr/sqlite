@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "mutation-begin-write-operation",
+  "title": "Mutation begin-write operation",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The mutation compiler now has the source operation that verifies a schema, marks its write mask, and records multi-write statement requirements.",
+    "source_files": [{"path":"src/build.c","sha256":"c71549801eb2f56dcba062a6ce1c347d93203e43deb05c08ba4ad71a2c08d867"}],
+    "source_entity_ids": ["src/build.c::function::sqlite3BeginWriteOperation::line-5403"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Transaction execution", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Top-level schema verification"],"caller_closure":"The complete write-mask and statement-journal shaping body is translated."},
+  "contracts": {"inputs":["Mutation Parse, statement-savepoint flag, database index"],"outputs":["Schema verified, database bit added to write set, multi-write sticky flag updated"],"ownership":"Borrows Parse.","state_and_results":"Existing multi-write state is never cleared.","locks_callbacks_io":"No direct I/O; emits compiler state for later VDBE transaction setup.","failure_and_continuation":"Invalid database index or verification OOM propagates before write-mask mutation."},
+  "mappings": [{"source_entity_id":"src/build.c::function::sqlite3BeginWriteOperation::line-5403","relation":"mutation-schema-write-mask-and-multiwrite-setup","zig_declaration_ids":["src/core/internal/mutation_compiler.zig::function::beginWriteOperation"]}],
+  "representation_differences": ["The bounded compiler uses a u64 schema mask and typed boolean multi-write state."],
+  "oracle": {"protocol":"Begin writes on main and attached schemas with false/true statement flags.","internal_observations":["verified mask", "write mask", "sticky multi-write flag"],"normalization":"Exact mask and boolean comparison."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Verification append failure is bounded as NoMemory.","io_crash_concurrency":"Compiler-only state; no direct I/O.","malformed_input":"Out-of-mask database indices return InvalidSchema.","continuation":"Prior mask and multi-write state remain sticky.","performance":"Constant-time bit operations plus one-time schema verification." ,"commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/mutation_compiler.zig","native_call_path":"mutation compiler setup -> beginWriteOperation","bounded_owner_retired":"No alternate source-identity helper."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Wire all mutation compiler callers and focused operation trace."],
+  "context_review": {"implementation_spans":["Complete sqlite3BeginWriteOperation body", "top-level schema verification and Parse state"],"callers":["DDL and DML mutation compilation"],"callees":["codeVerifySchemaAtToplevel"],"assertions_branches_cleanup":["database bit", "false/true statement flag", "sticky multi-write"],"upstream_tests":["Project mutation and broad runtime tests"]},
+  "evidence_receipts": []
+}

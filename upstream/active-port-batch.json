@@ -170,6 +170,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/build.c::function::sqlite3BeginWriteOperation::line-5403",
+      "source_sha256": "83030268067581bb1754298220ad07e4c62f60b37e5cc4a70ee03691bcbd5187",
+      "zig_declaration_id": "src/core/internal/mutation_compiler.zig::function::beginWriteOperation",
+      "zig_declaration_sha256": "1955d182c6376bc2ad523ef38ac2de7a6d4cc14a175e4034a69e15b2efe8b6cf",
+      "atomic_unit_id": "mutation-begin-write-operation",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/complete.c::function::sqlite3_complete16::line-269",
       "source_sha256": "e1778e89eceeef4e69df1436511712e0f0c9ba8f8df751f548576b921c42b0b1",
       "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_complete16",

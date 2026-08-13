@@ -76,7 +76,7 @@ pub const Program = struct {
         self.returning.deinit();
     }
 };
-pub const Parse = struct { allocator: std.mem.Allocator, catalog: *Catalog, program: *Program, nested: usize = 0, errors: usize = 0, returning_columns: []const usize = &.{}, used_schemas: u64 = 0, write_schemas: u64 = 0, finished: bool = false };
+pub const Parse = struct { allocator: std.mem.Allocator, catalog: *Catalog, program: *Program, nested: usize = 0, errors: usize = 0, returning_columns: []const usize = &.{}, used_schemas: u64 = 0, write_schemas: u64 = 0, multi_write: bool = false, finished: bool = false };
 
 fn findTable(catalog: *Catalog, name: []const u8) ?*Table {
     for (catalog.tables.items) |*table| {
@@ -411,6 +411,13 @@ pub fn codeVerifySchemaAtToplevel(parse: *Parse, database: usize) Error!void {
         parse.catalog.verified |= mask;
         if (database == 1) try openTempDatabase(parse, false);
     }
+}
+
+/// Source `sqlite3BeginWriteOperation()`.
+pub fn beginWriteOperation(parse: *Parse, set_statement: bool, database: usize) Error!void {
+    try codeVerifySchemaAtToplevel(parse, database);
+    parse.write_schemas |= @as(u64, 1) << @intCast(database);
+    parse.multi_write = parse.multi_write or set_statement;
 }
 
 /// Source `sqlite3CodeVerifyNamedSchema()`.
