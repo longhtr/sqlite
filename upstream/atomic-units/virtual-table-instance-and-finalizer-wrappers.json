@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "virtual-table-instance-and-finalizer-wrappers",
+  "title": "Virtual-table instance and transaction finalizer wrappers",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Typed lifecycle helpers now expose connection-state instance lookup, the capacity-reserved transaction append primitive, and exact commit/rollback finalizer wrappers used by virtual-table create and begin paths.",
+    "source_files": [{"path":"src/vtab.c","sha256":"511babb71798ebebf9c3249b1388c844809349d242babaf44dee412f870508e1"}],
+    "source_entity_ids": ["src/vtab.c::function::sqlite3GetVTable::line-194","src/vtab.c::function::addToVTrans::line-758","src/vtab.c::function::sqlite3VtabRollback::line-1022","src/vtab.c::function::sqlite3VtabCommit::line-1031"],
+    "behavioral_block_ids": ["src/vtab.c::function::sqlite3GetVTable::behavior::for::line-197-column-3::ordinal-0","src/vtab.c::function::sqlite3GetVTable::behavior::return::line-198-column-3::ordinal-0","src/vtab.c::function::sqlite3VtabRollback::behavior::return::line-1024-column-3::ordinal-0","src/vtab.c::function::sqlite3VtabCommit::behavior::return::line-1033-column-3::ordinal-0"],
+    "excluded_responsibilities": ["Virtual-table constructor and sync bodies", "Public SQL transaction integration for writable application virtual tables", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Typed virtual table State, Table, Instance, Module, and callFinalizer owners"],"caller_closure":"Create/begin use addVirtualTransaction; public typed lifecycle clients use lookup and finalizer wrappers."},
+  "contracts": {"inputs":["Lifecycle state, table, module set, and finalizer kind"],"outputs":["Connection-owned instance lookup, retained transaction entry, or cleared transaction list"],"ownership":"Appending increments the instance reference; finalization invokes the selected callback, resets state, decrements the reference, and clears entries.","state_and_results":"Lookup returns only an instance attached to the requested state. Commit and rollback are infallible wrappers returning source-success semantics.","locks_callbacks_io":"Calls module callbacks only through the typed lifecycle module table.","failure_and_continuation":"Capacity reservation occurs before append; finalizer callback result is intentionally ignored like source callFinaliser."},
+  "mappings": [
+    {"source_entity_id":"src/vtab.c::function::sqlite3GetVTable::line-194","relation":"connection-state-vtable-instance-lookup","zig_declaration_ids":["src/core/internal/virtual_table_lifecycle.zig::function::getVirtualTable"]},
+    {"source_entity_id":"src/vtab.c::function::addToVTrans::line-758","relation":"reserved-vtable-transaction-append","zig_declaration_ids":["src/core/internal/virtual_table_lifecycle.zig::function::addVirtualTransaction"]},
+    {"source_entity_id":"src/vtab.c::function::sqlite3VtabRollback::line-1022","relation":"vtable-rollback-finalizer-wrapper","zig_declaration_ids":["src/core/internal/virtual_table_lifecycle.zig::function::rollbackVirtualTables"]},
+    {"source_entity_id":"src/vtab.c::function::sqlite3VtabCommit::line-1031","relation":"vtable-commit-finalizer-wrapper","zig_declaration_ids":["src/core/internal/virtual_table_lifecycle.zig::function::commitVirtualTables"]}
+  ],
+  "representation_differences": ["Connection ownership is represented by membership in typed lifecycle State.tables instead of linked VTable.db pointers."],
+  "oracle": {"protocol":"Construct typed module/table instances, append transactions, run commit and rollback, and compare callback order, references, savepoint reset, and list clearing.","internal_observations":["selected instance", "callback count and final state"],"normalization":"Compare exact typed lifecycle observations."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"Append is called only after successful five-slot capacity growth.","io_crash_concurrency":"No direct I/O; lifecycle state serializes connection-local mutation.","malformed_input":"Absent tables and instances return null or skip callbacks.","continuation":"Finalizers always clear transaction state and permit subsequent transactions.","performance":"Linear lookup/finalization over connection-local tables.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/virtual_table_lifecycle.zig","native_call_path":"create/begin -> addVirtualTransaction; transaction completion -> commitVirtualTables/rollbackVirtualTables","bounded_owner_retired":"Transaction append logic is centralized."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"SQL transaction integration, trace, assurance, and review remain open."},
+  "known_blockers": ["Connect writable virtual tables to public SQL transaction completion.","Add focused trace and independent review."],
+  "context_review": {"implementation_spans":["Complete source instance lookup, addToVTrans, callFinaliser, commit, and rollback region","Typed constructor, begin, and finalizer callers"],"callers":["createVirtualTable and beginVirtualTransaction","typed transaction completion clients"],"callees":["callFinalizer and module commit/rollback callbacks"],"assertions_branches_cleanup":["missing instance, capacity, reference increment/decrement, callback absence, savepoint reset, and list clear reviewed"],"upstream_tests":["Project virtual table lifecycle tests"]},
+  "evidence_receipts": []
+}

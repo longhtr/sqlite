@@ -186,6 +186,15 @@ fn findTable(state: *State, name: []const u8) ?*Table {
     return null;
 }
 
+/// Source `sqlite3GetVTable()`: select the instance owned by this lifecycle
+/// state rather than another connection's instance of the same schema table.
+pub fn getVirtualTable(state: *State, table: *Table) ?*Instance {
+    for (state.tables.items) |candidate| {
+        if (candidate == table) return candidate.instance;
+    }
+    return null;
+}
+
 test "virtual table parser accumulation transfers each argument once" {
     const table = try beginVirtualParse(std.testing.allocator, "main", "items", "module", 32);
     defer {
@@ -233,6 +242,12 @@ pub fn growVirtualTransactions(state: *State) Error!void {
     state.transactions.ensureUnusedCapacity(state.allocator, 5) catch return error.OutOfMemory;
 }
 
+/// Source `addToVTrans()`; capacity must have been reserved first.
+pub fn addVirtualTransaction(state: *State, table: *Table) void {
+    state.transactions.appendAssumeCapacity(table);
+    if (table.instance) |instance| instance.reference_count += 1;
+}
+
 /// Source `sqlite3VtabCallCreate()`.
 pub fn createVirtualTable(state: *State, table_name: []const u8, modules: []const Module) Error!void {
     const table = findTable(state, table_name) orelse return error.NotFound;
@@ -242,8 +257,7 @@ pub fn createVirtualTable(state: *State, table_name: []const u8, modules: []cons
         if (module.destroy == null) return error.NotFound;
         try callConstructor(state, table, module, constructor);
         try growVirtualTransactions(state);
-        state.transactions.appendAssumeCapacity(table);
-        table.instance.?.reference_count += 1;
+        addVirtualTransaction(state, table);
         return;
     }
     return error.NotFound;
@@ -266,6 +280,16 @@ pub fn destroyVirtualTable(state: *State, table_name: []const u8, modules: []con
 }
 
 pub const FinalizerKind = enum { commit, rollback };
+
+/// Source `sqlite3VtabRollback()`.
+pub fn rollbackVirtualTables(state: *State, modules: []const Module) void {
+    callFinalizer(state, modules, .rollback);
+}
+
+/// Source `sqlite3VtabCommit()`.
+pub fn commitVirtualTables(state: *State, modules: []const Module) void {
+    callFinalizer(state, modules, .commit);
+}
 
 /// Source `callFinaliser()`.
 pub fn callFinalizer(state: *State, modules: []const Module, kind: FinalizerKind) void {
@@ -309,9 +333,8 @@ pub fn beginVirtualTransaction(state: *State, table: ?*Table, modules: []const M
         const callback = module.begin orelse return;
         try growVirtualTransactions(state);
         if (callback(instance.context) != 0) return error.ConstructorFailed;
-        state.transactions.appendAssumeCapacity(selected);
+        addVirtualTransaction(state, selected);
         instance.in_transaction = true;
-        instance.reference_count += 1;
         if (savepoint_depth > 0 and module.savepoint != null) {
             instance.savepoint_depth = savepoint_depth;
             if (module.savepoint.?(instance.context, savepoint_depth - 1) != 0) return error.ConstructorFailed;

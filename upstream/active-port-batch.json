@@ -825,6 +825,42 @@
       "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/vtab.c::function::sqlite3GetVTable::line-194",
+      "source_sha256": "74c15d889e459a0b23c7dc43acf030d908a60ea7a357f275eff079bf771ecc8f",
+      "zig_declaration_id": "src/core/internal/virtual_table_lifecycle.zig::function::getVirtualTable",
+      "zig_declaration_sha256": "99323b18299669058ab0a1faf115de58e0c213fcf368fa2c27b5c06fee95b87e",
+      "atomic_unit_id": "virtual-table-instance-and-finalizer-wrappers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vtab.c::function::addToVTrans::line-758",
+      "source_sha256": "8c0669c19a3db5a05c79ea25ba9854d1461bb94d4139bdf10dddf8303bf43852",
+      "zig_declaration_id": "src/core/internal/virtual_table_lifecycle.zig::function::addVirtualTransaction",
+      "zig_declaration_sha256": "102f3d94e1e0ec566cf0db90409224fe9a68c38616958c0cf1278d249d746b70",
+      "atomic_unit_id": "virtual-table-instance-and-finalizer-wrappers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vtab.c::function::sqlite3VtabRollback::line-1022",
+      "source_sha256": "05d679bd20cc3b16d3d16335f4c00e2c96d7093e11f7003d555948b67774a44f",
+      "zig_declaration_id": "src/core/internal/virtual_table_lifecycle.zig::function::rollbackVirtualTables",
+      "zig_declaration_sha256": "5f346fd2ed125162c80fd1c23cbccdb81b93f53aa4120951442e2163fa06fb46",
+      "atomic_unit_id": "virtual-table-instance-and-finalizer-wrappers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vtab.c::function::sqlite3VtabCommit::line-1031",
+      "source_sha256": "9553ab3d9665282f9d57b4acd6fe638cf0c63385de8b1918fa5fae0f6b76a16e",
+      "zig_declaration_id": "src/core/internal/virtual_table_lifecycle.zig::function::commitVirtualTables",
+      "zig_declaration_sha256": "8aadbb11c7c27d072313a8906780f74289884fc38335483b532237f4615b75c6",
+      "atomic_unit_id": "virtual-table-instance-and-finalizer-wrappers",
+      "class": "short",
+      "complete": true
     }
   ]
 }
