@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "alter-rename-callback-and-schema-reload",
+  "title": "ALTER rename callbacks and schema reload",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The ALTER analysis owner now exposes source-shaped callbacks for token unmapping, SELECT traversal, quote-fix collection, rename-token destruction, and VDBE schema reload sequencing.",
+    "source_files": [{"path":"src/alter.c","sha256":"23a9dd17124628c135adc203946295639cba6ba035e2b278cab96f32650fc1ae"}],
+    "source_entity_ids": [
+      "src/alter.c::function::renameReloadSchema::line-111",
+      "src/alter.c::function::renameUnmapExprCb::line-816",
+      "src/alter.c::function::renameTokenFree::line-949",
+      "src/alter.c::function::renameColumnSelectCb::line-996",
+      "src/alter.c::function::renameQuotefixExprCb::line-1903"
+    ],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Complete ALTER SQL compiler integration", "Independent fidelity review"]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [],
+    "external_source_responsibilities": ["Rename token map", "Expression walker", "VDBE operation builder"],
+    "caller_closure": "The functions own their complete callback, cleanup, and schema-reload responsibilities; higher-level ALTER compilation remains separate."
+  },
+  "contracts": {
+    "inputs": ["Source-layout Parse, Walker, Expr, Select, RenameToken, and database index values"],
+    "outputs": ["Remapped or collected tokens, released token lists, and ordered SetCookie/ParseSchema operations"],
+    "ownership": "Token-list cleanup consumes every node; callbacks borrow parser trees.",
+    "state_and_results": "Callbacks return source walker controls and schema reload includes TEMP for non-TEMP databases.",
+    "locks_callbacks_io": "No direct I/O; schema reload appends VDBE operations under parser ownership.",
+    "failure_and_continuation": "Callbacks and destructor allocate nothing; absent VDBE makes reload a no-op."
+  },
+  "mappings": [
+    {"source_entity_id":"src/alter.c::function::renameReloadSchema::line-111","relation":"alter-schema-cookie-and-reparse-op-sequence","zig_declaration_ids":["src/core/internal/alter_analysis.zig::function::reloadRenamedSchema"]},
+    {"source_entity_id":"src/alter.c::function::renameUnmapExprCb::line-816","relation":"rename-expression-token-unmap-callback","zig_declaration_ids":["src/core/internal/alter_analysis.zig::function::unmapExpressionCallback"]},
+    {"source_entity_id":"src/alter.c::function::renameTokenFree::line-949","relation":"rename-token-list-destructor","zig_declaration_ids":["src/core/internal/alter_analysis.zig::function::freeRenameTokens"]},
+    {"source_entity_id":"src/alter.c::function::renameColumnSelectCb::line-996","relation":"rename-column-select-walker-callback","zig_declaration_ids":["src/core/internal/alter_analysis.zig::function::renameColumnSelectCallback"]},
+    {"source_entity_id":"src/alter.c::function::renameQuotefixExprCb::line-1903","relation":"quote-fix-expression-token-collector","zig_declaration_ids":["src/core/internal/alter_analysis.zig::function::renameQuoteFixExpressionCallback"]}
+  ],
+  "representation_differences": ["Typed Zig callbacks use the repository's source-layout parser structures and canonical Opcode enum."],
+  "oracle": {
+    "protocol": "Exercise callbacks and operation shaping through the broad repository runtime suite.",
+    "internal_observations": ["walker control", "token-list ownership", "SetCookie then ParseSchema ordering"],
+    "normalization": "Compare source-visible state transitions rather than allocation addresses."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No new allocation paths.",
+    "io_crash_concurrency": "No direct I/O or concurrency.",
+    "malformed_input": "Requires source-valid parser graph and database index invariants.",
+    "continuation": "Consumed token lists cannot be reused; parser operations remain executable.",
+    "performance": "Linear in token list or CTE count; constant schema-operation count.",
+    "commands": ["zig build test -j1"]
+  },
+  "integration": {
+    "production_owner": "src/core/internal/alter_analysis.zig",
+    "native_call_path": "ALTER analysis and compiler helpers -> typed callbacks/destructor/schema reload",
+    "bounded_owner_retired": "No duplicate source-identity implementations."
+  },
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Complete higher-level ALTER compiler wiring and focused pinned-C trace."],
+  "context_review": {
+    "implementation_spans": ["Complete five upstream bodies", "Adjacent rename walker and VDBE helper contracts"],
+    "callers": ["ALTER rename and quote-fix processing"],
+    "callees": ["Rename remap", "walker", "database allocator", "VDBE auxiliary operations"],
+    "assertions_branches_cleanup": ["View/CTE prune", "double-quoted string filter", "TEMP reload branch", "full token-list cleanup"],
+    "upstream_tests": ["Project broad runtime and ALTER schema differential tests"]
+  },
+  "evidence_receipts": []
+}

@@ -11,6 +11,7 @@ const schema = @import("schema_types.zig");
 const schema_analysis = @import("schema_analysis.zig");
 const types = @import("vdbe_types.zig");
 const walker_api = @import("walker.zig");
+const vdbe_aux = @import("vdbe_aux.zig");
 
 fn setAlterError(parse: *parse_types.Parse, message: []const u8) void {
     const db: *types.Sqlite3 = @ptrCast(@alignCast(parse.db.?));
@@ -168,7 +169,8 @@ pub fn walkTriggerForRename(walker: *parse_types.Walker, trigger: *parse_types.T
     }
 }
 
-fn unmapExpressionCallback(walker: *parse_types.Walker, node: *parse_types.Expr) callconv(.c) c_int {
+/// Source `renameUnmapExprCb()`.
+pub fn unmapExpressionCallback(walker: *parse_types.Walker, node: *parse_types.Expr) callconv(.c) c_int {
     const rename = @import("rename_analysis.zig");
     rename.remapToken(walker.pParse.?, null, node);
     rename.remapToken(walker.pParse.?, null, &node.y.pTab);
@@ -200,6 +202,28 @@ fn unmapSelectCallback(walker: *parse_types.Walker, select: *parse_types.Select)
     return walker_api.continue_walk;
 }
 
+/// Source `renameColumnSelectCb()`.
+pub fn renameColumnSelectCallback(walker: *parse_types.Walker, select: *parse_types.Select) callconv(.c) c_int {
+    if (select.selFlags & (0x0000_0200 | 0x0000_0400) != 0) return walker_api.prune;
+    if (select.pWith) |with| {
+        for (with.items()) |cte| {
+            _ = walker_api.walkSelect(walker, cte.pSelect);
+            unmapRenameExpressionList(walker.pParse.?, cte.pCols);
+        }
+    }
+    return walker_api.continue_walk;
+}
+
+/// Source `renameQuotefixExprCb()`.
+pub fn renameQuoteFixExpressionCallback(walker: *parse_types.Walker, node: *parse_types.Expr) callconv(.c) c_int {
+    const double_quoted: u32 = 0x0000_0080;
+    if (node.op == tokens.tk_string and node.flags & double_quoted != 0) {
+        const context: *RenameContext = @ptrCast(@alignCast(walker.u.pointer.?));
+        _ = findRenameToken(walker.pParse.?, context, node);
+    }
+    return walker_api.continue_walk;
+}
+
 /// Source `sqlite3RenameExprUnmap()`.
 pub fn unmapRenameExpression(parse: *parse_types.Parse, node: ?*parse_types.Expr) void {
     const saved = parse.eParseMode;
@@ -210,6 +234,16 @@ pub fn unmapRenameExpression(parse: *parse_types.Parse, node: ?*parse_types.Expr
     parse.eParseMode = 3;
     _ = walker_api.walkExpr(&walker, node);
     parse.eParseMode = saved;
+}
+
+/// Source `renameTokenFree()`.
+pub fn freeRenameTokens(db: *types.Sqlite3, first: ?*parse_types.RenameToken) void {
+    var current = first;
+    while (current) |token| {
+        const next = token.next;
+        db_allocator.free(db, token);
+        current = next;
+    }
 }
 
 /// Source `sqlite3RenameExprlistUnmap()`.
@@ -224,6 +258,17 @@ pub fn unmapRenameExpressionList(parse: *parse_types.Parse, list_optional: ?*par
             @import("rename_analysis.zig").remapToken(parse, null, item.zEName);
         }
     }
+}
+
+/// Source `renameReloadSchema()`.
+pub fn reloadRenamedSchema(parse: *parse_types.Parse, database_index: c_int, flags: u16) void {
+    const machine = parse.pVdbe orelse return;
+    const db: *types.Sqlite3 = @ptrCast(@alignCast(parse.db.?));
+    const database = db.aDb.?[@intCast(database_index)];
+    const current_cookie = database.pSchema.?.cookie;
+    _ = vdbe_aux.addOperation3(machine, .SetCookie, database_index, 1, current_cookie +% 1);
+    vdbe_aux.addParseSchemaOperation(machine, database_index, null, flags);
+    if (database_index != 1) vdbe_aux.addParseSchemaOperation(machine, 1, null, flags);
 }
 
 pub const ConstraintToken = struct { length: usize, token_type: u16 };

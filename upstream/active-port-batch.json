@@ -8,47 +8,110 @@
   "minimum_substantive_functions": 50,
   "entries": [
     {
-      "source_entity_id": "src/pager.c::function::pager_cksum::line-2251",
-      "source_sha256": "61ee037a7cf7e262fd1b4282edf473ea02344af9201ed1de2fbfd3bb522edd1f",
-      "zig_declaration_id": "src/core/pager.zig::function::Pager.journalChecksum",
-      "zig_declaration_sha256": "611ea30db1f5236771fd097ecbf62d00c3ea50fcbfbf24fdd6f053a85e52d9f0",
-      "atomic_unit_id": "pager-rollback-journal-checksum",
+      "source_entity_id": "src/alter.c::function::renameColumnSelectCb::line-996",
+      "source_sha256": "325b5cff86b7c8a6b9d34e9bddf9d79b3a0464fc885b676fd7c3eed763f1da2f",
+      "zig_declaration_id": "src/core/internal/alter_analysis.zig::function::renameColumnSelectCallback",
+      "zig_declaration_sha256": "532afb041966bc0e96798e915652907c98c5ebd43e9c86f730cac65bbf3f61fd",
+      "atomic_unit_id": "alter-rename-callback-and-schema-reload",
       "class": "short",
       "complete": true
     },
     {
-      "source_entity_id": "src/pager.c::function::read32bits::line-1099",
-      "source_sha256": "48b01353208d8e3b73f9fbda1db809dd4f5c51f44289da43f99f99dacbf40b57",
-      "zig_declaration_id": "src/core/pager.zig::function::Pager.read32Bits",
-      "zig_declaration_sha256": "b6e3e2f77df15e3a76fd88504a84fcdfe0fcd11c754b1c185f4fbcfa32245d14",
-      "atomic_unit_id": "pager-big-endian-file-u32-io",
+      "source_entity_id": "src/alter.c::function::renameQuotefixExprCb::line-1903",
+      "source_sha256": "e2c099b3575c137975f8848cd9554307fb63d98f4283d58cb95257dc525a12c4",
+      "zig_declaration_id": "src/core/internal/alter_analysis.zig::function::renameQuoteFixExpressionCallback",
+      "zig_declaration_sha256": "ae91f2a0358dade4efb6d1abb910443c0f0fc68ca38168cdb092d58e1dbcd497",
+      "atomic_unit_id": "alter-rename-callback-and-schema-reload",
       "class": "short",
       "complete": true
     },
     {
-      "source_entity_id": "src/pager.c::function::write32bits::line-1118",
-      "source_sha256": "5ce29786c165094ea13dcac4e82966805bccabee39391b277b022ac55ef6d41c",
-      "zig_declaration_id": "src/core/pager.zig::function::Pager.write32Bits",
-      "zig_declaration_sha256": "9d30482ca3c618aa1da32c53b57364d48e609cc1a053bcb0a4ccdf0e4b2cf500",
-      "atomic_unit_id": "pager-big-endian-file-u32-io",
+      "source_entity_id": "src/alter.c::function::renameReloadSchema::line-111",
+      "source_sha256": "ca71f11440dd68b0e77d9ea7a4ffaaf7b78c615b5336cc49e4e137dc907b9928",
+      "zig_declaration_id": "src/core/internal/alter_analysis.zig::function::reloadRenamedSchema",
+      "zig_declaration_sha256": "9cbbae3c52a81ca5e3017f8ad8af1d4f864bca82ac2ce9c6585a3c85df3a124e",
+      "atomic_unit_id": "alter-rename-callback-and-schema-reload",
       "class": "short",
       "complete": true
     },
     {
-      "source_entity_id": "src/pager.c::function::pager_reset::line-1783",
-      "source_sha256": "fca632a63d4416812cb4a08c45b332c88de44b236ae04c142721718574a57a93",
-      "zig_declaration_id": "src/core/pager.zig::function::Pager.resetCache",
-      "zig_declaration_sha256": "930af1c689c5f35b0744ba15609534d6bc1f794f0e9ac7c5449f460bc4a41947",
-      "atomic_unit_id": "pager-cache-reset-and-data-version",
+      "source_entity_id": "src/alter.c::function::renameTokenFree::line-949",
+      "source_sha256": "e2c75e13f422e7c344fc8eb10263bf5e812927d3e0e2e0ebeb439c73a0ad7a2c",
+      "zig_declaration_id": "src/core/internal/alter_analysis.zig::function::freeRenameTokens",
+      "zig_declaration_sha256": "4f62b84b93848566ab3268e2c2d341b71faa335968f59d43b257821df744f128",
+      "atomic_unit_id": "alter-rename-callback-and-schema-reload",
       "class": "short",
       "complete": true
     },
     {
-      "source_entity_id": "src/btree.c::function::computeCellSize::line-7619",
-      "source_sha256": "ae952b3885fb9d80cd700cb461d180e1d6b7ebc94a5e502ccb823713a93a269e",
-      "zig_declaration_id": "src/core/internal/btree_core.zig::function::computeCellSize",
-      "zig_declaration_sha256": "47ab76f5bf66846b9ae03d8b9c3f734e8aa0b967de4e7aea3a7a5be5474307c6",
-      "atomic_unit_id": "btree-cell-size-cache-accessors",
+      "source_entity_id": "src/alter.c::function::renameUnmapExprCb::line-816",
+      "source_sha256": "6507c93a7b7546a84cd23c39ed015600bab8f5030fd71a967d30700538a7cec3",
+      "zig_declaration_id": "src/core/internal/alter_analysis.zig::function::unmapExpressionCallback",
+      "zig_declaration_sha256": "73b1b78eb398a3908c0e11387fa6cf69e7f9227d4bb0c67a3e41e64be13feeb6",
+      "atomic_unit_id": "alter-rename-callback-and-schema-reload",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::attachBackupObject::line-311",
+      "source_sha256": "a1e024c9eb5546154ee6a61847f53a4e1d3e6ddaa6c93cb6f578f8d298190900",
+      "zig_declaration_id": "src/core/internal/backup_core.zig::function::attachBackupObject",
+      "zig_declaration_sha256": "971808eddcb3e3e5e0ac7558d94a89bd017743cf09181734526713e214f29158",
+      "atomic_unit_id": "backup-source-notification-attachment",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::checkReadTransaction::line-123",
+      "source_sha256": "55ab28416836c96079c627af004ea967d4417532431d72ac67ce4e4965abcdfa",
+      "zig_declaration_id": "src/core/internal/backup_core.zig::function::checkReadTransaction",
+      "zig_declaration_sha256": "81607c056ffe5b6d278bac57da712ede3e30b580b2b86a5fb1e5e5132dfdba8c",
+      "atomic_unit_id": "backup-destination-admission-and-page-size",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::isFatalError::line-226",
+      "source_sha256": "b687d5a7864e72400183a7a7b280af43fdd378e2b3e950c58fd21ba4a408ad52",
+      "zig_declaration_id": "src/core/internal/backup_core.zig::function::isFatalError",
+      "zig_declaration_sha256": "eb30893528df0e4d4b8d9ef4ac8278aa7adc1e98c51193071f2dd088da404b41",
+      "atomic_unit_id": "backup-fatal-error-classification",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::setDestPgsz::line-113",
+      "source_sha256": "5289f7d13628a2c2026cd59e8bfbb5624d68b3cd30a709d889405c5afcc71789",
+      "zig_declaration_id": "src/core/internal/backup_core.zig::function::setDestinationPageSize",
+      "zig_declaration_sha256": "9277636c6e66f4e3bd22a14b803fb1d4d94cf448d3325deb0f89b3b46009ac8b",
+      "atomic_unit_id": "backup-destination-admission-and-page-size",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::sqlite3BackupRestart::line-728",
+      "source_sha256": "a31d7595c54ef88779d878c8e61719b74a688dc481651980cd01d2f85dc92ec9",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::backupRestartOwner",
+      "zig_declaration_sha256": "e6eb3fa05f2a0d333914f6a7cb3ec3ef4de0e01eb6ec69b3eeb3c4a5efff4476",
+      "atomic_unit_id": "backup-restart-on-pager-data-version",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::sqlite3_backup_pagecount::line-666",
+      "source_sha256": "150a785b49b670e4074dcfc99b40b00c97be6c2814597029bdc4dcf80b46bc1f",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_backup_pagecount",
+      "zig_declaration_sha256": "5d4da4f12586af709f01cde131ecabb403403c81c2eb3bf7ead68933357cc27c",
+      "atomic_unit_id": "public-backup-progress-observers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::sqlite3_backup_remaining::line-652",
+      "source_sha256": "4f6a66ce71345b99500ddfce712f4d89557fb1c0e16ff7c09cf41d886a8a8dc0",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_backup_remaining",
+      "zig_declaration_sha256": "c397cd1b58bd153ea642ae86e6982cafc2eb70ece9bc7defb3651fd0c6dd7849",
+      "atomic_unit_id": "public-backup-progress-observers",
       "class": "short",
       "complete": true
     },
@@ -62,12 +125,66 @@
       "complete": true
     },
     {
-      "source_entity_id": "src/json.c::function::jsonHexToInt::line-947",
-      "source_sha256": "0c276fe570845ab171f1f9a1f565a988dd8eb14d3beb5ed17d977b718defb2c8",
-      "zig_declaration_id": "src/core/internal/json_core.zig::function::hexToInt",
-      "zig_declaration_sha256": "3601261d7672c546144b423e5b9ee75237351ad6e2785aff47b44135ebaab5b1",
-      "atomic_unit_id": "json-hex-decode-and-prefix-validation",
+      "source_entity_id": "src/btree.c::function::computeCellSize::line-7619",
+      "source_sha256": "ae952b3885fb9d80cd700cb461d180e1d6b7ebc94a5e502ccb823713a93a269e",
+      "zig_declaration_id": "src/core/internal/btree_core.zig::function::computeCellSize",
+      "zig_declaration_sha256": "47ab76f5bf66846b9ae03d8b9c3f734e8aa0b967de4e7aea3a7a5be5474307c6",
+      "atomic_unit_id": "btree-cell-size-cache-accessors",
       "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/complete.c::function::sqlite3_complete16::line-269",
+      "source_sha256": "e1778e89eceeef4e69df1436511712e0f0c9ba8f8df751f548576b921c42b0b1",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_complete16",
+      "zig_declaration_sha256": "21eccbcbb3447ba375ab87f94f2bb8c8a73f279b4f5d3930146c4910690d0f3d",
+      "atomic_unit_id": "sql-completeness-state-machine",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonAllAlphanum::line-4046",
+      "source_sha256": "b54f9d29711163b5f9c23c798f1e381ce3d4e5c0c0b864e48de52c97e4995639",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::allAlphanumeric",
+      "zig_declaration_sha256": "4510528936dff788f61720a31ebcffc9e4f11b681105c42f20d45b954372eb71",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonArrayFinal::line-4889",
+      "source_sha256": "77b7b45ec7c2d4942897fcb78924f30a855ea46049318abec8d10f81cd2fd8b3",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::arrayAggregateFinal",
+      "zig_declaration_sha256": "636c87fba5f869ca5b962778b54fa63e6707cc97c990a689de72c6b6a902e668",
+      "atomic_unit_id": "json-aggregate-value-final-wrappers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonArrayValue::line-4886",
+      "source_sha256": "ca11965db7e81d5a702f52693d1429163ea46de7d4c25ef2d1eb70eb95948fe6",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::arrayAggregateValue",
+      "zig_declaration_sha256": "84b8fdc8a824fee6edca043b49b5c5bba99a84b24a6bfce2cbf911d75c7bb984",
+      "atomic_unit_id": "json-aggregate-value-final-wrappers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonCacheDeleteGeneric::line-428",
+      "source_sha256": "4d2eaf765429aec4ddcc41a405fd2aa7d2248cce0172064bb35bac222058d9bf",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::cacheDeleteGeneric",
+      "zig_declaration_sha256": "1a723a51fc9dc1e61d4151a998ac82b941898293a5e8b5997544ebee19f4c3c1",
+      "atomic_unit_id": "json-cache-generic-destructor",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonExtractFunc::line-4072",
+      "source_sha256": "daf4210d5a8f0ff54a4d249f0a4ef0ab84f0193eb9e28f4dcd4bb9a89ce3df19",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::extractFunction",
+      "zig_declaration_sha256": "afba8ed52663de3fbe305671dc439cc61672417e08a1b63b16172b6263ce5172",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "substantive",
       "complete": true
     },
     {
@@ -75,6 +192,15 @@
       "source_sha256": "dcf788e8ed4398ed1b5687ec9020f91d02e71184569b6380c9f799996917420e",
       "zig_declaration_id": "src/core/internal/json_core.zig::function::hexToInt4",
       "zig_declaration_sha256": "e5d7359f26590cd031242409cd16555d07cf6829a6fd9fe51c7ec8fc944dc533",
+      "atomic_unit_id": "json-hex-decode-and-prefix-validation",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonHexToInt::line-947",
+      "source_sha256": "0c276fe570845ab171f1f9a1f565a988dd8eb14d3beb5ed17d977b718defb2c8",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::hexToInt",
+      "zig_declaration_sha256": "3601261d7672c546144b423e5b9ee75237351ad6e2785aff47b44135ebaab5b1",
       "atomic_unit_id": "json-hex-decode-and-prefix-validation",
       "class": "short",
       "complete": true
@@ -107,154 +233,37 @@
       "complete": true
     },
     {
-      "source_entity_id": "src/backup.c::function::sqlite3BackupRestart::line-728",
-      "source_sha256": "a31d7595c54ef88779d878c8e61719b74a688dc481651980cd01d2f85dc92ec9",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::backupRestartOwner",
-      "zig_declaration_sha256": "e6eb3fa05f2a0d333914f6a7cb3ec3ef4de0e01eb6ec69b3eeb3c4a5efff4476",
-      "atomic_unit_id": "backup-restart-on-pager-data-version",
+      "source_entity_id": "src/json.c::function::jsonObjectFinal::line-5067",
+      "source_sha256": "3be2922e9c8c637f8c3bd447eb1555e7b2d345b79577de5879fb586ced7c8b79",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::objectAggregateFinal",
+      "zig_declaration_sha256": "ce9f9312ac4c7598c19280d0a94a7a1b2bbd706aea43d8cdfd798dc59591f8e8",
+      "atomic_unit_id": "json-aggregate-value-final-wrappers",
       "class": "short",
       "complete": true
     },
     {
-      "source_entity_id": "src/backup.c::function::isFatalError::line-226",
-      "source_sha256": "b687d5a7864e72400183a7a7b280af43fdd378e2b3e950c58fd21ba4a408ad52",
-      "zig_declaration_id": "src/core/internal/backup_core.zig::function::isFatalError",
-      "zig_declaration_sha256": "eb30893528df0e4d4b8d9ef4ac8278aa7adc1e98c51193071f2dd088da404b41",
-      "atomic_unit_id": "backup-fatal-error-classification",
+      "source_entity_id": "src/json.c::function::jsonObjectValue::line-5064",
+      "source_sha256": "e028912dfd42b766de4f3027afef93b52b52209ca1c1051284eb5b3639663459",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::objectAggregateValue",
+      "zig_declaration_sha256": "141228d67f2ec2313c5625024b7f7b7ef924aac74583b563db921d652a6f8442",
+      "atomic_unit_id": "json-aggregate-value-final-wrappers",
       "class": "short",
       "complete": true
     },
     {
-      "source_entity_id": "src/backup.c::function::setDestPgsz::line-113",
-      "source_sha256": "5289f7d13628a2c2026cd59e8bfbb5624d68b3cd30a709d889405c5afcc71789",
-      "zig_declaration_id": "src/core/internal/backup_core.zig::function::setDestinationPageSize",
-      "zig_declaration_sha256": "9277636c6e66f4e3bd22a14b803fb1d4d94cf448d3325deb0f89b3b46009ac8b",
-      "atomic_unit_id": "backup-destination-admission-and-page-size",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/backup.c::function::checkReadTransaction::line-123",
-      "source_sha256": "55ab28416836c96079c627af004ea967d4417532431d72ac67ce4e4965abcdfa",
-      "zig_declaration_id": "src/core/internal/backup_core.zig::function::checkReadTransaction",
-      "zig_declaration_sha256": "81607c056ffe5b6d278bac57da712ede3e30b580b2b86a5fb1e5e5132dfdba8c",
-      "atomic_unit_id": "backup-destination-admission-and-page-size",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/backup.c::function::attachBackupObject::line-311",
-      "source_sha256": "a1e024c9eb5546154ee6a61847f53a4e1d3e6ddaa6c93cb6f578f8d298190900",
-      "zig_declaration_id": "src/core/internal/backup_core.zig::function::attachBackupObject",
-      "zig_declaration_sha256": "971808eddcb3e3e5e0ac7558d94a89bd017743cf09181734526713e214f29158",
-      "atomic_unit_id": "backup-source-notification-attachment",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/json.c::function::jsonStringReset::line-552",
-      "source_sha256": "45e7e2bfbc235d0878de8b1d8b9749dba176131e97a57609f5843af5cbb20185",
-      "zig_declaration_id": "src/core/internal/json_core.zig::function::JsonString.reset",
-      "zig_declaration_sha256": "7b1882eb293ec3f0c7acc10edb222818adf9da7c877d0f4175d555f61ff72f2e",
-      "atomic_unit_id": "json-string-output-and-abbreviated-path",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/json.c::function::jsonStringOom::line-559",
-      "source_sha256": "f3bde570782e28ee6aeb295998b4e85ccb1b6510f8b8cb64bec4a98cac7fd0a7",
-      "zig_declaration_id": "src/core/internal/json_core.zig::function::JsonString.reportOom",
-      "zig_declaration_sha256": "9e1743bb54035bcc91b0d61dd7649af6edb212ae833e1af8ca05d5202bbe1e5e",
-      "atomic_unit_id": "json-string-output-and-abbreviated-path",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/json.c::function::jsonStringTooDeep::line-567",
-      "source_sha256": "dea88c63c79f8b791ad0d3807867e163659f2a13ac728943e1d8a7409bb1b41a",
-      "zig_declaration_id": "src/core/internal/json_core.zig::function::JsonString.reportTooDeep",
-      "zig_declaration_sha256": "374bcaf1175a0a3ca42fbd721e8f15cce4fae13e5f29a12a621c72acecdfed19",
-      "atomic_unit_id": "json-string-output-and-abbreviated-path",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/json.c::function::jsonStringTrimOneChar::line-660",
-      "source_sha256": "1bee85840353aeb056b07ef6550ab1a36b17114ac51a034bc7ca3d7c1e066ebe",
-      "zig_declaration_id": "src/core/internal/json_core.zig::function::trimOneCharacter",
-      "zig_declaration_sha256": "86cf7ed993cf14a92bd3eb7ff9c662fa754119034136026addcd2574a8491389",
-      "atomic_unit_id": "json-string-output-and-abbreviated-path",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/json.c::function::jsonStringTerminate::line-673",
-      "source_sha256": "a0b11d3f0cd424f25facffa7df30ffbcab5be24fd202bbed3eeadc0197f4c75a",
-      "zig_declaration_id": "src/core/internal/json_core.zig::function::terminateString",
-      "zig_declaration_sha256": "dcdfa2ae4d682b5d2edef97bec5849dadf378682a49e9dc9a8ba03d486347e20",
-      "atomic_unit_id": "json-string-output-and-abbreviated-path",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/json.c::function::jsonAllAlphanum::line-4046",
-      "source_sha256": "b54f9d29711163b5f9c23c798f1e381ce3d4e5c0c0b864e48de52c97e4995639",
-      "zig_declaration_id": "src/core/internal/json_functions.zig::function::allAlphanumeric",
-      "zig_declaration_sha256": "4510528936dff788f61720a31ebcffc9e4f11b681105c42f20d45b954372eb71",
-      "atomic_unit_id": "json-string-output-and-abbreviated-path",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pager.c::function::pagerExclusiveLock::line-7605",
-      "source_sha256": "adda780089f1c5726a8ad4fb46c92b6bf799b5e87742ffe202be9c1876d4e713",
-      "zig_declaration_id": "src/core/pager.zig::function::Pager.lockExclusiveForWal",
-      "zig_declaration_sha256": "ccd0d72cb1c48747fb8e2de00fba811bb8fbf8501c1856c72fb28261a842bd61",
-      "atomic_unit_id": "pager-exclusive-wal-connection-open",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pager.c::function::pagerOpenWal::line-7627",
-      "source_sha256": "c690daad8b7e83f97e79d270c87d50ab1ea18f7a8cc0ea5451b327d787de8a83",
-      "zig_declaration_id": "src/core/pager.zig::function::Pager.openWalConnection",
-      "zig_declaration_sha256": "8d444e0c8da9375fa640f1bd46d2672d135106876e0d3bc9ef9b19c2b8b4fa66",
-      "atomic_unit_id": "pager-exclusive-wal-connection-open",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/json.c::function::jsonWrongNumArgs::line-1134",
-      "source_sha256": "f338e29dcee62c45bfa0b194590dcbb54b05eccc00686117afd3174932500b8b",
-      "zig_declaration_id": "src/core/internal/json_functions.zig::function::reportWrongArgumentCount",
-      "zig_declaration_sha256": "4928088afa16781bd8e22e6da1ce22cec9e24dfea3156c77f2f8bbbe2e8e4dd8",
-      "atomic_unit_id": "json-insertion-dispatch-and-argument-errors",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/json.c::function::jsonSetFunc::line-4549",
-      "source_sha256": "01d90e15088f681a40f30d07d98959f79694314ce85f7cd41f6f9c4016f48299",
-      "zig_declaration_id": "src/core/internal/json_functions.zig::function::setFunction",
-      "zig_declaration_sha256": "cc93df9c10bc1ffd2449e8c3d0aeeae1db7682c6a2f0dd41b01f16d7c782f8bf",
+      "source_entity_id": "src/json.c::function::jsonReplaceFunc::line-4523",
+      "source_sha256": "898e855c1f0110996dde3998dd8606ea2344d93a090240df58368be60b8bb040",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::replaceFunction",
+      "zig_declaration_sha256": "53176b1c30988457f7dff84e2b0079e00fb889836e97f69f1fa8c41e7b2d8ba5",
       "atomic_unit_id": "json-insertion-dispatch-and-argument-errors",
       "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/json.c::function::jsonExtractFunc::line-4072",
-      "source_sha256": "daf4210d5a8f0ff54a4d249f0a4ef0ab84f0193eb9e28f4dcd4bb9a89ce3df19",
-      "zig_declaration_id": "src/core/internal/json_functions.zig::function::extractFunction",
-      "zig_declaration_sha256": "afba8ed52663de3fbe305671dc439cc61672417e08a1b63b16172b6263ce5172",
-      "atomic_unit_id": "json-string-output-and-abbreviated-path",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/json.c::function::jsonStringGrow::line-577",
-      "source_sha256": "471ad725887c8ac7daea679f8642d50ff17dd70de3df17ff64924dfadcefeb8a",
-      "zig_declaration_id": "src/core/internal/json_core.zig::function::growString",
-      "zig_declaration_sha256": "8afff266bc73151357523e78ee8d055bed9be94ce45d75b6bf30cfccae8daf0e",
+      "source_entity_id": "src/json.c::function::jsonReturnParse::line-3777",
+      "source_sha256": "856f691909fff7b323018482ab377b8070f3157075fd7504a58b2ec84d0a39ca",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::returnParse",
+      "zig_declaration_sha256": "94c2f87d0f5e34159d83a4d012d86dda7eadc448a951c50b2c9dfa8b7595accb",
       "atomic_unit_id": "json-string-output-and-abbreviated-path",
       "class": "substantive",
       "complete": true
@@ -264,15 +273,6 @@
       "source_sha256": "d60671dcbffdb108ca232a37a7f2f3d91cdece6f61814ac8a3dfcb1024f8b31c",
       "zig_declaration_id": "src/core/internal/json_functions.zig::function::returnString",
       "zig_declaration_sha256": "7e44995239e0a4ae905e65a7fd8cf9638c0196559703403ebac0e07ba92a6350",
-      "atomic_unit_id": "json-string-output-and-abbreviated-path",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/json.c::function::jsonReturnParse::line-3777",
-      "source_sha256": "856f691909fff7b323018482ab377b8070f3157075fd7504a58b2ec84d0a39ca",
-      "zig_declaration_id": "src/core/internal/json_functions.zig::function::returnParse",
-      "zig_declaration_sha256": "94c2f87d0f5e34159d83a4d012d86dda7eadc448a951c50b2c9dfa8b7595accb",
       "atomic_unit_id": "json-string-output-and-abbreviated-path",
       "class": "substantive",
       "complete": true
@@ -296,84 +296,318 @@
       "complete": true
     },
     {
-      "source_entity_id": "src/json.c::function::jsonReplaceFunc::line-4523",
-      "source_sha256": "898e855c1f0110996dde3998dd8606ea2344d93a090240df58368be60b8bb040",
-      "zig_declaration_id": "src/core/internal/json_functions.zig::function::replaceFunction",
-      "zig_declaration_sha256": "53176b1c30988457f7dff84e2b0079e00fb889836e97f69f1fa8c41e7b2d8ba5",
+      "source_entity_id": "src/json.c::function::jsonSetFunc::line-4549",
+      "source_sha256": "01d90e15088f681a40f30d07d98959f79694314ce85f7cd41f6f9c4016f48299",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::setFunction",
+      "zig_declaration_sha256": "cc93df9c10bc1ffd2449e8c3d0aeeae1db7682c6a2f0dd41b01f16d7c782f8bf",
       "atomic_unit_id": "json-insertion-dispatch-and-argument-errors",
       "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/util.c::function::sqlite3ErrorMsg::line-242",
-      "source_sha256": "3bb672d33877e9ea06a144064508c7baf9d43725eb490a8b14bb7870f8bde167",
-      "zig_declaration_id": "src/core/internal/parse_error.zig::function::report",
-      "zig_declaration_sha256": "1a1ea1bc606fe367dd5ee94d86df2d8bdc4437475b59873f2efafcea05ecea97",
-      "atomic_unit_id": "parse-error-message-publication",
+      "source_entity_id": "src/json.c::function::jsonStringGrow::line-577",
+      "source_sha256": "471ad725887c8ac7daea679f8642d50ff17dd70de3df17ff64924dfadcefeb8a",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::growString",
+      "zig_declaration_sha256": "8afff266bc73151357523e78ee8d055bed9be94ce45d75b6bf30cfccae8daf0e",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
       "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/where.c::function::sqlite3_vtab_collation::line-4554",
-      "source_sha256": "52b2788333e6ed88a6524727d688e2dbf4eeeaa047cbebed314de0b1a304c23c",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::planningConstraintCollation",
-      "zig_declaration_sha256": "385f20bacd98c4e8e2bb8a8a0d290579581420181e48dea42411e62c165e7111",
-      "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
+      "source_entity_id": "src/json.c::function::jsonStringOom::line-559",
+      "source_sha256": "f3bde570782e28ee6aeb295998b4e85ccb1b6510f8b8cb64bec4a98cac7fd0a7",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::JsonString.reportOom",
+      "zig_declaration_sha256": "9e1743bb54035bcc91b0d61dd7649af6edb212ae833e1af8ca05d5202bbe1e5e",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringReset::line-552",
+      "source_sha256": "45e7e2bfbc235d0878de8b1d8b9749dba176131e97a57609f5843af5cbb20185",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::JsonString.reset",
+      "zig_declaration_sha256": "7b1882eb293ec3f0c7acc10edb222818adf9da7c877d0f4175d555f61ff72f2e",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringTerminate::line-673",
+      "source_sha256": "a0b11d3f0cd424f25facffa7df30ffbcab5be24fd202bbed3eeadc0197f4c75a",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::terminateString",
+      "zig_declaration_sha256": "dcdfa2ae4d682b5d2edef97bec5849dadf378682a49e9dc9a8ba03d486347e20",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringTooDeep::line-567",
+      "source_sha256": "dea88c63c79f8b791ad0d3807867e163659f2a13ac728943e1d8a7409bb1b41a",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::JsonString.reportTooDeep",
+      "zig_declaration_sha256": "374bcaf1175a0a3ca42fbd721e8f15cce4fae13e5f29a12a621c72acecdfed19",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonStringTrimOneChar::line-660",
+      "source_sha256": "1bee85840353aeb056b07ef6550ab1a36b17114ac51a034bc7ca3d7c1e066ebe",
+      "zig_declaration_id": "src/core/internal/json_core.zig::function::trimOneCharacter",
+      "zig_declaration_sha256": "86cf7ed993cf14a92bd3eb7ff9c662fa754119034136026addcd2574a8491389",
+      "atomic_unit_id": "json-string-output-and-abbreviated-path",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/json.c::function::jsonWrongNumArgs::line-1134",
+      "source_sha256": "f338e29dcee62c45bfa0b194590dcbb54b05eccc00686117afd3174932500b8b",
+      "zig_declaration_id": "src/core/internal/json_functions.zig::function::reportWrongArgumentCount",
+      "zig_declaration_sha256": "4928088afa16781bd8e22e6da1ce22cec9e24dfea3156c77f2f8bbbe2e8e4dd8",
+      "atomic_unit_id": "json-insertion-dispatch-and-argument-errors",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::openDatabase::line-3360",
+      "source_sha256": "a0661a5033fa811d8f8e9817ad81da27a5f4b4e32d29e28e87df50df9c4c7dd1",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::openConnection",
+      "zig_declaration_sha256": "6ee33830b408d7d0cd01dc3b121e39b2a414a627bd8928eb2cd39bee195d18f1",
+      "atomic_unit_id": "connection-open-initialization-and-flag-normalization",
       "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/where.c::function::sqlite3_vtab_in::line-4574",
-      "source_sha256": "f7b5c4c9245a7b625072bd55f0fe232222eab874b0376cf4d4167564554a9a2b",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::planningIn",
-      "zig_declaration_sha256": "7dff5b572bf7af96706e97166ed92d5cedc1cd752b2ad292993c73019e96a747",
-      "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
+      "source_entity_id": "src/main.c::function::sqlite3CantopenError::line-4010",
+      "source_sha256": "43f962ee7da7729aee11a3f777d81c6e6d0cd0e1843c29cfb8429c43148daa07",
+      "zig_declaration_id": "src/core/internal/error_state.zig::function::cannotOpenError",
+      "zig_declaration_sha256": "e897576c9590bb0fdec4d4ae9969f255a43a081f3d55f4f35d492fd3af85cef0",
+      "atomic_unit_id": "low-level-source-error-reporting",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3Close::line-1266",
+      "source_sha256": "2a9d34ee268dc96cfdbc9cb050ca4cb56dee8400a1aa419ef8954b2f5965145a",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::closeConnection",
+      "zig_declaration_sha256": "df28ce2a4570a2d218c8d3043e9cbe9e315dffcf5bdeb5fd1a5e429b8d1ef321",
+      "atomic_unit_id": "connection-close-and-deferred-zombie-release",
       "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/where.c::function::sqlite3_vtab_rhs_value::line-4594",
-      "source_sha256": "10d4bae9570d2c7620dfbc120c45f2deb918882409c933ede0d5eba6cd71ad75",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::planningRhsValue",
-      "zig_declaration_sha256": "b204fbd5f5f666baa2f8000a7063ed5dc2dd0d1fc8d6a24af09bfb2bdfe982f7",
-      "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
+      "source_entity_id": "src/main.c::function::sqlite3CorruptError::line-4002",
+      "source_sha256": "b5aa3479d5458701679e6c8e3e79db8c06317bc6933acc6d1c02178581cdad13",
+      "zig_declaration_id": "src/core/internal/error_state.zig::function::corruptError",
+      "zig_declaration_sha256": "cb51b11431ba3b0ca37bcee480ea65c7df5f521ee6a4937505cf93059caf8b23",
+      "atomic_unit_id": "low-level-source-error-reporting",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::line-1375",
+      "source_sha256": "9d843ef67a7fa437b03cbfe224f08ef8e3d629dd245f7050d600cfb017b59d4b",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::Connection.leaveMutexAndCloseZombie",
+      "zig_declaration_sha256": "6391f667311bad1d2e5a6bea8755ee82db8857b269df0a3c5be8a779aeb7e493",
+      "atomic_unit_id": "connection-close-and-deferred-zombie-release",
       "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/vdbemem.c::function::sqlite3VdbeMemFromBtree::line-1462",
-      "source_sha256": "d0e1f158a2f1df70c20e8da9532c03833998bd22376accd4a30dabfa130bbaef",
-      "zig_declaration_id": "src/core/internal/vdbe_mem.zig::function::memFromBtree",
-      "zig_declaration_sha256": "713048f8d5f4eaeeb26cc5a75fdcb40f11b4def8e400175730abd23bd59fc6b4",
-      "atomic_unit_id": "vdbe-btree-and-constant-expression-value-materialization",
+      "source_entity_id": "src/main.c::function::sqlite3MisuseError::line-4006",
+      "source_sha256": "f6ba1c87d939c40b702f38ca6f4304ccac038fb5969310b33cd137a332fb6c76",
+      "zig_declaration_id": "src/core/internal/error_state.zig::function::misuseError",
+      "zig_declaration_sha256": "28217cc3bfea338c042e6a00b18c90d90dabea0678459246621537af5a96fd48",
+      "atomic_unit_id": "low-level-source-error-reporting",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3ReportError::line-3997",
+      "source_sha256": "5280a46f7980fa52174a7212000e862ce4e14012c76cb1761baf5e59998c29bc",
+      "zig_declaration_id": "src/core/internal/error_state.zig::function::reportSourceError",
+      "zig_declaration_sha256": "60541b002bcb61e9bf3553635fae632cccb508495e89b9c18eaccd5e7cbddc3c",
+      "atomic_unit_id": "low-level-source-error-reporting",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/main.c::function::sqlite3_create_collation16::line-3819",
+      "source_sha256": "df9034cc17a8a15523629a1e3bda43da94e86163e43a45cfee6fdd7d3d0bf7aa",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_create_collation16",
+      "zig_declaration_sha256": "6a880385e61d7ca16b306bb6cf201d9c0117524bd941dc6d6f33bda413bcedd7",
+      "atomic_unit_id": "utf16-function-and-collation-registration",
       "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/vdbemem.c::function::sqlite3VdbeMemFromBtreeZeroOffset::line-1490",
-      "source_sha256": "a99ad1029a63b4806c44a7e235c07689a2326c46a6b79185af611e9991b5314d",
-      "zig_declaration_id": "src/core/internal/vdbe_mem.zig::function::memFromBtreeZeroOffset",
-      "zig_declaration_sha256": "d33d005b8dd5f7326bfa805f447b17119ad6a358b606a48f326cd955815e19cb",
-      "atomic_unit_id": "vdbe-btree-and-constant-expression-value-materialization",
+      "source_entity_id": "src/main.c::function::sqlite3_create_function16::line-2175",
+      "source_sha256": "4771b0a411f3b1cf2ab6680ab780d1d7b7ca02623c303c421ac2bd0ebad1a747",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_create_function16",
+      "zig_declaration_sha256": "850d4dfd2d38a75fcc3905e29fdddac3f8b1f468e17c7f98e3a287959bf2c8ae",
+      "atomic_unit_id": "utf16-function-and-collation-registration",
       "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/vdbemem.c::function::valueFromExpr::line-1795",
-      "source_sha256": "949ef56a947923c89b4034a5993298033d36e30a1e9a83cbdf04cf3ed63f968c",
-      "zig_declaration_id": "src/core/internal/vdbe_mem.zig::function::valueFromConstantExpression",
-      "zig_declaration_sha256": "910acee9bf452bd060837f853eb822131cd6620bf54456cc063c6ab33dcadc15",
-      "atomic_unit_id": "vdbe-btree-and-constant-expression-value-materialization",
+      "source_entity_id": "src/os_unix.c::function::unixDeviceCharacteristics::line-4480",
+      "source_sha256": "9dcb976d88ecc4d3fd447fae7b25e0e7cad785b2d26b2614ed6f2b5870c81fdc",
+      "zig_declaration_id": "src/core/unix_vfs.zig::function::xDevice",
+      "zig_declaration_sha256": "f294b0a85a76e569539e5ff11709fffb7c0445c68fe62ae48515db1133edf676",
+      "atomic_unit_id": "unix-vfs-device-observers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/os_unix.c::function::unixSectorSize::line-4461",
+      "source_sha256": "000beca8e47ba2c483fd6a27c85dd9ee4f28c02346af02ef80ed0a7664bd0ca1",
+      "zig_declaration_id": "src/core/unix_vfs.zig::function::xSector",
+      "zig_declaration_sha256": "b91caf5bd0e17be7e12ae07e695ecc27777b337cd210ab0ce31feba07d4e5d45",
+      "atomic_unit_id": "unix-vfs-device-observers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pagerExclusiveLock::line-7605",
+      "source_sha256": "adda780089f1c5726a8ad4fb46c92b6bf799b5e87742ffe202be9c1876d4e713",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.lockExclusiveForWal",
+      "zig_declaration_sha256": "ccd0d72cb1c48747fb8e2de00fba811bb8fbf8501c1856c72fb28261a842bd61",
+      "atomic_unit_id": "pager-exclusive-wal-connection-open",
       "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/whereexpr.c::function::whereCombineDisjuncts::line-559",
-      "source_sha256": "210c6e946ed9b0961edb65ecde83c7ee4d93cbd774a4aaf5c6527325f2101e41",
-      "zig_declaration_id": "src/core/internal/where_planner.zig::function::combineDisjuncts",
-      "zig_declaration_sha256": "bea1793a0bf9f31f68ba990b8d2e6fed981a7f9c08b130b9bf1df45f0bd1998e",
-      "atomic_unit_id": "where-compatible-or-range-combination",
+      "source_entity_id": "src/pager.c::function::pagerOpenWal::line-7627",
+      "source_sha256": "c690daad8b7e83f97e79d270c87d50ab1ea18f7a8cc0ea5451b327d787de8a83",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.openWalConnection",
+      "zig_declaration_sha256": "8d444e0c8da9375fa640f1bd46d2672d135106876e0d3bc9ef9b19c2b8b4fa66",
+      "atomic_unit_id": "pager-exclusive-wal-connection-open",
       "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pager_cksum::line-2251",
+      "source_sha256": "61ee037a7cf7e262fd1b4282edf473ea02344af9201ed1de2fbfd3bb522edd1f",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.journalChecksum",
+      "zig_declaration_sha256": "611ea30db1f5236771fd097ecbf62d00c3ea50fcbfbf24fdd6f053a85e52d9f0",
+      "atomic_unit_id": "pager-rollback-journal-checksum",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::pager_reset::line-1783",
+      "source_sha256": "fca632a63d4416812cb4a08c45b332c88de44b236ae04c142721718574a57a93",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.resetCache",
+      "zig_declaration_sha256": "930af1c689c5f35b0744ba15609534d6bc1f794f0e9ac7c5449f460bc4a41947",
+      "atomic_unit_id": "pager-cache-reset-and-data-version",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::read32bits::line-1099",
+      "source_sha256": "48b01353208d8e3b73f9fbda1db809dd4f5c51f44289da43f99f99dacbf40b57",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.read32Bits",
+      "zig_declaration_sha256": "b6e3e2f77df15e3a76fd88504a84fcdfe0fcd11c754b1c185f4fbcfa32245d14",
+      "atomic_unit_id": "pager-big-endian-file-u32-io",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pager.c::function::write32bits::line-1118",
+      "source_sha256": "5ce29786c165094ea13dcac4e82966805bccabee39391b277b022ac55ef6d41c",
+      "zig_declaration_id": "src/core/pager.zig::function::Pager.write32Bits",
+      "zig_declaration_sha256": "9d30482ca3c618aa1da32c53b57364d48e609cc1a053bcb0a4ccdf0e4b2cf500",
+      "atomic_unit_id": "pager-big-endian-file-u32-io",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabClose::line-2951",
+      "source_sha256": "8f00f81fc4462ba683b03bfe3b0766642c6fe99d6fc9a73f1eb68e5919648687",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualClose",
+      "zig_declaration_sha256": "fed93db070ba6b0cebd444319126d0d451afa35b67bbc8617e51294977246747",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabColumn::line-3035",
+      "source_sha256": "da9889e2f59c77853b60d71f75b7d85226c0abf00e03c63d3287259c12b6875c",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualColumn",
+      "zig_declaration_sha256": "2ecd8ee2b3f2841948edd4b7f2b68f18e7a425e1df5f16f23e12b6829469d9c5",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabConnect::line-2815",
+      "source_sha256": "f68185073f32b51c8b37c5c5e4690ed40925ba6f38ce548a3d659a203872de6f",
+      "zig_declaration_id": "src/core/internal/pragma_runtime.zig::function::connectVirtualTable",
+      "zig_declaration_sha256": "9d3cf053f72c51fa8b743efd79aef4a3be5ca9fe2a34f43d3e5fb716e90d5e7c",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabEof::line-3027",
+      "source_sha256": "ed437a5265dd56d1054825e820b922a1a5d7fcf090af73b8850d566a49434e84",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualEof",
+      "zig_declaration_sha256": "59a490b1d8545e2587ac4bc3374c7cc2f6bf896dffb71c930f3974b10313fded",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabFilter::line-2977",
+      "source_sha256": "39dea4a34b93f157163773a0d7b964d0844beecd5c34ebee5d823048b5a6b42e",
+      "zig_declaration_id": "src/core/internal/pragma_runtime.zig::function::virtualFilter",
+      "zig_declaration_sha256": "19dcb8d9f934d585533d8f3422d1f3310a496bb14708d188522faa6cc3336e70",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabOpen::line-2928",
+      "source_sha256": "294ea23fe2fb08a2356f4b3f5d5c37c390203afa38657b3ef60a1b0605d380be",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualOpen",
+      "zig_declaration_sha256": "5781b7b24242ffbae416ff256762f5a43bb1bc94c9d7e334ccc778a27ca2d755",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::pragmaVtabRowid::line-3053",
+      "source_sha256": "96da42ffbb74fc5137aac9eaf06e260b031bc3220d08b776e797845afeaefed9",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualRowid",
+      "zig_declaration_sha256": "63ad16de68a4dcaa782174639e1d69dd3a484a537d692673b840475cb2bdce7a",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/pragma.c::function::sqlite3PragmaVtabRegister::line-3093",
+      "source_sha256": "a9984f26a473cf0dd4a353922d3bd220ae1f350383d3f0bf1276ff64e3d6e4e0",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::compilePragmaVirtualScan",
+      "zig_declaration_sha256": "5279af9ec21226392c0315f461fbaffb065d211a3336b110c8a4f1f8a6c113ff",
+      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/prepare.c::function::sqlite3Prepare16::line-983",
+      "source_sha256": "318bd2e1b720cfe158334fd424d6f3c2b5d944f1963522c1f7e63bac2481e3d9",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::prepareUtf16",
+      "zig_declaration_sha256": "77bcd48f1c53ed9e76be1113afbd2715827189cb767fe8c20ca83bd0e6d479b1",
+      "atomic_unit_id": "utf16-prepare-conversion-and-tail-mapping",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/select.c::function::agginfoFree::line-7110",
+      "source_sha256": "57fd69e5e32f04671101d85a4844b4d1cc3bef0fe94f43d91f208c0178ddaa8f",
+      "zig_declaration_id": "src/core/internal/aggregate_analysis.zig::function::freeAggregateInfo",
+      "zig_declaration_sha256": "0ec0719aa47f876c733cb34dcb954aa6563256478b40baa22784f11340338248",
+      "atomic_unit_id": "aggregate-info-owner-release",
+      "class": "short",
       "complete": true
     },
     {
@@ -382,15 +616,6 @@
       "zig_declaration_id": "src/core/sql_frontend.zig::function::databaseStatus",
       "zig_declaration_sha256": "0b2e376997a9ab272f0b1778aac52db6619602ad1015b598a574be2d3b4cb03c",
       "atomic_unit_id": "connection-status-32-bit-wrapper",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/table.c::function::sqlite3_get_table::line-116",
-      "source_sha256": "b86ba1e380cc6da5a2afe57da76c67e34439edb88b8c1d9a4676ceeb79c3124a",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::collectTable",
-      "zig_declaration_sha256": "5fdc90e30641904fa2d767f360f3d7569776139993abf1ae74bc46278e6b1bb9",
-      "atomic_unit_id": "get-table-result-collection-and-release",
       "class": "substantive",
       "complete": true
     },
@@ -404,13 +629,40 @@
       "complete": true
     },
     {
-      "source_entity_id": "src/vdbetrace.c::function::sqlite3VdbeExpandSql::line-72",
-      "source_sha256": "87bb1f08e87688f9de6c17b929204960c8d4aeb7cd7992d3e3cfe0d4873f2a3b",
-      "zig_declaration_id": "src/core/statement.zig::function::expandSql",
-      "zig_declaration_sha256": "d240b53cf847bb416632c6c2d978e62b6b1feea99b60b854ea7403f422ced0e7",
-      "atomic_unit_id": "vdbe-expanded-sql-nested-execution",
+      "source_entity_id": "src/table.c::function::sqlite3_get_table::line-116",
+      "source_sha256": "b86ba1e380cc6da5a2afe57da76c67e34439edb88b8c1d9a4676ceeb79c3124a",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::collectTable",
+      "zig_declaration_sha256": "5fdc90e30641904fa2d767f360f3d7569776139993abf1ae74bc46278e6b1bb9",
+      "atomic_unit_id": "get-table-result-collection-and-release",
       "class": "substantive",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/upsert.c::function::sqlite3UpsertAnalyzeTarget::line-90",
+      "source_sha256": "c0fbbb4d1b2257095ac97beee5a8b858d1c9a783a5021975473218a8db0ece01",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::findUpsertConflict",
+      "atomic_unit_id": "upsert-target-analysis-and-update",
+      "class": "substantive",
+      "complete": true,
+      "zig_declaration_sha256": "537c525991ff06339edcd6d04219c5fe31e0ef322762d78b287a5c90ee0ce40c"
+    },
+    {
+      "source_entity_id": "src/upsert.c::function::sqlite3UpsertDelete::line-33",
+      "source_sha256": "ccf8289d38a456f0d771f81f50a87bce5f17c065ee66d58e2ed459a94da3ef18",
+      "zig_declaration_id": "src/core/internal/compiler_ownership.zig::function::deleteUpsert",
+      "zig_declaration_sha256": "4c94e386622a7a367b264095dec0e332362e14a99bfd0f9408bd543c28eeb094",
+      "atomic_unit_id": "upsert-optional-delete-closure",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/upsert.c::function::sqlite3UpsertDoUpdate::line-267",
+      "source_sha256": "9c31dcad6a97295f7bfaa265bb56db0594a57cd2707434aa6231b1d7c9317789",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::executeUpsertUpdate",
+      "atomic_unit_id": "upsert-target-analysis-and-update",
+      "class": "substantive",
+      "complete": true,
+      "zig_declaration_sha256": "7449219a5d20a4172eea64bf3db17f596c940ac76208216b58be5952561ea9be"
     },
     {
       "source_entity_id": "src/util.c::function::sqlite3ColumnType::line-104",
@@ -419,15 +671,6 @@
       "zig_declaration_sha256": "47d9e848c67fe49288d946acc242d8493dba86db12fcfccf41247d22d60e4416",
       "atomic_unit_id": "schema-column-type-representation",
       "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/util.c::function::sqlite3ErrorFinish::line-120",
-      "source_sha256": "21e5152c73b2ae3e092a873bb22a012151eb4db20febfcf98d8edb5fb64040ef",
-      "zig_declaration_id": "src/core/internal/error_state.zig::function::finishDatabaseError",
-      "zig_declaration_sha256": "398b2d4633efe4e413ee9a49339973d73898f42264f592123aa6234cb9b2710b",
-      "atomic_unit_id": "connection-error-state-and-fault-simulation",
-      "class": "short",
       "complete": true
     },
     {
@@ -449,93 +692,30 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/util.c::function::sqlite3ErrorFinish::line-120",
+      "source_sha256": "21e5152c73b2ae3e092a873bb22a012151eb4db20febfcf98d8edb5fb64040ef",
+      "zig_declaration_id": "src/core/internal/error_state.zig::function::finishDatabaseError",
+      "zig_declaration_sha256": "398b2d4633efe4e413ee9a49339973d73898f42264f592123aa6234cb9b2710b",
+      "atomic_unit_id": "connection-error-state-and-fault-simulation",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/util.c::function::sqlite3ErrorMsg::line-242",
+      "source_sha256": "3bb672d33877e9ea06a144064508c7baf9d43725eb490a8b14bb7870f8bde167",
+      "zig_declaration_id": "src/core/internal/parse_error.zig::function::report",
+      "zig_declaration_sha256": "1a1ea1bc606fe367dd5ee94d86df2d8bdc4437475b59873f2efafcea05ecea97",
+      "atomic_unit_id": "parse-error-message-publication",
+      "class": "substantive",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/util.c::function::sqlite3FaultSim::line-44",
       "source_sha256": "bdd6014400ddc1fe469d0242b36b56d4f642e6b8d3f75110aef23870be9e947e",
       "zig_declaration_id": "src/core/public_api.zig::function::faultSimulation",
       "zig_declaration_sha256": "21e46bda1696f4cb49e8e4d62a7a680740b45a312cc097f941766723cc8d7498",
       "atomic_unit_id": "connection-error-state-and-fault-simulation",
       "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/main.c::function::openDatabase::line-3360",
-      "source_sha256": "a0661a5033fa811d8f8e9817ad81da27a5f4b4e32d29e28e87df50df9c4c7dd1",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::openConnection",
-      "zig_declaration_sha256": "6ee33830b408d7d0cd01dc3b121e39b2a414a627bd8928eb2cd39bee195d18f1",
-      "atomic_unit_id": "connection-open-initialization-and-flag-normalization",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/main.c::function::sqlite3Close::line-1266",
-      "source_sha256": "2a9d34ee268dc96cfdbc9cb050ca4cb56dee8400a1aa419ef8954b2f5965145a",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::closeConnection",
-      "zig_declaration_sha256": "df28ce2a4570a2d218c8d3043e9cbe9e315dffcf5bdeb5fd1a5e429b8d1ef321",
-      "atomic_unit_id": "connection-close-and-deferred-zombie-release",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/main.c::function::sqlite3LeaveMutexAndCloseZombie::line-1375",
-      "source_sha256": "9d843ef67a7fa437b03cbfe224f08ef8e3d629dd245f7050d600cfb017b59d4b",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::Connection.leaveMutexAndCloseZombie",
-      "zig_declaration_sha256": "6391f667311bad1d2e5a6bea8755ee82db8857b269df0a3c5be8a779aeb7e493",
-      "atomic_unit_id": "connection-close-and-deferred-zombie-release",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_open::line-121",
-      "source_sha256": "64b2edc516d7a3c052c9f62781e6ccc7e6bec5bf57c34019792555e19e8016d8",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_blob_open",
-      "zig_declaration_sha256": "bd7d59adf43944d07bbea97f4aab2bc549b9e8fba4aced6247b2fb9e938b84a8",
-      "atomic_unit_id": "incremental-blob-open-reopen-and-close",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_reopen::line-503",
-      "source_sha256": "5dd41a7e782320f380e8552725a83a906dc3a0f7f567946a18721920e96f3ae3",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_blob_reopen",
-      "zig_declaration_sha256": "be304eb54cccfbd4693443e6309375f2bd11870517d0908614cbce4952abc15c",
-      "atomic_unit_id": "incremental-blob-open-reopen-and-close",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_close::line-360",
-      "source_sha256": "1aedca151649ab0a32c382ac0aeccb697fd69fa2d631c1d917e3e1b9561f0d29",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_blob_close",
-      "zig_declaration_sha256": "f1c1c2e854d79987f467bc900289b70dfe8b7e21888849436bfbb59446f4c602",
-      "atomic_unit_id": "incremental-blob-open-reopen-and-close",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/main.c::function::sqlite3_create_function16::line-2175",
-      "source_sha256": "4771b0a411f3b1cf2ab6680ab780d1d7b7ca02623c303c421ac2bd0ebad1a747",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_create_function16",
-      "zig_declaration_sha256": "850d4dfd2d38a75fcc3905e29fdddac3f8b1f468e17c7f98e3a287959bf2c8ae",
-      "atomic_unit_id": "utf16-function-and-collation-registration",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/main.c::function::sqlite3_create_collation16::line-3819",
-      "source_sha256": "df9034cc17a8a15523629a1e3bda43da94e86163e43a45cfee6fdd7d3d0bf7aa",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_create_collation16",
-      "zig_declaration_sha256": "6a880385e61d7ca16b306bb6cf201d9c0117524bd941dc6d6f33bda413bcedd7",
-      "atomic_unit_id": "utf16-function-and-collation-registration",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/prepare.c::function::sqlite3Prepare16::line-983",
-      "source_sha256": "318bd2e1b720cfe158334fd424d6f3c2b5d944f1963522c1f7e63bac2481e3d9",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::prepareUtf16",
-      "zig_declaration_sha256": "77bcd48f1c53ed9e76be1113afbd2715827189cb767fe8c20ca83bd0e6d479b1",
-      "atomic_unit_id": "utf16-prepare-conversion-and-tail-mapping",
-      "class": "substantive",
       "complete": true
     },
     {
@@ -566,15 +746,6 @@
       "complete": true
     },
     {
-      "source_entity_id": "src/complete.c::function::sqlite3_complete16::line-269",
-      "source_sha256": "e1778e89eceeef4e69df1436511712e0f0c9ba8f8df751f548576b921c42b0b1",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_complete16",
-      "zig_declaration_sha256": "21eccbcbb3447ba375ab87f94f2bb8c8a73f279b4f5d3930146c4910690d0f3d",
-      "atomic_unit_id": "sql-completeness-state-machine",
-      "class": "substantive",
-      "complete": true
-    },
-    {
       "source_entity_id": "src/vdbeapi.c::function::sqlite3_vtab_in_first::line-1093",
       "source_sha256": "4d1d4a2e5068bf95038df0d7027d127a01f9a6ca6aa5547f1f0719f392bf8690",
       "zig_declaration_id": "src/core/statement.zig::function::sqlite3_vtab_in_first",
@@ -593,12 +764,48 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_bytes::line-488",
+      "source_sha256": "a3e309f63e670547a6f77319edb3eafd4fd214fe98d3b8803d1c8c62abfd98f3",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_blob_bytes",
+      "zig_declaration_sha256": "949bef067b740e89f34cf99742d223609f3f3866b8df4dab5e3b2ca30b27b8f0",
+      "atomic_unit_id": "public-incremental-blob-read-write-size",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_close::line-360",
+      "source_sha256": "1aedca151649ab0a32c382ac0aeccb697fd69fa2d631c1d917e3e1b9561f0d29",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_blob_close",
+      "zig_declaration_sha256": "f1c1c2e854d79987f467bc900289b70dfe8b7e21888849436bfbb59446f4c602",
+      "atomic_unit_id": "incremental-blob-open-reopen-and-close",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_open::line-121",
+      "source_sha256": "64b2edc516d7a3c052c9f62781e6ccc7e6bec5bf57c34019792555e19e8016d8",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_blob_open",
+      "zig_declaration_sha256": "bd7d59adf43944d07bbea97f4aab2bc549b9e8fba4aced6247b2fb9e938b84a8",
+      "atomic_unit_id": "incremental-blob-open-reopen-and-close",
+      "class": "substantive",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_read::line-471",
       "source_sha256": "4005610032b3d563fd2798f48757c7aab8556e139b7b8a8e5facd7981d200f4a",
       "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_blob_read",
       "zig_declaration_sha256": "a967c90d030fec605c04af21d346c2d0292f29f9c241018957c6c9d5b61a0236",
       "atomic_unit_id": "public-incremental-blob-read-write-size",
       "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_reopen::line-503",
+      "source_sha256": "5dd41a7e782320f380e8552725a83a906dc3a0f7f567946a18721920e96f3ae3",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_blob_reopen",
+      "zig_declaration_sha256": "be304eb54cccfbd4693443e6309375f2bd11870517d0908614cbce4952abc15c",
+      "atomic_unit_id": "incremental-blob-open-reopen-and-close",
+      "class": "substantive",
       "complete": true
     },
     {
@@ -611,93 +818,39 @@
       "complete": true
     },
     {
-      "source_entity_id": "src/vdbeblob.c::function::sqlite3_blob_bytes::line-488",
-      "source_sha256": "a3e309f63e670547a6f77319edb3eafd4fd214fe98d3b8803d1c8c62abfd98f3",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_blob_bytes",
-      "zig_declaration_sha256": "949bef067b740e89f34cf99742d223609f3f3866b8df4dab5e3b2ca30b27b8f0",
-      "atomic_unit_id": "public-incremental-blob-read-write-size",
-      "class": "short",
+      "source_entity_id": "src/vdbemem.c::function::sqlite3VdbeMemFromBtree::line-1462",
+      "source_sha256": "d0e1f158a2f1df70c20e8da9532c03833998bd22376accd4a30dabfa130bbaef",
+      "zig_declaration_id": "src/core/internal/vdbe_mem.zig::function::memFromBtree",
+      "zig_declaration_sha256": "713048f8d5f4eaeeb26cc5a75fdcb40f11b4def8e400175730abd23bd59fc6b4",
+      "atomic_unit_id": "vdbe-btree-and-constant-expression-value-materialization",
+      "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/where.c::function::sqlite3_vtab_distinct::line-4629",
-      "source_sha256": "22a8ff1880c623c37a5b9d38be207231d198111d264c48deea9ca6c432af793e",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_vtab_distinct",
-      "zig_declaration_sha256": "28bd8850c96aa1ba4bb0b6040ad3a499beb094eb079fd7d6609b32e9ec5b19fe",
-      "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
-      "class": "short",
+      "source_entity_id": "src/vdbemem.c::function::sqlite3VdbeMemFromBtreeZeroOffset::line-1490",
+      "source_sha256": "a99ad1029a63b4806c44a7e235c07689a2326c46a6b79185af611e9991b5314d",
+      "zig_declaration_id": "src/core/internal/vdbe_mem.zig::function::memFromBtreeZeroOffset",
+      "zig_declaration_sha256": "d33d005b8dd5f7326bfa805f447b17119ad6a358b606a48f326cd955815e19cb",
+      "atomic_unit_id": "vdbe-btree-and-constant-expression-value-materialization",
+      "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/backup.c::function::sqlite3_backup_remaining::line-652",
-      "source_sha256": "4f6a66ce71345b99500ddfce712f4d89557fb1c0e16ff7c09cf41d886a8a8dc0",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_backup_remaining",
-      "zig_declaration_sha256": "c397cd1b58bd153ea642ae86e6982cafc2eb70ece9bc7defb3651fd0c6dd7849",
-      "atomic_unit_id": "public-backup-progress-observers",
-      "class": "short",
+      "source_entity_id": "src/vdbemem.c::function::valueFromExpr::line-1795",
+      "source_sha256": "949ef56a947923c89b4034a5993298033d36e30a1e9a83cbdf04cf3ed63f968c",
+      "zig_declaration_id": "src/core/internal/vdbe_mem.zig::function::valueFromConstantExpression",
+      "zig_declaration_sha256": "910acee9bf452bd060837f853eb822131cd6620bf54456cc063c6ab33dcadc15",
+      "atomic_unit_id": "vdbe-btree-and-constant-expression-value-materialization",
+      "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/backup.c::function::sqlite3_backup_pagecount::line-666",
-      "source_sha256": "150a785b49b670e4074dcfc99b40b00c97be6c2814597029bdc4dcf80b46bc1f",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_backup_pagecount",
-      "zig_declaration_sha256": "5d4da4f12586af709f01cde131ecabb403403c81c2eb3bf7ead68933357cc27c",
-      "atomic_unit_id": "public-backup-progress-observers",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/os_unix.c::function::unixSectorSize::line-4461",
-      "source_sha256": "000beca8e47ba2c483fd6a27c85dd9ee4f28c02346af02ef80ed0a7664bd0ca1",
-      "zig_declaration_id": "src/core/unix_vfs.zig::function::xSector",
-      "zig_declaration_sha256": "b91caf5bd0e17be7e12ae07e695ecc27777b337cd210ab0ce31feba07d4e5d45",
-      "atomic_unit_id": "unix-vfs-device-observers",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/os_unix.c::function::unixDeviceCharacteristics::line-4480",
-      "source_sha256": "9dcb976d88ecc4d3fd447fae7b25e0e7cad785b2d26b2614ed6f2b5870c81fdc",
-      "zig_declaration_id": "src/core/unix_vfs.zig::function::xDevice",
-      "zig_declaration_sha256": "f294b0a85a76e569539e5ff11709fffb7c0445c68fe62ae48515db1133edf676",
-      "atomic_unit_id": "unix-vfs-device-observers",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/main.c::function::sqlite3ReportError::line-3997",
-      "source_sha256": "5280a46f7980fa52174a7212000e862ce4e14012c76cb1761baf5e59998c29bc",
-      "zig_declaration_id": "src/core/internal/error_state.zig::function::reportSourceError",
-      "zig_declaration_sha256": "60541b002bcb61e9bf3553635fae632cccb508495e89b9c18eaccd5e7cbddc3c",
-      "atomic_unit_id": "low-level-source-error-reporting",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/main.c::function::sqlite3CorruptError::line-4002",
-      "source_sha256": "b5aa3479d5458701679e6c8e3e79db8c06317bc6933acc6d1c02178581cdad13",
-      "zig_declaration_id": "src/core/internal/error_state.zig::function::corruptError",
-      "zig_declaration_sha256": "cb51b11431ba3b0ca37bcee480ea65c7df5f521ee6a4937505cf93059caf8b23",
-      "atomic_unit_id": "low-level-source-error-reporting",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/main.c::function::sqlite3MisuseError::line-4006",
-      "source_sha256": "f6ba1c87d939c40b702f38ca6f4304ccac038fb5969310b33cd137a332fb6c76",
-      "zig_declaration_id": "src/core/internal/error_state.zig::function::misuseError",
-      "zig_declaration_sha256": "28217cc3bfea338c042e6a00b18c90d90dabea0678459246621537af5a96fd48",
-      "atomic_unit_id": "low-level-source-error-reporting",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/main.c::function::sqlite3CantopenError::line-4010",
-      "source_sha256": "43f962ee7da7729aee11a3f777d81c6e6d0cd0e1843c29cfb8429c43148daa07",
-      "zig_declaration_id": "src/core/internal/error_state.zig::function::cannotOpenError",
-      "zig_declaration_sha256": "e897576c9590bb0fdec4d4ae9969f255a43a081f3d55f4f35d492fd3af85cef0",
-      "atomic_unit_id": "low-level-source-error-reporting",
-      "class": "short",
+      "source_entity_id": "src/vdbetrace.c::function::sqlite3VdbeExpandSql::line-72",
+      "source_sha256": "87bb1f08e87688f9de6c17b929204960c8d4aeb7cd7992d3e3cfe0d4873f2a3b",
+      "zig_declaration_id": "src/core/statement.zig::function::expandSql",
+      "zig_declaration_sha256": "d240b53cf847bb416632c6c2d978e62b6b1feea99b60b854ea7403f422ced0e7",
+      "atomic_unit_id": "vdbe-expanded-sql-nested-execution",
+      "class": "substantive",
       "complete": true
     },
     {
@@ -710,119 +863,11 @@
       "complete": true
     },
     {
-      "source_entity_id": "src/vtab.c::function::sqlite3VtabArgInit::line-533",
-      "source_sha256": "64f5b64c7d80dab9564269edaa3dd2e2c51b42c9c76efdfbb6844bc5691c6ba1",
-      "zig_declaration_id": "src/core/internal/virtual_table_lifecycle.zig::function::initializeVirtualArgument",
-      "zig_declaration_sha256": "02c39fab90f182a1d52d883381c4575fe230804bd7372e5b0e2e24ad1ac4cde8",
-      "atomic_unit_id": "virtual-table-parser-argument-boundaries",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/where.c::function::exprIsCoveredByIndex::line-3735",
-      "source_sha256": "a90ce05384e1ee5540805ef06120159801c83c06919670ff4716b8a36bd795ab",
-      "zig_declaration_id": "src/core/internal/where_planner.zig::function::expressionCoveredByIndex",
-      "zig_declaration_sha256": "10abee3c7dd3c56dd146d1e1a58ec8a28d29339de5052483128bcc943547aa72",
-      "atomic_unit_id": "where-expression-index-coverage-match",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/upsert.c::function::sqlite3UpsertAnalyzeTarget::line-90",
-      "source_sha256": "c0fbbb4d1b2257095ac97beee5a8b858d1c9a783a5021975473218a8db0ece01",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::findUpsertConflict",
-      "atomic_unit_id": "upsert-target-analysis-and-update",
-      "class": "substantive",
-      "complete": true,
-      "zig_declaration_sha256": "537c525991ff06339edcd6d04219c5fe31e0ef322762d78b287a5c90ee0ce40c"
-    },
-    {
-      "source_entity_id": "src/upsert.c::function::sqlite3UpsertDoUpdate::line-267",
-      "source_sha256": "9c31dcad6a97295f7bfaa265bb56db0594a57cd2707434aa6231b1d7c9317789",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::executeUpsertUpdate",
-      "atomic_unit_id": "upsert-target-analysis-and-update",
-      "class": "substantive",
-      "complete": true,
-      "zig_declaration_sha256": "7449219a5d20a4172eea64bf3db17f596c940ac76208216b58be5952561ea9be"
-    },
-    {
-      "source_entity_id": "src/upsert.c::function::sqlite3UpsertDelete::line-33",
-      "source_sha256": "ccf8289d38a456f0d771f81f50a87bce5f17c065ee66d58e2ed459a94da3ef18",
-      "zig_declaration_id": "src/core/internal/compiler_ownership.zig::function::deleteUpsert",
-      "zig_declaration_sha256": "4c94e386622a7a367b264095dec0e332362e14a99bfd0f9408bd543c28eeb094",
-      "atomic_unit_id": "upsert-optional-delete-closure",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pragma.c::function::pragmaVtabConnect::line-2815",
-      "source_sha256": "f68185073f32b51c8b37c5c5e4690ed40925ba6f38ce548a3d659a203872de6f",
-      "zig_declaration_id": "src/core/internal/pragma_runtime.zig::function::connectVirtualTable",
-      "zig_declaration_sha256": "9d3cf053f72c51fa8b743efd79aef4a3be5ca9fe2a34f43d3e5fb716e90d5e7c",
-      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pragma.c::function::pragmaVtabOpen::line-2928",
-      "source_sha256": "294ea23fe2fb08a2356f4b3f5d5c37c390203afa38657b3ef60a1b0605d380be",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualOpen",
-      "zig_declaration_sha256": "5781b7b24242ffbae416ff256762f5a43bb1bc94c9d7e334ccc778a27ca2d755",
-      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pragma.c::function::pragmaVtabClose::line-2951",
-      "source_sha256": "8f00f81fc4462ba683b03bfe3b0766642c6fe99d6fc9a73f1eb68e5919648687",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualClose",
-      "zig_declaration_sha256": "fed93db070ba6b0cebd444319126d0d451afa35b67bbc8617e51294977246747",
-      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pragma.c::function::pragmaVtabFilter::line-2977",
-      "source_sha256": "39dea4a34b93f157163773a0d7b964d0844beecd5c34ebee5d823048b5a6b42e",
-      "zig_declaration_id": "src/core/internal/pragma_runtime.zig::function::virtualFilter",
-      "zig_declaration_sha256": "19dcb8d9f934d585533d8f3422d1f3310a496bb14708d188522faa6cc3336e70",
-      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pragma.c::function::pragmaVtabEof::line-3027",
-      "source_sha256": "ed437a5265dd56d1054825e820b922a1a5d7fcf090af73b8850d566a49434e84",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualEof",
-      "zig_declaration_sha256": "59a490b1d8545e2587ac4bc3374c7cc2f6bf896dffb71c930f3974b10313fded",
-      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pragma.c::function::pragmaVtabColumn::line-3035",
-      "source_sha256": "da9889e2f59c77853b60d71f75b7d85226c0abf00e03c63d3287259c12b6875c",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualColumn",
-      "zig_declaration_sha256": "2ecd8ee2b3f2841948edd4b7f2b68f18e7a425e1df5f16f23e12b6829469d9c5",
-      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
-      "class": "substantive",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pragma.c::function::pragmaVtabRowid::line-3053",
-      "source_sha256": "96da42ffbb74fc5137aac9eaf06e260b031bc3220d08b776e797845afeaefed9",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::pragmaVirtualRowid",
-      "zig_declaration_sha256": "63ad16de68a4dcaa782174639e1d69dd3a484a537d692673b840475cb2bdce7a",
-      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/pragma.c::function::sqlite3PragmaVtabRegister::line-3093",
-      "source_sha256": "a9984f26a473cf0dd4a353922d3bd220ae1f350383d3f0bf1276ff64e3d6e4e0",
-      "zig_declaration_id": "src/core/sql_frontend.zig::function::compilePragmaVirtualScan",
-      "zig_declaration_sha256": "5279af9ec21226392c0315f461fbaffb065d211a3336b110c8a4f1f8a6c113ff",
-      "atomic_unit_id": "pragma-eponymous-virtual-table-runtime",
+      "source_entity_id": "src/vtab.c::function::addToVTrans::line-758",
+      "source_sha256": "8c0669c19a3db5a05c79ea25ba9854d1461bb94d4139bdf10dddf8303bf43852",
+      "zig_declaration_id": "src/core/internal/virtual_table_lifecycle.zig::function::addVirtualTransaction",
+      "zig_declaration_sha256": "102f3d94e1e0ec566cf0db90409224fe9a68c38616958c0cf1278d249d746b70",
+      "atomic_unit_id": "virtual-table-instance-and-finalizer-wrappers",
       "class": "short",
       "complete": true
     },
@@ -836,10 +881,19 @@
       "complete": true
     },
     {
-      "source_entity_id": "src/vtab.c::function::addToVTrans::line-758",
-      "source_sha256": "8c0669c19a3db5a05c79ea25ba9854d1461bb94d4139bdf10dddf8303bf43852",
-      "zig_declaration_id": "src/core/internal/virtual_table_lifecycle.zig::function::addVirtualTransaction",
-      "zig_declaration_sha256": "102f3d94e1e0ec566cf0db90409224fe9a68c38616958c0cf1278d249d746b70",
+      "source_entity_id": "src/vtab.c::function::sqlite3VtabArgInit::line-533",
+      "source_sha256": "64f5b64c7d80dab9564269edaa3dd2e2c51b42c9c76efdfbb6844bc5691c6ba1",
+      "zig_declaration_id": "src/core/internal/virtual_table_lifecycle.zig::function::initializeVirtualArgument",
+      "zig_declaration_sha256": "02c39fab90f182a1d52d883381c4575fe230804bd7372e5b0e2e24ad1ac4cde8",
+      "atomic_unit_id": "virtual-table-parser-argument-boundaries",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/vtab.c::function::sqlite3VtabCommit::line-1031",
+      "source_sha256": "9553ab3d9665282f9d57b4acd6fe638cf0c63385de8b1918fa5fae0f6b76a16e",
+      "zig_declaration_id": "src/core/internal/virtual_table_lifecycle.zig::function::commitVirtualTables",
+      "zig_declaration_sha256": "8aadbb11c7c27d072313a8906780f74289884fc38335483b532237f4615b75c6",
       "atomic_unit_id": "virtual-table-instance-and-finalizer-wrappers",
       "class": "short",
       "complete": true
@@ -854,66 +908,57 @@
       "complete": true
     },
     {
-      "source_entity_id": "src/vtab.c::function::sqlite3VtabCommit::line-1031",
-      "source_sha256": "9553ab3d9665282f9d57b4acd6fe638cf0c63385de8b1918fa5fae0f6b76a16e",
-      "zig_declaration_id": "src/core/internal/virtual_table_lifecycle.zig::function::commitVirtualTables",
-      "zig_declaration_sha256": "8aadbb11c7c27d072313a8906780f74289884fc38335483b532237f4615b75c6",
-      "atomic_unit_id": "virtual-table-instance-and-finalizer-wrappers",
+      "source_entity_id": "src/where.c::function::exprIsCoveredByIndex::line-3735",
+      "source_sha256": "a90ce05384e1ee5540805ef06120159801c83c06919670ff4716b8a36bd795ab",
+      "zig_declaration_id": "src/core/internal/where_planner.zig::function::expressionCoveredByIndex",
+      "zig_declaration_sha256": "10abee3c7dd3c56dd146d1e1a58ec8a28d29339de5052483128bcc943547aa72",
+      "atomic_unit_id": "where-expression-index-coverage-match",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/where.c::function::sqlite3_vtab_collation::line-4554",
+      "source_sha256": "52b2788333e6ed88a6524727d688e2dbf4eeeaa047cbebed314de0b1a304c23c",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::planningConstraintCollation",
+      "zig_declaration_sha256": "385f20bacd98c4e8e2bb8a8a0d290579581420181e48dea42411e62c165e7111",
+      "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
+      "class": "substantive",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/where.c::function::sqlite3_vtab_distinct::line-4629",
+      "source_sha256": "22a8ff1880c623c37a5b9d38be207231d198111d264c48deea9ca6c432af793e",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_vtab_distinct",
+      "zig_declaration_sha256": "28bd8850c96aa1ba4bb0b6040ad3a499beb094eb079fd7d6609b32e9ec5b19fe",
+      "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
       "class": "short",
       "complete": true
     },
     {
-      "source_entity_id": "src/json.c::function::jsonArrayValue::line-4886",
-      "source_sha256": "ca11965db7e81d5a702f52693d1429163ea46de7d4c25ef2d1eb70eb95948fe6",
-      "zig_declaration_id": "src/core/internal/json_functions.zig::function::arrayAggregateValue",
-      "zig_declaration_sha256": "84b8fdc8a824fee6edca043b49b5c5bba99a84b24a6bfce2cbf911d75c7bb984",
-      "atomic_unit_id": "json-aggregate-value-final-wrappers",
-      "class": "short",
+      "source_entity_id": "src/where.c::function::sqlite3_vtab_in::line-4574",
+      "source_sha256": "f7b5c4c9245a7b625072bd55f0fe232222eab874b0376cf4d4167564554a9a2b",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::planningIn",
+      "zig_declaration_sha256": "7dff5b572bf7af96706e97166ed92d5cedc1cd752b2ad292993c73019e96a747",
+      "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
+      "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/json.c::function::jsonArrayFinal::line-4889",
-      "source_sha256": "77b7b45ec7c2d4942897fcb78924f30a855ea46049318abec8d10f81cd2fd8b3",
-      "zig_declaration_id": "src/core/internal/json_functions.zig::function::arrayAggregateFinal",
-      "zig_declaration_sha256": "636c87fba5f869ca5b962778b54fa63e6707cc97c990a689de72c6b6a902e668",
-      "atomic_unit_id": "json-aggregate-value-final-wrappers",
-      "class": "short",
+      "source_entity_id": "src/where.c::function::sqlite3_vtab_rhs_value::line-4594",
+      "source_sha256": "10d4bae9570d2c7620dfbc120c45f2deb918882409c933ede0d5eba6cd71ad75",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::planningRhsValue",
+      "zig_declaration_sha256": "b204fbd5f5f666baa2f8000a7063ed5dc2dd0d1fc8d6a24af09bfb2bdfe982f7",
+      "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
+      "class": "substantive",
       "complete": true
     },
     {
-      "source_entity_id": "src/json.c::function::jsonObjectValue::line-5064",
-      "source_sha256": "e028912dfd42b766de4f3027afef93b52b52209ca1c1051284eb5b3639663459",
-      "zig_declaration_id": "src/core/internal/json_functions.zig::function::objectAggregateValue",
-      "zig_declaration_sha256": "141228d67f2ec2313c5625024b7f7b7ef924aac74583b563db921d652a6f8442",
-      "atomic_unit_id": "json-aggregate-value-final-wrappers",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/json.c::function::jsonObjectFinal::line-5067",
-      "source_sha256": "3be2922e9c8c637f8c3bd447eb1555e7b2d345b79577de5879fb586ced7c8b79",
-      "zig_declaration_id": "src/core/internal/json_functions.zig::function::objectAggregateFinal",
-      "zig_declaration_sha256": "ce9f9312ac4c7598c19280d0a94a7a1b2bbd706aea43d8cdfd798dc59591f8e8",
-      "atomic_unit_id": "json-aggregate-value-final-wrappers",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/select.c::function::agginfoFree::line-7110",
-      "source_sha256": "57fd69e5e32f04671101d85a4844b4d1cc3bef0fe94f43d91f208c0178ddaa8f",
-      "zig_declaration_id": "src/core/internal/aggregate_analysis.zig::function::freeAggregateInfo",
-      "zig_declaration_sha256": "0ec0719aa47f876c733cb34dcb954aa6563256478b40baa22784f11340338248",
-      "atomic_unit_id": "aggregate-info-owner-release",
-      "class": "short",
-      "complete": true
-    },
-    {
-      "source_entity_id": "src/json.c::function::jsonCacheDeleteGeneric::line-428",
-      "source_sha256": "4d2eaf765429aec4ddcc41a405fd2aa7d2248cce0172064bb35bac222058d9bf",
-      "zig_declaration_id": "src/core/internal/json_functions.zig::function::cacheDeleteGeneric",
-      "zig_declaration_sha256": "1a723a51fc9dc1e61d4151a998ac82b941898293a5e8b5997544ebee19f4c3c1",
-      "atomic_unit_id": "json-cache-generic-destructor",
-      "class": "short",
+      "source_entity_id": "src/whereexpr.c::function::whereCombineDisjuncts::line-559",
+      "source_sha256": "210c6e946ed9b0961edb65ecde83c7ee4d93cbd774a4aaf5c6527325f2101e41",
+      "zig_declaration_id": "src/core/internal/where_planner.zig::function::combineDisjuncts",
+      "zig_declaration_sha256": "bea1793a0bf9f31f68ba990b8d2e6fed981a7f9c08b130b9bf1df45f0bd1998e",
+      "atomic_unit_id": "where-compatible-or-range-combination",
+      "class": "substantive",
       "complete": true
     }
   ]
