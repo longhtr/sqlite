@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "insert-expression-column-flag-union",
+  "title": "INSERT expression column-flag union",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "INSERT generated-column and CHECK analysis now has the source walker callback that accumulates referenced column flags.",
+    "source_files": [{"path":"src/insert.c","sha256":"f63b83c88d3829441d2db2ee64b664335859c5f35ac6da1e3b77e136a132de09"}],
+    "source_entity_ids": ["src/insert.c::function::exprColumnFlagUnion::line-269"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Generated-column evaluation", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Expression walker and source-layout Table"],"caller_closure":"The complete callback body and return control are translated."},
+  "contracts": {"inputs":["Walker containing a table and expression node"],"outputs":["Walker eCode unioned with referenced non-rowid column flags"],"ownership":"Borrows table and expression.","state_and_results":"Only TK_COLUMN with nonnegative iColumn mutates eCode; always continues walking.","locks_callbacks_io":"No locks or I/O.","failure_and_continuation":"No allocation or failure; source-valid column bounds asserted."},
+  "mappings": [{"source_entity_id":"src/insert.c::function::exprColumnFlagUnion::line-269","relation":"insert-expression-referenced-column-flags","zig_declaration_ids":["src/core/internal/insert_analysis.zig::function::expressionColumnFlagUnion"]}],
+  "representation_differences": ["Walker union pointer stores the typed Table through its generic pointer arm."],
+  "oracle": {"protocol":"Walk column, rowid, and non-column expressions over columns with distinct flags.","internal_observations":["exact eCode bit union", "continue result"],"normalization":"Exact integer flags."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"No allocation.","io_crash_concurrency":"No I/O or concurrency.","malformed_input":"Source-valid column indices required.","continuation":"Always returns WRC_Continue.","performance":"Constant time per expression node.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/insert_analysis.zig","native_call_path":"INSERT expression analysis -> expressionColumnFlagUnion","bounded_owner_retired":"No alternate source-identity callback."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Wire complete generated-column/CHECK walker owner and focused trace."],
+  "context_review": {"implementation_spans":["Complete exprColumnFlagUnion body", "Walker and Table column layout"],"callers":["INSERT generated-column and CHECK analysis"],"callees":["None"],"assertions_branches_cleanup":["TK_COLUMN branch", "nonnegative column guard", "column bound assertion"],"upstream_tests":["Project INSERT and broad runtime tests"]},
+  "evidence_receipts": []
+}

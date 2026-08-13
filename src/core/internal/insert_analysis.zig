@@ -1,11 +1,14 @@
 //! INSERT affinity and VALUES analysis from `insert.c`.
 
+const std = @import("std");
 const db_allocator = @import("db_allocator.zig");
 const expression_analysis = @import("expression_analysis.zig");
 const parse_types = @import("parse_types.zig");
 const schema = @import("schema_types.zig");
 const schema_analysis = @import("schema_analysis.zig");
 const types = @import("vdbe_types.zig");
+const tokens = @import("../generated/tokens.zig");
+const walker_api = @import("walker.zig");
 
 /// Source `readsTable()`.
 pub fn readsTable(parse: *parse_types.Parse, database_index: c_int, table: *schema.Table) bool {
@@ -22,6 +25,16 @@ pub fn readsTable(parse: *parse_types.Parse, database_index: c_int, table: *sche
         if (table.kind == .virtual and operation.opcode == .VOpen and table.owner.virtual.instances != null and operation.p4.pVtab == @as(*types.VTable, @ptrCast(@alignCast(table.owner.virtual.instances.?))).pVtab) return true;
     }
     return false;
+}
+
+/// Source `exprColumnFlagUnion()`.
+pub fn expressionColumnFlagUnion(walker: *parse_types.Walker, node: *parse_types.Expr) callconv(.c) c_int {
+    if (node.op == tokens.tk_column and node.iColumn >= 0) {
+        const table: *schema.Table = @ptrCast(@alignCast(walker.u.pointer.?));
+        std.debug.assert(node.iColumn < table.column_count);
+        walker.eCode |= table.columns.?[@intCast(node.iColumn)].flags;
+    }
+    return walker_api.continue_walk;
 }
 
 /// Source `computeIndexAffStr()`.

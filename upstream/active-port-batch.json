@@ -161,6 +161,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/insert.c::function::exprColumnFlagUnion::line-269",
+      "source_sha256": "77d14847ad121ab0ee9d0414208c79c1533956ef57ba0d4d2119e507ec54964f",
+      "zig_declaration_id": "src/core/internal/insert_analysis.zig::function::expressionColumnFlagUnion",
+      "zig_declaration_sha256": "5a192d72e45213ab9c242f09a4b93575fb5eca242d3a00fc0168a5e418db1280",
+      "atomic_unit_id": "insert-expression-column-flag-union",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/json.c::function::jsonAllAlphanum::line-4046",
       "source_sha256": "b54f9d29711163b5f9c23c798f1e381ce3d4e5c0c0b864e48de52c97e4995639",
       "zig_declaration_id": "src/core/internal/json_functions.zig::function::allAlphanumeric",
