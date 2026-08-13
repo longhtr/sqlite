@@ -3520,10 +3520,14 @@ pub export fn sqlite3_backup_finish(pointer: ?*sqlite3_backup) callconv(.c) c_in
     }
     return rc.toC();
 }
+/// Source `sqlite3_backup_remaining()`: expose progress from the most recent
+/// step without advancing or locking the backup owner.
 pub export fn sqlite3_backup_remaining(pointer: ?*sqlite3_backup) callconv(.c) c_int {
     const backup: *Backup = if (pointer) |value| @ptrCast(@alignCast(value)) else return 0;
     return backup.remaining;
 }
+/// Source `sqlite3_backup_pagecount()`: expose the source page count captured
+/// by the most recent step without advancing or locking the backup owner.
 pub export fn sqlite3_backup_pagecount(pointer: ?*sqlite3_backup) callconv(.c) c_int {
     const backup: *Backup = if (pointer) |value| @ptrCast(@alignCast(value)) else return 0;
     return backup.pages;

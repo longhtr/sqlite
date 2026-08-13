@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "id": "public-backup-progress-observers",
+  "title": "Public online backup progress observers",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "The remaining and page-count APIs expose the stable progress snapshot written by the most recent backup step without advancing, allocating, or locking the backup owner.",
+    "source_files": [
+      {
+        "path": "src/backup.c",
+        "sha256": "2304c4f820c977aa009ceb464d9b774942cd7b4686156a5ed28d50a3e50f861e"
+      }
+    ],
+    "source_entity_ids": [
+      "src/backup.c::function::sqlite3_backup_remaining::line-652",
+      "src/backup.c::function::sqlite3_backup_pagecount::line-666"
+    ],
+    "behavioral_block_ids": [
+      "src/backup.c::function::sqlite3_backup_remaining::behavior::return::line-659-column-3::ordinal-0",
+      "src/backup.c::function::sqlite3_backup_pagecount::behavior::return::line-673-column-3::ordinal-0"
+    ],
+    "excluded_responsibilities": [
+      "Backup initialization stepping finishing and restart",
+      "Independent fidelity review"
+    ]
+  },
+  "dependencies": {
+    "atomic_unit_ids": [
+      "backup-restart-on-pager-data-version"
+    ],
+    "external_source_responsibilities": [
+      "Production Backup progress fields written by sqlite3_backup_step"
+    ],
+    "caller_closure": "Both assigned canonical public exports read the production online-backup owner."
+  },
+  "contracts": {
+    "inputs": [
+      "Nullable public backup handle"
+    ],
+    "outputs": [
+      "Most recently published remaining-page or total-page count, or zero under API armor for null"
+    ],
+    "ownership": "Borrowed backup handle; no allocation, release, or transfer.",
+    "state_and_results": "Observers do not advance a step. Restart preserves the previous snapshot until the next step recomputes both values.",
+    "locks_callbacks_io": "No lock, callback, or I/O; source documents these progress observations as the most recent step snapshot.",
+    "failure_and_continuation": "Null returns zero. Live handles remain unchanged and step/finish continuation is unaffected."
+  },
+  "mappings": [
+    {
+      "source_entity_id": "src/backup.c::function::sqlite3_backup_remaining::line-652",
+      "relation": "source-public-backup-remaining-progress-observer",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::sqlite3_backup_remaining"
+      ]
+    },
+    {
+      "source_entity_id": "src/backup.c::function::sqlite3_backup_pagecount::line-666",
+      "relation": "source-public-backup-page-count-observer",
+      "zig_declaration_ids": [
+        "src/core/sql_frontend.zig::function::sqlite3_backup_pagecount"
+      ]
+    }
+  ],
+  "representation_differences": [
+    "Native Backup stores c_int progress directly after deriving it from the selected source Pager page size and retained snapshot."
+  ],
+  "oracle": {
+    "protocol": "Initialize a backup, inspect zero initial progress, perform bounded and completing steps, mutate/restart the source, and compare remaining/page-count snapshots through finish.",
+    "internal_observations": [
+      "remaining and total page fields",
+      "restart-pending preservation before the next step"
+    ],
+    "normalization": "Compare exact public integer observations at each step boundary."
+  },
+  "assurance": {
+    "source_context_reviewed": true,
+    "source_translated": true,
+    "internal_trace_equivalent": false,
+    "subsystem_integrated": false,
+    "oom": "No allocation; reports the prior snapshot after any failed step.",
+    "io_crash_concurrency": "No direct I/O or lock; valid-handle concurrent use follows the public backup API contract.",
+    "malformed_input": "Null handle returns zero under active API armor behavior.",
+    "continuation": "Observation does not alter stepping, restart, or finish behavior.",
+    "performance": "Constant-time field reads.",
+    "commands": [
+      "zig build phase17-connection-client -j1",
+      "zig build memdb-api-differential -j1"
+    ]
+  },
+  "integration": {
+    "production_owner": "src/core/sql_frontend.zig Backup owner",
+    "native_call_path": "Canonical public exports read progress populated by the production attached-schema-capable backup step.",
+    "bounded_owner_retired": "Yes. The observers have no separate progress model."
+  },
+  "independent_review": {
+    "status": "pending",
+    "reviewer": null,
+    "review_commit": null,
+    "notes": "Pinned-C internal trace, assurance, and independent review remain open."
+  },
+  "known_blockers": [
+    "Add focused pinned-C progress trace across bounded steps and restart.",
+    "Complete assurance and independent fidelity review."
+  ],
+  "context_review": {
+    "implementation_spans": [
+      "Complete pinned backup progress observer bodies and surrounding finish/update contracts",
+      "Production Backup progress write and restart owners plus public C tests"
+    ],
+    "callers": [
+      "Canonical online-backup C clients"
+    ],
+    "callees": [
+      "No helper call; direct production Backup field observation"
+    ],
+    "assertions_branches_cleanup": [
+      "Null armor, live snapshot, bounded step, completing step, restart preservation, and finish lifetime reviewed"
+    ],
+    "upstream_tests": [
+      "Upstream backup progress tests",
+      "Project phase17 and memdb backup differentials"
+    ]
+  },
+  "evidence_receipts": []
+}

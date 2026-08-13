@@ -627,6 +627,24 @@
       "atomic_unit_id": "vtab-constraint-collation-in-and-rhs",
       "class": "short",
       "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::sqlite3_backup_remaining::line-652",
+      "source_sha256": "4f6a66ce71345b99500ddfce712f4d89557fb1c0e16ff7c09cf41d886a8a8dc0",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_backup_remaining",
+      "zig_declaration_sha256": "c397cd1b58bd153ea642ae86e6982cafc2eb70ece9bc7defb3651fd0c6dd7849",
+      "atomic_unit_id": "public-backup-progress-observers",
+      "class": "short",
+      "complete": true
+    },
+    {
+      "source_entity_id": "src/backup.c::function::sqlite3_backup_pagecount::line-666",
+      "source_sha256": "150a785b49b670e4074dcfc99b40b00c97be6c2814597029bdc4dcf80b46bc1f",
+      "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_backup_pagecount",
+      "zig_declaration_sha256": "5d4da4f12586af709f01cde131ecabb403403c81c2eb3bf7ead68933357cc27c",
+      "atomic_unit_id": "public-backup-progress-observers",
+      "class": "short",
+      "complete": true
     }
   ]
 }

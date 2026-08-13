@@ -15,6 +15,11 @@
       "status": "source-translated"
     },
     {
+      "id": "public-backup-progress-observers",
+      "path": "upstream/atomic-units/public-backup-progress-observers.json",
+      "status": "source-translated"
+    },
+    {
       "id": "public-incremental-blob-read-write-size",
       "path": "upstream/atomic-units/public-incremental-blob-read-write-size.json",
       "status": "source-translated"
