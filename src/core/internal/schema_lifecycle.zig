@@ -103,6 +103,11 @@ pub fn resetAllSchemas(db: *types.Sqlite3) void {
     if (db.nSchemaLock == 0) schema_analysis.collapseDatabaseArray(db);
 }
 
+/// Source `sqlite3CommitInternalChanges()`.
+pub fn commitInternalChanges(db: *types.Sqlite3) void {
+    db.mDbFlags &= ~types.database_flag.schema_change;
+}
+
 /// Source `sqliteViewResetAll()`.
 pub fn resetAllViews(db: *types.Sqlite3, database_index: c_int) void {
     const schema_owner = db.aDb.?[@intCast(database_index)].pSchema.?;

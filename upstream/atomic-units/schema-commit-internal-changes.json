@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "schema-commit-internal-changes",
+  "title": "Schema internal-change commit",
+  "status": "source-translated",
+  "admission_ready": true,
+  "scope": {
+    "rationale": "Schema lifecycle now has the source commit leaf that clears the connection's pending schema-change flag.",
+    "source_files": [{"path":"src/build.c","sha256":"c71549801eb2f56dcba062a6ce1c347d93203e43deb05c08ba4ad71a2c08d867"}],
+    "source_entity_ids": ["src/build.c::function::sqlite3CommitInternalChanges::line-674"],
+    "behavioral_block_ids": [],
+    "excluded_responsibilities": ["Transaction commit execution", "Independent fidelity review"]
+  },
+  "dependencies": {"atomic_unit_ids":[],"external_source_responsibilities":["Connection database flags"],"caller_closure":"The complete flag-clearing leaf is translated."},
+  "contracts": {"inputs":["Connection"],"outputs":["DBFLAG_SchemaChange cleared"],"ownership":"Borrows connection.","state_and_results":"All unrelated database flags are preserved.","locks_callbacks_io":"No locks, callbacks, or I/O.","failure_and_continuation":"Cannot fail."},
+  "mappings": [{"source_entity_id":"src/build.c::function::sqlite3CommitInternalChanges::line-674","relation":"schema-change-flag-commit-clear","zig_declaration_ids":["src/core/internal/schema_lifecycle.zig::function::commitInternalChanges"]}],
+  "representation_differences": ["Uses the typed database_flag constant."],
+  "oracle": {"protocol":"Set schema-change with unrelated flags, invoke the helper, and compare resulting flags.","internal_observations":["schema-change cleared", "unrelated flags retained"],"normalization":"Exact bit-mask comparison."},
+  "assurance": {"source_context_reviewed":true,"source_translated":true,"internal_trace_equivalent":false,"subsystem_integrated":false,"oom":"No allocation.","io_crash_concurrency":"No I/O; caller synchronization applies.","malformed_input":"Requires a valid connection.","continuation":"Connection remains reusable.","performance":"Constant time.","commands":["zig build test -j1"]},
+  "integration": {"production_owner":"src/core/internal/schema_lifecycle.zig","native_call_path":"schema commit lifecycle -> commitInternalChanges","bounded_owner_retired":"No alternate source-identity helper."},
+  "independent_review": {"status":"pending","reviewer":null,"review_commit":null,"notes":"Independent review remains open."},
+  "known_blockers": ["Wire the complete transaction commit caller and focused trace."],
+  "context_review": {"implementation_spans":["Complete sqlite3CommitInternalChanges body", "connection database-flag definitions"],"callers":["Schema transaction commit lifecycle"],"callees":["None"],"assertions_branches_cleanup":["single masked flag clear"],"upstream_tests":["Project schema and broad runtime tests"]},
+  "evidence_receipts": []
+}

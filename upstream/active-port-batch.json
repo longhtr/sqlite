@@ -143,6 +143,15 @@
       "complete": true
     },
     {
+      "source_entity_id": "src/build.c::function::sqlite3CommitInternalChanges::line-674",
+      "source_sha256": "16fe819f1dde4f58c8dbeba65b8ea1fa21dba8a3c4f3dbb8f4ff6c3ba19f9306",
+      "zig_declaration_id": "src/core/internal/schema_lifecycle.zig::function::commitInternalChanges",
+      "zig_declaration_sha256": "80583f41e76860530733371129e94d900d91116676dd538d25e21d62b6bbefd5",
+      "atomic_unit_id": "schema-commit-internal-changes",
+      "class": "short",
+      "complete": true
+    },
+    {
       "source_entity_id": "src/complete.c::function::sqlite3_complete16::line-269",
       "source_sha256": "e1778e89eceeef4e69df1436511712e0f0c9ba8f8df751f548576b921c42b0b1",
       "zig_declaration_id": "src/core/sql_frontend.zig::function::sqlite3_complete16",
